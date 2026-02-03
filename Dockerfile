@@ -1,52 +1,61 @@
 FROM python:3.12-slim
 
 LABEL maintainer="Mole AI Team"
-LABEL description="Mole AI v2.0 - Diagnóstico de Plantas con Arquitectura Hexagonal"
+LABEL description="Mole AI v2.0 - Diagnóstico de Plantas con Phi-3.5 Vision-Instruct Q4"
 LABEL version="2.0.0"
-LABEL architecture="hexagonal_modular"
+LABEL model="phi-3.5-vision-instruct-q4"
 
-ENV DEBIAN_FRONTEND=noninteractive
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    API_HOST=0.0.0.0 \
+    API_PORT=8000 \
+    LOG_LEVEL=INFO
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
+# Instalar dependencias del sistema (optimizadas para Phi-3.5 + CPU inference)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
-    git \
     libpq-dev \
     libgl1-mesa-glx \
     libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    wget \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && rm -rf /var/lib/apt/lists/* && apt-get clean
 
-# Copiar requirements actualizados
+# Copiar requirements
 COPY requirements.txt .
 
-# Instalar dependencias Python
+# Instalar dependencias Python (con optimizaciones)
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /root/.cache/pip
+    pip install --no-cache-dir -r requirements.txt
 
 # Crear estructura de directorios
-RUN mkdir -p /app/storage/images /app/storage/documents /app/storage/vectors /app/logs
+RUN mkdir -p \
+    storage/vectors \
+    storage/uploads \
+    storage/documents \
+    logs
 
-# Copiar arquitectura hexagonal
-COPY mole_ai/ /app/mole_ai/
-# El main.py está dentro de mole_ai/
+# Copiar aplicación FastAPI + RAG + Phi-3.5
+COPY mole_ai/ ./mole_ai/
+COPY .env.example .env
 
 # Crear usuario non-root
 RUN useradd -m -u 1000 moleai && \
-    chown -R moleai:moleai /app && \
-    chmod +x /app/storage /app/logs
+    chown -R moleai:moleai /app
+
+USER moleai
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+# CMD con uvicorn
+CMD ["python", "-m", "uvicorn", "mole_ai.main:app", \
+     "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
 
 # Exponer puerto
 EXPOSE 8000

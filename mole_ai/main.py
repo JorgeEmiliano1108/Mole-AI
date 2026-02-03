@@ -1,430 +1,428 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
-import logging
+"""
+Mole AI v2.0 - Diagnóstico de Plantas con Phi-3.5 Vision-Instruct Q4
+FastAPI + RAG Dinámico + PostgreSQL
+"""
+
 import os
+import logging
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Optional, List
+import uuid
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import json
+
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-from .domain.models.plant import (
-    PlantDiagnosis, 
-    SensorData, 
-    PlantImage, 
-    DiagnosticFilter,
-    SystemMetrics
-)
-from .domain.exceptions import (
-    PlantAnalysisException,
-    ModelNotReadyError,
-    ConfidenceThresholdError,
-    ServiceUnavailableError
-)
-from .use_cases.unified_diagnostic import UnifiedDiagnosticUseCase
-from .adapters.outbound.phi3_vision_adapter import Phi3VisionAdapter
-from .adapters.outbound.unified_rag_adapter import UnifiedRAGAdapter
-from .adapters.outbound.postgresql_adapter import PostgreSQLAdapter
+# Importar integraciones
+from .rag_loader import RAGLoader
+from .phi3_integration import Phi3VisionModel
 
 load_dotenv()
 
-# Configuración de logging
+# Logging
 logging.basicConfig(
     level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper()),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Dependencias globales (inyectadas)
-vision_adapter: Optional[Phi3VisionAdapter] = None
-rag_adapter: Optional[UnifiedRAGAdapter] = None
-db_adapter: Optional[PostgreSQLAdapter] = None
-diagnostic_use_case: Optional[UnifiedDiagnosticUseCase] = None
+# ============================================================================
+# MODELOS PYDANTIC
+# ============================================================================
+
+class SensorData(BaseModel):
+    """Datos de sensores ESP32"""
+    ph: float = Field(..., ge=0, le=14)
+    humedad: float = Field(..., ge=0, le=100)
+    temp: float = Field(..., ge=-50, le=60)
+    uv: float = Field(..., ge=0, le=15)
 
 
-# Modelos Pydantic para API
 class DiagnosticRequest(BaseModel):
-    imagen: str  # base64
-    sensores: Optional[SensorData] = None
+    """Solicitud de diagnóstico"""
+    imagen: str = Field(..., description="Imagen en base64")
+    sensores: SensorData
     plant_id: Optional[str] = None
-    force_rag_query: Optional[str] = None
 
 
 class DiagnosticResponse(BaseModel):
-    id: Optional[str] = None
-    plant_id: Optional[str] = None
+    """Respuesta de diagnóstico"""
+    id: str
+    plant_id: Optional[str]
     estado: str
     confianza: float
-    especie: Optional[str] = None
-    sintomas: List[str] = []
+    especie: str
+    sintomas: List[str]
     diagnostico: str
-    recomendaciones: List[str] = []
-    fuentes: List[str] = []
-    modelo_utilizado: str
-    tiempo_inferencia: Optional[float] = None
+    recomendaciones: List[str]
+    fuentes: List[str]
     requiere_accion_humana: bool
-    created_at: Optional[str] = None
+    timestamp: str
 
 
 class HealthResponse(BaseModel):
+    """Estado del sistema"""
     status: str
-    service: str
-    version: str
     model_ready: bool
     rag_ready: bool
-    database_connected: bool
-    system_metrics: Optional[Dict[str, Any]] = None
+    db_connected: bool
+    timestamp: str
 
 
-class VisionOnlyRequest(BaseModel):
-    imagen: str
-    context: Optional[str] = None
+class UploadResponse(BaseModel):
+    """Respuesta de upload"""
+    status: str
+    filename: str
+    chunks: int
+    message: Optional[str]
 
 
-class KnowledgeRequest(BaseModel):
-    query: str
-    filters: Optional[Dict[str, Any]] = None
-    top_k: int = 3
+# ============================================================================
+# INICIALIZACIÓN
+# ============================================================================
+
+rag_loader: Optional[RAGLoader] = None
+phi3_model: Optional[Phi3VisionModel] = None
 
 
-# Inyección de dependencias
-async def get_vision_adapter() -> Phi3VisionAdapter:
-    if vision_adapter is None:
-        raise HTTPException(status_code=503, detail="Adaptador de visión no inicializado")
-    return vision_adapter
+def get_db_connection():
+    """Obtiene conexión a PostgreSQL"""
+    try:
+        conn = psycopg2.connect(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            database=os.getenv("POSTGRES_DB", "mole_ai_db"),
+            user=os.getenv("POSTGRES_USER", "mole_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "mole_pass_2026"),
+            cursor_factory=RealDictCursor
+        )
+        return conn
+    except Exception as e:
+        logger.warning(f"Error conectando a PostgreSQL: {str(e)}")
+        return None
 
 
-async def get_rag_adapter() -> UnifiedRAGAdapter:
-    if rag_adapter is None:
-        raise HTTPException(status_code=503, detail="Adaptador RAG no inicializado")
-    return rag_adapter
+async def init_db():
+    """Inicializa tablas en PostgreSQL"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            logger.warning("PostgreSQL no disponible, continuando sin persistencia")
+            return
+        
+        cursor = conn.cursor()
+        
+        # Tabla de diagnósticos
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS diagnosticos (
+                id UUID PRIMARY KEY,
+                plant_id UUID,
+                imagen_url VARCHAR(500),
+                estado VARCHAR(50) NOT NULL,
+                confianza FLOAT NOT NULL,
+                especie VARCHAR(100),
+                sintomas TEXT,
+                diagnostico TEXT NOT NULL,
+                recomendaciones TEXT,
+                fuentes TEXT,
+                sensores JSONB,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        logger.info("✅ Base de datos inicializada")
+        
+    except Exception as e:
+        logger.warning(f"Error inicializando DB: {str(e)}")
 
 
-async def get_db_adapter() -> PostgreSQLAdapter:
-    if db_adapter is None:
-        raise HTTPException(status_code=503, detail="Adaptador de base de datos no inicializado")
-    return db_adapter
-
-
-async def get_diagnostic_use_case() -> UnifiedDiagnosticUseCase:
-    if diagnostic_use_case is None:
-        raise HTTPException(status_code=503, detail="Caso de uso de diagnóstico no inicializado")
-    return diagnostic_use_case
-
-
-# Lifecycle management
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Inicialización y limpieza de la aplicación FastAPI"""
-    global vision_adapter, rag_adapter, db_adapter, diagnostic_use_case
+    """Lifecycle de la aplicación"""
+    global rag_loader, phi3_model
     
     try:
-        logger.info("🚀 Inicializando Mole AI con arquitectura hexagonal unificada...")
+        logger.info("🚀 Inicializando Mole AI v2.0...")
         
-        # Inicializar adaptadores (infraestructura)
-        logger.info("📦 Inicializando adaptadores de infraestructura...")
+        # RAG Loader
+        logger.info("📦 Inicializando RAG Loader...")
+        rag_loader = RAGLoader()
+        logger.info("✅ RAG Loader listo")
         
-        db_adapter = PostgreSQLAdapter()
-        await db_adapter.initialize()
-        logger.info("✅ PostgreSQL Adapter inicializado")
+        # Phi-3.5 Model
+        logger.info("🧠 Inicializando Phi-3.5 Vision-Instruct Q4...")
+        phi3_model = Phi3VisionModel()
+        await phi3_model.initialize()
+        logger.info("✅ Phi-3.5 listo")
         
-        rag_adapter = UnifiedRAGAdapter()
-        await rag_adapter.initialize()
-        logger.info("✅ RAG Adapter inicializado")
+        # Database
+        logger.info("💾 Inicializando base de datos...")
+        await init_db()
         
-        vision_adapter = Phi3VisionAdapter()
-        await vision_adapter.initialize()
-        logger.info("✅ Phi-3.5 Vision Adapter inicializado")
-        
-        # Inicializar caso de uso (lógica de negocio)
-        logger.info("🎯 Inicializando casos de uso...")
-        diagnostic_use_case = UnifiedDiagnosticUseCase(
-            vision_provider=vision_adapter,
-            knowledge_retriever=rag_adapter,
-            sensor_data=db_adapter,
-            persistence=db_adapter,
-            model_manager=vision_adapter
-        )
-        logger.info("✅ Unified Diagnostic Use Case inicializado")
-        
-        logger.info("🎉 Mole AI v2.0 - Arquitectura Hexagonal Unificada ready!")
+        logger.info("🎉 Mole AI v2.0 ready!")
         yield
         
     except Exception as e:
-        logger.error(f"❌ Error crítico en inicialización: {str(e)}")
+        logger.error(f"❌ Error en inicialización: {str(e)}")
         raise
     finally:
-        # Limpieza de recursos
-        logger.info("🔄 Realizando limpieza de recursos...")
-        if db_adapter:
-            await db_adapter.close()
-        logger.info("✅ Recursos liberados")
+        logger.info("🔄 Limpieza de recursos...")
 
 
-# Crear aplicación FastAPI
+# ============================================================================
+# APLICACIÓN FASTAPI
+# ============================================================================
+
 app = FastAPI(
-    title="Mole AI v2.0 - Diagnóstico de Plantas Endémicas Mexicanas",
-    description="Sistema unificado con arquitectura hexagonal y Phi-3.5 Vision-Instruct Q4",
+    title="Mole AI v2.0 - Diagnóstico de Plantas",
+    description="Sistema unificado con Phi-3.5 Vision-Instruct Q4",
     version="2.0.0",
-    lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc"
+    lifespan=lifespan
 )
 
-# Configurar CORS
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, configurar dominios específicos
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# Endpoints Principales
+# ============================================================================
+# ENDPOINTS PRINCIPALES
+# ============================================================================
+
 @app.post("/diagnostico", response_model=DiagnosticResponse, tags=["Diagnóstico"])
-async def diagnosticar_planta(
-    request: DiagnosticRequest,
-    use_case: UnifiedDiagnosticUseCase = Depends(get_diagnostic_use_case)
-):
+async def diagnosticar(request: DiagnosticRequest) -> DiagnosticResponse:
     """
-    Diagnóstico completo unificado de planta
-    - Análisis visual con Phi-3.5
-    - Recuperación de conocimiento RAG
-    - Integración con sensores
+    Diagnóstico completo de planta
+    Entrada: Imagen base64 + sensores
+    Salida: JSON estructurado con estado, confianza, síntomas, etc.
     """
     try:
-        logger.info(f"📥 Solicitud de diagnóstico para planta {request.plant_id or 'desconocida'}")
+        if not phi3_model or not await phi3_model.is_ready():
+            raise HTTPException(status_code=503, detail="Modelo Phi-3.5 no disponible")
         
-        # Crear imagen
-        image = PlantImage(
+        logger.info(f"📥 Solicitud de diagnóstico para planta {request.plant_id or 'anónima'}")
+        
+        # Recuperar contexto RAG
+        rag_query = f"síntomas estado planta {request.sensores.temp}°C humedad {request.sensores.humedad}%"
+        rag_chunks = await rag_loader.retrieve_knowledge(rag_query, top_k=3)
+        
+        rag_context = "\n".join([
+            f"- {chunk['metadata'].get('source', 'Unknown')}: {chunk['content'][:200]}..."
+            for chunk in rag_chunks
+        ]) if rag_chunks else "Sin contexto RAG disponible"
+        
+        logger.info(f"Recuperados {len(rag_chunks)} chunks de RAG")
+        
+        # Análisis con Phi-3.5
+        logger.info("🧠 Ejecutando inferencia con Phi-3.5...")
+        result = await phi3_model.analyze_plant(
             image_base64=request.imagen,
-            plant_id=request.plant_id
+            sensores=request.sensores.dict(),
+            rag_context=rag_context
         )
         
-        # Ejecutar diagnóstico completo
-        diagnosis = await use_case.execute_complete_diagnosis(
-            image=image,
-            sensor_input=request.sensores,
-            plant_id=request.plant_id,
-            force_rag_query=request.force_rag_query
-        )
+        if result["status"] != "success":
+            raise HTTPException(status_code=500, detail=result.get("message"))
         
-        # Convertir a respuesta API
+        diagnosis_data = result["data"]
+        
+        # Determinar si requiere acción humana
+        confianza = float(diagnosis_data.get("confianza", 0.5))
+        requiere_accion = confianza < 0.85 or diagnosis_data.get("estado") == "Peligro"
+        
+        # Crear respuesta
+        diagnosis_id = str(uuid.uuid4())
         response = DiagnosticResponse(
-            id=diagnosis.id,
-            plant_id=diagnosis.plant_id,
-            estado=diagnosis.estado.value,
-            confianza=diagnosis.confianza,
-            especie=diagnosis.especie,
-            sintomas=diagnosis.sintomas,
-            diagnostico=diagnosis.diagnostico,
-            recomendaciones=diagnosis.recomendaciones,
-            fuentes=diagnosis.fuentes,
-            modelo_utilizado=diagnosis.modelo_utilizado,
-            tiempo_inferencia=diagnosis.tiempo_inferencia,
-            requiere_accion_humana=diagnosis.requiere_accion_humana,
-            created_at=diagnosis.created_at.isoformat() if diagnosis.created_at else None
+            id=diagnosis_id,
+            plant_id=request.plant_id,
+            estado=diagnosis_data.get("estado", "Atención"),
+            confianza=confianza,
+            especie=diagnosis_data.get("especie", "Desconocida"),
+            sintomas=diagnosis_data.get("sintomas", []),
+            diagnostico=diagnosis_data.get("diagnostico", ""),
+            recomendaciones=diagnosis_data.get("recomendaciones", []),
+            fuentes=diagnosis_data.get("fuentes", []),
+            requiere_accion_humana=requiere_accion,
+            timestamp=datetime.now().isoformat()
         )
         
-        logger.info(f"✅ Diagnóstico completado: {diagnosis.estado} (confianza: {diagnosis.confianza:.2f})")
+        # Persistir en DB (si está disponible)
+        try:
+            conn = get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO diagnosticos (
+                        id, plant_id, estado, confianza, especie, sintomas,
+                        diagnostico, recomendaciones, fuentes, sensores
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    diagnosis_id,
+                    request.plant_id,
+                    response.estado,
+                    response.confianza,
+                    response.especie,
+                    ",".join(response.sintomas),
+                    response.diagnostico,
+                    ",".join(response.recomendaciones),
+                    ",".join(response.fuentes),
+                    json.dumps(request.sensores.dict())
+                ))
+                conn.commit()
+                cursor.close()
+                conn.close()
+                logger.info(f"✅ Diagnóstico guardado: {diagnosis_id}")
+        except Exception as e:
+            logger.warning(f"No se guardó en DB: {str(e)}")
+        
+        logger.info(f"✅ Diagnóstico completado: {response.estado} (confianza: {response.confianza:.2f})")
+        
         return response
         
-    except ModelNotReadyError as e:
-        logger.error(f"❌ Modelo no listo: {str(e)}")
-        raise HTTPException(status_code=503, detail=f"Modelo Phi-3.5 no disponible: {str(e)}")
-    except ConfidenceThresholdError as e:
-        logger.error(f"❌ Confianza insuficiente: {str(e)}")
-        raise HTTPException(status_code=422, detail=f"Confianza insuficiente: {str(e)}")
-    except PlantAnalysisException as e:
-        logger.error(f"❌ Error en diagnóstico: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error procesando diagnóstico: {str(e)}")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"❌ Error inesperado: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error interno del servidor")
+        logger.error(f"Error en diagnóstico: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/vision/analizar", tags=["Análisis Visual"])
-async def analizar_vision_solamente(
-    request: VisionOnlyRequest,
-    vision: Phi3VisionAdapter = Depends(get_vision_adapter)
-):
-    """Análisis visual rápido (sin RAG ni persistencia)"""
+@app.post("/admin/rag/upload", response_model=UploadResponse, tags=["Admin"])
+async def upload_pdf(
+    file: UploadFile = File(...),
+    category: Optional[str] = None
+) -> UploadResponse:
+    """
+    Endpoint para ADMIN: Inyectar PDFs dinámicamente al RAG
+    Los PDFs se procesan, vectorizan y se agregan sin reiniciar
+    """
     try:
-        image = PlantImage(image_base64=request.imagen)
-        result = await vision.analyze_plant_image(image, request.context)
-        return {"vision_result": result}
-    except Exception as e:
-        logger.error(f"Error en análisis visual: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error análisis visual: {str(e)}")
-
-
-@app.post("/conocimiento/consultar", tags=["Conocimiento"])
-async def consultar_conocimiento(
-    request: KnowledgeRequest,
-    rag: UnifiedRAGAdapter = Depends(get_rag_adapter)
-):
-    """Consulta directa a base de conocimiento RAG"""
-    try:
-        results = await rag.get_relevant_knowledge(
-            query=request.query,
-            filters=request.filters,
-            top_k=request.top_k
+        if not rag_loader:
+            raise HTTPException(status_code=503, detail="RAG no inicializado")
+        
+        if not file.filename.endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
+        
+        logger.info(f"📤 Admin subiendo PDF: {file.filename}")
+        
+        # Guardar PDF temporalmente
+        upload_dir = "storage/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        pdf_path = os.path.join(upload_dir, file.filename)
+        with open(pdf_path, "wb") as f:
+            contents = await file.read()
+            f.write(contents)
+        
+        # Procesar PDF
+        result = await rag_loader.upload_pdf(
+            pdf_path,
+            metadata={"category": category or "general"}
         )
-        return {"knowledge_results": results}
+        
+        if result["status"] == "success":
+            logger.info(f"✅ PDF cargado: {file.filename} ({result['chunks']} chunks)")
+            return UploadResponse(
+                status="success",
+                filename=file.filename,
+                chunks=result["chunks"],
+                message="PDF inyectado al RAG exitosamente"
+            )
+        else:
+            raise HTTPException(status_code=400, detail=result.get("message"))
+            
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error en consulta RAG: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error consulta conocimiento: {str(e)}")
+        logger.error(f"Error en upload: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-# Endpoints de Datos
-@app.get("/sensores/latest", tags=["Sensores"])
-async def obtener_sensores_recientes(
-    plant_id: Optional[str] = None,
-    db: PostgreSQLAdapter = Depends(get_db_adapter)
-):
-    """Obtiene datos más recientes de sensores"""
+@app.get("/admin/rag/sources", tags=["Admin"])
+async def get_rag_sources():
+    """
+    Endpoint para ADMIN: Listar PDFs cargados en RAG
+    """
     try:
-        sensor_data = await db.get_latest_sensor_data(plant_id)
-        return {"sensor_data": sensor_data.dict()}
+        if not rag_loader:
+            raise HTTPException(status_code=503, detail="RAG no inicializado")
+        
+        sources = await rag_loader.get_sources()
+        return {"sources": sources, "total": len(sources)}
+        
     except Exception as e:
-        logger.error(f"Error obteniendo sensores: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error sensores: {str(e)}")
+        logger.error(f"Error obteniendo sources: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/sensores/guardar", tags=["Sensores"])
-async def guardar_datos_sensores(
-    sensor_data: SensorData,
-    db: PostgreSQLAdapter = Depends(get_db_adapter)
-):
-    """Guarda nuevos datos de sensores"""
-    try:
-        success = await db.save_sensor_data(sensor_data)
-        return {"success": success, "message": "Datos guardados correctamente"}
-    except Exception as e:
-        logger.error(f"Error guardando sensores: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error guardando sensores: {str(e)}")
-
-
-@app.get("/diagnosticos/historial/{plant_id}", tags=["Diagnóstico"])
-async def obtener_historial_diagnosticos(
-    plant_id: str,
-    limit: int = 10,
-    db: PostgreSQLAdapter = Depends(get_db_adapter)
-):
-    """Obtiene historial de diagnósticos de una planta"""
-    try:
-        diagnoses = await db.get_diagnosis_history(plant_id, limit)
-        return {
-            "plant_id": plant_id,
-            "diagnoses": [d.dict() for d in diagnoses]
-        }
-    except Exception as e:
-        logger.error(f"Error obteniendo historial: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error historial: {str(e)}")
-
-
-# Endpoints de Sistema
 @app.get("/health", response_model=HealthResponse, tags=["Sistema"])
-async def health_check():
-    """Health check completo del sistema"""
+async def health() -> HealthResponse:
+    """
+    Health check del sistema
+    """
     try:
-        # Verificar componentes
-        model_ready = await vision_adapter.is_model_ready() if vision_adapter else False
-        rag_ready = bool(rag_adapter and len(rag_adapter.documents) > 0) if rag_adapter else False
-        db_connected = bool(db_adapter and db_adapter._connection and not db_adapter._connection.closed) if db_adapter else False
+        model_ready = phi3_model and await phi3_model.is_ready()
+        rag_ready = rag_loader is not None
         
-        # Obtener métricas si está disponible
-        system_metrics = None
-        if db_connected:
-            try:
-                system_metrics = await db_adapter.get_system_metrics()
-            except:
-                pass
+        # Verificar DB
+        db_ready = False
+        try:
+            conn = get_db_connection()
+            if conn:
+                conn.close()
+                db_ready = True
+        except:
+            pass
         
-        status = "healthy" if (model_ready and rag_ready and db_connected) else "unhealthy"
+        status = "healthy" if (model_ready and rag_ready) else "degraded"
         
         return HealthResponse(
             status=status,
-            service="Mole AI v2.0 - Hexagonal Architecture",
-            version="2.0.0",
             model_ready=model_ready,
             rag_ready=rag_ready,
-            database_connected=db_connected,
-            system_metrics=system_metrics
+            db_connected=db_ready,
+            timestamp=datetime.now().isoformat()
         )
         
     except Exception as e:
-        logger.error(f"Error en health check: {str(e)}")
-        raise HTTPException(status_code=503, detail=f"Servicio no disponible: {str(e)}")
+        logger.error(f"Error en health: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/system/metrics", tags=["Sistema"])
-async def obtener_metricas_sistema(
-    db: PostgreSQLAdapter = Depends(get_db_adapter)
-):
-    """Obtiene métricas detalladas del sistema"""
-    try:
-        metrics = await db_adapter.get_system_metrics()
-        
-        # Agregar información de modelos
-        if vision_adapter:
-            model_info = await vision_adapter.get_model_info()
-            metrics["model_info"] = model_info
-        
-        # Agregar información de RAG
-        if rag_adapter:
-            metrics["rag_info"] = {
-                "total_documents": len(rag_adapter.documents),
-                "vector_store_type": "chroma" if rag_adapter.use_chroma else "faiss",
-                "embedding_model": rag_adapter.embedding_model
-            }
-        
-        return {"metrics": metrics}
-        
-    except Exception as e:
-        logger.error(f"Error obteniendo métricas: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error métricas: {str(e)}")
-
-
-@app.get("/", tags=["Sistema"])
+@app.get("/", tags=["Info"])
 async def root():
-    """Información general del servicio"""
+    """Root endpoint"""
     return {
-        "service": "Mole AI v2.0",
-        "architecture": "Hexagonal Modular",
-        "model": "Phi-3.5 Vision-Instruct Q4",
+        "name": "Mole AI v2.0",
         "version": "2.0.0",
-        "description": "Sistema unificado de diagnóstico de plantas endémicas mexicanas",
+        "model": "Phi-3.5 Vision-Instruct Q4",
         "endpoints": {
-            "health": "/health",
-            "diagnostico": "/diagnostico",
-            "vision_analisis": "/vision/analizar",
-            "conocimiento": "/conocimiento/consultar",
-            "sensores": "/sensores/latest",
-            "historial": "/diagnosticos/historial/{plant_id}",
-            "metrics": "/system/metrics",
+            "diagnostico": "POST /diagnostico",
+            "admin_upload": "POST /admin/rag/upload",
+            "admin_sources": "GET /admin/rag/sources",
+            "health": "GET /health",
             "docs": "/docs"
-        },
-        "features": [
-            "Arquitectura Hexagonal Pura",
-            "Phi-3.5 Vision-Instruct Unificado",
-            "RAG Integrado",
-            "PostgreSQL Optimizado",
-            "Inyección de Dependencias",
-            "Error Handling Robusto"
-        ]
+        }
     }
 
 
-# Inicialización directa para desarrollo
 if __name__ == "__main__":
     import uvicorn
-    
-    # Configuración para desarrollo
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
+        "mole_ai.main:app",
+        host=os.getenv("API_HOST", "0.0.0.0"),
         port=int(os.getenv("API_PORT", "8000")),
-        reload=os.getenv("DEBUG", "false").lower() == "true",
-        log_level=os.getenv("LOG_LEVEL", "info").lower()
+        reload=os.getenv("DEBUG", "false").lower() == "true"
     )
