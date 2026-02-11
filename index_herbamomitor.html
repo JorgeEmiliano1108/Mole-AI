@@ -1,2 +1,162 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mole-IA TermLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+
+    <div id="start-screen" class="screen active">
+        <div class="intro-header">
+            <h1 class="intro-title">MoleAI</h1>
+            <div class="intro-sub">MONITORING TOOL</div>
+        </div>
+
+        <div class="intro-layout">
+            <div class="intro-menu">
+                <div class="menu-item" onclick="updateIntro('giro')">OBJETIVO</div>
+                <div class="menu-item" onclick="updateIntro('vision')">VISIÓN</div>
+                <div class="menu-item" onclick="updateIntro('flora')">FLORA MEXICANA</div>
+                <div class="menu-item" onclick="updateIntro('web')">ACERCA DE LA WEB</div>
+
+                <button class="start-btn-box" onclick="irALogin()">[ INICIAR SISTEMA ]</button>
+            </div>
+
+            <div class="intro-display">
+                <div id="intro-text" class="display-text">
+                    > SELECCIONE UNA OPCIÓN...<span class="cursor-blink">_</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="intro-footer">
+            COPYRIGHT 2077 MoleAI
+        </div>
+    </div>
+
+    <div id="login-screen" class="screen">
+        <div class="login-box">
+            <h2 class="login-title">ACCESO SEGURO</h2>
+            
+            <div id="register-fields" style="display: none;">
+                <div class="input-group">
+                    <label>USUARIO:</label>
+                    <input type="text" id="username-input" class="term-input" placeholder="FarmBoy_99">
+                </div>
+                <div class="input-group">
+                    <label>FECHA NAC:</label>
+                    <input type="date" id="dob-input" class="term-input" style="color-scheme: dark;">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>EMAIL:</label>
+                <input type="email" id="email-input" class="term-input" placeholder="usuario@email.com">
+            </div>
+            <div class="input-group">
+                <label>CLAVE:</label>
+                <input type="password" id="password-input" class="term-input" placeholder="****">
+            </div>
+
+            <button class="login-btn" onclick="entrarSistema()">ENTRAR >></button>
+            
+            <div class="register-link-container">
+                <span id="reg-link-text" onclick="mostrarRegistro()" style="cursor: pointer; font-size: 14px; text-decoration: underline; color: var(--pip-green); margin-top: 15px; display: block;">
+                    Registrarse
+                </span>
+            </div>
+
+            <div id="login-error" class="error-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="app-screen" class="screen">
+        <div class="pipboy-casing">
+            <div class="screen-container">
+                <div class="pip-header-container">
+                    <div class="agent-toggle" onclick="abrirChat()" title="Abrir comunicación con Mole-IA">
+                        <img src="{% static 'assets/topo.png' %}" class="mole-toggle-icon default-icon" alt="Agente Mole-IA">
+                        <img src="{% static 'assets/planta.jpeg' %}" class="mole-toggle-icon hover-icon" alt="Planta Agente IA">
+                    </div>
+
+                    <div class="header-tabs">
+                        <div class="tab-btn active" onclick="cambiarPlanta('manzanilla', this)">MANZANILLA</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('sabila', this)">SÁBILA</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('menta', this)">MENTA</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('lavanda', this)">LAVANDA</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('cempasuchil', this)">CEMPASÚCHIL</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('bugambilia', this)">BUGAMBILIA</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('toronjil', this)">TORONJIL</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('peyote', this)">PEYOTE</div>
+                        <div class="tab-btn" onclick="cambiarPlanta('hongos', this)">HONGOS</div>
+                        <div class="tab-btn btn-exit" onclick="location.reload()">[X]</div>
+                    </div>
+                </div>
+
+                <div class="main-display">
+                    <div class="col-stats">
+                        <div class="stat-block"><span class="stat-title">HUMEDAD</span><span class="stat-value" id="disp-hum">SIN DATOS</span></div>
+                        <div class="stat-block"><span class="stat-title">TEMP.</span><span class="stat-value" id="disp-temp">SIN DATOS</span></div>
+                        <div class="stat-block clickable-stat" onclick="toggleSys(this)"><span class="stat-title">RIEGO</span><span class="stat-value">OFF</span></div>
+                    </div>
+
+                    <div class="col-visual">
+                        <div class="focus-bracket fb-tl"></div><div class="focus-bracket fb-tr"></div>
+                        <div class="focus-bracket fb-bl"></div><div class="focus-bracket fb-br"></div>
+                        
+                        <svg id="icon-manzanilla" class="plant-icon active" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M50 90 Q 50 50 30 30" /><circle cx="30" cy="30" r="8" /><circle cx="70" cy="40" r="8" /><path d="M50 90 Q 50 60 70 40" /></g></svg>
+                        <svg id="icon-sabila" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M30 90 L 70 90 L 75 75 L 25 75 Z" /><path d="M35 75 Q 30 40 50 10 Q 70 40 65 75" /></g></svg>
+                        <svg id="icon-menta" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M50 95 V 20" /><path d="M50 35 Q 20 25 25 50 Q 50 45 50 35" /><path d="M50 35 Q 80 25 75 50 Q 50 45 50 35" /></g></svg>
+                        <svg id="icon-lavanda" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M50 95 V 50" /><path d="M40 40 L 40 15" stroke-dasharray="2,2" stroke-width="4"/><path d="M60 30 L 60 5" stroke-dasharray="2,2" stroke-width="4"/></g></svg>
+                        <svg id="icon-cempasuchil" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M50 90 V 60"/><circle cx="50" cy="40" r="15" stroke-dasharray="2,2"/><circle cx="50" cy="40" r="5"/></g></svg>
+                        <svg id="icon-bugambilia" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M50 90 Q 30 70 50 50"/><path d="M50 50 Q 70 30 50 10"/><path d="M50 50 Q 30 30 10 50"/><path d="M50 50 Q 70 70 90 50"/></g></svg>
+                        <svg id="icon-toronjil" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M50 95 V 30"/><path d="M50 50 L 30 40"/><path d="M50 70 L 70 60"/><circle cx="50" cy="20" r="5"/></g></svg>
+                        <svg id="icon-peyote" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><circle cx="50" cy="60" r="25" /><circle cx="50" cy="60" r="15" /><path d="M50 35 V 25" /><path d="M25 60 H 15" /><path d="M75 60 H 85" /></g></svg>
+                        <svg id="icon-hongos" class="plant-icon" viewBox="0 0 100 100"><g fill="none" stroke="#1eff00" stroke-width="3"><path d="M30 70 Q 30 40 50 30 Q 70 40 70 70" /><path d="M40 70 V 90 H 60 V 70" /><circle cx="40" cy="50" r="3" fill="#1eff00" /></g></svg>
+                    </div>
+
+                    <div class="col-stats">
+                        <div class="stat-block"><span class="stat-title">pH SUELO</span><span class="stat-value" id="disp-ph">SIN DATOS</span></div>
+                        <div class="stat-block"><span class="stat-title">ÍNDICE UV</span><span class="stat-value" id="disp-uv">SIN DATOS</span></div>
+                        <div class="stat-block" id="health-box"><span class="stat-title">ESTADO</span><span class="stat-value" id="disp-health">SIN DATOS</span></div>
+                        <div class="stat-block clickable-stat" onclick="toggleSys(this)"><span class="stat-title">LUCES</span><span class="stat-value">OFF</span></div>
+                    </div>
+                </div>
+
+                <div id="ai-modal">
+                    <div class="chat-header">
+                        <span>MOLE-AI CHAT</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div id="websocket-indicator" class="websocket-indicator disconnected">🔴 Offline</div>
+                            <span style="cursor:pointer" onclick="cerrarChat()">[X]</span>
+                        </div>
+                    </div>
+                    <div id="ai-chat-container">
+                        <div class="ai-message bot">> Hola. Soy Mole-IA. Estoy listo para darte información sobre la planta seleccionada.</div>
+                    </div>
+                    <div class="ai-input-area">
+                        <span>></span>
+                        <input type="text" id="ai-input" placeholder="Pregunta por usos, recetas..." onkeypress="if(event.keyCode===13) enviarComandoAI()">
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="{% static 'js/config.js' %}"></script>
+    
+    <script src="{% static 'js/apiService.js' %}"></script>
+    
+    <script src="{% static 'js/main.js' %}"></script>
+
+</body>
+</html>
 
 
