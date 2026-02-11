@@ -1,0 +1,293 @@
+/* =========================================
+   MOLE-AI TERMLINK - ESTILOS UNIFICADOS
+   Base: Fallout Style (Pip-Boy)
+   Addons: WebSocket Chat & Alerts
+   ========================================= */
+
+/* --- 1. BASE GENERAL (PIP-BOY STYLE) --- */
+:root {
+    --pip-green: #1eff00;
+    --pip-dim: #124d08;
+    --pip-bg: #000;
+    --pip-alert: #ffaa00;
+    --pip-danger: #ff0000;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    background-color: var(--pip-bg);
+    margin: 0; height: 100vh;
+    font-family: 'VT323', monospace;
+    color: var(--pip-green);
+    overflow: hidden; user-select: none;
+}
+
+/* Scanlines Globales */
+body::after {
+    content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px; z-index: 1000; pointer-events: none;
+}
+
+/* CLASES DE UTILIDAD */
+.screen { display: none; width: 100%; height: 100%; position: relative; z-index: 10; }
+.screen.active { display: flex; }
+
+/* --- PANTALLA 1: INICIO --- */
+#start-screen {
+    flex-direction: column; justify-content: center; align-items: center; padding: 40px;
+}
+
+.intro-header {
+    width: 100%; max-width: 1000px;
+    border-bottom: 2px solid var(--pip-green);
+    margin-bottom: 20px; padding-bottom: 10px;
+}
+.intro-title { font-size: 2.5rem; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+.intro-sub { color: var(--pip-dim); font-size: 1rem; }
+
+.intro-layout {
+    display: flex; width: 100%; max-width: 1000px; height: 60vh;
+    border-bottom: 2px solid var(--pip-dim);
+}
+
+.intro-menu {
+    width: 35%; padding-right: 20px; border-right: 2px solid var(--pip-green);
+    display: flex; flex-direction: column; justify-content: center; gap: 20px;
+}
+
+.menu-item {
+    font-size: 1.5rem; color: var(--pip-dim); cursor: pointer; transition: 0.2s;
+    padding: 5px 0; text-transform: uppercase;
+}
+.menu-item:hover, .menu-item.active-menu { 
+    color: var(--pip-green); text-shadow: 0 0 10px var(--pip-green); padding-left: 10px; 
+}
+
+.start-btn-box {
+    margin-top: 30px; border: 2px solid var(--pip-green);
+    padding: 10px; text-align: center; cursor: pointer;
+    transition: 0.3s; background: transparent; color: var(--pip-green);
+    font-family: 'VT323'; font-size: 1.6rem; width: 100%;
+}
+.start-btn-box:hover { background: var(--pip-green); color: #000; box-shadow: 0 0 20px var(--pip-green); }
+
+.intro-display {
+    width: 65%; padding: 30px;
+    display: flex; align-items: flex-start; justify-content: flex-start;
+    border: 1px solid var(--pip-dim); margin: 20px;
+    background: rgba(0, 20, 0, 0.3); box-shadow: inset 0 0 30px #000;
+    overflow-y: auto;
+}
+
+.display-text { 
+    font-size: 1.4rem; line-height: 1.6; color: var(--pip-green);
+    text-shadow: 0 0 5px var(--pip-green); min-height: 50px; width: 100%;
+}
+
+.cursor-blink { animation: blink 1s infinite; font-weight: bold; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.intro-footer {
+    margin-top: 20px; font-size: 0.8rem; color: var(--pip-dim); text-align: center; width: 100%;
+}
+
+/* --- PANTALLA 2: LOGIN --- */
+#login-screen { flex-direction: column; align-items: center; justify-content: center; }
+.login-box {
+    border: 2px solid var(--pip-green); padding: 40px; width: 400px; text-align: center;
+    box-shadow: 0 0 30px rgba(30, 255, 0, 0.1); background: #000;
+}
+.login-title { margin-top:0; border-bottom: 1px solid var(--pip-green); padding-bottom:10px; }
+.input-group { margin-bottom: 20px; text-align: left; }
+.input-group label { display: block; color: var(--pip-green); font-size: 1.2rem; margin-bottom: 5px; }
+.term-input {
+    width: 100%; background: #000; border: 1px solid var(--pip-dim); 
+    color: var(--pip-green); padding: 10px; font-family: 'VT323'; font-size: 1.5rem; outline: none;
+}
+.term-input:focus { border-color: var(--pip-green); box-shadow: 0 0 10px var(--pip-dim); }
+.login-btn {
+    width:100%; border:2px solid var(--pip-green); background:transparent; 
+    color:var(--pip-green); padding:10px; cursor:pointer; font-family: 'VT323'; font-size: 1.2rem;
+}
+.login-btn:hover { background: var(--pip-green); color: #000; }
+
+/* --- PANTALLA 3: DASHBOARD --- */
+#app-screen { flex-direction: column; align-items: center; justify-content: center; }
+.pipboy-casing {
+    width: 98%; max-width: 1200px; height: 95vh;
+    background: #222; padding: 20px; border-radius: 30px;
+    box-shadow: inset 0 0 50px #000, 0 0 20px #111;
+    display: flex; flex-direction: column;
+}
+.screen-container {
+    flex-grow: 1; background: radial-gradient(circle, #0f240f 0%, #000500 90%);
+    border: 4px solid #555; border-radius: 20px; position: relative;
+    overflow: hidden; padding: 20px; box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
+    display: flex; flex-direction: column;
+}
+
+/* Header & Topo */
+.pip-header-container {
+    display: flex; align-items: end; gap: 20px;
+    border-bottom: 2px solid var(--pip-green);
+    padding-bottom: 10px; margin-bottom: 20px; height: 70px;
+}
+.agent-toggle {
+    width: 70px; height: 70px;
+    border: 1px solid var(--pip-dim); 
+    margin-right: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+    transition: all 0.2s; overflow: hidden; position: relative;
+    background: #000;
+}
+.agent-toggle:hover { border-color: var(--pip-green); box-shadow: 0 0 15px var(--pip-green); }
+
+/* --- IMÁGENES DE TOPO/PLANTA --- */
+.mole-img, .default-icon { 
+    display: block; width: 100%; height: 100%; 
+    object-fit: contain; image-rendering: pixelated; background: #000;
+}
+.plant-img, .hover-icon { 
+    display: none; width: 100%; height: 100%; 
+    object-fit: contain; image-rendering: pixelated; background: #000;
+}
+.agent-toggle:hover .mole-toggle-icon.default-icon { display: none; }
+.agent-toggle:hover .mole-toggle-icon.hover-icon { display: block; }
+
+.header-tabs { 
+    flex-grow: 1; display: flex; justify-content: flex-start; gap: 15px;
+    margin-bottom: 0; font-size: 1.3rem; text-transform: uppercase; overflow-x: auto; 
+    align-items: center; height: 100%;
+}
+.header-tabs::-webkit-scrollbar { display: none; }
+.tab-btn { cursor: pointer; opacity: 0.5; transition: 0.2s; padding: 5px 10px; white-space: nowrap; }
+.tab-btn.active { opacity: 1; font-weight: bold; text-shadow: 0 0 10px var(--pip-green); border-bottom: 3px solid var(--pip-green); }
+.tab-btn:hover { color: #fff; opacity: 1; }
+.btn-exit { color: red; opacity: 0.8; }
+
+/* Main Dashboard */
+.main-display { flex-grow: 1; display: flex; position: relative; z-index: 15; }
+.col-stats { width: 25%; display: flex; flex-direction: column; justify-content: center; gap: 40px; }
+.stat-block { 
+    border: 2px solid var(--pip-green); background: rgba(0, 20, 0, 0.6); 
+    padding: 10px; position: relative; text-align: center; transition: all 0.3s;
+}
+.stat-title { font-size: 1rem; background: var(--pip-green); color: #000; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); padding: 0 5px; white-space: nowrap; }
+.stat-value { font-size: 2rem; display: block; text-shadow: 0 0 5px var(--pip-green); }
+.clickable-stat { cursor: pointer; }
+
+/* Alertas Dashboard */
+.stat-block.warning { border-color: var(--pip-alert); box-shadow: 0 0 10px var(--pip-alert); animation: pulseWarn 1s infinite; }
+.stat-block.warning .stat-title { background: var(--pip-alert); }
+.stat-block.warning .stat-value { color: var(--pip-alert); text-shadow: 0 0 5px var(--pip-alert); }
+.stat-block.danger { border-color: var(--pip-danger); box-shadow: 0 0 15px var(--pip-danger); animation: pulseDanger 0.5s infinite; }
+.stat-block.danger .stat-title { background: var(--pip-danger); color: #fff; }
+.stat-block.danger .stat-value { color: var(--pip-danger); text-shadow: 0 0 5px var(--pip-danger); }
+@keyframes pulseWarn { 50% { opacity: 0.7; } }
+@keyframes pulseDanger { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; border-color: transparent; } }
+
+.col-visual { width: 50%; display: flex; justify-content: center; align-items: center; position: relative; }
+.focus-bracket { position: absolute; width: 20px; height: 20px; border: 3px solid var(--pip-green); box-shadow: 0 0 10px var(--pip-green); }
+.fb-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+.fb-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+.fb-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+.fb-br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+.plant-icon { width: 200px; height: 200px; display: none; filter: drop-shadow(0 0 10px var(--pip-green)); animation: float 6s infinite ease-in-out; }
+.plant-icon.active { display: block; }
+@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+/* --- 2. CHAT & WEBSOCKET ENHANCEMENTS (AÑADIDO) --- */
+
+/* Contenedor del Chat */
+#ai-modal {
+    display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+    width: 90%; max-width: 600px; height: 500px;
+    background: #000; border: 3px solid var(--pip-green); z-index: 200; 
+    padding: 15px; box-shadow: 0 0 50px rgba(30, 255, 0, 0.3); flex-direction: column;
+}
+.chat-header { 
+    display: flex; justify-content: space-between; align-items: center; 
+    padding-bottom: 10px; border-bottom: 2px solid var(--pip-green); 
+    font-size: 1.5rem; color: var(--pip-green); 
+}
+
+/* Área de Mensajes */
+#ai-chat-container {
+    flex-grow: 1; overflow-y: auto; margin-top: 10px; margin-bottom: 10px;
+    padding: 10px; border: 1px solid var(--pip-dim); display: flex; flex-direction: column;
+    background-repeat: no-repeat; background-position: center; background-size: 200px;
+    /* Ajustado para asegurar visibilidad */
+    background-color: rgba(0, 15, 0, 0.9);
+}
+
+/* Estilos de Mensajes (Base + Nuevos) */
+.ai-message { 
+    margin-bottom: 15px; padding: 10px; border: 1px solid var(--pip-dim); 
+    max-width: 90%; font-size: 1.1rem; position: relative; transition: all 0.3s ease;
+}
+.ai-message:hover { transform: translateX(2px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+
+.ai-message.bot { 
+    background: rgba(30, 255, 0, 0.05); color: var(--pip-green); align-self: flex-start; 
+    border-left: 3px solid var(--pip-green);
+}
+.ai-message.user { 
+    background: rgba(0, 0, 0, 0.8); color: #fff; align-self: flex-end; text-align: right; 
+    border-right: 3px solid #fff;
+}
+
+/* Input Area */
+.ai-input-area { display: flex; align-items: center; border: 2px solid var(--pip-green); padding: 5px; background: #000; }
+#ai-input { 
+    flex-grow: 1; background: transparent; border: none; 
+    color: var(--pip-green); font-family: 'VT323'; font-size: 1.2rem; padding: 5px; outline: none; 
+}
+
+/* --- INDICADORES TÁCTICOS (NUEVO) --- */
+
+/* Indicador de Estado WebSocket */
+.websocket-indicator {
+    padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-right: 10px;
+}
+.websocket-indicator.connected { background: var(--pip-green); color: #000; box-shadow: 0 0 5px var(--pip-green); }
+.websocket-indicator.disconnected { background: var(--pip-danger); color: #fff; animation: pulse 1s infinite; }
+
+/* Alertas Especiales en Chat */
+.tactical-alert-indicator {
+    background: linear-gradient(45deg, var(--pip-dim), #000);
+    color: var(--pip-alert); border: 1px solid var(--pip-alert);
+    padding: 5px; margin-bottom: 5px; display: inline-block;
+    font-size: 0.9em; text-transform: uppercase;
+}
+.ai-message.tactical-alert {
+    border-left: 6px solid var(--pip-alert);
+    background: linear-gradient(to right, rgba(255, 170, 0, 0.1), transparent);
+}
+.ai-message.error {
+    background: rgba(255, 0, 0, 0.1); border-left: 4px solid var(--pip-danger); color: #ff6666;
+}
+
+/* Metadatos */
+.ai-message .ai-metadata {
+    font-size: 0.8em; color: #888; margin-top: 8px; padding-top: 5px;
+    border-top: 1px solid var(--pip-dim); font-family: 'Courier New', monospace;
+}
+
+/* Animaciones */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .intro-layout { flex-direction: column; height: auto; }
+    .intro-menu { width: 100%; border-right: none; border-bottom: 1px solid var(--pip-dim); padding-bottom: 20px; }
+    .intro-display { width: 100%; margin: 20px 0; height: 200px; }
+    .pipboy-casing { width: 100%; height: 100vh; border-radius: 0; padding: 5px; border: none; }
+    .screen-container { border-width: 2px; }
+    .pip-header-container { flex-wrap: wrap; height: auto; }
+    .main-display { flex-direction: column; align-items: center; overflow-y: auto; }
+    .col-visual { width: 100%; height: 200px; order: 1; margin-bottom: 10px; }
+    .col-stats { width: 100%; flex-direction: row; order: 2; margin-bottom: 10px; gap: 10px; }
+    .plant-icon { width: 140px; height: 140px; }
+}
