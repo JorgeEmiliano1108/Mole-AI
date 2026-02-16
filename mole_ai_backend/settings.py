@@ -312,29 +312,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Channels Configuration for WebSocket support
 ASGI_APPLICATION = 'mole_ai_backend.asgi.application'
 
-# Channel layers configuration - Redis with fallback
-try:
-    import redis
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                "hosts": [('127.0.0.1', 6379)],
-            },
-        },
+# FIX: Forzar InMemory para Windows/Dev sin Redis
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
     }
-    print("✅ Redis channel layer configured")
-except ImportError:
-    print("⚠️ Redis not found - using in-memory channel layer (development only)")
-    CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels.layers.InMemoryChannelLayer'
-        }
-    }
+}
 
 # Mole-AI Service Configuration
 MOLE_AI_SERVICE_URL = os.getenv('MOLE_AI_SERVICE_URL', 'http://localhost:8001')
-MOLE_AI_TIMEOUT = int(os.getenv('MOLE_AI_TIMEOUT', '30'))
+MOLE_AI_TIMEOUT = int(os.getenv('MOLE_AI_TIMEOUT', '120'))
 MOLE_AI_API_KEY = os.getenv('MOLE_AI_API_KEY', None)
 
 import mimetypes

@@ -79,3 +79,16 @@ class AuthHealthCheckView(APIView):
             'service': 'Authentication Module',
             'version': '1.0.0'
         })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def auth_debug_view(request):
+    """
+    Debug endpoint for Auth headers
+    """
+    return Response({
+        'user': str(request.user),
+        'auth_header': request.META.get('HTTP_AUTHORIZATION', 'None'),
+        'is_authenticated': request.user.is_authenticated,
+        'supabase_uid': getattr(request.user, 'supabase_uid', None)
+    })

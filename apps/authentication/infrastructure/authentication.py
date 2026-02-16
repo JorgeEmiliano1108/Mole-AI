@@ -44,11 +44,17 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         Authenticate the token with Supabase JWT secret and return user.
         """
         try:
-            # Decode the JWT token using Supabase secret
+            # Auto-detect algorithm and get correct verification key
+            from apps.authentication.jwks import get_verification_key
+            verification_key, algorithms = get_verification_key(
+                settings.SUPABASE_URL, token
+            )
+            
+            # Decode the JWT token using the resolved key
             payload = jwt.decode(
                 token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=[settings.SUPABASE_JWT_ALGORITHM],
+                verification_key,
+                algorithms=algorithms,
                 audience='authenticated',
                 options={
                     'verify_aud': True,

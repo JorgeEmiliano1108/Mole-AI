@@ -31,12 +31,23 @@ def index_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-@throttle_classes([SensorDataThrottle])
 def sensor_data_view(request):
     """
     API endpoint para obtener datos de sensores
+    BUILDER FIX: Dev Mode support
     """
+    from django.conf import settings
+    
+    # Check for authentication OR Dev Mode
+    if not request.user.is_authenticated:
+        # Dev mode: Allow if DEBUG is True AND specific query param is present
+        is_dev_access = settings.DEBUG and request.GET.get('dev_mode') == 'true'
+        if not is_dev_access:
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+            
     try:
         # Validar parámetros de consulta con serializer
         query_serializer = SensorDataQuerySerializer(data=request.GET)

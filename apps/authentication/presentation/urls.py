@@ -18,4 +18,7 @@ urlpatterns = [
     
     # Health Check endpoint
     path('api/v1/auth/health/', views.AuthHealthCheckView.as_view(), name='auth_health_check'),
+    
+    # Debug Auth endpoint
+    path('api/v1/auth/debug/', views.auth_debug_view, name='auth_debug'),
 ]

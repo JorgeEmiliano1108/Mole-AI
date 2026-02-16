@@ -132,7 +132,7 @@ class MoleAIClient:
     def __init__(self):
         """Initialize client with configuration"""
         self.base_url = getattr(settings, 'MOLE_AI_SERVICE_URL', 'http://localhost:8001')
-        self.timeout = getattr(settings, 'MOLE_AI_TIMEOUT', 30)
+        self.timeout = getattr(settings, 'MOLE_AI_TIMEOUT', 120)
         self.api_key = getattr(settings, 'MOLE_AI_API_KEY', None)
         
         logger.info(f"Mole-AI client initialized with URL: {self.base_url}")
@@ -244,7 +244,7 @@ class MoleAIClient:
             )
             
             # Make request to Mole-AI service
-            response_data = self._make_request('/v1/chat/generate', data=payload)
+            response_data = self._make_request('/api/v1/mole-ai/chat', data=payload)
             
             # Calculate processing time
             processing_time_ms = int((timezone.now() - start_time).total_seconds() * 1000)
@@ -314,7 +314,7 @@ class MoleAIClient:
                 'model': kwargs.get('model', 'sentence-transformers/all-mpnet-base-v2')
             }
             
-            response_data = self._make_request('/v1/embeddings', data=payload)
+            response_data = self._make_request('/api/v1/embeddings', data=payload)
             
             return {
                 'vector': response_data.get('vector'),
@@ -335,7 +335,7 @@ class MoleAIClient:
             Health status information
         """
         try:
-            response_data = self._make_request('/v1/health', method='GET')
+            response_data = self._make_request('/api/v1/health', method='GET')
             
             return {
                 'is_healthy': response_data.get('is_healthy'),

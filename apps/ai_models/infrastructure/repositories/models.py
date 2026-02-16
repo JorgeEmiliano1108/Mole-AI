@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-# from pgvector import VectorField  # Temporarily commented for setup
+from pgvector.django import VectorField
 import json
 
 User = get_user_model()
@@ -122,10 +122,10 @@ class CNNInference(models.Model):
     top_prediction = models.JSONField(default=dict)  # Highest confidence prediction
     
     # Feature extraction
-    # features_vector = VectorField(dimensions=512, null=True, blank=True)  # CNN features
-    # embedding_vector = VectorField(dimensions=1536, null=True, blank=True)  # CLIP embedding
-    features_vector = models.TextField(null=True, blank=True)  # Temporary field type
-    embedding_vector = models.TextField(null=True, blank=True)  # Temporary field type
+    features_vector = VectorField(dimensions=512, null=True, blank=True)  # CNN features
+    embedding_vector = VectorField(dimensions=1536, null=True, blank=True)  # CLIP embedding
+    # features_vector = models.TextField(null=True, blank=True)  # Temporary field type
+    # embedding_vector = models.TextField(null=True, blank=True)  # Temporary field type
     
     # Performance metrics
     inference_time_ms = models.IntegerField()

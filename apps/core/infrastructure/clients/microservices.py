@@ -172,7 +172,7 @@ class BaseMicroserviceClient(ABC):
     
     def health_check(self) -> ServiceResponse:
         """Check if microservice is healthy."""
-        return self.get("health")
+        return self.get("api/v1/health")
     
     def __enter__(self):
         return self
@@ -188,16 +188,16 @@ class AIMicroserviceClient(BaseMicroserviceClient):
         """Send image to AI microservice for analysis."""
         files = {'image': ('image.jpg', image_data, 'image/jpeg')}
         data = {'model_type': model_type}
-        return self.post('analyze/image', data=data, files=files)
+        return self.post('api/v1/analyze/image', data=data, files=files)
     
     def generate_recommendations(self, context: Dict[str, Any]) -> ServiceResponse:
         """Generate AI recommendations based on context."""
-        return self.post('recommendations/generate', data=context)
+        return self.post('api/v1/recommendations/generate', data=context)
     
     def chat_with_plant_expert(self, message: str, session_id: str) -> ServiceResponse:
         """Send chat message to plant expert AI."""
-        data = {'message': message, 'session_id': session_id}
-        return self.post('chat/expert', data=data)
+        data = {'query': message, 'context': [], 'session_id': session_id}
+        return self.post('api/v1/mole-ai/chat', data=data)
 
 
 class DataProcessingMicroserviceClient(BaseMicroserviceClient):

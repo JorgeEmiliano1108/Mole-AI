@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-# from pgvector import VectorField  # Temporarily commented for setup
+from pgvector.django import VectorField
 
 User = get_user_model()
 
@@ -80,8 +80,8 @@ class PlantKnowledge(models.Model):
     common_names = models.JSONField(default=list, blank=True)
     
     # Vector embedding for semantic search
-    # embedding = VectorField(dimensions=1536)  # OpenAI embedding dimension - Temporarily commented
-    embedding = models.TextField(null=True, blank=True)  # Temporary field type
+    embedding = VectorField(dimensions=1536)  # OpenAI embedding dimension
+    # embedding = models.TextField(null=True, blank=True)  # Temporary field type
     
     # Metadata
     source = models.CharField(max_length=100, blank=True)
