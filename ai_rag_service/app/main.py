@@ -1,13 +1,182 @@
+"""
+Mole AI - Backend for Backend Service (Merged & Stable)
+FastAPI microservice following Hexagonal Architecture
+"""
+import logging
+import sys
+import os
+from contextlib import asynccontextmanager
+from typing import Optional, Any
+
+# Load .env BEFORE any other imports that use os.getenv
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env'))
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+# ============================================================================
+# 1. SYS.PATH FIX 
+# ============================================================================
+# Aseguramos que la raíz del proyecto esté en el path antes de importar nada más
 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+# ============================================================================
+# IMPORTS
+# ============================================================================
+# Importamos adaptadores e interfaces reales
 
+try:
+    from application.use_cases.mole_ai_chat_use_case import MoleAIChatUseCase
+    from application.use_cases import (
+        GenerateEmbeddingUseCase, 
+        GenerateChatUseCase, 
+        GetServiceHealthUseCase
+    )
+    from infrastructure.ai.model_manager import ModelManagerAdapter
+    from infrastructure.ai.vector_store import FAISSVectorStoreAdapter
+    from infrastructure.data.pdf_parser import PDFIngestionAdapter
+    
+    from application.use_cases.ingest_knowledge_use_case import IngestKnowledgeUseCase
+    from infrastructure.api.routes import create_routes
+    from infrastructure.api.knowledge_routes import create_knowledge_routes
+    print("Imports cargados.")
+except ImportError as e:
+    print(f"ERROR: {e}")
+    print("ai_rag_service entorno virtual activo.")
+    sys.exit(1) 
 
-@app.get("/")
+# ============================================================================
+# LOGGING & GLOBAL STATE
+# ============================================================================
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Contenedor de Dependencias
+# ============================================================================
+# LIFECYCLE (Gestión de Modelos)
+# ============================================================================
+# Contenedor de Dependencias Globales
+model_manager: Optional[ModelManagerAdapter] = None
+vector_store_adapter: Optional[FAISSVectorStoreAdapter] = None
+pdf_ingestion_adapter: Optional[PDFIngestionAdapter] = None
+
+embedding_use_case: Optional[GenerateEmbeddingUseCase] = None
+chat_use_case: Optional[GenerateChatUseCase] = None
+mole_ai_chat_use_case: Optional[MoleAIChatUseCase] = None
+health_use_case: Optional[GetServiceHealthUseCase] = None
+ingest_knowledge_use_case: Optional[IngestKnowledgeUseCase] = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Inicializa los modelos de IA al arrancar y los limpia al cerrar"""
+    global model_manager, vector_store_adapter, pdf_ingestion_adapter
+    global embedding_use_case, chat_use_case, mole_ai_chat_use_case, health_use_case, ingest_knowledge_use_case
+    
+    logger.info("Iniciando Mole AI Service...")
+    
+    try:
+        # 1. Inicializar el Gestor de Modelos (Carga pesada)
+        model_manager = ModelManagerAdapter()
+        await model_manager.initialize() 
+        logger.info("Model Manager inicializado")
+        
+        # 2. Inicializar Adaptadores de Infraestructura
+        vector_store_adapter = FAISSVectorStoreAdapter()
+        pdf_ingestion_adapter = PDFIngestionAdapter()
+
+        # 3. Inyectar servicios en los Casos de Uso
+        embedding_service = model_manager.get_embedding_service()
+        llm_service = model_manager.get_llm_service()
+
+        embedding_use_case = GenerateEmbeddingUseCase(embedding_service)
+        chat_use_case = GenerateChatUseCase(llm_service)
+        
+        # INYECCIÓN DEL CASO DE USO ESPECIALIZADO (Mole-AI)
+        mole_ai_chat_use_case = MoleAIChatUseCase(
+            llm_service=llm_service,
+            vector_store=vector_store_adapter
+        )
+        
+        # Caso de uso de Ingesta
+        ingest_knowledge_use_case = IngestKnowledgeUseCase(
+            vector_store=vector_store_adapter,
+            ingestion_service=pdf_ingestion_adapter
+        )
+        
+        health_use_case = GetServiceHealthUseCase(model_manager)
+        
+        # 4. REGISTRO DE RUTAS (Ahora dentro del lifespan para asegurar inyección)
+        if create_routes:
+            logger.info("Configurando rutas y endpoints...")
+            api_router = create_routes(
+                embedding_use_case=embedding_use_case,
+                chat_use_case=chat_use_case,
+                mole_ai_chat_use_case=mole_ai_chat_use_case,
+                health_use_case=health_use_case,
+                ingest_knowledge_use_case=ingest_knowledge_use_case
+            )
+            app.include_router(api_router, prefix="/api/v1")
+            
+            # Knowledge management routes (PDF ingest, sources)
+            knowledge_api = create_knowledge_routes(ingest_knowledge_use_case)
+            app.include_router(knowledge_api, prefix="/api/v1")
+            
+            # Log de rutas
+            for route in app.routes:
+                methods = ", ".join(route.methods) if hasattr(route, "methods") else "ANY"
+                logger.info(f"   👉 {methods} {route.path}")
+        
+        logger.info("Casos de uso listos para recibir peticiones")
+        yield # El servicio corre aquí
+        
+    except Exception as e:
+        logger.error(f"Error en inicio: {e}")
+        raise e
+    finally:
+        logger.info("Apagando servicios...")
+        if model_manager:
+            await model_manager.unload_all_models()
+
+# ============================================================================
+# FASTAPI APP SETUP
+# ============================================================================
+app = FastAPI(
+    title="Mole AI Service",
+    version="1.1.0 (Multimodal)",
+    lifespan=lifespan
+)
+
+@app.get("/", tags=["General"])
 async def root():
-    return {"message": "ai_rag_service stub running"}
+    """Root endpoint to check service status and redirect to docs"""
+    return {
+        "service": "Mole AI RAG Service",
+        "status": "online",
+        "version": "1.1.0",
+        "docs_url": "/docs",
+        "health_check": "/api/v1/health"
+    }
+
+# CORS: Allow all origins in dev. In production, set CORS_ALLOWED_ORIGINS env var.
+_cors_env = os.getenv("CORS_ALLOWED_ORIGINS", "")
+_cors_origins = [o.strip() for o in _cors_env.split(",") if o.strip()] if _cors_env else ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ============================================================================
+# ENTRY POINT
+# ============================================================================
+if __name__ == "__main__":
+    import uvicorn
+    # Ajustamos sys.path nuevamente para uvicorn subprocess
+    sys.path.append(PROJECT_ROOT)
+    uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)

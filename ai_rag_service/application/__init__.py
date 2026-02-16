@@ -1,0 +1,1 @@
+# Application package for B4B AI service

@@ -1,275 +1,224 @@
-# 🧬 Mole AI - RAG Service
+# Mole AI - Backend for Backend Service
 
-**Microservicio de RAG + Razonamiento** usando **Phi-3.5 Vision-Instruct Q4**
+## 📋 **Overview**
 
-Integra conocimiento externo (PDFs) con razonamiento para generar diagnósticos finales.
+FastAPI microservice siguiendo **Arquitectura Hexagonal (Clean Architecture)** que proporciona capacidades de IA para aplicaciones Django consumidoras.
 
-Arquitectura hexagonal, independiente, probable vía Swagger UI.
-
-## 🏗️ Arquitectura Hexagonal
+## 🏗️ **Arquitectura**
 
 ```
 ai_rag_service/
-├── domain/                    # Lógica pura
-│   ├── models/               # Entidades
-│   ├── ports/                # Interfaces
-│   └── exceptions/
-├── use_cases/                # Orquestación
-│   ├── upload_pdf_use_case.py
-│   └── diagnose_with_rag_use_case.py
-├── adapters/                 # Implementaciones
-│   ├── inbound/             # FastAPI
-│   └── outbound/
-│       ├── vector_store.py  # FAISS
-│       └── phi3_reasoning.py
-├── infrastructure/          # Configuración
-├── main.py
-├── requirements.txt
-├── Dockerfile
-└── README.md
+├── domain/                    # Lógica de negocio pura
+│   ├── models.py             # Entidades (EmbeddingRequest, ChatRequest, etc.)
+│   └── ports.py              # Interfaces abstractas (EmbeddingPort, LLMGenerationPort)
+├── application/               # Casos de uso (orchestración)
+│   └── use_cases.py          # GenerateEmbeddingUseCase, GenerateChatUseCase
+├── infrastructure/           # Implementaciones concretas
+│   ├── ai/                   # Servicios de IA
+│   │   ├── embeddings.py     # SentenceTransformerEmbeddingAdapter
+│   │   ├── llm.py           # Phi35LLMAdapter
+│   │   └── model_manager.py  # ModelManagerAdapter
+│   └── api/                  # Capa HTTP
+│       ├── contracts.py      # DTOs Pydantic
+│       └── routes.py         # Endpoints FastAPI
+└── main_refactored.py        # Orquestador principal
 ```
 
-## 🚀 Inicio Rápido
+## 🔌 **API Endpoints**
 
-### 1. Instalación
+### **1. Generar Embeddings**
+```http
+POST /v1/embeddings
+Content-Type: application/json
 
-```bash
-cd ai_rag_service
-pip install -r requirements.txt
-```
-
-### 2. Ejecutar Servicio
-
-```bash
-python -m uvicorn main:app --reload --port 8002
-```
-
-Swagger: http://localhost:8002/docs
-
-### 3. Probar Endpoints
-
-#### Subir PDF (Admin)
-
-```bash
-curl -X POST http://localhost:8002/rag/admin/upload-pdf \
-  -F "file=@plant_guide.pdf"
-```
-
-#### Diagnóstico Final
-
-```json
 {
-  "vision_output": {
-    "estado": "Atención",
-    "confianza": 0.85,
-    "especie_probable": "Solanum lycopersicum",
-    "sintomas": ["Manchas", "Defoliación"],
-    "análisis_visual": "..."
-  },
-  "sensores": {
-    "ph": 6.5,
-    "humedad": 65.0,
-    "temp": 24.5,
-    "uv": 0.8
-  }
-}
-```
-
-## 📡 Endpoints
-
-### POST `/rag/diagnose`
-
-Diagnóstico final (Vision + RAG + Phi-3.5)
-
-**Request:**
-```json
-{
-  "vision_output": {...},
-  "sensores": {...}
+    "text": "¿Cómo puedo cuidar una planta de menta en casa?"
 }
 ```
 
 **Response:**
 ```json
 {
-  "id": "uuid",
-  "timestamp": "2024-12-19T10:30:00",
-  "diagnostico": "Tizón tardío confirmado",
-  "recomendaciones": ["Aplicar fungicida"],
-  "fuentes_consultadas": ["plant_diseases.pdf"],
-  "confianza_final": 0.92,
-  "requiere_accion_humana": false
+    "vector": [0.12, -0.45, 0.78, ...],  // 768 dimensiones
+    "dimension": 768,
+    "model_used": "sentence-transformers/all-mpnet-base-v2",
+    "processing_time_ms": 45.2
 }
 ```
 
-### POST `/rag/admin/upload-pdf`
+### **2. Generar Respuesta Chat**
+```http
+POST /v1/chat/generate
+Content-Type: application/json
 
-Inyecta PDF dinámicamente al RAG
-
-```bash
-curl -X POST http://localhost:8002/rag/admin/upload-pdf \
-  -F "file=@knowledge.pdf"
+{
+    "query": "¿Cómo riego la menta?",
+    "context": [
+        "La menta necesita humedad constante pero sin encharcamiento.",
+        "Es mejor regar por la mañana para evitar hongos."
+    ],
+    "max_tokens": 512,
+    "temperature": 0.7
+}
 ```
 
-### GET `/rag/admin/sources`
-
-Lista PDFs cargados
-
-### GET `/rag/health`
-
-Health check
-
-## 📊 Flujo de Datos
-
-```
-1. Recibe output de Vision Service
-   ├─ estado, confianza, especie, síntomas
-   └─ análisis visual
-
-2. Recibe datos de sensores
-   ├─ pH, humedad, temp, UV
-   └─ Contexto ambiental
-
-3. RAG retrieval
-   └─ Query similar en FAISS → chunks relevantes
-
-4. Razonamiento con Phi-3.5
-   ├─ Procesa: visión + sensores + conocimiento
-   └─ Output: diagnóstico + recomendaciones
-
-5. Respuesta estructurada JSON
-   └─ Diagnóstico final, fuentes, acción requerida
-```
-
-## 📦 Docker
-
-### Build
-
-```bash
-docker build -t mole-ai-rag:1.0 .
-```
-
-### Run
-
-```bash
-docker run -p 8002:8002 \
-  -v $(pwd)/storage:/app/storage \
-  mole-ai-rag:1.0
-```
-
-## 🧠 Modelo
-
-**Phi-3.5 Vision-Instruct Q4**
-- ÚNICO modelo permitido
-- CPU-optimized
-- Q4 quantization
-- Usado para razonamiento + contexto RAG
-
-## 🏛️ Diseño Hexagonal
-
-### Domain
-- `models/`: Entidades (VisionOutput, DiagnoseRequest, FinalDiagnosis)
-- `ports/`: Interfaces (VectorStorePort, ReasoningModelPort)
-
-### Use Cases
-- `UploadPDFUseCase`: Ingesta dinámica de PDFs
-- `DiagnoseWithRAGUseCase`: Integración completa
-
-### Adapters
-- **Inbound**: FastAPI + Swagger
-- **Outbound**: FAISS + Phi-3.5 Reasoning
-
-## ✅ Flujo de Ejecución
-
-```
-1. HTTP Request → FastAPI Adapter
-2. Adapter → Use Case (DiagnoseWithRAGUseCase)
-3. Use Case → Domain Ports
-4. Ports → FAISS (retrieval) + Phi-3.5 (reasoning)
-5. Domain Models ← Adapters
-6. HTTP Response (JSON)
-```
-
-## 📖 Documentación
-
-- **Swagger**: http://localhost:8002/docs
-- **ReDoc**: http://localhost:8002/redoc
-- **OpenAPI**: http://localhost:8002/openapi.json
-
-## 🔧 Configuración
-
-```env
-API_HOST=0.0.0.0
-API_PORT=8002
-REASONING_MODEL=microsoft/Phi-3.5-vision-instruct
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-VECTOR_DB_PATH=storage/vectors
-LOG_LEVEL=INFO
-```
-
-## 📝 Modelos de Datos
-
-```python
-# Entrada desde Vision Service
-VisionOutput(
-    estado: "Sana|Atención|Peligro",
-    confianza: 0.0-1.0,
-    especie_probable: str,
-    sintomas: List[str],
-    análisis_visual: str
-)
-
-# Entrada de sensores
-SensorData(
-    ph: float,
-    humedad: float,
-    temp: float,
-    uv: float
-)
-
-# Salida final
-FinalDiagnosis(
-    diagnostico: str,
-    recomendaciones: List[str],
-    fuentes_consultadas: List[str],
-    confianza_final: float,
-    requiere_accion_humana: bool
-)
-```
-
-## 🗄️ Vector Store (FAISS)
-
-```
-storage/vectors/
-├── faiss_index/        # Índice de FAISS
-└── metadata.json       # Metadatos de PDFs
-```
-
-## ⛔ Prohibiciones (Compliance)
-
-✅ NO se comunica con Vision Service (independiente)
-✅ NO usa otros modelos (solo Phi-3.5)
-✅ NO bases de datos externas
-✅ NO pseudocódigo
-✅ 100% ejecutable
-✅ Probable vía Swagger UI
-
-## 🚦 Health Check
-
-```bash
-curl http://localhost:8002/rag/health
-```
-
+**Response:**
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2024-12-19T10:30:00"
+    "answer": "Para regar tu menta correctamente, mantén el suelo húmedo pero no encharcado...",
+    "model_used": "microsoft/Phi-3.5-vision-instruct",
+    "tokens_generated": 127,
+    "processing_time_ms": 2341.5
 }
 ```
 
----
+### **3. Health Check**
+```http
+GET /v1/health
+```
 
-**Versión:** 1.0.0  
-**Status:** Production Ready ✅  
-**Modelo:** Phi-3.5 Vision-Instruct Q4  
-**Arquitectura:** Hexagonal
+**Response:**
+```json
+{
+    "is_healthy": true,
+    "uptime_seconds": 1234.56,
+    "version": "1.0.0",
+    "models": [
+        {
+            "model": "sentence-transformers/all-mpnet-base-v2",
+            "is_loaded": true,
+            "loading_time_ms": 2340.5,
+            "memory_usage_mb": 456.7
+        },
+        {
+            "model": "microsoft/Phi-3.5-vision-instruct",
+            "is_loaded": true,
+            "loading_time_ms": 45678.2,
+            "memory_usage_mb": 2345.6
+        }
+    ]
+}
+```
+
+## 🐍 **Uso con Django**
+
+### **Ejemplo en Django `ai_models/views.py`:**
+
+```python
+import httpx
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+AI_SERVICE_URL = "http://localhost:8002"
+
+@api_view(['POST'])
+def llm_chat_view(request):
+    """Endpoint Django que consume el B4B service"""
+    
+    try:
+        question = request.data.get('question', '')
+        
+        # 1. Generar embedding con el B4B service
+        embedding_response = httpx.post(
+            f"{AI_SERVICE_URL}/v1/embeddings",
+            json={"text": question},
+            timeout=30.0
+        ).json()
+        
+        embedding = embedding_response['vector']
+        
+        # 2. Buscar en Supabase usando el embedding
+        context_chunks = search_in_supabase(embedding)
+        
+        # 3. Generar respuesta con el B4B service
+        chat_response = httpx.post(
+            f"{AI_SERVICE_URL}/v1/chat/generate",
+            json={
+                "query": question,
+                "context": [chunk['content'] for chunk in context_chunks]
+            },
+            timeout=60.0
+        ).json()
+        
+        return Response({
+            "question": question,
+            "answer": chat_response['answer'],
+            "sources": context_chunks,
+            "models_used": {
+                "embeddings": embedding_response['model_used'],
+                "llm": chat_response['model_used']
+            },
+            "processing_times": {
+                "embedding_ms": embedding_response.get('processing_time_ms'),
+                "llm_ms": chat_response.get('processing_time_ms')
+            }
+        })
+        
+    except Exception as e:
+        return Response(
+            {"error": f"Error processing request: {str(e)}"},
+            status=500
+        )
+
+def search_in_supabase(embedding, threshold=0.5, limit=5):
+    """Buscar vectores similares en Supabase"""
+    # Implementación de búsqueda vectorial con pgvector
+    supabase.rpc('search_botanical_knowledge', {
+        'query_embedding': embedding,
+        'match_threshold': threshold,
+        'max_results': limit
+    }).execute()
+    
+    return response.data
+```
+
+## 🚀 **Iniciar el Servicio**
+
+```bash
+# 1. Instalar dependencias
+cd ai_rag_service
+pip install -r requirements.txt
+
+# 2. Iniciar servicio
+python main_refactored.py
+
+# 3. O con uvicorn
+uvicorn main_refactored:app --host 0.0.0.0 --port 8002 --reload
+```
+
+## 🧪 **Probar el Servicio**
+
+```bash
+# Ejecutar test simple
+python test_refactored.py
+
+# O probar con curl
+curl -X POST "http://localhost:8002/v1/embeddings" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "test text"}'
+
+curl -X POST "http://localhost:8002/v1/chat/generate" \
+     -H "Content-Type: application/json" \
+     -d '{"query": "hello", "context": ["test context"]}'
+```
+
+## 🔧 **Ventajas de la Refactorización**
+
+✅ **Arquitectura Limpia**: Separación clara entre dominio, aplicación e infraestructura  
+✅ **Backend for Backend**: Diseñado específicamente para ser consumido por Django  
+✅ **Modelos Cargados una vez**: Optimización con lifespan events  
+✅ **Sin Dependencias de BD**: Django maneja Supabase, este servicio solo hace IA  
+✅ **Contratos Claros**: DTOs Pydantic para validación  
+✅ **Logging y Monitoring**: Tiempos de procesamiento y estado de modelos  
+✅ **Escalabilidad**: Fácil añadir nuevos modelos o endpoints  
+
+## 📝 **Notas Importantes**
+
+- **Modelos cargados al inicio**: Los modelos se cargan una vez y se reutilizan
+- **Timeouts configurados**: 10 minutos para carga de modelos, timeouts por request
+- **Memory management**: Uso de `psutil` para monitorizar memoria
+- **Error handling**: Respuestas de error consistentes
+- **CORS configurado**: Ajustar origins para producción
+
+Este servicio está diseñado para ser **stateless** y **escalable**, perfecto para microservicios de IA en arquitecturas híbridas Django + FastAPI.
