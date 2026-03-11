@@ -1,0 +1,460 @@
+================================================================================
+REPORTE DE CAMBIOS — Sprint 1 Mole.AI
+Redactor: GitHub Copilot (Arquitecto Principal)
+Fecha: 7 de marzo de 2026
+Basado en: auditoria_mole_ai.txt — Sprint 2 semanas
+================================================================================
+
+
+================================================================================
+PARTE I — CAMBIOS APLICADOS EN ESTA SESIÓN
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN A — DEPENDENCIAS (requirements.txt)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo modificado: requirements.txt (raíz del proyecto Django)
+
+Paquetes añadidos:
+  + python-dotenv~=1.0    → carga de .env antes de importar settings
+  + pgvector~=0.3         → extensión vectorial para Supabase/PostgreSQL
+  + PyJWT~=2.8            → decodificación de tokens JWT en middleware
+  + cryptography~=42.0    → dependencia transitiva de PyJWT (firma RS256)
+  + aiohttp~=3.9          → cliente HTTP async usado en apps/authentication/
+  + requests~=2.31        → cliente HTTP síncrono usado en apps/ai_models/utils.py
+  + django-redis~=5.4     → backend de caché Redis (configurado en settings.py
+                             como django_redis.cache.RedisCache)
+
+Razón: el contenedor Docker fallaba con ModuleNotFoundError en cada intento de
+ejecutar manage.py. Se identificaron las dependencias faltantes iterativamente
+mediante los trazas de error y un grep sistemático de todos los imports en apps/.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN B — MODELO DE DATOS (Bloque 1 del sprint)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo modificado: apps/core/infrastructure/repositories/models.py
+
+Cambios:
+  1. Tres nuevos tipos de sensor añadidos a SensorLog.SENSOR_TYPES:
+       ('uv', 'UV Index')
+       ('soil_temperature', 'Soil Temperature')
+       ('pH_cnn', 'pH CNN Inference')
+
+  2. Restricción de unicidad añadida a SensorLog.Meta:
+       unique_together = [('device_id', 'sensor_type', 'timestamp')]
+
+     Esta restricción es prerequisito para que bulk_create(ignore_conflicts=True)
+     funcione de forma idempotente — sin ella, reintentos desde el Edge Node
+     generarían duplicados silenciosos en la base de datos.
+
+Migración generada y aplicada:
+  apps/core/migrations/0002_alter_sensorlog_sensor_type_and_more.py
+  Comando: docker compose run --rm django_backend python manage.py migrate → OK
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN C — SERIALIZERS DRF (Bloque 1 del sprint)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo modificado: apps/core/presentation/serializers.py
+
+Clases añadidas (en orden de composición):
+
+  LocationSerializer
+    Campos: x (float, opcional), y (float, opcional), z (float, opcional)
+    Uso: representa coordenadas GPS del ESP32
+
+  SingleSensorSerializer
+    Campos:
+      - type (str) → normaliza aliases: soil_temp→soil_temperature, uv_index→uv
+      - value (float) → validado en rango [-1000, 10000]
+      - unit (str, opcional)
+    Uso: representa una lectura individual dentro de un batch
+
+  SensorReadingSerializer
+    Campos:
+      - device_id (str, requerido)
+      - plant_id (str, requerido)
+      - timestamp (DateTimeField, default=now)
+      - sensors (ListField de SingleSensorSerializer, mínimo 1)
+      - location (LocationSerializer, opcional)
+      - ph_cnn (float, [0.0–14.0], redondeado a 2 decimales, opcional)
+    Uso: payload completo que envía el Edge Node por cada ciclo de telemetría
+
+  SensorBatchSerializer
+    Campos:
+      - batch (ListField de SensorReadingSerializer, [1–500 elementos])
+    Uso: wrapper para el endpoint /batch/ que acepta hasta 500 lecturas por POST
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN D — VISTAS Y RUTAS (Bloque 1 del sprint)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo modificado: apps/core/presentation/views.py
+
+  sensor_data_view (refactorizado):
+    - Eliminado: parsing manual con request.data.get(), nested try/except silentes
+    - Añadido: SensorReadingSerializer para validación DRF estándar
+    - Ahora usa bulk_create(batch_size=50, ignore_conflicts=True) en lugar de
+      llamadas individuales a .save()
+    - Devuelve HTTP 400 con errores de campo detallados ante payload inválido
+
+  sensor_batch_view (nuevo):
+    - Acepta POST con SensorBatchSerializer (lista de hasta 500 lecturas)
+    - Inserta con transaction.atomic() + bulk_create(batch_size=200,
+      ignore_conflicts=True) para eficiencia y atomicidad
+    - Devuelve HTTP 201 con conteo de registros insertados
+
+Archivo modificado: apps/core/presentation/urls.py
+
+  Ruta añadida (ANTES de /sensor-data/ para evitar shadowing):
+    path('api/v1/sensor-data/batch/', views.sensor_batch_view, name='sensor_batch')
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN E — MOTOR DE EXPLICABILIDAD (Bloque 2 del sprint)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo creado: ai_rag_service/application/use_cases/explain_ph_use_case.py
+
+  PH_TOLERANCE_DB (dict hardcodeado):
+    Tabla de tolerancias para 7 especies agrícolas comunes + clave "default".
+    Actúa como último fallback (Capa Blanca simbólica):
+      Zea mays, Solanum lycopersicum, Phaseolus vulgaris, Capsicum annuum,
+      Cucurbita pepo, Solanum tuberosum, Mangifera indica, default
+
+  PhExplanationResult (dataclass):
+    Contiene: ph_raw, ph_status, deviation, reasoning, recommendations,
+    sensor_context, species_used, confidence, data_sources
+
+  ExplainPhUseCase.execute(ph_cnn, plant_id, sensors, species_name):
+    Flujo:
+      1. _get_tolerance() → Supabase (Capa Cero) → BotanicalFallbackGateway →
+         tabla hardcodeada → default
+      2. _classify_ph()  → "optimal" | "warning" | "critical"
+      3. _build_reasoning() → texto legible para el agricultor (Caja Blanca)
+      4. _get_sensor_alerts() → delega a SensorValidator o aplica reglas básicas
+      5. _build_recommendations() → acciones concretas según status + alertas
+      6. Retorna PhExplanationResult completamente auditable
+
+Archivo modificado: ai_rag_service/application/use_cases/__init__.py
+  + ExplainPhUseCase exportado en __all__
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN F — BOTANICAL GATEWAY (Bloque 3 del sprint)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo creado: ai_rag_service/infrastructure/external/botanical_gateway.py
+
+  TrefleAdapter:
+    - GET https://trefle.io/api/v1/plants/search?q={species}&token={token}
+    - Timeout: 5 segundos
+    - Extrae: growth.ph_minimum / growth.ph_maximum
+    - Devuelve None si la respuesta no contiene datos de pH
+
+  FarmVillageAdapter:
+    - GET https://api.farmvillage.io/v1/crops/ph?crop={species}
+    - Timeout: 5 segundos
+    - Extrae: ph_min / ph_max / ph_optimal
+    - Devuelve None si la respuesta falla o no contiene datos
+
+  BotanicalFallbackGateway.fetch_tolerance(species_name):
+    - asyncio.gather(trefle.fetch(), farmvillage.fetch(), return_exceptions=True)
+    - Trefle tiene prioridad; FarmVillage es respaldo secundario
+    - Devuelve None si ambas APIs fallan (sin lanzar excepción)
+    - Patrón: Race + Fallback paralelo; latencia = max(T_trefle, T_farmvillage)
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN G — ENDPOINT /explain/ph (Bloque 2+3 combinados)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivo modificado: ai_rag_service/infrastructure/api/contracts.py
+
+  Modelos Pydantic añadidos:
+    PhExplainRequest:
+      - ph_cnn (float, [0.0–14.0], requerido)
+      - plant_id (str, requerido)
+      - sensors (dict, default {})
+      - species_name (str, opcional)
+
+    PhExplainResponse:
+      - ph_raw, ph_status, deviation, reasoning, recommendations,
+        sensor_context, species_used, confidence, data_sources
+
+Archivo modificado: ai_rag_service/infrastructure/api/routes.py
+
+  Firma de create_routes() actualizada:
+    + explain_ph_use_case: ExplainPhUseCase = None (parámetro inyectado)
+
+  Endpoint añadido:
+    POST /api/v1/explain/ph
+    - Llama ExplainPhUseCase.execute() con los campos del body
+    - Devuelve PhExplainResponse con status + reasoning + recomendaciones
+    - HTTP 503 si el use case no fue inicializado
+    - HTTP 500 con detalle ante cualquier excepción no controlada
+
+Archivo modificado: ai_rag_service/app/main.py
+
+  Importaciones añadidas:
+    from application.use_cases.explain_ph_use_case import ExplainPhUseCase
+    from infrastructure.external.botanical_gateway import (
+        TrefleAdapter, FarmVillageAdapter, BotanicalFallbackGateway
+    )
+
+  Lifespan actualizado:
+    - Crea httpx.AsyncClient compartido para TrefleAdapter y FarmVillageAdapter
+    - Instancia BotanicalFallbackGateway con ambos adaptadores
+    - Instancia ExplainPhUseCase(knowledge_repo=None, botanical_gateway=...,
+      sensor_validator=None)
+    - Pasa explain_ph_use_case a create_routes()
+    - Cierra _http_client en el bloque finally
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECCIÓN H — EDGE NODE (Bloque 4 del sprint)
+────────────────────────────────────────────────────────────────────────────────
+
+Archivos creados en el directorio edge_node/:
+
+  edge_node/__init__.py
+    Marca el directorio como paquete Python. Contiene nota de arquitectura.
+
+  edge_node/store_forward_daemon.py
+    - init_db(): crea tabla pending_readings + índice UNIQUE (device_id, timestamp)
+    - enqueue_reading(): INSERT OR IGNORE (idempotente)
+    - sync_to_backend(): fetch hasta 200 filas no sincronizadas → POST batch
+      → marca synced=1 solo si el backend responde HTTP 2xx
+    - main(): bucle async cada SYNC_INTERVAL_SECONDS (default 30)
+    - Configuración via .env: EDGE_DB_PATH, BACKEND_BATCH_URL, HARDWARE_API_KEY,
+      SYNC_INTERVAL
+
+  edge_node/mqtt_local_subscriber.py
+    - Usa paho.mqtt.client.CallbackAPIVersion.VERSION2 (API moderna)
+    - Topic: mole/sensors/#
+    - on_message(): parsea JSON del ESP32 → llama enqueue_reading()
+    - Conecta al broker MQTT local (LAN, sin salir a internet)
+
+  edge_node/inference.py
+    - Carga modelo TFLite desde variable de entorno TFLITE_MODEL_PATH
+    - preprocess_image(): carga imagen con Pillow → convertir RGB→HSV→tensor
+    - run_inference(): ejecuta el intérprete TFLite → devuelve float [0.0, 14.0]
+    - Mock mode: si tflite_runtime no está instalado, devuelve random.uniform(5.5, 7.5)
+    - enqueue_cnn_result(): crea conexión SQLite temporal → enqueue_reading()
+    - CLI via argparse: python inference.py --image foto.jpg [--device-id X] [--plant-id Y]
+
+  edge_node/requirements.txt
+    httpx>=0.26, paho-mqtt>=2.0, python-dotenv>=1.0,
+    tflite-runtime>=2.14, Pillow>=10.0, numpy>=1.24
+
+
+================================================================================
+PARTE II — LO QUE FALTA PARA COMPLETAR EL SPRINT
+================================================================================
+
+El sprint definido en auditoria_mole_ai.txt tiene 10 días de trabajo. Los ítems
+a continuación son los que QUEDARON PENDIENTES después de esta sesión, ordenados
+por prioridad de desbloqueador.
+
+═══════════════════════════════════════════════════════════════════════════════
+PENDIENTES RESUELTOS (Sesión 2 — 7 de marzo de 2026)
+═══════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 1 — ✅ RESUELTO: Puerto knowledge_repo implementado
+────────────────────────────────────────────────────────────────────────────────
+
+Archivos creados:
+  ai_rag_service/domain/ports/knowledge_repository_port.py
+    → Interfaz abstracta (ABC) con get_ph_tolerance() y save_ph_tolerance()
+
+  ai_rag_service/infrastructure/database/supabase_knowledge_repo.py
+    → Adaptador concreto usando httpx contra Supabase REST API (PostgREST)
+    → GET con filtro species=eq.{name}, UPSERT con Prefer: resolution=merge-duplicates
+    → Requiere variables de entorno: SUPABASE_URL, SUPABASE_KEY
+    → Cero dependencias nuevas: usa httpx (ya en requirements.txt)
+
+Archivos modificados:
+  ai_rag_service/domain/ports/__init__.py
+    → Exporta KnowledgeRepositoryPort en __all__
+  ai_rag_service/app/main.py
+    → SupabaseKnowledgeRepo instanciado en el lifespan e inyectado en ExplainPhUseCase
+
+Tabla Supabase requerida (DDL):
+  CREATE TABLE IF NOT EXISTS plant_knowledge (
+      id          BIGSERIAL PRIMARY KEY,
+      species     TEXT UNIQUE NOT NULL,
+      ph_min      REAL NOT NULL,
+      ph_max      REAL NOT NULL,
+      ph_optimal  REAL NOT NULL,
+      updated_at  TIMESTAMPTZ DEFAULT now()
+  );
+
+Impacto: La "Capa Cero" ahora funciona end-to-end. El primer request para una
+especie consulta Supabase → cache miss → Trefle/FarmVillage → persiste en
+Supabase → requests posteriores usan el cache (confidence="high", costo=0).
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 2 — ✅ RESUELTO: SensorValidator conectado al ExplainPhUseCase
+────────────────────────────────────────────────────────────────────────────────
+
+Archivos modificados:
+  ai_rag_service/app/main.py
+    → SensorValidator() instanciado e inyectado como sensor_validator= en
+      ExplainPhUseCase dentro del lifespan
+
+  ai_rag_service/application/use_cases/explain_ph_use_case.py
+    → _get_sensor_alerts() reescrito completamente:
+      - Construye SensorData desde el dict de sensores del payload REST
+      - Llama SensorValidator.validate(data)
+      - Si lanza ValidationError, el mensaje se convierte en alerta
+      - Si validator es None, fallback a reglas básicas (retrocompatible)
+
+Verificado en contenedor:
+  temperatura=25, humidity=60 → alerts=[] (valores normales)
+  temperatura=999            → alerts=["physically impossible (valid: -50.0-60.0)"]
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 3 — ✅ RESUELTO: httpx añadido a ai_rag_service/requirements.txt
+────────────────────────────────────────────────────────────────────────────────
+
+Resuelto en la sesión anterior (sesión 1).
+Línea añadida: httpx>=0.26 — verificado presente en el archivo.
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 8 — ✅ RESUELTO: Bug de cierre httpx.AsyncClient corregido
+────────────────────────────────────────────────────────────────────────────────
+
+Resuelto en la sesión anterior (sesión 1).
+_http_client = None declarado antes del bloque try.
+finally usa: if _http_client is not None: await _http_client.aclose()
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PENDIENTES AÚN ABIERTOS
+═══════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 4 — MEDIO: Modelo TFLite NO entrenado
+────────────────────────────────────────────────────────────────────────────────
+
+NOTA: edge_node/ fue DESCARTADO (arquitectura cambiada a Direct-to-Cloud).
+Sin embargo, la lógica de inferencia TFLite puede reutilizarse si se migra
+al backend o al cliente móvil. El mock mode sigue siendo aceptable para MVP.
+
+Qué falta (tarea de ML, fuera del sprint de backend):
+  1. Recolectar dataset de imágenes de suelo con pH medido
+  2. Entrenar regresión (MobileNetV2 fine-tuned o similar)
+  3. Exportar a .tflite con cuantización int8
+  4. Integrar en el flujo elegido (backend o cliente)
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 5 — MEDIO: Tests de integración end-to-end NO escritos
+────────────────────────────────────────────────────────────────────────────────
+
+Qué falta:
+  Crear tests/integration/test_full_pipeline.py con al menos:
+
+  test_batch_endpoint_accepts_valid_payload():
+    POST /api/v1/sensor-data/batch/ con 3 lecturas válidas → HTTP 201
+
+  test_batch_endpoint_rejects_duplicate_silently():
+    Enviar el mismo batch dos veces → sin duplicados (unique_together)
+
+  test_explain_ph_returns_valid_structure():
+    POST /api/v1/explain/ph con ph_cnn=6.3, sensors={temp: 27, humidity: 55}
+    → HTTP 200, ph_status, reasoning, confidence válidos
+
+  test_supabase_knowledge_repo_get_and_save():
+    Mock Supabase → get returns None → save persists → get returns data
+
+Herramienta sugerida: pytest + pytest-asyncio + httpx.AsyncClient (TestClient)
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 6 — MEDIO: Autenticación del endpoint /explain/ph NO verificada
+────────────────────────────────────────────────────────────────────────────────
+
+Estado actual:
+  POST /api/v1/explain/ph en FastAPI está abierto — sin autenticación.
+
+Qué falta:
+  Añadir Depends(verify_api_key) al endpoint.
+  Revisar ai_rag_service/domain/security/ por lógica reutilizable.
+  Opciones: X-Hardware-Api-Key (M2M) o JWT Bearer (app cliente).
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 7 — BAJO: CONABIO/EncicloVida NO integrado en BotanicalFallbackGateway
+────────────────────────────────────────────────────────────────────────────────
+
+Qué falta:
+  1. Importar el adaptador CONABIO existente
+  2. Añadirlo como tercer callback en el asyncio.gather()
+  3. Prioridad: Trefle → FarmVillage → CONABIO
+
+
+────────────────────────────────────────────────────────────────────────────────
+PENDIENTE 9 — BAJO: Variables de entorno NO documentadas en .env.example
+────────────────────────────────────────────────────────────────────────────────
+
+Qué falta:
+  Crear .env.example con:
+    HARDWARE_API_KEY=<clave_m2m>
+    TREFLE_API_TOKEN=<token_trefle>
+    FARMVILLAGE_API_KEY=<api_key>
+    MOLE_AI_SERVICE_URL=http://ai_rag_service:8001
+    SUPABASE_URL=<url_del_proyecto_supabase>
+    SUPABASE_KEY=<anon_key_de_supabase>
+
+
+================================================================================
+PARTE III — RESUMEN DE ESTADO DEL SPRINT (ACTUALIZADO)
+================================================================================
+
+Plan original (auditoria_mole_ai.txt — 10 días):
+
+  Semana 1:
+    Día 1–2: serializers.py + /batch/ + unique_together + migración    ✅ COMPLETO
+    Día 2–3: ExplainPhUseCase + endpoint /explain/ph                   ✅ COMPLETO
+    Día 3–4: TrefleAdapter + FarmVillageAdapter + BotanicalGateway     ✅ COMPLETO
+    Día 4–5: Registrar botanical_gateway en lifespan FastAPI           ✅ COMPLETO
+             Conectar knowledge_repo.save_ph_tolerance (Capa Cero)    ✅ COMPLETO (sesión 2)
+
+  Semana 2:
+    Día 6–7: store_forward_daemon.py con SQLite                       ⛔ DESCARTADO (Direct-to-Cloud)
+    Día 7–8: mqtt_local_subscriber.py (paho-mqtt)                     ⛔ DESCARTADO (Direct-to-Cloud)
+    Día 8–9: inference.py (TFLite CNN)                                ⛔ DESCARTADO (Direct-to-Cloud)
+             Modelo .tflite entrenado                                  ❌ PENDIENTE (tarea ML externa)
+    Día 9–10: Tests end-to-end                                        ❌ PENDIENTE
+
+Estado cuantitativo (actualizado):
+  Archivos nuevos creados:         10 / 10   (100%) [+2 puerto + adaptador Supabase]
+  Archivos existentes modificados:  9 /  9   (100%) [+2 ports/__init__ + use_case]
+  Migración generada y aplicada:    SÍ
+  Conocimiento_repo conectado:      SÍ (✅ SupabaseKnowledgeRepo → Capa Cero operativa)
+  SensorValidator conectado:        SÍ (✅ ValidationError → alertas auditables)
+  httpx en requirements:            SÍ (✅ httpx>=0.26)
+  Bug _http_client corregido:       SÍ (✅ _http_client = None antes del try)
+  edge_node/ descartado:            SÍ (⛔ arquitectura Direct-to-Cloud)
+  Tests de integración:             NO (Pendiente 5)
+  Autenticación /explain/ph:        NO (Pendiente 6)
+  Modelo TFLite entrenado:          NO (Pendiente 4 — tarea ML)
+
+  Estimación de completitud del sprint de backend: ~90%
+  Pendientes funcionales: tests de integración (1 día) + auth (medio día)
+  Pendientes no-funcionales: .env.example, integración CONABIO (bajo)
+
+
+================================================================================
+FIN DEL REPORTE — Mole.AI Sprint 1 (v2) — 7 de marzo de 2026
+================================================================================

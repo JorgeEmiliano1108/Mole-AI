@@ -1,0 +1,920 @@
+================================================================================
+REPORTE DE AUDITORÍA TÉCNICA — Mole.AI MVP
+================================================================================
+Auditor: Principal Software Engineer / Arquitecto Cloud-IoT
+Sprint objetivo: 2 semanas | Presupuesto: $0
+Fecha: 7 de marzo de 2026
+================================================================================
+
+
+────────────────────────────────────────────────────────────────────────────────
+DIAGNÓSTICO EJECUTIVO
+────────────────────────────────────────────────────────────────────────────────
+
+Módulo                                        | Estado    | Brecha Crítica
+----------------------------------------------|-----------|--------------------------------------------------
+POST /api/v1/sensor-data/                     | PARCIAL   | Solo acepta single-reading, sin validación DRF, sin batch
+POST /api/v1/sensor-data/batch/               | FALTANTE  | Falta crear endpoint + serializer + bulk insert
+apps/core/presentation/serializers.py         | FALTANTE  | Toda la validación está inline en la vista (frágil)
+Motor de Explicabilidad (Agente Híbrido)      | FALTANTE  | Falta el cruce ph_cnn <-> tolerancias botánicas
+MQTT Subscriber en Django                     | FALTANTE  | Broker configurado pero sin consumer (eliminado del alcance MVP)
+Adaptador Trefle.io                           | FALTANTE  | Solo existe CONABIO/EncicloVida
+Adaptador FarmVillage                         | FALTANTE  | Solo existe CONABIO/EncicloVida
+Patrón Fallback "Capa Cero"                   | PARCIAL   | CONABIO ok, pero no persiste en Supabase tras cache miss
+Edge Node daemon (SQLite Store-and-Forward)   | FALTANTE  | Ningún script de sincronización offline
+serializers.py en ai_models                   | FALTANTE  | Placeholder en urls.py sin lógica
+
+Resultado: 4 de 10 módulos críticos funcionales. El MVP requiere 6 módulos nuevos.
+
+
+────────────────────────────────────────────────────────────────────────────────
+NOTAS ARQUITECTÓNICAS GENERALES
+────────────────────────────────────────────────────────────────────────────────
+
+Topología hardware definitiva (sin Raspberry Pi):
+  - ESP32           → Sensores (telemetría: pH químico, temperatura, humedad, UV)
+  - Edge Node       → Laptop/Smartphone (inferencia TFLite CNN + bridge MQTT local)
+  - Backend Cloud   → Django + FastAPI en Render (free tier)
+  - Base de datos   → Supabase PostgreSQL (free tier, RLS activo)
+
+Protocolos:
+  - ESP32 → Edge Node: MQTT local (broker Mosquitto en la misma LAN, SIN salir a internet)
+  - Edge Node → Backend: REST (HTTP POST) para telemetría batch y diagnósticos CNN
+  - Cliente (Smartphone/Laptop) → Backend: WebSocket (Django Channels) para chat en tiempo real
+  - Nota: Se prescinde del broker Mosquitto en la nube para simplificar arquitectura y ahorrar cuota
+
+Modelo TFLite:
+  - Tipo: Regresión (salida flotante continua, ej. 6.3 o 7.8)
+  - Corre 100% offline en el Edge Node
+  - El resultado ph_cnn llega incluido en el payload REST que el Edge Node envía a Django
+
+Estrategia "Capa Cero":
+  - Supabase es la fuente primaria (cero latencia, cero costo adicional)
+  - CONABIO (EncicloVida), Trefle.io y FarmVillage son TODAS fuentes externas de fallback
+  - Flujo: Supabase → Cache Miss → API externas (paralelo) → unificar → guardar en Supabase → retornar
+  - El guardado post-fetch hace el fallback idempotente (no repite peticiones externas)
+
+
+================================================================================
+BLOQUE 1 — ENDPOINT BATCH + SERIALIZERS
+================================================================================
+
+PROBLEMA ACTUAL:
+sensor_data_view hace validación manual inline con request.data.get(...).
+No usa DRF serializers, no acepta lotes, y ante un error en el ítem 47 de
+un batch de 100, rollbackea todo silenciosamente.
+
+────────────────────────────────────────────────────────────────────────────────
+1.1 — apps/core/presentation/serializers.py (CREAR)
+────────────────────────────────────────────────────────────────────────────────
+
+# apps/core/presentation/serializers.py
+from rest_framework import serializers
+
+
+class LocationSerializer(serializers.Serializer):
+    x = serializers.FloatField(required=False, default=0.0)
+    y = serializers.FloatField(required=False, default=0.0)
+    z = serializers.FloatField(required=False, default=0.0)
+
+
+class SingleSensorSerializer(serializers.Serializer):
+    SENSOR_TYPES = [
+        "pH", "humidity", "temperature", "soil_moisture",
+        "light", "uv", "soil_temperature", "nutrients",
+    ]
+    type = serializers.ChoiceField(choices=SENSOR_TYPES)
+    value = serializers.FloatField()
+    unit = serializers.CharField(max_length=20)
+    location = LocationSerializer(required=False, default=dict)
+
+
+class SensorReadingSerializer(serializers.Serializer):
+    """
+    Un registro de lectura: timestamp + N sensores + pH opcional de CNN.
+    Representa un slot temporal del Edge Node.
+    """
+    device_id = serializers.CharField(max_length=64)
+    plant_id = serializers.CharField(max_length=128)
+    timestamp = serializers.DateTimeField()
+    sensors = serializers.ListField(
+        child=SingleSensorSerializer(),
+        min_length=1,
+        max_length=50,
+    )
+    ph_cnn = serializers.FloatField(
+        required=False,
+        min_value=0.0,
+        max_value=14.0,
+        help_text="Valor flotante de regresión TFLite (colorimetría HSV)",
+    )
+    image_base64 = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_ph_cnn(self, value):
+        if not (0.0 <= value <= 14.0):
+            raise serializers.ValidationError(
+                f"ph_cnn={value} fuera del rango fisicoquímico [0, 14]"
+            )
+        return round(value, 2)
+
+
+class SensorBatchSerializer(serializers.Serializer):
+    """
+    Payload de sincronización masiva del daemon SQLite.
+    """
+    batch = serializers.ListField(
+        child=SensorReadingSerializer(),
+        min_length=1,
+        max_length=500,  # Limita el tamaño para proteger el free tier de Supabase
+    )
+
+
+────────────────────────────────────────────────────────────────────────────────
+1.2 — POST /api/v1/sensor-data/batch/ (NUEVA VISTA en views.py)
+────────────────────────────────────────────────────────────────────────────────
+
+# Añadir debajo de sensor_data_view en apps/core/presentation/views.py
+
+from django.db import transaction
+from .serializers import SensorBatchSerializer
+from ..infrastructure.repositories.models import SensorLog
+
+
+@api_view(["POST"])
+@authentication_classes([HardwareAPIKeyAuthentication])
+@permission_classes([IsAuthenticated])
+def sensor_batch_view(request):
+    """
+    Recibe el lote completo del daemon Store-and-Forward del Edge Node.
+    Estrategia: bulk_create con ignore_conflicts=True (idempotente por
+    device_id + timestamp para evitar duplicados en resincronizaciones).
+    """
+    serializer = SensorBatchSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    batch = serializer.validated_data["batch"]
+    logs_to_create = []
+    results = {"accepted": 0, "rejected": 0, "errors": []}
+
+    for reading in batch:
+        for sensor in reading["sensors"]:
+            loc = sensor.get("location", {})
+            logs_to_create.append(
+                SensorLog(
+                    device_id=reading["device_id"],
+                    plant_id=reading["plant_id"],
+                    sensor_type=sensor["type"],
+                    value=sensor["value"],
+                    unit=sensor["unit"],
+                    location_x=loc.get("x", 0.0),
+                    location_y=loc.get("y", 0.0),
+                    timestamp=reading["timestamp"],
+                )
+            )
+
+        # Si viene ph_cnn, se registra como sensor propio de la CNN
+        if "ph_cnn" in reading:
+            logs_to_create.append(
+                SensorLog(
+                    device_id=reading["device_id"],
+                    plant_id=reading["plant_id"],
+                    sensor_type="pH_cnn",          # Tipo reservado para inferencia visual
+                    value=reading["ph_cnn"],
+                    unit="pH",
+                    timestamp=reading["timestamp"],
+                )
+            )
+            results["accepted"] += 1
+
+    try:
+        with transaction.atomic():
+            created = SensorLog.objects.bulk_create(
+                logs_to_create,
+                ignore_conflicts=True,   # Requiere unique_together en el modelo
+                batch_size=200,          # Protege memoria en Supabase free tier
+            )
+            results["accepted"] += len(created)
+    except Exception as e:
+        return Response(
+            {"error": "Error en bulk insert", "detail": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response(results, status=status.HTTP_201_CREATED)
+
+
+────────────────────────────────────────────────────────────────────────────────
+1.3 — Nota: unique_together en SensorLog (MODIFICAR modelo existente)
+────────────────────────────────────────────────────────────────────────────────
+
+# En apps/core/infrastructure/repositories/models.py → clase SensorLog
+class Meta:
+    unique_together = [("device_id", "sensor_type", "timestamp")]
+    indexes = [
+        models.Index(fields=["device_id", "timestamp"]),
+        models.Index(fields=["plant_id", "sensor_type", "timestamp"]),
+    ]
+
+Luego ejecutar:
+  python manage.py makemigrations
+  python manage.py migrate
+
+
+────────────────────────────────────────────────────────────────────────────────
+1.4 — URL routing (MODIFICAR urls.py)
+────────────────────────────────────────────────────────────────────────────────
+
+# En apps/core/presentation/urls.py
+# IMPORTANTE: el endpoint /batch/ debe ir ANTES que el endpoint single
+path("api/v1/sensor-data/batch/", sensor_batch_view, name="sensor-batch"),
+path("api/v1/sensor-data/", sensor_data_view, name="sensor-data"),
+
+
+Payload de ejemplo para el endpoint batch:
+{
+  "batch": [
+    {
+      "device_id": "ESP32-EDGE-001",
+      "plant_id": "planta_maiz_01",
+      "timestamp": "2026-03-07T10:30:00Z",
+      "ph_cnn": 6.3,
+      "sensors": [
+        {"type": "temperature", "value": 27.4, "unit": "°C"},
+        {"type": "humidity",    "value": 62.0, "unit": "%"},
+        {"type": "uv",          "value": 3.1,  "unit": "index"}
+      ]
+    },
+    {
+      "device_id": "ESP32-EDGE-001",
+      "plant_id": "planta_maiz_01",
+      "timestamp": "2026-03-07T10:30:30Z",
+      "sensors": [
+        {"type": "temperature", "value": 27.6, "unit": "°C"}
+      ]
+    }
+  ]
+}
+
+
+================================================================================
+BLOQUE 2 — MOTOR DE EXPLICABILIDAD (AGENTE HÍBRIDO)
+================================================================================
+
+ARQUITECTURA CONCEPTUAL:
+
+  Edge Node ──[REST POST]──▶  Django  ──▶  FastAPI (MoleAI)
+                                │
+                      {ph_cnn: 6.3,          ┌─── Caja Negra (TFLite output)
+                       sensors: [...],  ─────┤
+                       plant_id: ...}        └─── Caja Blanca (reglas + Supabase + Fallback)
+                                                        │
+                                                ExplainableResponse JSON
+
+La "Caja Blanca" vive en FastAPI porque ya tiene MoleAIChatUseCase,
+SensorValidator y MoleAIAgriculturalCore. Django solo enruta.
+
+────────────────────────────────────────────────────────────────────────────────
+2.1 — ExplainPhUseCase (CREAR)
+────────────────────────────────────────────────────────────────────────────────
+
+# ai_rag_service/application/use_cases/explain_ph_use_case.py
+from dataclasses import dataclass, field
+from typing import Optional
+from ..common import UseCase
+
+
+# Rangos de tolerancia por especie (Capa Blanca simbólica — hardcoded para MVP)
+PH_TOLERANCE_DB = {
+    "Zea mays":               {"min": 5.8, "max": 7.0, "optimal": 6.5},
+    "Solanum lycopersicum":   {"min": 5.5, "max": 7.5, "optimal": 6.2},
+    "Phaseolus vulgaris":     {"min": 6.0, "max": 7.5, "optimal": 6.8},
+    "Capsicum annuum":        {"min": 6.0, "max": 6.8, "optimal": 6.4},
+    "Cucurbita pepo":         {"min": 6.0, "max": 7.5, "optimal": 6.8},
+    "default":                {"min": 5.5, "max": 8.0, "optimal": 6.5},
+}
+
+
+@dataclass
+class PhExplanationResult:
+    ph_raw: float                        # Output directo del TFLite
+    ph_status: str                       # "optimal" | "warning" | "critical"
+    deviation: float                     # Distancia al óptimo (+ = alcalino, - = ácido)
+    reasoning: str                       # Texto legible para el agricultor
+    recommendations: list[str]           # Acciones concretas
+    sensor_context: dict                 # Telemetría del ESP32 enriquecida
+    species_used: str                    # Qué especie se usó para calcular
+    confidence: str                      # "high" | "medium" | "low"
+    data_sources: list[str] = field(default_factory=list)
+
+
+class ExplainPhUseCase(UseCase):
+    """
+    Motor de Explicabilidad Híbrido (Caja Blanca + Caja Negra).
+
+    Flujo:
+      1. Recibe ph_cnn (float) + sensors (telemetría ESP32) + plant_id
+      2. Consulta Supabase (Capa Cero) por tolerancias de la especie
+      3. Cache Miss → llama BotanicalFallbackGateway (Trefle / FarmVillage)
+      4. Cruza ph_cnn con las tolerancias → genera status + reasoning
+      5. Combina con alertas térmicas/humedad del SensorValidator
+      6. Retorna PhExplanationResult (auditable, sin cajas negras)
+    """
+
+    def __init__(self, knowledge_repo, botanical_gateway, sensor_validator):
+        self.knowledge_repo = knowledge_repo       # Puerto → Supabase
+        self.botanical_gateway = botanical_gateway # Puerto → Trefle/FarmVillage
+        self.sensor_validator = sensor_validator   # Ya existe en el proyecto
+
+    async def execute(
+        self,
+        ph_cnn: float,
+        plant_id: str,
+        sensors: dict,
+        species_name: Optional[str] = None,
+    ) -> PhExplanationResult:
+
+        # ── Paso 1: Obtener tolerancias (Capa Cero primero) ─────────────
+        tolerance, source, confidence = await self._get_tolerance(species_name)
+
+        # ── Paso 2: Calcular status pH ───────────────────────────────────
+        optimal = tolerance["optimal"]
+        deviation = round(ph_cnn - optimal, 2)
+        ph_status = self._classify_ph(ph_cnn, tolerance)
+
+        # ── Paso 3: Generar reasoning legible (Caja Blanca) ─────────────
+        reasoning = self._build_reasoning(ph_cnn, tolerance, ph_status, deviation)
+
+        # ── Paso 4: Alertas cruzadas con sensores ESP32 ──────────────────
+        sensor_alerts = self.sensor_validator.validate_batch(sensors)
+        recommendations = self._build_recommendations(ph_status, deviation, sensor_alerts)
+
+        return PhExplanationResult(
+            ph_raw=ph_cnn,
+            ph_status=ph_status,
+            deviation=deviation,
+            reasoning=reasoning,
+            recommendations=recommendations,
+            sensor_context={**sensors, "alerts": sensor_alerts},
+            species_used=species_name or "default",
+            confidence=confidence,
+            data_sources=source,
+        )
+
+    async def _get_tolerance(self, species_name):
+        # 1. Supabase (Capa Cero)
+        if species_name:
+            cached = await self.knowledge_repo.get_ph_tolerance(species_name)
+            if cached:
+                return cached, ["supabase_cache"], "high"
+
+            # 2. Fallback externo → guarda en Supabase para no repetir petición
+            external = await self.botanical_gateway.fetch_tolerance(species_name)
+            if external:
+                await self.knowledge_repo.save_ph_tolerance(species_name, external)
+                return external, ["botanical_gateway", "supabase_saved"], "medium"
+
+        # 3. Default seguro (nunca falla)
+        return PH_TOLERANCE_DB["default"], ["hardcoded_default"], "low"
+
+    @staticmethod
+    def _classify_ph(ph: float, tol: dict) -> str:
+        if tol["min"] <= ph <= tol["max"]:
+            distance = abs(ph - tol["optimal"])
+            return "optimal" if distance <= 0.5 else "warning"
+        return "critical"
+
+    @staticmethod
+    def _build_reasoning(ph, tol, status, dev) -> str:
+        direction = "alcalino" if dev > 0 else "ácido"
+        return (
+            f"El modelo de visión (CNN) detectó pH={ph} mediante colorimetría HSV. "
+            f"Para esta especie el rango seguro es [{tol['min']}, {tol['max']}] "
+            f"con óptimo en {tol['optimal']} pH. "
+            f"El suelo está {abs(dev):.2f} unidades hacia el lado {direction}. "
+            f"Estado: {status.upper()}."
+        )
+
+    @staticmethod
+    def _build_recommendations(status, deviation, alerts) -> list[str]:
+        recs = []
+        if status == "critical":
+            if deviation < 0:
+                recs.append("Aplicar cal agrícola (CaCO₃) para elevar el pH.")
+            else:
+                recs.append("Aplicar azufre elemental o vinaza para reducir el pH.")
+        elif status == "warning":
+            recs.append("Monitorear pH cada 48h y evitar fertilizantes que alteren el suelo.")
+        for alert in alerts:
+            recs.append(f"ALERTA: {alert}")
+        return recs
+
+
+────────────────────────────────────────────────────────────────────────────────
+2.2 — Endpoint FastAPI /api/v1/explain/ph (AÑADIR a routes.py)
+────────────────────────────────────────────────────────────────────────────────
+
+# En ai_rag_service/infrastructure/api/routes.py
+
+from pydantic import BaseModel, Field, field_validator
+
+class PhExplainRequest(BaseModel):
+    ph_cnn: float = Field(..., ge=0.0, le=14.0, description="Salida TFLite (regresión)")
+    plant_id: str
+    species_name: str | None = None
+    sensors: dict = Field(default_factory=dict)  # Telemetría ESP32
+
+    @field_validator("ph_cnn")
+    @classmethod
+    def round_ph(cls, v):
+        return round(v, 2)
+
+
+@router.post("/api/v1/explain/ph", tags=["Explicabilidad"])
+@limiter.limit("30/minute")
+async def explain_ph_endpoint(request: Request, body: PhExplainRequest):
+    """
+    Motor de Explicabilidad Híbrido.
+    Recibe pH de CNN + telemetría y retorna JSON totalmente auditable.
+    """
+    use_case = ExplainPhUseCase(
+        knowledge_repo=request.app.state.knowledge_repo,
+        botanical_gateway=request.app.state.botanical_gateway,
+        sensor_validator=request.app.state.sensor_validator,
+    )
+    result = await use_case.execute(
+        ph_cnn=body.ph_cnn,
+        plant_id=body.plant_id,
+        sensors=body.sensors,
+        species_name=body.species_name,
+    )
+    return result.__dict__
+
+
+Ejemplo de respuesta JSON:
+{
+  "ph_raw": 6.3,
+  "ph_status": "optimal",
+  "deviation": -0.2,
+  "reasoning": "El modelo de visión (CNN) detectó pH=6.3 mediante colorimetría HSV.
+                Para esta especie el rango seguro es [5.8, 7.0] con óptimo en 6.5 pH.
+                El suelo está 0.20 unidades hacia el lado ácido. Estado: OPTIMAL.",
+  "recommendations": ["Monitorear pH cada 48h y evitar fertilizantes que alteren el suelo."],
+  "sensor_context": {
+    "temperature": 27.4,
+    "humidity": 62.0,
+    "alerts": []
+  },
+  "species_used": "Zea mays",
+  "confidence": "high",
+  "data_sources": ["supabase_cache"]
+}
+
+
+================================================================================
+BLOQUE 3 — API GATEWAY Y PATRÓN FALLBACK BOTÁNICO
+================================================================================
+
+PATRÓN RECOMENDADO: Gateway + Adapter + Unifier
+
+  BotanicalFallbackGateway
+      ├── TrefleAdapter          (asyncio, httpx async)
+      ├── FarmVillageAdapter     (asyncio, httpx async)
+      └── Orquestación paralela  (asyncio.gather con timeout individual)
+
+Regla de orquestación: Paralelo con asyncio.gather + timeout=5s individual.
+El primero que responda con datos válidos gana.
+Si ambos fallan → retorna None → Use Case usa el default hardcoded.
+
+────────────────────────────────────────────────────────────────────────────────
+3.1 — BotanicalFallbackGateway (CREAR)
+────────────────────────────────────────────────────────────────────────────────
+
+# ai_rag_service/infrastructure/external/botanical_gateway.py
+import asyncio
+import httpx
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+TREFLE_BASE = "https://trefle.io/api/v1"
+FARMVILLAGE_BASE = "https://api.farmvillage.io/v1"  # Ajustar URL real cuando esté disponible
+
+
+class TrefleAdapter:
+    """Adaptador para el API de Trefle.io (botánico global, free tier: 100 req/hora)."""
+
+    def __init__(self, api_token: str, client: httpx.AsyncClient):
+        self._token = api_token
+        self._client = client
+
+    async def fetch_ph_tolerance(self, species_name: str) -> Optional[dict]:
+        try:
+            resp = await self._client.get(
+                f"{TREFLE_BASE}/plants/search",
+                params={"q": species_name, "token": self._token},
+                timeout=5.0,
+            )
+            resp.raise_for_status()
+            data = resp.json().get("data", [])
+            if not data:
+                return None
+            plant = data[0].get("main_species", data[0])
+            growth = plant.get("growth", {})
+            ph_min = growth.get("ph_minimum")
+            ph_max = growth.get("ph_maximum")
+            if ph_min is None or ph_max is None:
+                return None
+            return {
+                "min": float(ph_min),
+                "max": float(ph_max),
+                "optimal": round((float(ph_min) + float(ph_max)) / 2, 1),
+                "source": "trefle",
+                "raw": plant.get("scientific_name"),
+            }
+        except (httpx.HTTPError, KeyError, ValueError) as e:
+            logger.warning("Trefle error for '%s': %s", species_name, e)
+            return None
+
+
+class FarmVillageAdapter:
+    """Adaptador para FarmVillage (centrado en cultivos mesoamericanos)."""
+
+    def __init__(self, api_key: str, client: httpx.AsyncClient):
+        self._key = api_key
+        self._client = client
+
+    async def fetch_ph_tolerance(self, species_name: str) -> Optional[dict]:
+        try:
+            resp = await self._client.get(
+                f"{FARMVILLAGE_BASE}/crops/ph",
+                params={"species": species_name},
+                headers={"X-Api-Key": self._key},
+                timeout=5.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return {
+                "min": float(data["ph_min"]),
+                "max": float(data["ph_max"]),
+                "optimal": float(
+                    data.get("ph_optimal",
+                    (data["ph_min"] + data["ph_max"]) / 2)
+                ),
+                "source": "farmvillage",
+                "raw": data.get("latin_name"),
+            }
+        except (httpx.HTTPError, KeyError, ValueError) as e:
+            logger.warning("FarmVillage error for '%s': %s", species_name, e)
+            return None
+
+
+class BotanicalFallbackGateway:
+    """
+    Orquesta consultas paralelas a Trefle y FarmVillage.
+    Implementa el patrón 'Race with fallback': el primero válido gana.
+    Si ambos fallan devuelve None para que el Use Case use el default seguro.
+    """
+
+    def __init__(self, trefle: TrefleAdapter, farmvillage: FarmVillageAdapter):
+        self._trefle = trefle
+        self._farmvillage = farmvillage
+
+    async def fetch_tolerance(self, species_name: str) -> Optional[dict]:
+        # Lanza ambas peticiones en paralelo — no bloquea el event loop
+        results = await asyncio.gather(
+            self._trefle.fetch_ph_tolerance(species_name),
+            self._farmvillage.fetch_ph_tolerance(species_name),
+            return_exceptions=True,   # Nunca eleva excepción al caller
+        )
+
+        trefle_result, fv_result = results
+
+        # Prioridad: Trefle primero (más preciso botánicamente)
+        for r in (trefle_result, fv_result):
+            if isinstance(r, dict) and r.get("min") is not None:
+                return r
+
+        logger.info("Cache miss completo para '%s' — usando default.", species_name)
+        return None
+
+
+────────────────────────────────────────────────────────────────────────────────
+3.2 — Registrar gateway en lifespan FastAPI (MODIFICAR main.py)
+────────────────────────────────────────────────────────────────────────────────
+
+# ai_rag_service/app/main.py — dentro del @asynccontextmanager lifespan
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Cliente HTTP reutilizable (no crear uno nuevo por petición)
+    async with httpx.AsyncClient() as http_client:
+        trefle = TrefleAdapter(
+            api_token=os.getenv("TREFLE_API_TOKEN", ""),
+            client=http_client,
+        )
+        farmvillage = FarmVillageAdapter(
+            api_key=os.getenv("FARMVILLAGE_API_KEY", ""),
+            client=http_client,
+        )
+        app.state.botanical_gateway = BotanicalFallbackGateway(trefle, farmvillage)
+        app.state.knowledge_repo = SupabaseKnowledgeRepository(...)  # Puerto existente
+        app.state.sensor_validator = SensorValidator()
+        yield
+    # El async with cierra el cliente HTTP al detener el servicio
+
+Variables de entorno necesarias (.env):
+  TREFLE_API_TOKEN=<tu_token_gratuito_de_trefle.io>
+  FARMVILLAGE_API_KEY=<tu_api_key_de_farmvillage>
+
+
+================================================================================
+BLOQUE 4 — EDGE NODE: DAEMON STORE-AND-FORWARD (SQLite → REST)
+================================================================================
+
+Este es el módulo MÁS AUSENTE del proyecto. Ningún script de sincronización
+offline existe actualmente. El daemon corre en la laptop/smartphone del
+agricultor como proceso de fondo.
+
+────────────────────────────────────────────────────────────────────────────────
+4.1 — edge_node/store_forward_daemon.py (CREAR — nuevo directorio)
+────────────────────────────────────────────────────────────────────────────────
+
+# edge_node/store_forward_daemon.py
+"""
+Daemon SQLite → REST  |  Mole.AI Edge Node
+==========================================
+Corre en laptop/smartphone como proceso de fondo.
+Rol:
+  1) Recibir telemetría del ESP32 via MQTT local (LAN, sin internet)
+  2) Encolarlo en SQLite junto con inferencias CNN (ph_cnn)
+  3) Sincronizar a Django via REST cuando haya internet disponible
+"""
+import asyncio
+import sqlite3
+import httpx
+import json
+import logging
+import os
+from pathlib import Path
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DB_PATH = Path("edge_mole.sqlite3")
+BACKEND_BATCH_URL = os.getenv("BACKEND_BATCH_URL",
+                              "http://localhost:8000/api/v1/sensor-data/batch/")
+SYNC_INTERVAL_SECONDS = int(os.getenv("SYNC_INTERVAL", "30"))
+HARDWARE_API_KEY = os.getenv("HARDWARE_API_KEY", "")
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [EDGE-DAEMON] %(levelname)s — %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+def init_db() -> sqlite3.Connection:
+    """Crea la base de datos local si no existe."""
+    con = sqlite3.connect(DB_PATH)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS pending_readings (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id    TEXT    NOT NULL,
+            plant_id     TEXT    NOT NULL,
+            timestamp    TEXT    NOT NULL,
+            sensors_json TEXT    NOT NULL,
+            ph_cnn       REAL,
+            synced       INTEGER DEFAULT 0,
+            created_at   TEXT    DEFAULT (datetime('now'))
+        )
+    """)
+    con.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_device_timestamp
+        ON pending_readings(device_id, timestamp)
+    """)
+    con.commit()
+    return con
+
+
+def enqueue_reading(
+    con: sqlite3.Connection,
+    device_id: str,
+    plant_id: str,
+    sensors: list,
+    ph_cnn: float = None,
+    timestamp: str = None,
+):
+    """
+    Llamado por el suscriptor MQTT local al recibir telemetría del ESP32,
+    o por el módulo de inferencia TFLite al completar un diagnóstico CNN.
+    """
+    ts = timestamp or datetime.utcnow().isoformat()
+    try:
+        con.execute(
+            "INSERT OR IGNORE INTO pending_readings "
+            "(device_id, plant_id, timestamp, sensors_json, ph_cnn) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (device_id, plant_id, ts, json.dumps(sensors), ph_cnn),
+        )
+        con.commit()
+    except sqlite3.Error as e:
+        logger.error("Error al encolar lectura: %s", e)
+
+
+async def sync_to_backend(con: sqlite3.Connection):
+    """Envía lotes de hasta 200 registros no sincronizados al backend."""
+    rows = con.execute(
+        "SELECT id, device_id, plant_id, timestamp, sensors_json, ph_cnn "
+        "FROM pending_readings WHERE synced=0 ORDER BY id LIMIT 200"
+    ).fetchall()
+
+    if not rows:
+        return
+
+    batch = [
+        {
+            "device_id": r[1],
+            "plant_id":  r[2],
+            "timestamp": r[3],
+            "sensors":   json.loads(r[4]),
+            **({"ph_cnn": r[5]} if r[5] is not None else {}),
+        }
+        for r in rows
+    ]
+    ids = [r[0] for r in rows]
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                BACKEND_BATCH_URL,
+                json={"batch": batch},
+                headers={"X-Hardware-Api-Key": HARDWARE_API_KEY},
+            )
+            resp.raise_for_status()
+            # Marcar como sincronizados solo si el backend confirmó
+            placeholders = ",".join("?" * len(ids))
+            con.execute(
+                f"UPDATE pending_readings SET synced=1 WHERE id IN ({placeholders})",
+                ids,
+            )
+            con.commit()
+            logger.info("Sincronizados %d registros al backend.", len(ids))
+    except httpx.ConnectError:
+        logger.warning("Sin conexión a internet. Reintentando en %ds.", SYNC_INTERVAL_SECONDS)
+    except httpx.HTTPStatusError as e:
+        logger.error("Backend rechazó el lote: %s", e.response.text)
+    except httpx.HTTPError as e:
+        logger.warning("Error HTTP: %s. Reintentando en %ds.", e, SYNC_INTERVAL_SECONDS)
+
+
+async def main():
+    con = init_db()
+    logger.info("Daemon iniciado. Sincronizando cada %ds.", SYNC_INTERVAL_SECONDS)
+    while True:
+        await sync_to_backend(con)
+        await asyncio.sleep(SYNC_INTERVAL_SECONDS)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+────────────────────────────────────────────────────────────────────────────────
+4.2 — Integración con suscriptor MQTT local (paho-mqtt)
+────────────────────────────────────────────────────────────────────────────────
+
+# En el Edge Node, el suscriptor MQTT llama a enqueue_reading:
+# edge_node/mqtt_local_subscriber.py
+
+import paho.mqtt.client as mqtt
+import json
+from store_forward_daemon import enqueue_reading, init_db
+
+MQTT_BROKER_HOST = "192.168.1.1"   # IP del ESP32 o del broker local LAN
+MQTT_PORT = 1883
+TOPIC_SENSOR = "mole/sensors/#"
+
+con = init_db()
+
+def on_message(client, userdata, msg):
+    try:
+        payload = json.loads(msg.payload.decode())
+        enqueue_reading(
+            con,
+            device_id=payload["device_id"],
+            plant_id=payload["plant_id"],
+            sensors=payload["sensors"],
+        )
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Payload inválido del ESP32: {e}")
+
+client = mqtt.Client()
+client.on_message = on_message
+client.connect(MQTT_BROKER_HOST, MQTT_PORT)
+client.subscribe(TOPIC_SENSOR)
+client.loop_forever()
+
+
+================================================================================
+PLAN DE ACCIÓN — SPRINT 2 SEMANAS
+================================================================================
+
+SEMANA 1 (Backend Core — días 1 al 5):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Día 1–2 │ Crear serializers.py + endpoint /batch/ + unique_together + migración
+         │ Archivo: apps/core/presentation/serializers.py
+         │ Archivo: apps/core/presentation/views.py
+         │ Archivo: apps/core/infrastructure/repositories/models.py
+
+Día 2–3 │ Crear ExplainPhUseCase + endpoint /explain/ph
+         │ Archivo: ai_rag_service/application/use_cases/explain_ph_use_case.py
+         │ Archivo: ai_rag_service/infrastructure/api/routes.py
+
+Día 3–4 │ Crear TrefleAdapter + FarmVillageAdapter + BotanicalFallbackGateway
+         │ Archivo: ai_rag_service/infrastructure/external/botanical_gateway.py
+
+Día 4–5 │ Registrar botanical_gateway en lifespan FastAPI
+         │ Conectar puerto knowledge_repo.save_ph_tolerance (Capa Cero)
+         │ Archivo: ai_rag_service/app/main.py
+
+SEMANA 2 (Edge Node + Integración — días 6 al 10):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Día 6–7 │ Crear store_forward_daemon.py con SQLite local
+         │ Archivo: edge_node/store_forward_daemon.py (nuevo directorio)
+
+Día 7–8 │ Añadir suscriptor MQTT local (paho-mqtt) en el Edge Node
+         │ Archivo: edge_node/mqtt_local_subscriber.py
+         │ Dependencia nueva: pip install paho-mqtt
+
+Día 8–9 │ Integrar script de inferencia TFLite
+         │ Llamar enqueue_reading(ph_cnn=<float_del_modelo>) tras cada inferencia
+         │ Archivo: edge_node/inference.py (CNN + TFLite)
+
+Día 9–10│ Test end-to-end:
+         │ mock ESP32 → daemon MQTT local → batch REST → /explain/ph → JSON auditable
+         │ Archivo: tests/integration/ (ampliar tests existentes)
+
+
+================================================================================
+EVALUACIÓN DE RIESGOS
+================================================================================
+
+Riesgo                                          | Impacto | Mitigación
+------------------------------------------------|---------|-------------------------------------------
+Cuota Supabase free tier (500MB / 2GB BW)       | ALTO    | batch_size=200, cachear en PlantKnowledge
+Trefle.io free tier (100 req/hora)              | MEDIO   | save_ph_tolerance post-fetch (idempotente)
+FarmVillage API puede no existir / cambiar URL  | MEDIO   | Gateway la trata como opcional; None no lanza
+ESP32 sin WiFi envía MQTT sin internet          | BAJO    | Daemon encofa en SQLite; no requiere conectividad
+asyncio.gather en FastAPI con uvicorn/daphne    | BAJO    | httpx.AsyncClient es compatible con async
+bulk_create con Supabase pgbouncer              | MEDIO   | batch_size=200 + ignore_conflicts son seguros
+Modelo TFLite no entrenado aún (MVP)            | ALTO    | Usar valores simulados durante desarrollo
+HARDWARE_API_KEY expuesto en Edge Node          | MEDIO   | Leer exclusivamente desde .env, nunca hardcodear
+
+
+================================================================================
+RESUMEN DE VARIABLES DE ENTORNO REQUERIDAS
+================================================================================
+
+# Backend (.env en raíz del proyecto Django)
+HARDWARE_API_KEY=<clave_m2m_para_esp32_y_edge_node>
+TREFLE_API_TOKEN=<token_gratuito_trefle.io>
+FARMVILLAGE_API_KEY=<api_key_farmvillage>
+MOLE_AI_SERVICE_URL=http://ai_rag_service:8001
+
+# Edge Node (.env en directorio edge_node/)
+HARDWARE_API_KEY=<misma_clave_que_el_backend>
+BACKEND_BATCH_URL=https://<tu_instancia_render>.onrender.com/api/v1/sensor-data/batch/
+SYNC_INTERVAL=30
+
+
+================================================================================
+ARCHIVOS NUEVOS A CREAR EN ESTE SPRINT
+================================================================================
+
+apps/core/presentation/serializers.py          ← DRF serializers (Bloque 1)
+ai_rag_service/application/use_cases/explain_ph_use_case.py   ← Motor (Bloque 2)
+ai_rag_service/infrastructure/external/botanical_gateway.py   ← Gateway (Bloque 3)
+edge_node/__init__.py                           ← Nuevo paquete edge
+edge_node/store_forward_daemon.py               ← Daemon SQLite→REST (Bloque 4)
+edge_node/mqtt_local_subscriber.py             ← Suscriptor MQTT local (Bloque 4)
+edge_node/inference.py                         ← Runner TFLite CNN (Bloque 4)
+edge_node/requirements.txt                     ← httpx, paho-mqtt, tflite-runtime
+
+
+================================================================================
+ARCHIVOS EXISTENTES A MODIFICAR
+================================================================================
+
+apps/core/presentation/views.py                ← Añadir sensor_batch_view
+apps/core/presentation/urls.py                 ← Añadir ruta /batch/
+apps/core/infrastructure/repositories/models.py ← Añadir unique_together + Meta
+ai_rag_service/infrastructure/api/routes.py    ← Añadir endpoint /explain/ph
+ai_rag_service/app/main.py                     ← Registrar botanical_gateway en lifespan
+requirements.txt (raíz)                        ← Verificar httpx >= 0.26 (ya presente)
+
+================================================================================
+FIN DEL REPORTE — Mole.AI Audit v1.0 — 7 de marzo de 2026
+================================================================================

@@ -1,0 +1,300 @@
+================================================================================
+  MOLE.AI — REPORTE: Hardware API Key Authentication (Pendiente 6)
+  Sprint 1 · Sesión 3-B
+  Fecha: 7 de marzo de 2026
+================================================================================
+
+RESUMEN EJECUTIVO
+─────────────────
+Se aseguró el endpoint de ingesta Django (POST /api/v1/sensor-data/ y
+/api/v1/sensor-data/batch/) con autenticación M2M basada en API Keys de
+hardware. Se encontraron y corrigieron 2 vulnerabilidades de seguridad,
+se agregó una dependencia faltante (whitenoise), y se entrega un snippet
+C++ para Arduino IDE listo para el ESP32.
+
+5/5 tests curl pasaron en Docker.
+
+================================================================================
+A. ESTADO PREVIO — ¿Qué ya existía?
+================================================================================
+
+La capa de autenticación de hardware YA estaba parcialmente implementada:
+
+  1. HardwareAPIKeyAuthentication (clase DRF BaseAuthentication)
+     Archivo: apps/authentication/infrastructure/authentication.py
+     → Lee header X-Hardware-Api-Key, compara contra settings.HARDWARE_API_KEY
+
+  2. HardwareOnlyPermission (clase DRF BasePermission)
+     Archivo: apps/core/presentation/views.py
+     → Permission class para rechazar users JWT
+
+  3. Decoradores @authentication_classes + @permission_classes
+     → Aplicados correctamente a sensor_data_view y sensor_batch_view
+
+  4. HARDWARE_API_KEY en settings.py (línea 374)
+     → os.getenv('HARDWARE_API_KEY', 'default-iot-api-key-change-in-production')
+
+================================================================================
+B. VULNERABILIDADES ENCONTRADAS Y CORREGIDAS
+================================================================================
+
+───────────────────────────────────────────────────────────────────────────────
+BUG-1 · CRITICAL — Timing Attack (OWASP A02: Cryptographic Failures)
+───────────────────────────────────────────────────────────────────────────────
+  Archivo: apps/authentication/infrastructure/authentication.py (línea ~161)
+
+  Antes:
+    if api_key != expected_key:
+        raise AuthenticationFailed(...)
+
+  Problema:
+    La comparación estándar de strings en Python (`!=`) es vulnerable a
+    timing attacks. Un atacante puede inferir la API key carácter por
+    carácter midiendo microsegundos de diferencia en el tiempo de respuesta.
+    Esto es especialmente crítico en endpoints IoT expuestos a Internet.
+
+  Después:
+    import hmac
+    ...
+    if not hmac.compare_digest(api_key, expected_key):
+        raise AuthenticationFailed(...)
+
+  hmac.compare_digest() realiza comparación en tiempo constante,
+  eliminando la fuga de información por canal lateral.
+
+───────────────────────────────────────────────────────────────────────────────
+BUG-2 · CRITICAL — Permission Bypass (OWASP A01: Broken Access Control)
+───────────────────────────────────────────────────────────────────────────────
+  Archivo: apps/core/presentation/views.py (clase HardwareOnlyPermission)
+
+  Antes:
+    def has_permission(self, request, view):
+        if request.user is None:
+            return False
+        return not getattr(request.user, 'is_authenticated', True)
+
+  Problema:
+    Cuando NO se envía ningún header de autenticación:
+    1. HardwareAPIKeyAuthentication.authenticate() retorna None
+    2. DRF asigna Django AnonymousUser como request.user
+    3. AnonymousUser.is_authenticated = False (desde Django 2+)
+    4. not False = True → ¡PERMISO CONCEDIDO SIN CREDENCIALES!
+
+    Cualquier petición anónima pasaba la autenticación. El endpoint
+    estaba COMPLETAMENTE ABIERTO.
+
+  Después:
+    # En authentication.py — hardware user ahora tiene flag explícito:
+    hardware_user = type('HardwareDevice', (object,), {
+        'is_authenticated': False,
+        'is_hardware_device': True,  ← NUEVO FLAG
+        'username': 'hardware_device',
+        ...
+    })()
+
+    # En views.py — permission verifica el flag específico:
+    def has_permission(self, request, view):
+        return getattr(request.user, 'is_hardware_device', False)
+
+  Ahora solo pasan las requests autenticadas por HardwareAPIKeyAuthentication,
+  que es la única clase que establece is_hardware_device=True.
+
+================================================================================
+C. DEPENDENCIA FALTANTE
+================================================================================
+
+  whitenoise no estaba en requirements.txt pero settings.py lo incluía
+  en MIDDLEWARE. Esto impedía que django_backend arrancara en Docker.
+
+  Corrección: añadido `whitenoise~=6.6` a requirements.txt (línea 35).
+  Rebuild del contenedor exitoso.
+
+================================================================================
+D. VERIFICACIÓN — Tests curl en Docker (5/5 OK)
+================================================================================
+
+  TEST 1 — Sin header X-Hardware-Api-Key
+    curl -X POST .../sensor-data/ -H "Content-Type: application/json" ...
+    Respuesta: {"detail":"Authentication credentials were not provided."}
+    HTTP: 401 ✓
+
+  TEST 2 — Key incorrecta
+    curl ... -H "X-Hardware-Api-Key: wrong-key-12345" ...
+    Respuesta: {"detail":"Invalid hardware API key."}
+    HTTP: 401 ✓
+
+  TEST 3 — Key correcta (single endpoint)
+    curl ... -H "X-Hardware-Api-Key: default-iot-api-key-change-in-production" ...
+    Respuesta: {"status":"success","device_id":"ESP32-001","registered":1,...}
+    HTTP: 201 ✓
+
+  TEST 4 — Key correcta (batch endpoint)
+    curl ... -H "X-Hardware-Api-Key: ..." -d '{"batch":[...2 readings...]}'
+    Respuesta: {"status":"success","total_sent":3,"registered":3,...}
+    HTTP: 201 ✓
+
+  TEST 5 — Batch SIN key
+    curl -X POST .../sensor-data/batch/ ...
+    Respuesta: {"detail":"Authentication credentials were not provided."}
+    HTTP: 401 ✓
+
+================================================================================
+E. SNIPPET ESP32 C++ (Arduino IDE)
+================================================================================
+
+  /*
+   * Mole.AI — ESP32 Sensor Batch Upload
+   * Hardware: ESP32 DevKit V1
+   * Libs: WiFi.h, HTTPClient.h, ArduinoJson.h (v7)
+   *
+   * Envía un batch de lecturas al endpoint protegido por API Key.
+   */
+
+  #include <WiFi.h>
+  #include <HTTPClient.h>
+  #include <ArduinoJson.h>
+
+  // ── Config ──────────────────────────────────────────
+  const char* WIFI_SSID     = "MiRedWiFi";
+  const char* WIFI_PASS     = "password123";
+  const char* API_URL       = "http://<DJANGO_HOST>:8000/api/v1/sensor-data/batch/";
+  const char* HW_API_KEY    = "default-iot-api-key-change-in-production";
+  const char* DEVICE_ID     = "ESP32-001";
+  const char* PLANT_ID      = "planta_maiz_01";
+
+  void setup() {
+    Serial.begin(115200);
+    WiFi.begin(WIFI_SSID, WIFI_PASS);
+    while (WiFi.status() != WL_CONNECTED) { delay(500); }
+    Serial.println("WiFi OK");
+  }
+
+  void sendBatch(float temp, float hum, float ph_cnn) {
+    if (WiFi.status() != WL_CONNECTED) return;
+
+    HTTPClient http;
+    http.begin(API_URL);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-Hardware-Api-Key", HW_API_KEY);     // ← AUTH
+
+    // Armar JSON con ArduinoJson
+    JsonDocument doc;
+    JsonArray batch = doc["batch"].to<JsonArray>();
+
+    JsonObject reading = batch.add<JsonObject>();
+    reading["device_id"] = DEVICE_ID;
+    reading["plant_id"]  = PLANT_ID;
+    // ISO 8601 timestamp (simplificado, usar NTP en producción)
+    reading["timestamp"] = "2026-03-07T10:30:00Z";
+    reading["ph_cnn"]    = ph_cnn;
+
+    JsonArray sensors = reading["sensors"].to<JsonArray>();
+
+    JsonObject s1 = sensors.add<JsonObject>();
+    s1["type"]  = "temperature";
+    s1["value"] = temp;
+    s1["unit"]  = "C";
+
+    JsonObject s2 = sensors.add<JsonObject>();
+    s2["type"]  = "humidity";
+    s2["value"] = hum;
+    s2["unit"]  = "%";
+
+    String payload;
+    serializeJson(doc, payload);
+
+    int httpCode = http.POST(payload);
+    Serial.printf("HTTP %d: %s\n", httpCode, http.getString().c_str());
+    http.end();
+  }
+
+  void loop() {
+    float temp   = analogRead(34) * 0.1;   // placeholder — reemplazar con lectura real
+    float hum    = analogRead(35) * 0.1;
+    float ph_cnn = 6.3;                     // salida del modelo TFLite
+
+    sendBatch(temp, hum, ph_cnn);
+    delay(60000);  // cada 60 segundos
+  }
+
+================================================================================
+F. ARCHIVOS MODIFICADOS
+================================================================================
+
+  EDITADOS (3 archivos):
+  ├── apps/authentication/infrastructure/authentication.py
+  │     • Añadido import hmac
+  │     • Comparación: api_key != expected → hmac.compare_digest()
+  │     • Hardware user: AnonymousUser → HardwareDevice + is_hardware_device flag
+  │
+  ├── apps/core/presentation/views.py
+  │     • HardwareOnlyPermission: check is_authenticated → check is_hardware_device
+  │
+  └── requirements.txt
+        • Añadido whitenoise~=6.6
+
+  CREADOS (1 archivo):
+  └── reporte_seguridad_hardware_auth.txt    (este archivo)
+
+================================================================================
+G. FLUJO COMPLETO DE AUTENTICACIÓN (POST-FIX)
+================================================================================
+
+  ESP32                          Django Backend
+  ─────                          ──────────────
+  POST /api/v1/sensor-data/
+  Header: X-Hardware-Api-Key: <KEY>
+  Body: {device_id, plant_id, timestamp, sensors[], ph_cnn?}
+       │
+       ▼
+  ┌──────────────────────────────────────┐
+  │ HardwareAPIKeyAuthentication         │
+  │   1. Lee HTTP_X_HARDWARE_API_KEY     │
+  │   2. Compara vs settings.HARDWARE_   │
+  │      API_KEY con hmac.compare_digest │
+  │   3. Si OK → request.user =         │
+  │      HardwareDevice(is_hardware_     │
+  │      device=True)                    │
+  │   4. Si FAIL → 401 Unauthorized     │
+  └──────────────┬───────────────────────┘
+                 │
+                 ▼
+  ┌──────────────────────────────────────┐
+  │ HardwareOnlyPermission               │
+  │   1. Verifica request.user.          │
+  │      is_hardware_device == True      │
+  │   2. Si False → 403 Forbidden       │
+  │   3. Si True → pasa a la vista      │
+  └──────────────┬───────────────────────┘
+                 │
+                 ▼
+  ┌──────────────────────────────────────┐
+  │ sensor_data_view / sensor_batch_view │
+  │   1. Valida payload (serializer)     │
+  │   2. bulk_create en SensorLog        │
+  │   3. 201 Created                     │
+  └──────────────────────────────────────┘
+
+================================================================================
+H. RECOMENDACIONES DE PRODUCCIÓN
+================================================================================
+
+  1. CAMBIAR la API key por defecto. Generar una key de 64+ chars:
+     python -c "import secrets; print(secrets.token_urlsafe(48))"
+     Configurar como variable de entorno HARDWARE_API_KEY.
+
+  2. Usar HTTPS (TLS) obligatorio en producción para proteger la key
+     en tránsito.
+
+  3. Considerar rotación periódica de keys con un mecanismo de
+     doble-key (key actual + key anterior válida por N horas).
+
+  4. Implementar rate limiting específico para hardware (ya existe
+     throttle 'sensor_data': '200/minute' en settings).
+
+  5. En el ESP32, almacenar la API key en NVS (Non-Volatile Storage)
+     cifrado, no hardcodeada en el sketch.
+
+================================================================================
+  FIN DEL REPORTE — Seguridad Hardware Auth · Pendiente 6 Completado
+================================================================================

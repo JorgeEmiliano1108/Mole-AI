@@ -1,0 +1,105 @@
+networks:
+  mole-ai-net:
+    driver: bridge
+
+services:
+  # --- BACKEND (Django "Pip-Boy") ---
+  django_backend:
+    build: .
+    container_name: django_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - SUPABASE_DB_NAME=mole_ai_db
+      - SUPABASE_DB_USER=postgres
+      - SUPABASE_DB_PASSWORD=postgres
+      - SUPABASE_DB_HOST=db
+      - SUPABASE_DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - MOLE_AI_SERVICE_URL=http://fastapi_rag:8002/api/v1
+      - MQTT_BROKER_HOST=mqtt_broker
+      - MQTT_BROKER_PORT=1883
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      fastapi_rag:
+        condition: service_healthy
+      mqtt_broker:
+        condition: service_started
+    networks:
+      - mole-ai-net
+
+  # --- AI SERVICE (FastAPI "Cerebro") ---
+  fastapi_rag:
+    build: ./ai_rag_service
+    container_name: fastapi_rag
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./ai_rag_service:/app
+      - ./ai_rag_service/storage:/app/storage
+    env_file:
+      - .env
+    environment:
+      - PORT=8002
+      - HOST=0.0.0.0
+      - API_PORT=8002
+      - VECTOR_DB_PATH=/app/storage/vectors
+      - REDIS_URL=redis://redis:6379/0
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/health"]
+      interval: 15s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+    networks:
+      - mole-ai-net
+
+  # --- DATABASE (Postgres + pgvector) ---
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: mole_ai_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mole_ai_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mole-ai-net
+
+  # --- CACHE (Redis) ---
+  redis:
+    image: redis:7-alpine
+    container_name: mole_ai_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mole-ai-net
+
+  # --- MQTT BROKER (Eclipse Mosquitto) ---
+  mqtt_broker:
+    image: eclipse-mosquitto:2
+    container_name: mqtt_broker
+    ports:
+      - "1883:1883" # MQTT
+      - "9001:9001" # WebSockets
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - mole-ai-net
+
+volumes:
+  postgres_data:
