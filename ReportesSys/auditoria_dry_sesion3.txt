@@ -1,0 +1,242 @@
+================================================================================
+AUDITORÍA DE DEUDA TÉCNICA (DRY) — Sesión 3 · Mole.AI Sprint 1
+Redactor: GitHub Copilot (Arquitecto Principal / Code Auditor)
+Fecha: 7 de marzo de 2026
+Alcance: apps/ (Django) ↔ ai_rag_service/ (FastAPI) — módulos activos del sprint
+================================================================================
+
+
+================================================================================
+OBJETIVO
+================================================================================
+
+Identificar y eliminar código duplicado, lógica redundante y validaciones
+repetidas acumuladas durante los cambios arquitectónicos del Sprint 1, en
+particular por la separación de responsabilidades entre Django (ingestión) y
+FastAPI (explicabilidad/validación).
+
+Criterio de clasificación:
+  ALTA   → doble fuente de verdad activa; inconsistencia causaría bugs en prod
+  MEDIA  → confusión de mantenimiento; código muerto o sin sincronización
+  BAJA   → duplicidad aceptable por contrato de frontera de sistemas
+
+
+================================================================================
+HALLAZGOS
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+DRY-1 · ALTA · Validación de rango de `value` duplicada en serializers.py
+────────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA:
+  Existían dos validaciones genéricas de rango para el campo `value` dentro
+  del mismo archivo apps/core/presentation/serializers.py:
+
+    SensorLogSerializer.validate_value()   → rango [-1000, 1000]
+    SingleSensorSerializer.validate_value() → rango [-1000, 10000]
+
+  Los rangos difieren entre sí y ninguno tiene semántica física (temperatura no
+  puede ser 999 °C). La validación física real vive en FastAPI:
+    ai_rag_service/domain/services/validator_service.py → rangos por tipo
+
+  SensorLogSerializer es el serializador ModelSerializer heredado; la ruta
+  activa para ingestión pasa por SingleSensorSerializer, por lo que
+  SensorLogSerializer.validate_value() era código redundante con rango incorrecto.
+
+SOLUCIÓN APLICADA:
+  Eliminado el método validate_value() de SensorLogSerializer.
+  SingleSensorSerializer conserva su validate_value() ([-1000, 10000]) como
+  guard de frontera de sistema. La validación física permanece en FastAPI.
+
+ARCHIVO MODIFICADO:
+  apps/core/presentation/serializers.py
+    - Eliminadas líneas:
+        def validate_value(self, value):
+            if not isinstance(value, (int, float)):
+                raise serializers.ValidationError("Value must be a number")
+            if value < -1000 or value > 1000:
+                raise serializers.ValidationError("Value out of reasonable range")
+            return value
+
+RIESGO POST-FIX: Ninguno.
+  SensorLogSerializer no es la ruta principal de ingestión.
+  El guard de rango activo sigue siendo SingleSensorSerializer.
+
+
+────────────────────────────────────────────────────────────────────────────────
+DRY-2 · ALTA · Mapeo Django sensor_type → FastAPI SensorData disperso en código
+────────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA:
+  La conversión de nombres de tipo de sensor entre Django y FastAPI estaba
+  embebida en cadenas if/elif dentro de SensorDataAggregator.get_latest_sensor_readings():
+
+    if 'soil_moisture' in latest_readings:
+        sensor_data['soil_humidity'] = ...
+    if 'ph' in latest_readings:
+        sensor_data['ph_level'] = ...
+
+  No existía una tabla centralizada. Añadir un nuevo tipo de sensor a
+  SensorLog.SENSOR_TYPES requería modificar 3 lugares distintos:
+    1. SensorLog.SENSOR_TYPES (models.py)
+    2. La lista hardcodeada de sensor_types (services.py)
+    3. El bloque de conversión if/elif (services.py)
+
+SOLUCIÓN APLICADA:
+  Creado SENSOR_FIELD_MAP como constante de módulo en apps/ai_models/services.py:
+
+    SENSOR_FIELD_MAP: dict = {
+        'temperature':      'temperature',
+        'humidity':         'humidity',
+        'soil_moisture':    'soil_humidity',    # Django -> FastAPI
+        'ph':               'ph_level',
+        'uv':               'uv_index',
+        'soil_temperature': 'soil_temperature',
+    }
+
+  Ahora para añadir un nuevo tipo basta con:
+    1. Añadirlo a SensorLog.SENSOR_TYPES (models.py) + migración
+    2. Añadir su entry en SENSOR_FIELD_MAP (services.py)
+
+ARCHIVO MODIFICADO:
+  apps/ai_models/services.py
+    - Añadido SENSOR_FIELD_MAP como constante de módulo tras logger
+    - Eliminado el bloque de if/elif de conversión manual
+    - La iteración ahora es: for django_type, fastapi_field in SENSOR_FIELD_MAP.items()
+
+RIESGO POST-FIX: Ninguno.
+  Los 4 tipos originales (temperature, humidity, soil_moisture, ph) siguen
+  siendo consultados y mapeados exactamente igual.
+  Se añadieron uv y soil_temperature que antes se ignoraban silenciosamente.
+
+
+────────────────────────────────────────────────────────────────────────────────
+DRY-3 · MEDIA · Lista hardcodeada de sensor_types fuera de sincronía con modelo
+────────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA:
+  apps/ai_models/services.py línea 83 tenía:
+
+    sensor_types = ['temperature', 'humidity', 'soil_moisture', 'ph', 'light']
+
+  Esta lista estaba desincronizada con SensorLog.SENSOR_TYPES:
+    · 'light' está en SENSOR_TYPES pero SensorLog no recibe lecturas de luz
+      en la arquitectura Direct-to-Cloud → las queries retornaban siempre None
+    · Faltaban 'uv', 'soil_temperature', 'pH_cnn' (añadidos en Sprint 1)
+
+SOLUCIÓN APLICADA:
+  La lista hardcodeada fue eliminada por completo. SENSOR_FIELD_MAP (DRY-2)
+  actúa como la única fuente de verdad sobre qué tipos se consultan, resolviendo
+  DRY-3 al mismo tiempo que DRY-2.
+
+ARCHIVO MODIFICADO:
+  apps/ai_models/services.py (misma modificación que DRY-2)
+
+
+────────────────────────────────────────────────────────────────────────────────
+DRY-4 · BAJA · Validación de rango de pH duplicada entre capas (ACEPTABLE)
+────────────────────────────────────────────────────────────────────────────────
+
+INSTANCIAS:
+  apps/core/presentation/serializers.py:
+    ph_cnn = serializers.FloatField(min_value=0.0, max_value=14.0)
+
+  ai_rag_service/domain/services/validator_service.py:
+    PH_MIN, PH_MAX = 0.0, 14.0
+
+DECISIÓN: NO modificar.
+  Cada servicio valida en su propia frontera de sistema — práctica defensiva
+  correcta en arquitectura de microservicios. Si falla Django, FastAPI rechaza.
+  Si falla FastAPI, Django ya guardó con valor correcto.
+  La duplicidad aquí es deliberada y segura.
+
+
+────────────────────────────────────────────────────────────────────────────────
+DRY-5 · MEDIA · PlantKnowledge (Django ORM) apuntaba a tabla obsoleta
+────────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA:
+  apps/core/infrastructure/repositories/models.py contenía PlantKnowledge
+  con db_table = 'plant_knowledge'.
+  Tras la decisión arquitectónica de usar species_catalog en Supabase como
+  fuente de verdad para tolerancias de pH, la tabla plant_knowledge ya no será
+  creada ni usada.
+
+  El modelo ya tenía managed = False (no crea tabla en migraciones), pero su
+  docstring no reflejaba el cambio arquitectónico, causando confusión para
+  cualquier desarrollador que lo leyera.
+
+SOLUCIÓN APLICADA:
+  Actualizado el docstring de PlantKnowledge:
+
+    DEPRECATED: pH tolerance data has been consolidated into the
+    `species_catalog` table in Supabase (columns: ideal_ph_min/max/optimal).
+    Access via ai_rag_service SupabaseKnowledgeRepo, not via this ORM model.
+    This model is kept for backward compatibility only (managed=False).
+
+ARCHIVO MODIFICADO:
+  apps/core/infrastructure/repositories/models.py — solo docstring
+
+
+================================================================================
+RESUMEN DE CAMBIOS APLICADOS
+================================================================================
+
+┌─────────┬────────┬──────────────────────────────────────────────────┬────────┐
+│ ID      │ Prio   │ Descripción                                      │ Estado │
+├─────────┼────────┼──────────────────────────────────────────────────┼────────┤
+│ DRY-1   │ ALTA   │ Eliminado validate_value() redund. en            │   ✅   │
+│         │        │ SensorLogSerializer                              │        │
+├─────────┼────────┼──────────────────────────────────────────────────┼────────┤
+│ DRY-2   │ ALTA   │ Creado SENSOR_FIELD_MAP como única fuente de     │   ✅   │
+│         │        │ verdad para mapeo Django→FastAPI                 │        │
+├─────────┼────────┼──────────────────────────────────────────────────┼────────┤
+│ DRY-3   │ MEDIA  │ Eliminada lista hardcodeada desincronizada;      │   ✅   │
+│         │        │ resuelta por SENSOR_FIELD_MAP (DRY-2)            │        │
+├─────────┼────────┼──────────────────────────────────────────────────┼────────┤
+│ DRY-4   │ BAJA   │ Validación pH duplicada — aceptable por          │   ⏭️   │
+│         │        │ contrato de frontera de microservicios           │        │
+├─────────┼────────┼──────────────────────────────────────────────────┼────────┤
+│ DRY-5   │ MEDIA  │ PlantKnowledge marcada como DEPRECATED en        │   ✅   │
+│         │        │ docstring; managed=False ya existía              │        │
+└─────────┴────────┴──────────────────────────────────────────────────┴────────┘
+
+Archivos modificados en esta auditoría: 4
+  · ai_rag_service/infrastructure/database/supabase_knowledge_repo.py
+      → Tabla plant_knowledge → species_catalog
+      → Clave species → scientific_name
+      → Columnas ph_min/max/optimal → ideal_ph_min/max/optimal
+      → Guard para columnas NULL pre-migración
+
+  · apps/core/presentation/serializers.py
+      → Eliminado SensorLogSerializer.validate_value() (líneas ~34–40)
+
+  · apps/ai_models/services.py
+      → Añadido SENSOR_FIELD_MAP (constante de módulo, líneas ~40–48)
+      → Eliminada lista hardcodeada ['temperature', 'humidity', ...]
+      → Eliminado bloque if/elif de conversión manual
+      → Loop unificado sobre SENSOR_FIELD_MAP
+
+  · apps/core/infrastructure/repositories/models.py
+      → Docstring PlantKnowledge actualizado con nota DEPRECATED
+
+
+================================================================================
+ESTADO DEL SPRINT TRAS ESTA SESIÓN
+================================================================================
+
+  Deuda técnica DRY identificada:            5 ítems
+  Deuda técnica DRY resuelta:                4 ítems (DRY-1, 2, 3, 5)
+  Deuda técnica DRY aceptada intencionalmente: 1 ítem (DRY-4)
+
+  Regla de mantenimiento posterior:
+    · Para añadir un nuevo tipo de sensor → SENSOR_FIELD_MAP es el único lugar
+      que necesita actualización en apps/ai_models/services.py
+    · SensorLog.SENSOR_TYPES sigue siendo la fuente de verdad para la BD Django
+    · SensorData en ai_rag_service/domain/models.py define los campos del dominio
+
+
+================================================================================
+FIN DEL REPORTE — Auditoría DRY Sesión 3 · Mole.AI Sprint 1 — 7 de marzo de 2026
+================================================================================
