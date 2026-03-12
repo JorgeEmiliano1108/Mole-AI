@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-black text-[#00ffaa] font-mono overflow-hidden">
+    <div class="scanline"></div>
+
+    <div id="intro-screen" class="fixed inset-0 bg-black z-40 flex items-center justify-center p-10">
+        <div class="grid grid-cols-2 gap-12 w-full max-w-6xl h-full max-h-[650px]">
+            <div class="border-2 border-[#00ffaa] p-10 flex flex-col justify-between relative bg-black shadow-[0_0_20px_rgba(0,255,170,0.1)]">
+                <div>
+                    <h1 class="text-7xl font-bold mb-2 tracking-wider text-[#00ffaa] drop-shadow-[0_0_15px_rgba(0,255,170,0.5)]">MoleAI</h1>
+                    <h2 class="text-xl tracking-[0.5em] mb-8 opacity-70">M O N I T O R I N G  T O O L</h2>
+                    <hr class="border-[#00ffaa]/40 mb-10">
+                    <div class="flex flex-col gap-6 text-xl tracking-widest">
+                        <button onclick="typeContent('objetivo')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">OBJETIVO</button>
+                        <button onclick="typeContent('vision')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
+                        <button onclick="typeContent('flora')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
+                        <button onclick="typeContent('acerca')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">ACERCA DE LA WEB</button>
+                    </div>
+                </div>
+                <button onclick="startSystem()" class="w-full border-2 border-[#00ffaa] py-4 text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
+            </div>
+            <div class="border border-[#00ffaa]/30 p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)]">
+                <p id="typewriter-output" class="text-2xl leading-relaxed whitespace-pre-wrap font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-10">
+        <div class="border border-[#00ffaa] p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6">
+            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 border border-[#00ffaa] bg-black px-4 py-1">
+                <svg class="w-5 h-5 text-[#00ffaa]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            </div>
+            <h2 class="text-3xl text-center font-bold tracking-widest mt-2">ACCESO SEGURO</h2>
+            
+            <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">USUARIO:</label>
+                <input type="text" id="user-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest" placeholder="admin / usuario" autocomplete="off">
+            </div>
+            <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">CLAVE:</label>
+                <input type="password" id="pass-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest" placeholder="••••••••">
+            </div>
+            
+            <div class="flex flex-col gap-2 mt-4">
+                <button onclick="attemptLogin()" class="border border-[#00ffaa]/50 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold">ENTRAR >></button>
+                <button onclick="showRegisterScreen()" class="border border-[#00ffaa]/30 py-2 text-xs hover:bg-[#00ffaa]/20 transition-all tracking-widest opacity-80 hover:opacity-100">[ CREAR NUEVO USUARIO ]</button>
+            </div>
+
+            <button onclick="backToIntro()" class="text-xs text-center opacity-50 hover:opacity-100 transition-opacity mt-2 tracking-widest">Volver a inicio</button>
+            
+            <p id="login-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
+        </div>
+    </div>
+
+    <div id="register-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-10">
+        <div class="border border-[#00ffaa] p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6">
+            <h2 class="text-3xl text-center font-bold tracking-widest mt-2">REGISTRO DE OPERADOR</h2>
+            
+            <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">NUEVO USUARIO:</label>
+                <input type="text" id="reg-user-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest" placeholder="Ej. Operador_01" autocomplete="off">
+            </div>
+            <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">NUEVA CLAVE:</label>
+                <input type="password" id="reg-pass-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest" placeholder="••••••••">
+            </div>
+            
+            <div class="flex flex-col gap-2 mt-4">
+                <button onclick="submitRegistration()" class="border border-[#00ffaa]/50 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold">CREAR CREDENCIALES</button>
+                <button onclick="backToLogin()" class="border border-[#00ffaa]/30 py-2 text-xs hover:bg-[#00ffaa]/20 transition-all tracking-widest opacity-80 hover:opacity-100">[ VOLVER AL LOGIN ]</button>
+            </div>
+
+            <p id="reg-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
+            <p id="reg-success" class="text-[#00ffaa] text-center text-xs hidden font-bold tracking-widest">USUARIO CREADO.</p>
+        </div>
+    </div>
+
+    <main id="main-dashboard" class="hidden h-screen p-6 flex-col relative">
+        <header class="flex justify-between items-start border-b-2 border-[#00ffaa] pb-4 mb-6 shrink-0">
+            <div class="flex gap-6">
+                <div class="flex flex-col border-r border-[#00ffaa]/30 pr-6">
+                    <h1 class="text-3xl font-bold tracking-tighter leading-none">MOLE-IA</h1>
+                    <span class="text-[9px] mt-1 animate-pulse uppercase">● System Online</span>
+                </div>
+                <nav class="flex flex-wrap gap-2 max-w-4xl">
+                    <button onclick="updatePlant('Manzanilla')" class="nav-btn active">MANZANILLA</button>
+                    <button onclick="updatePlant('Sábila')" class="nav-btn">SÁBILA</button>
+                    <button onclick="updatePlant('Menta')" class="nav-btn">MENTA</button>
+                    <button onclick="updatePlant('Lavanda')" class="nav-btn">LAVANDA</button>
+                    <button onclick="updatePlant('Cempasúchil')" class="nav-btn">CEMPASÚCHIL</button>
+                    <button onclick="updatePlant('Bugambilia')" class="nav-btn">BUGAMBILIA</button>
+                    <button onclick="updatePlant('Toronjil')" class="nav-btn">TORONJIL</button>
+                    <button onclick="updatePlant('Peyote')" class="nav-btn">PEYOTE</button>
+                    <button onclick="updatePlant('Hongos')" class="nav-btn">HONGOS</button>
+                    <button onclick="openContactModal()" class="nav-btn">CONTÁCTANOS</button>
+                    <button onclick="logout()" class="exit-btn font-bold">[ SALIR ]</button>
+                </nav>
+            </div>
+            <div id="clock" class="text-4xl font-bold tracking-tighter">00:00:00</div>
+        </header>
+
+        <div class="grid grid-cols-12 gap-8 flex-1 items-center min-h-0">
+            <div class="col-span-3 space-y-6">
+                <div class="stat-card">
+                    <span class="label">HUMEDAD AMBIENTE</span>
+                    <span id="txt-hum" class="value text-6xl">65%</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">TEMPERATURA</span>
+                    <span id="txt-temp" class="value text-6xl">24°C</span>
+                </div>
+               <button onclick="openModal()" class="w-full border-2 border-[#f97316] text-[#f97316] py-3 mt-4 hover:bg-[#f97316] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(249,115,22,0.3)]">
+    VER ANÁLISIS DETALLADO 
+</button>
+            </div>
+
+            <div class="col-span-6 flex justify-center">
+                <div class="relative w-full aspect-square border-2 border-[#00ffaa] p-1 bg-black group overflow-hidden max-w-[500px]">
+                    <div class="absolute top-4 left-4 z-20 bg-black/80 border border-[#00ffaa] px-2 py-1 text-[10px]">LIVE_FEED // <span id="plant-tag">MANZANILLA</span></div>
+                    <img id="main-img" src="img/manzanilla.jpg" class="w-full h-full object-cover plant-filter group-hover:filter-none">
+                </div>
+            </div>
+
+            <div class="col-span-3 space-y-6 text-right">
+                <div class="stat-card">
+                    <span class="label">pH DEL SUELO</span>
+                    <span id="txt-ph" class="value text-6xl">6.8</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">ÍNDICE UV</span>
+                    <span id="txt-uv" class="value text-4xl pt-4 block">MODERADO</span>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="toggleChat()" class="absolute bottom-8 right-8 w-14 h-14 border-2 border-[#00ffaa] bg-black text-[#00ffaa] flex items-center justify-center shadow-[0_0_15px_rgba(0,255,170,0.2)] hover:bg-[#00ffaa] hover:text-black transition-all z-50 group">
+            <svg class="w-6 h-6 animate-pulse group-hover:animate-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+        </button>
+
+        <div id="chat-window" class="hidden absolute bottom-24 right-8 w-80 h-[400px] border-2 border-[#00ffaa] bg-black z-50 flex-col shadow-[0_0_20px_rgba(0,255,170,0.15)]">
+            <div class="border-b-2 border-[#00ffaa] p-3 flex justify-between items-center bg-[#001105]">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-[#f97316] rounded-full animate-ping"></span>
+                    <span class="font-bold tracking-widest text-sm text-[#00ffaa]">ASISTENTE MOLE-IA</span>
+                </div>
+                <button onclick="toggleChat()" class="text-sm hover:text-red-500 font-bold tracking-widest">[X]</button>
+            </div>
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-mono">
+                </div>
+
+            <div class="border-t-2 border-[#00ffaa] p-2 flex bg-black">
+                <span class="text-[#00ffaa] mr-2">></span>
+                <input type="text" id="chat-input" class="flex-1 bg-transparent text-[#00ffaa] outline-none placeholder-[#00ffaa]/30 font-mono text-xs" placeholder="Ingresa comando..." autocomplete="off">
+                <button onclick="sendChatMessage()" class="ml-2 text-[#00ffaa] hover:text-white font-bold transition-colors text-xs">ENVIAR</button>
+            </div>
+        </div>
+    </main>
+
+    <main id="admin-dashboard" class="hidden h-screen overflow-y-auto p-6 flex-col relative text-[#00e5ff] font-mono bg-[#000511]">
+        <header class="flex justify-between items-start border-b-2 border-[#00e5ff] pb-4 mb-6 shrink-0">
+            <div class="flex gap-6">
+                <div class="flex flex-col border-r border-[#00e5ff]/30 pr-6">
+                    <h1 class="text-3xl font-bold tracking-tighter leading-none text-[#00e5ff] drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]">OVERRIDE DE ADMIN</h1>
+                    <span class="text-[12px] mt-1 animate-pulse uppercase font-bold text-white">> BIENVENIDO SUPERVISOR</span>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="downloadAdminReport()" class="border-2 border-[#00e5ff] px-4 py-2 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-colors shadow-[0_0_10px_rgba(0,229,255,0.3)]">
+                    [ DESCARGAR REPORTE GENERAL ]
+                </button>
+                <button onclick="logout()" class="border-2 border-[#ff4444] text-[#ff4444] px-4 py-2 hover:bg-[#ff4444] hover:text-black font-bold tracking-widest transition-colors">
+                    [ SALIR ]
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-3 gap-8 min-h-[350px] shrink-0">
+            <div class="border border-[#00e5ff]/40 p-6 flex flex-col bg-black/50 relative shadow-[inset_0_0_20px_rgba(0,229,255,0.05)]">
+                <span class="text-sm font-bold tracking-widest mb-4 opacity-80 border-b border-[#00e5ff]/30 pb-2">ESTADO DE USUARIOS EN RED</span>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="admin-chart-users"></canvas>
+                </div>
+            </div>
+
+            <div class="border border-[#00e5ff]/40 p-6 flex flex-col bg-black/50 relative shadow-[inset_0_0_20px_rgba(0,229,255,0.05)]">
+                <span class="text-sm font-bold tracking-widest mb-4 opacity-80 border-b border-[#00e5ff]/30 pb-2">TASA DE NUEVOS REGISTROS (7 DÍAS)</span>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="admin-chart-regs"></canvas>
+                </div>
+            </div>
+
+            <div class="border border-[#00e5ff]/40 p-6 flex flex-col bg-black/50 relative shadow-[inset_0_0_20px_rgba(0,229,255,0.05)]">
+                <span class="text-sm font-bold tracking-widest mb-4 opacity-80 border-b border-[#00e5ff]/30 pb-2">SALUD GLOBAL DEL HUERTO</span>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="admin-chart-plants"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 mt-8 shrink-0 pb-10">
+            <div class="border border-[#ff4444]/60 p-6 flex flex-col bg-[#110000] shadow-[inset_0_0_20px_rgba(255,68,68,0.1)]">
+                <span class="text-sm font-bold tracking-widest mb-4 text-[#ff4444] border-b border-[#ff4444]/30 pb-2">>> OVERRIDE DE CULTIVOS (SABOTAJE)</span>
+                <p class="text-xs mb-4 opacity-70 text-white">Fuerza parámetros críticos en los huertos de los operadores.</p>
+                <div class="flex flex-col gap-3">
+                    <button onclick="triggerOverride('sequia')" class="border border-[#ff4444] p-2 hover:bg-[#ff4444] hover:text-black font-bold transition-colors text-sm">INDUCIR SEQUÍA (PEYOTE)</button>
+                    <button onclick="triggerOverride('fallo_riego')" class="border border-[#ff4444] p-2 hover:bg-[#ff4444] hover:text-black font-bold transition-colors text-sm">FALLO DE RIEGO (SÁBILA)</button>
+                    <button onclick="triggerOverride('restaurar')" class="border border-[#00e5ff] p-2 hover:bg-[#00e5ff] hover:text-black font-bold transition-colors text-sm text-[#00e5ff] mt-2">RESTAURAR SISTEMAS A LA NORMALIDAD</button>
+                </div>
+            </div>
+
+            <div class="border border-[#00e5ff]/40 p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative">
+                <span class="text-sm font-bold tracking-widest mb-4 border-b border-[#00e5ff]/30 pb-2">>> ESCÁNER DE INTEGRIDAD DEL BÚNKER</span>
+                <button onclick="runDiagnostic()" class="w-full border-2 border-[#00e5ff] py-2 mb-4 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-all">
+                    [ EJECUTAR DIAGNÓSTICO DE CULTIVOS ]
+                </button>
+                <div class="flex-1 bg-[#000511] border border-[#00e5ff]/20 p-4 font-mono text-xs overflow-y-auto h-[150px]">
+                    <ul id="diagnostic-term" class="space-y-1 opacity-80">
+                        <li>> Esperando comando de inicio...</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="border border-[#00e5ff]/40 p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative mt-8 shrink-0 mb-10">
+            <div class="flex justify-between items-center border-b border-[#00e5ff]/30 pb-2 mb-4">
+                <span class="text-sm font-bold tracking-widest text-[#00e5ff]">> BANDEJA DE REPORTES INTERCEPTADOS</span>
+                <button onclick="generateMasterReport()" class="border border-[#00e5ff] px-4 py-2 text-xs hover:bg-[#00e5ff] hover:text-black font-bold transition-all shadow-[0_0_10px_rgba(0,229,255,0.2)]">
+                    [ EXPORTAR REPORTE MAESTRO ]
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-4 text-[10px] opacity-70 mb-2 px-2 uppercase tracking-widest">
+                <div class="col-span-2">HORA</div>
+                <div class="col-span-3">OPERADOR</div>
+                <div class="col-span-3">CLASIFICACIÓN</div>
+                <div class="col-span-4">DETALLE DEL PROBLEMA</div>
+            </div>
+            
+            <div id="admin-reports-list" class="flex-1 bg-[#000511] border border-[#00e5ff]/20 p-2 overflow-y-auto h-[250px] custom-scrollbar space-y-2">
+                <div class="text-center opacity-50 text-xs py-8">> NO HAY REPORTES EN LA BANDEJA...</div>
+            </div>
+        </div>
+        <div class="border border-[#00e5ff]/40 p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative mt-8 shrink-0 mb-10">
+            <div class="flex justify-between items-center border-b border-[#00e5ff]/30 pb-2 mb-4">
+                <span class="text-sm font-bold tracking-widest text-[#00e5ff]">> BANDEJA DE REPORTES INTERCEPTADOS</span>
+                <button onclick="generateMasterReport()" class="border border-[#00e5ff] px-4 py-2 text-xs hover:bg-[#00e5ff] hover:text-black font-bold transition-all shadow-[0_0_10px_rgba(0,229,255,0.2)]">
+                    [ EXPORTAR REPORTE MAESTRO ]
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-4 text-[10px] opacity-70 mb-2 px-2 uppercase tracking-widest">
+                <div class="col-span-2">HORA</div>
+                <div class="col-span-3">OPERADOR</div>
+                <div class="col-span-3">CLASIFICACIÓN</div>
+                <div class="col-span-4">DETALLE DEL PROBLEMA</div>
+            </div>
+            
+            <div id="admin-reports-list" class="flex-1 bg-[#000511] border border-[#00e5ff]/20 p-2 overflow-y-auto h-[250px] custom-scrollbar space-y-2">
+                <div class="text-center opacity-50 text-xs py-8">> NO HAY REPORTES EN LA BANDEJA...</div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="analysis-modal" class="hidden fixed inset-0 bg-black z-50 p-10 flex-col overflow-hidden">
+        <div class="flex justify-between items-center border-b-2 border-[#00ffaa] pb-4 mb-8">
+            <div class="flex items-center gap-4">
+                <h2 class="text-3xl tracking-widest font-bold uppercase">ANÁLISIS DE DATOS</h2>
+            </div>
+            <button onclick="closeModal()" class="border border-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black font-bold transition-colors uppercase tracking-widest">
+                [ &lt;- VOLVER ]
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 h-[45%] mb-8">
+            <div class="border border-[#00ffaa]/30 p-4 bg-black relative">
+                <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE HUMEDAD</span>
+                <canvas id="chart-hum"></canvas>
+            </div>
+            <div class="border border-[#00ffaa]/30 p-4 bg-black relative">
+                <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE TEMPERATURA</span>
+                <canvas id="chart-temp"></canvas>
+            </div>
+        </div>
+
+        <div class="flex-1 border border-[#00ffaa] flex flex-col overflow-hidden min-h-0">
+            <div class="bg-[#00ffaa] text-black px-4 py-2 text-sm font-bold uppercase shrink-0">REGISTRO DE EVENTOS</div>
+            <div class="p-6 flex-1 bg-black overflow-y-auto custom-scrollbar">
+                <div id="log-list" class="space-y-4 text-[13px]"></div>
+            </div>
+        </div>
+    </div>
+   <div id="contact-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-6">
+    <div class="border-2 border-[#00ffaa] bg-black p-8 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.2)]">
+        <h2 class="text-3xl font-bold tracking-widest mb-6 border-b border-[#00ffaa]/30 pb-2 text-center uppercase">Comentario</h2>
+        
+        <div class="space-y-4 mb-6">
+            <div class="flex flex-col gap-2">
+                <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">ID de Operador:</label>
+                <input type="text" id="contact-user" class="bg-[#001105] border border-[#00ffaa]/50 p-2 text-[#00ffaa] outline-none font-mono text-sm" readonly>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">Clasificación de Anomalía:</label>
+                <select id="contact-type" class="bg-[#001105] border border-[#00ffaa]/50 p-2 text-[#00ffaa] outline-none font-mono text-sm appearance-none cursor-pointer">
+                    <option value="estado_planta">Estado Crítico de Especímen</option>
+                    <option value="falla_tecnica">Falla de Hardware/Sensores</option>
+                    <option value="brecha_seguridad">Brecha de Seguridad / Sabotaje</option>
+                    <option value="otro">Otro (Especificar en texto)</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">Detalles del Reporte:</label>
+                <textarea id="contact-msg" rows="4" class="bg-[#001105] border border-[#00ffaa]/50 p-2 text-[#00ffaa] outline-none font-mono text-sm resize-none custom-scrollbar" placeholder="Describa la situación..."></textarea>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-3 relative">
+            <button onclick="sendReport()" class="w-full border-2 border-[#00ffaa] bg-[#00ffaa]/10 py-3 hover:bg-[#00ffaa] hover:text-black font-bold uppercase tracking-widest transition-all">
+                [ TRANSMITIR DATOS ]
+            </button>
+            <button onclick="closeContactModal()" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
+                [ ABORTAR TRANSMISIÓN ]
+            </button>
+        </div>
+        
+        <p id="contact-status" class="hidden text-center mt-4 text-xs font-bold tracking-widest"></p>
+    </div>
+</div>
+    <script src="main.js"></script>
+</body>
+</html>
