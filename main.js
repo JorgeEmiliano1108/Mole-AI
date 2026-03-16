@@ -89,7 +89,7 @@ function submitRegistration() {
     }
 }
 
-// --- NUEVA VERSIÓN DE ATTEMPT LOGIN CON ANIMACIONES PRIME ---
+// --- NUEVA VERSIÓN DE ATTEMPT LOGIN CON ANIMACIONES PRIME Y SOPORTE MULTIUSUARIO ---
 function attemptLogin() {
     const user = document.getElementById('user-input').value.trim();
     const pass = document.getElementById('pass-input').value.trim();
@@ -107,7 +107,6 @@ function attemptLogin() {
         // =========================================================
         if (user.toLowerCase() === 'admin') {
             
-            // 1. Inyectamos keyframes de estática si no existen
             if (!document.getElementById('admin-glitch-style')) {
                 const style = document.createElement('style');
                 style.id = 'admin-glitch-style';
@@ -123,12 +122,10 @@ function attemptLogin() {
                 document.head.appendChild(style);
             }
 
-            // 2. Creamos el overlay negro absoluto
             const overlay = document.createElement('div');
             overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black';
             document.body.appendChild(overlay);
 
-            // 3. Creamos la capa de ruido (glitch visual)
             const noise = document.createElement('div');
             noise.className = 'absolute inset-0';
             noise.style.backgroundImage = 'repeating-radial-gradient(circle at 17% 32%, #ffffff, #000000 0.001px)';
@@ -136,15 +133,11 @@ function attemptLogin() {
             noise.style.opacity = '0.85';
             overlay.appendChild(noise);
 
-            // Ocultamos el login por debajo para que no estorbe
             loginScreen.classList.add('hidden');
 
-            // 4. Secuencia de tiempos
             setTimeout(() => {
-                // A los 1.5s quitamos la estática y dejamos la pantalla negra
                 noise.remove(); 
                 
-                // Agregamos el mensaje del supervisor
                 const msg = document.createElement('h1');
                 msg.innerText = "> BIENVENIDO SUPERVISOR";
                 msg.className = "text-[#00e5ff] font-bold text-3xl md:text-5xl tracking-[0.3em] uppercase drop-shadow-[0_0_15px_#00e5ff] animate-pulse text-center px-4";
@@ -152,23 +145,20 @@ function attemptLogin() {
                 overlay.appendChild(msg);
 
                 setTimeout(() => {
-                    // Después de leer el mensaje, se desvanece
                     overlay.style.transition = 'opacity 0.8s ease';
                     overlay.style.opacity = '0';
                     
-                    // Mostramos el dashboard azul
                     const adminDash = document.getElementById('admin-dashboard');
                     adminDash.classList.remove('hidden');
                     adminDash.classList.add('flex');
                     initAdminCharts(); 
                     renderAdminReports();
 
-                    // Destruimos el overlay para liberar memoria
                     setTimeout(() => overlay.remove(), 800); 
-                }, 2500); // 2.5 segundos mostrando el mensaje
+                }, 2500);
 
-            }, 1500); // 1.5 segundos de estática salvaje
-        } 
+            }, 1500); 
+        }
         
         // =========================================================
         // ANIMACIÓN PARA EL USUARIO (APAGADO Y ENCENDIDO DE TV VIEJA)
@@ -191,6 +181,20 @@ function attemptLogin() {
                     loginScreen.style.transform = '';
                     loginScreen.style.filter = '';
                     loginScreen.style.transition = '';
+
+        // LÓGICA DE RUTEO: DAVID VS NUEVO USUARIO
+                    const davidNav = document.getElementById('david-plants');
+                    const newUserNav = document.getElementById('new-user-plants');
+
+                    if (user === 'david@gmail.com') {
+                        if (davidNav) { davidNav.classList.remove('hidden'); davidNav.classList.add('flex'); }
+                        if (newUserNav) { newUserNav.classList.add('hidden'); newUserNav.classList.remove('flex'); }
+                        updatePlant('Manzanilla'); // Cargamos datos de David
+                    } else {
+                        if (davidNav) { davidNav.classList.add('hidden'); davidNav.classList.remove('flex'); }
+                        if (newUserNav) { newUserNav.classList.remove('hidden'); newUserNav.classList.add('flex'); }
+                        setEmptyDashboardState(); // Cargamos estado vacío
+                    }            
                     
                     // 2. Tiempo de Oscuridad (Pantalla muerta)
                     setTimeout(() => {
@@ -238,7 +242,7 @@ function attemptLogin() {
     }
 }
 
-// PEGA ESTO (La versión con el efecto TV):
+// Efecto TV):
 function logout() {
     const mainDash = document.getElementById('main-dashboard');
     const adminDash = document.getElementById('admin-dashboard');
@@ -793,6 +797,7 @@ function sendReport() {
     }, 1500); 
 }
 
+// Termina la función de los reportes que se cortó en tu mensaje
 function renderAdminReports() {
     const container = document.getElementById('admin-reports-list');
     if(!container) return; 
@@ -854,4 +859,432 @@ function backToIntro() {
     document.getElementById('pass-input').value = '';
     document.getElementById('login-error').classList.add('hidden');
 }
-// --- HASTA AQUÍ ---
+
+// ==========================================================
+// 7. FUNCIONES PARA NUEVOS USUARIOS Y MODAL DE CULTIVOS
+// ==========================================================
+
+function setEmptyDashboardState() {
+    // Ponemos los sensores en espera
+    document.getElementById('txt-hum').innerText = '--%';
+    document.getElementById('txt-temp').innerText = '--°C';
+    document.getElementById('txt-ph').innerText = '--';
+    document.getElementById('txt-uv').innerText = 'N/A';
+    
+    // Alerta de sin señal
+    const plantTag = document.getElementById('plant-tag');
+    plantTag.innerText = 'SIN SEÑAL';
+    plantTag.classList.add('text-red-500', 'animate-pulse');
+    plantTag.classList.remove('text-[#00ffaa]');
+    
+    // Apagamos botones extra
+    const btnAnalysis = document.getElementById('btn-analysis');
+    if(btnAnalysis) {
+        btnAnalysis.innerText = 'ESPERANDO DATOS...';
+        btnAnalysis.disabled = true;
+        btnAnalysis.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+    
+    // Gráfico de la cámara vacía
+    const mainImgContainer = document.getElementById('main-img');
+    const parentContainer = mainImgContainer.parentElement;
+    
+    // Ocultamos la imagen original y ponemos un contenedor vacío
+    mainImgContainer.style.display = 'none';
+    
+    // Si no existe el contenedor de "no señal", lo creamos
+    if (!document.getElementById('no-signal-container')) {
+        const noSignal = document.createElement('div');
+        noSignal.id = 'no-signal-container';
+        noSignal.className = "text-[#00ffaa] opacity-50 flex flex-col items-center justify-center w-full h-full min-h-[250px] border border-dashed border-[#00ffaa]/30";
+        noSignal.innerHTML = `
+            <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            <p class="text-xs tracking-widest text-center">> VINCULE UN CULTIVO <br> PARA INICIAR MONITOREO</p>
+        `;
+        parentContainer.appendChild(noSignal);
+    } else {
+        document.getElementById('no-signal-container').style.display = 'flex';
+    }
+}
+
+function openAddPlantModal() {
+    document.getElementById('add-plant-modal').classList.remove('hidden');
+}
+
+function closeAddPlantModal() {
+    document.getElementById('add-plant-modal').classList.add('hidden');
+}
+
+function registerNewPlant() {
+    alert("¡Inicializando sensores para el nuevo cultivo!\n(Aquí agregaremos la planta al menú posteriormente)");
+    closeAddPlantModal();
+}
+
+// Pequeño parche para cuando David inicia sesión, asegurarnos de que se vuelva a ver la imagen 
+// (por si un usuario nuevo cerró sesión y luego entró David)
+const originalUpdatePlant = updatePlant;
+updatePlant = function(name) {
+    const mainImg = document.getElementById('main-img');
+    const noSignal = document.getElementById('no-signal-container');
+    
+    if (mainImg) mainImg.style.display = 'block';
+    if (noSignal) noSignal.style.display = 'none';
+    
+    const btnAnalysis = document.getElementById('btn-analysis');
+    if(btnAnalysis) {
+        btnAnalysis.innerText = '[ ANÁLISIS DETALLADO ]';
+        btnAnalysis.disabled = false;
+        btnAnalysis.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    originalUpdatePlant(name);
+};
+
+// ==========================================================
+// 8. FLUJO DE DIAGNÓSTICO (CÁMARA Y DEEPSEEK)
+// ==========================================================
+
+async function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 1. Mostrar la imagen en la tarjeta de resultados (preview)
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('scanned-image-preview').src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Mostrar pantalla de carga
+    document.getElementById('loading-scan-modal').classList.remove('hidden');
+
+    // 3. Preparar los datos para el POST
+    const formData = new FormData();
+    formData.append('image', file);
+    // formData.append('user_id', currentOperatorId); // Si necesitas mandar el ID del usuario
+
+    try {
+        /* ========================================================
+        AQUÍ VA TU CÓDIGO REAL PARA EL BACKEND:
+        
+        const response = await fetch('https://tu-api.com/api/v1/diagnose/', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        ========================================================
+        */
+
+        // Simulamos el tiempo de respuesta del servidor (3 segundos) y la respuesta de DeepSeek
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const data = {
+            species: "Solanum lycopersicum (Tomate)",
+            status: "Infección por Oídio (Hongo) - Nivel Crítico",
+            ph: "5.2 (Ligeramente ácido)",
+            treatment: "Aislar espécimen inmediatamente. Aplicar fungicida a base de azufre o bicarbonato de sodio (1 cucharada por litro de agua) cada 7 días. Mejorar ventilación y reducir humedad ambiental al 50%."
+        };
+
+        // 4. Llenar la tarjeta de diagnóstico con los datos
+        document.getElementById('diag-species').innerText = data.species;
+        document.getElementById('diag-status').innerText = data.status;
+        document.getElementById('diag-ph').innerText = data.ph;
+        document.getElementById('diag-treatment').innerText = data.treatment;
+
+    } catch (error) {
+        console.error("Error en conexión con el motor IA:", error);
+        document.getElementById('diag-species').innerText = "ERROR DE CONEXIÓN";
+        document.getElementById('diag-status').innerText = "Fallo al contactar servidor DeepSeek.";
+    } finally {
+        // 5. Ocultar carga y mostrar resultado
+        document.getElementById('loading-scan-modal').classList.add('hidden');
+        document.getElementById('diagnosis-result-modal').classList.remove('hidden');
+        
+        // Limpiar el input para permitir volver a escanear la misma foto si se desea
+        document.getElementById('camera-input').value = '';
+    }
+}
+
+function closeDiagnosisModal() {
+    document.getElementById('diagnosis-result-modal').classList.add('hidden');
+}
+
+// ==========================================================
+// 9. FLUJO DE MI HUERTO (HISTORIAL Y FAVORITOS - API SIMULADA)
+// ==========================================================
+
+// Bases de datos locales simuladas (hasta que conectes tu backend real)
+let userHistoryDB = [
+    { id: "SCAN-001", date: "15/03/2026", species: "Solanum lycopersicum", status: "Infección por Oídio", ph: "5.2" },
+    { id: "SCAN-002", date: "10/03/2026", species: "Aloe vera", status: "Óptimo", ph: "7.1" }
+];
+let userFavoritesDB = [];
+
+// Variable para recordar qué pestaña estamos viendo
+let currentTab = 'history'; 
+
+function openHistoryModal() {
+    document.getElementById('history-modal').classList.remove('hidden');
+    // Simulamos la llamada GET /api/v1/history/ y GET /api/v1/favorites/
+    fetchAndRenderHuerto(currentTab);
+}
+
+function closeHistoryModal() {
+    document.getElementById('history-modal').classList.add('hidden');
+}
+
+function switchHistoryTab(tab) {
+    currentTab = tab;
+    
+    // Estilos visuales de las pestañas
+    const btnHist = document.getElementById('tab-history');
+    const btnFav = document.getElementById('tab-favorites');
+    
+    if (tab === 'history') {
+        btnHist.className = "text-[#00ffaa] border-b-2 border-[#00ffaa] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        btnFav.className = "text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+    } else {
+        btnFav.className = "text-[#f97316] border-b-2 border-[#f97316] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        btnHist.className = "text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+    }
+    
+    fetchAndRenderHuerto(tab);
+}
+
+async function fetchAndRenderHuerto(tab) {
+    const container = document.getElementById('history-list-container');
+    container.innerHTML = `<div class="text-center text-[#00ffaa] animate-pulse mt-10 text-xs tracking-widest">> SINCRONIZANDO CON BASE DE DATOS CENTRAL...</div>`;
+
+    // 1. SIMULACIÓN DE PETICIÓN GET (Tarda medio segundo)
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const dataToRender = tab === 'history' ? userHistoryDB : userFavoritesDB;
+    const accentColor = tab === 'history' ? '#00ffaa' : '#f97316';
+
+    // 2. RENDERIZADO DE LAS CARDS
+    if (dataToRender.length === 0) {
+        container.innerHTML = `<div class="text-center text-white/50 mt-10 text-xs tracking-widest">> NO HAY REGISTROS EN ESTA CATEGORÍA.</div>`;
+        return;
+    }
+
+    container.innerHTML = dataToRender.map(item => `
+        <div class="border border-[${accentColor}]/30 bg-black p-4 flex flex-col md:flex-row justify-between md:items-center gap-4 hover:bg-[${accentColor}]/10 transition-colors">
+            <div>
+                <span class="text-[10px] text-white/50 border border-white/20 px-1">${item.id} | ${item.date}</span>
+                <h3 class="text-[${accentColor}] font-bold mt-1 text-sm md:text-base uppercase">${item.species}</h3>
+                <p class="text-xs text-white/80">Estado: <span class="${item.status === 'Óptimo' ? 'text-[#00ffaa]' : 'text-red-400'}">${item.status}</span> | pH: ${item.ph}</p>
+            </div>
+            <div class="flex gap-2 shrink-0">
+                <button onclick="downloadReportPDF('${item.id}', this)" class="border border-[#00e5ff] text-[#00e5ff] px-3 py-1 text-[10px] uppercase font-bold hover:bg-[#00e5ff] hover:text-black transition-colors">
+                    [ PDF ]
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// ----------------------------------------------------
+// REEMPLAZA ESTA FUNCIÓN DEL FLUJO 1
+// ----------------------------------------------------
+async function saveToFavorites() {
+    const btn = event.target;
+    const originalText = btn.innerText;
+    
+    btn.innerText = "[ ENVIANDO... ]";
+    btn.classList.add('animate-pulse');
+
+    // SIMULACIÓN DE POST /api/v1/favorites/
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Tomamos los datos de la tarjeta actual que el usuario está viendo
+    const newFavorite = {
+        id: "FAV-" + Math.floor(Math.random() * 1000),
+        date: new Date().toLocaleDateString('en-GB'),
+        species: document.getElementById('diag-species').innerText,
+        status: document.getElementById('diag-status').innerText,
+        ph: document.getElementById('diag-ph').innerText
+    };
+
+    // Lo metemos al arreglo local (hasta que tengas BD)
+    userFavoritesDB.push(newFavorite);
+
+    btn.innerText = "[ GUARDADO EN FAVORITOS ]";
+    btn.classList.remove('animate-pulse', 'border-[#f97316]', 'text-[#f97316]', 'hover:bg-[#f97316]');
+    btn.classList.add('border-green-500', 'text-green-500', 'hover:bg-green-500', 'cursor-not-allowed');
+    btn.disabled = true; // Evitar multiples clicks
+}
+
+// ==========================================================
+// 10. FLUJO DE GEOLOCALIZACIÓN (MAPA Y PERMISOS)
+// ==========================================================
+
+let mapInstance = null;
+let userLocation = null;
+
+// 1. Pedir permiso de ubicación EXACTA
+function requestLocation() {
+    if ("geolocation" in navigator) {
+        
+        // Aquí configuramos el GPS en modo "Francotirador" (Alta Precisión)
+        const opcionesGPS = {
+            enableHighAccuracy: true, // Obliga al dispositivo a usar el hardware GPS real
+            timeout: 10000,           // Le da 10 segundos máximo para encontrar los satélites
+            maximumAge: 0             // Le dice que no use ubicaciones viejas guardadas en memoria
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+                console.log("> UBICACIÓN EXACTA CAPTURADA:", userLocation);
+
+                // Si el mapa ya está abierto, lo centramos en ti con un zoom súper cercano (nivel 16)
+                if (mapInstance) {
+                    mapInstance.setView([userLocation.lat, userLocation.lng], 16);
+                }
+            },
+            (error) => {
+                console.warn("> ACCESO A GPS DENEGADO O FALLIDO:", error.message);
+            },
+            opcionesGPS // Pasamos las opciones aquí
+        );
+    }
+}
+
+// 2. Abrir el modal y renderizar el mapa
+function openMapModal() {
+    document.getElementById('map-modal').classList.remove('hidden');
+    
+    // Si el mapa no se ha creado aún, lo inicializamos
+    if (!mapInstance) {
+        // Coordenadas iniciales (Ejemplo: Centro de México), Zoom nivel 5
+        mapInstance = L.map('map-container').setView([23.6345, -102.5528], 5);
+
+        // Capa de mapa oscuro (Estilo Terminal/Cyberpunk)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20,
+            keepBuffer: 4, // Mantiene en memoria los cuadritos que ya cargó
+            updateWhenZooming: false // Evita parpadeos mientras haces el gesto de zoom
+        }).addTo(mapInstance);
+    } else {
+        // Si ya existe, le decimos a Leaflet que recalcule su tamaño porque estaba oculto
+        setTimeout(() => mapInstance.invalidateSize(), 400);
+    }
+
+    // 3. Cargar los pines de historial
+    loadMapPins();
+}
+
+function closeMapModal() {
+    document.getElementById('map-modal').classList.add('hidden');
+}
+
+// 4. Dibujar los puntos de infección en el mapa
+function loadMapPins() {
+    // Aquí harías un GET /api/v1/history/ para sacar la lat/lng de cada planta
+    // Por ahora usamos datos simulados para que veas cómo se ve
+    const geoData = [
+        { lat: 19.4326, lng: -99.1332, species: "Tomate (Oídio)", status: "Crítico", color: "#ef4444" }, // CDMX (Rojo)
+        { lat: 20.6596, lng: -103.3496, species: "Sábila", status: "Óptimo", color: "#00ffaa" }, // Guadalajara (Verde)
+        { lat: 25.6866, lng: -100.3161, species: "Maíz (Roya)", status: "Atención", color: "#f97316" } // Monterrey (Naranja)
+    ];
+
+    // Limpiar pines anteriores si es necesario (opcional)
+    // mapInstance.eachLayer((layer) => { if (layer instanceof L.Marker) mapInstance.removeLayer(layer) });
+
+    geoData.forEach(point => {
+        // Creamos un pin de estilo "hacker" con CSS en lugar del pin azul aburrido de Google Maps
+        const customPin = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="background-color:${point.color}; width:12px; height:12px; border-radius:50%; box-shadow: 0 0 15px ${point.color}; border: 1px solid white;"></div>`,
+            iconSize: [12, 12],
+            iconAnchor: [6, 6]
+        });
+
+        // Agregamos el pin y su cuadrito de información (Popup)
+        L.marker([point.lat, point.lng], { icon: customPin })
+            .addTo(mapInstance)
+            .bindPopup(`
+                <div style="background:#001105; color:#00ffaa; border:1px solid #00ffaa; padding:8px; font-family:monospace; min-width: 150px;">
+                    <strong style="color:white; display:block; border-bottom:1px solid rgba(0,255,170,0.3); padding-bottom:4px; margin-bottom:4px; text-transform:uppercase;">
+                        ${point.species}
+                    </strong>
+                    Estado: <span style="color:${point.color}">${point.status}</span>
+                </div>
+            `);
+    });
+}
+
+// ==========================================================
+// 11. FLUJO DE DESCARGA DE REPORTES (PDF BLOB)
+// ==========================================================
+
+async function downloadReportPDF(reportId, btnElement) {
+    // 1. Cambiamos el estado del botón a "descargando"
+    const originalText = btnElement.innerText;
+    btnElement.innerText = "[ DESCARGANDO... ]";
+    btnElement.classList.add('animate-pulse', 'bg-[#00e5ff]/20');
+
+    try {
+        /* ========================================================
+        AQUÍ VA TU CÓDIGO REAL PARA EL BACKEND (Cuando esté listo):
+        
+        const response = await fetch(`https://tu-api.com/api/v1/reports/${reportId}/download`, {
+            method: 'GET',
+            // headers: { 'Authorization': 'Bearer ' + token } // Si usas tokens de sesión
+        });
+        
+        if (!response.ok) throw new Error('Error al descargar el archivo');
+        
+        const blob = await response.blob();
+        ======================================================== */
+
+        // SIMULACIÓN DE API: Esperamos 1.5 segundos para fingir que descargamos
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Creamos un Blob falso simulando ser un PDF (Solo para la prueba visual)
+        const pdfContent = "%PDF-1.4\n% Simulación de reporte fitosanitario para MOLE-IA...\n% Especie sana. Fin del reporte.";
+        const blob = new Blob([pdfContent], { type: 'application/pdf' });
+
+        // 2. MAGIA DE FRONTEND: Crear enlace invisible y forzar descarga
+        const url = window.URL.createObjectURL(blob); // Crea una URL temporal en el navegador
+        const a = document.createElement('a');        // Crea una etiqueta <a> invisible
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `MOLE_IA_Reporte_${reportId}.pdf`; // El nombre con el que se guardará el archivo
+        
+        document.body.appendChild(a);
+        a.click(); // ¡Simulamos que el usuario le dio clic!
+        
+        // 3. Limpieza de memoria
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+    } catch (error) {
+        console.error("> ERROR DE DESCARGA:", error);
+        alert("[!] ERROR: No se pudo establecer conexión con el servidor para la descarga.");
+    } finally {
+        // 4. Regresamos el botón a la normalidad
+        btnElement.innerText = originalText;
+        btnElement.classList.remove('animate-pulse', 'bg-[#00e5ff]/20');
+    }
+}
+
+// ==========================================================
+// MENÚ DESPLEGABLE DE CULTIVOS (DROPDOWN)
+// ==========================================================
+function toggleCultivosMenu() {
+    const dropdown = document.getElementById('dropdown-cultivos');
+    dropdown.classList.toggle('hidden');
+}
+
+// Cierra el menú si das clic en cualquier otro lado de la pantalla
+window.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('dropdown-cultivos');
+    const isClickInside = e.target.closest('button[onclick="toggleCultivosMenu()"]');
+    
+    if (dropdown && !dropdown.classList.contains('hidden') && !isClickInside) {
+        dropdown.classList.add('hidden');
+    }
+});
