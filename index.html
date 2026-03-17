@@ -25,6 +25,8 @@
                         <button onclick="typeContent('vision')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
                         <button onclick="typeContent('flora')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
                         <button onclick="typeContent('acerca')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">ACERCA DE LA WEB</button>
+                        <button onclick="openIotWizard()" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-[#00ffaa]/30 mt-4 text-[#00ffaa] font-bold">[+] VINCULAR ESP32</button>
+                        <button onclick="openDeleteModal()" class="text-left text-red-500 hover:text-white hover:bg-red-600 p-2 transition-colors border border-red-500/30 mt-8 font-bold text-sm">[!] PURGAR CUENTA (DERECHOS ARCO)</button>
                     </div>
                 </div>
                 <button onclick="startSystem()" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
@@ -427,8 +429,8 @@
         </div>
 
         <div class="mt-8 space-y-3">
-            <button class="w-full border-2 border-[#f97316] text-[#f97316] py-2 hover:bg-[#f97316] hover:text-black transition-colors font-bold tracking-widest uppercase text-sm">
-                [ GUARDAR E INICIALIZAR ]
+            <button type="button" onclick="registerNewPlant()" class="w-full border border-[#00ffaa] bg-[#001105] text-[#00ffaa] py-3 hover:bg-[#00ffaa] hover:text-black font-bold transition-colors mt-6 text-sm tracking-widest">
+                > GUARDAR E INICIALIZAR
             </button>
             <button onclick="closeAddPlantModal()" class="w-full border border-red-500/50 text-red-500 py-2 hover:bg-red-500 hover:text-black transition-colors font-bold tracking-widest uppercase text-xs">
                 [ CANCELAR ]
@@ -555,6 +557,72 @@
                 </div>
         </div>
     </div>
+
+    <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4 font-mono">
+    <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.15)] relative">
+        
+        <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
+            > ENLACE DE HARDWARE: ESP32_NODE
+        </h2>
+
+        <div id="iot-step-1" class="iot-step block">
+            <p class="text-white/80 text-sm mb-4">> Escaneando frecuencias locales en busca de hardware AgroGuard...</p>
+            <div class="animate-pulse text-[#00ffaa] text-center my-8 text-2xl">[ RADARES ACTIVOS ]</div>
+            <button onclick="nextIotStep(2)" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
+                > SIMULAR DISPOSITIVO ENCONTRADO
+            </button>
+        </div>
+
+        <div id="iot-step-2" class="iot-step hidden">
+            <p class="text-white/80 text-sm mb-4">> Dispositivo detectado. Ingrese credenciales de red local (2.4 GHz).</p>
+            
+            <label class="block text-[#00ffaa] text-xs mb-1">> SSID (Nombre de red)</label>
+            <input type="text" id="wifi-ssid" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 mb-4 outline-none focus:border-[#00ffaa]" placeholder="Ej. Red_Casa_2.4G">
+            
+            <label class="block text-[#00ffaa] text-xs mb-1">> PASSWORD</label>
+            <div class="relative mb-6">
+                <input type="password" id="wifi-pass" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 outline-none focus:border-[#00ffaa] font-sans" placeholder="********">
+                <button onclick="toggleWifiPassword()" class="absolute right-2 top-2 text-[#00ffaa]/70 hover:text-[#00ffaa] text-xs">
+                    [ VER ]
+                </button>
+            </div>
+
+            <div class="flex justify-between">
+                <button onclick="nextIotStep(1)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
+                <button onclick="nextIotStep(3)" class="border border-[#00ffaa] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs">> SIGUIENTE</button>
+            </div>
+        </div>
+
+        <div id="iot-step-3" class="iot-step hidden">
+            <p class="text-yellow-400 text-sm mb-4">> ADVERTENCIA: Verifique los datos antes de inyectar el payload al ESP32.</p>
+            <div class="bg-[#001105] border border-[#00ffaa]/30 p-4 mb-6 text-sm text-white/80 space-y-2">
+                <p>TARGET: <span class="text-[#00ffaa]">ESP32_AGRO_01</span></p>
+                <p>SSID: <span id="confirm-ssid" class="text-[#00ffaa]">---</span></p>
+                <p>ENCRIPTACIÓN: <span class="text-[#00ffaa]">WPA2-PSK</span></p>
+            </div>
+            
+            <div class="flex justify-between">
+                <button onclick="nextIotStep(2)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
+                <button onclick="startHardwareProvisioning()" class="border border-[#00ffaa] bg-[#001105] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> INYECTAR DATOS</button>
+            </div>
+        </div>
+
+        <div id="iot-step-4" class="iot-step hidden text-center py-8">
+            <p class="text-[#00ffaa] text-lg mb-2 animate-pulse">> ESTABLECIENDO HANDSHAKE...</p>
+            <p class="text-white/50 text-xs font-mono">Transfiriendo paquetes cifrados al microcontrolador. No apague el equipo.</p>
+        </div>
+
+        <div id="iot-step-5" class="iot-step hidden text-center py-6">
+            <div class="text-[#00ffaa] text-4xl mb-4">[ OK ]</div>
+            <p class="text-white mb-6">> Hardware provisionado exitosamente. El dispositivo se reiniciará y se conectará al servidor de Mole.AI.</p>
+            <button onclick="closeIotWizard()" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> CERRAR PANEL</button>
+        </div>
+
+        <button id="iot-close-btn" onclick="closeIotWizard()" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">
+            [X]
+        </button>
+        </div>
+        </div>
 
     <script src="main.js"></script>
 </body>
