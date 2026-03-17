@@ -26,7 +26,7 @@
                         <button onclick="typeContent('flora')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
                         <button onclick="typeContent('acerca')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">ACERCA DE LA WEB</button>
                         <button onclick="openIotWizard()" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-[#00ffaa]/30 mt-4 text-[#00ffaa] font-bold">[+] VINCULAR ESP32</button>
-                        <button onclick="openDeleteModal()" class="text-left text-red-500 hover:text-white hover:bg-red-600 p-2 transition-colors border border-red-500/30 mt-8 font-bold text-sm">[!] PURGAR CUENTA</button>
+
                     </div>
                 </div>
                 <button onclick="startSystem()" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
@@ -175,6 +175,10 @@
             </div>
 
             <div class="md:col-span-3 space-y-6 md:text-right order-3">
+                <button onclick="openUserProfile()" class="w-full h-24 border border-[#00ffaa]/50 bg-[#001105] hover:bg-[#00ffaa] hover:text-black text-[#00ffaa] flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,255,170,0.05)] cursor-pointer">
+                    <span class="text-2xl font-bold mb-1">[ :() ]</span>
+                    <span class="text-xs font-bold tracking-widest">> PERFIL</span>
+                    </button>
                 <div class="stat-card">
                     <span class="label">pH DEL SUELO</span>
                     <span id="txt-ph" class="value text-5xl md:text-6xl">6.8</span>
@@ -623,6 +627,33 @@
         </button>
         </div>
         </div>
+
+        <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 font-mono">
+    <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-md shadow-[0_0_30px_rgba(0,255,170,0.15)] relative text-left">
+        
+        <button onclick="closeUserProfile()" class="absolute top-4 right-4 text-[#00ffaa] hover:text-white font-bold text-xl">
+            [X]
+        </button>
+        
+        <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-6">
+            > STATUS DEL OPERADOR
+        </h2>
+        
+        <div class="space-y-4 text-sm mb-8">
+            <p><span class="text-[#00ffaa]">NOMBRE:</span> <span class="text-white" id="profile-name">Agente Mole</span></p>
+            <p><span class="text-[#00ffaa]">ID:</span> <span class="text-white">M-A1-9982</span></p>
+            <p><span class="text-[#00ffaa]">RANGO:</span> <span class="text-white">SUPERVISOR DE CULTIVOS</span></p>
+            <p><span class="text-[#00ffaa]">SESIÓN:</span> <span class="text-green-400 animate-pulse">ACTIVA</span></p>
+        </div>
+
+        <div class="border-t border-red-500/50 pt-6">
+            <p class="text-red-500 text-[10px] mb-3 font-bold uppercase tracking-tighter">Zona de Peligro / Derechos ARCO</p>
+            <button onclick="openDeleteModal()" class="w-full text-center text-red-500 hover:text-white hover:bg-red-600 py-2 transition-colors border border-red-500/50 font-bold text-xs">
+                ELIMINAR MI CUENTA DEL SISTEMA
+            </button>
+        </div>
+    </div>
+</div>
 
     <script src="main.js"></script>
 </body>
