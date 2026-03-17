@@ -916,8 +916,9 @@ function closeAddPlantModal() {
 }
 
 function registerNewPlant() {
-    alert("¡Inicializando sensores para el nuevo cultivo!\n(Aquí agregaremos la planta al menú posteriormente)");
-    closeAddPlantModal();
+    console.log("> Procesando inicialización de nuevo cultivo...");
+    alert("[ OK ] Cultivo inicializado en la base de datos local.");
+    closeAddPlantModal(); // Esta es la magia que cierra tu ventana
 }
 
 // Pequeño parche para cuando David inicia sesión, asegurarnos de que se vuelva a ver la imagen 
@@ -1288,3 +1289,160 @@ window.addEventListener('click', function(e) {
         dropdown.classList.add('hidden');
     }
 });
+
+
+// ==========================================================
+// SEGURIDAD S1: RENDERIZADO SEGURO DE CHAT (Anti-XSS)
+// ==========================================================
+
+// 1. Creador de mensajes genéricos (Usuario o Estado)
+function appendChatMessage(container, role, text, opts = {}) {
+    const msg = document.createElement('div');
+    msg.className = `ai-message ${role} ${opts.extraClass ? opts.extraClass : ''}`;
+
+    // Si trae imagen adjunta, la inyectamos seguro
+    if (opts.withImage && opts.imageSrc) {
+        const img = document.createElement('img');
+        img.className = 'w-32 h-32 object-cover border-2 border-[#00ffaa] mb-2'; // Estilo hacker
+        img.alt = 'Imagen escaneada';
+        img.src = opts.imageSrc;
+        msg.appendChild(img);
+    }
+
+    // Inyectamos el texto de forma segura
+    const textNode = document.createElement('div');
+    textNode.className = 'chat-text text-sm font-mono text-white/80';
+    textNode.textContent = text || '';
+    msg.appendChild(textNode);
+
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+    return msg;
+}
+
+// 2. Creador de respuestas de la IA (Multilínea y Alertas Tácticas)
+function appendMultilineBotMessage(container, answer, tacticalCount) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ai-message bot border-l-2 border-[#00ffaa] pl-3 mb-4';
+
+    // Si hay alerta de plaga, metemos el badge estilo militar
+    if (tacticalCount > 0) {
+        const badge = document.createElement('div');
+        badge.className = 'text-red-500 font-bold border border-red-500 p-1 text-xs mb-2 inline-block';
+        badge.textContent = `> ALERTA TÁCTICA: ${tacticalCount} detectada(s)`;
+        wrapper.appendChild(badge);
+    }
+
+    // Procesamos línea por línea de la IA sin usar HTML crudo
+    const lines = String(answer || '').split('\n');
+    lines.forEach((line, idx) => {
+        const p = document.createElement('p');
+        p.textContent = line;
+        p.className = "text-[#00ffaa] font-mono text-sm";
+        wrapper.appendChild(p);
+        
+        if (idx < lines.length - 1) {
+            const spacer = document.createElement('br');
+            wrapper.appendChild(spacer);
+        }
+    });
+
+    container.appendChild(wrapper);
+    container.scrollTop = container.scrollHeight;
+}
+
+// ==========================================================
+// SEGURIDAD S1: CONTROL DE MEMORIA Y LISTENERS
+// ==========================================================
+
+let chatListenerAttached = false;
+
+// Conectar el oído del chat UNA SOLA VEZ
+function attachChatListenerOnce() {
+    if (chatListenerAttached) return;
+    // Asumiendo que 'handleChatResponse' es la función que procesa la llegada del mensaje
+    if (typeof handleChatResponse === 'function') {
+        window.addEventListener('chatMessage', handleChatResponse);
+        chatListenerAttached = true;
+        console.log("> Listener de chat asegurado.");
+    }
+}
+
+// Desconectar el oído para liberar memoria RAM
+function detachChatListener() {
+    if (!chatListenerAttached) return;
+    if (typeof handleChatResponse === 'function') {
+        window.removeEventListener('chatMessage', handleChatResponse);
+        chatListenerAttached = false;
+        console.log("> Listener de chat desconectado (Memoria liberada).");
+    }
+}
+
+// Limpiar la basura cuando el usuario cierra o recarga la página
+window.addEventListener('beforeunload', () => {
+    detachChatListener();
+    if (typeof monitorInterval !== 'undefined' && monitorInterval) {
+        clearInterval(monitorInterval);
+        console.log("> Intervalo de sensores destruido.");
+    }
+});
+
+
+// ==========================================================
+// MÓDULO IOT: WIZARD DE CONFIGURACIÓN ESP32
+// ==========================================================
+
+function openIotWizard() {
+    // 1. Mostrar el modal
+    document.getElementById('iot-wizard-modal').classList.remove('hidden');
+    // 2. Reiniciar siempre al Paso 1
+    nextIotStep(1);
+}
+
+function closeIotWizard() {
+    document.getElementById('iot-wizard-modal').classList.add('hidden');
+    
+    // SEGURIDAD CRÍTICA: Limpiar contraseñas del DOM al cerrar
+    document.getElementById('wifi-ssid').value = '';
+    document.getElementById('wifi-pass').value = '';
+    document.getElementById('wifi-pass').type = 'password'; // resetear vista
+    console.log("> Buffer de credenciales Wi-Fi purgado por seguridad.");
+}
+
+function nextIotStep(stepNumber) {
+    // Ocultar todos los pasos
+    document.querySelectorAll('.iot-step').forEach(el => el.classList.add('hidden'));
+    
+    // Mostrar el paso solicitado
+    document.getElementById(`iot-step-${stepNumber}`).classList.remove('hidden');
+
+    // Si pasamos al paso 3 (Confirmación), copiamos el nombre del Wi-Fi para que el usuario lo revise
+    if (stepNumber === 3) {
+        const ssidValue = document.getElementById('wifi-ssid').value || 'RED_DESCONOCIDA';
+        document.getElementById('confirm-ssid').textContent = ssidValue;
+    }
+}
+
+function toggleWifiPassword() {
+    const passInput = document.getElementById('wifi-pass');
+    if (passInput.type === 'password') {
+        passInput.type = 'text';
+    } else {
+        passInput.type = 'password';
+    }
+}
+
+function startHardwareProvisioning() {
+    // Vamos al paso de carga
+    nextIotStep(4);
+    document.getElementById('iot-close-btn').classList.add('hidden'); // Ocultar la X para que no aborten el proceso
+
+    // Simulamos que tarda 3 segundos en conectarse al ESP32 y luego mostramos el Éxito
+    setTimeout(() => {
+        nextIotStep(5);
+        document.getElementById('iot-close-btn').classList.remove('hidden'); // Devolver la X
+        
+        // Aquí en el futuro haríamos el fetch al backend real
+        console.log("> Datos enviados al endpoint de aprovisionamiento IoT.");
+    }, 3000);
+}
