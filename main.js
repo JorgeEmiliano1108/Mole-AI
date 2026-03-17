@@ -1446,3 +1446,21 @@ function startHardwareProvisioning() {
         console.log("> Datos enviados al endpoint de aprovisionamiento IoT.");
     }, 3000);
 }
+
+// Funciones para el Perfil del Operador
+function openUserProfile() {
+    console.log("> Accediendo a datos del operador...");
+    document.getElementById('user-profile-modal').classList.remove('hidden');
+}
+
+function closeUserProfile() {
+    document.getElementById('user-profile-modal').classList.add('hidden');
+}
+
+// Modificación a la función de purga para que cierre el perfil antes de abrir la alerta roja
+function openDeleteModal() {
+    closeUserProfile(); // Cerramos el perfil para que no se encimen
+    document.getElementById('delete-account-modal').classList.remove('hidden');
+    document.getElementById('confirm-delete-input').value = '';
+    checkDeleteWord();
+}
