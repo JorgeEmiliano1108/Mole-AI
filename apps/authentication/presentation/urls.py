@@ -1,3 +1,15 @@
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 from django.urls import path
 from . import views
 
@@ -5,23 +17,23 @@ app_name = 'authentication'
 
 urlpatterns = [
     # Login handshake — validates Supabase JWT and returns user info
-    path('api/v1/auth/validate-token/', views.validate_token_view, name='validate_token'),
+    path('validate-token/', views.validate_token_view, name='validate_token'),
 
     # User Profile endpoints
-    path('api/v1/auth/profile/', views.user_profile_view, name='user_profile'),
+    path('profile/', views.user_profile_view, name='user_profile'),
     
     # User Subscription endpoints
-    path('api/v1/auth/subscription/', views.user_subscription_view, name='user_subscription'),
+    path('subscription/', views.user_subscription_view, name='user_subscription'),
     
     # User Metadata endpoints
-    path('api/v1/auth/metadata/', views.user_metadata_view, name='user_metadata'),
+    path('metadata/', views.user_metadata_view, name='user_metadata'),
     
     # Logout endpoint
-    path('api/v1/auth/logout/', views.logout_view, name='logout'),
+    path('logout/', views.logout_view, name='logout'),
     
     # Health Check endpoint
-    path('api/v1/auth/health/', views.AuthHealthCheckView.as_view(), name='auth_health_check'),
+    path('health/', views.AuthHealthCheckView.as_view(), name='auth_health_check'),
     
     # Debug Auth endpoint
-    path('api/v1/auth/debug/', views.auth_debug_view, name='auth_debug'),
+    path('debug/', views.auth_debug_view, name='auth_debug'),
 ]

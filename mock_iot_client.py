@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 """
 Mock IoT Client Simulator - Mole AI
 ====================================
@@ -55,8 +67,8 @@ PLANT_ID = "plant_001_manzanilla"
 # Leer API Key desde .env (requerida para autenticación M2M)
 HARDWARE_API_KEY = os.getenv('HARDWARE_API_KEY')
 if not HARDWARE_API_KEY:
-    print("⚠️  WARNING: HARDWARE_API_KEY not set. Using mock key for local testing only.")
-    HARDWARE_API_KEY = "mock-local-testing-key"
+    logger.error("HARDWARE_API_KEY not set. Exiting to avoid insecure default usage.")
+    raise SystemExit("HARDWARE_API_KEY not set. Set it in your environment or .env (do NOT commit .env).")
 
 # ============================================================================
 # DATOS ESTÁTICOS DE SENSORES — Wide Table (columnas directas)

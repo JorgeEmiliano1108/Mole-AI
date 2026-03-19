@@ -7,7 +7,7 @@ from ms2_rag_cag_service.infrastructure.llm_client import LLMClient
 import logging
 import os
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.llms import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import ValidationError
 
@@ -56,5 +56,5 @@ class MoleAIChatUseCase:
             return ChatResponse.model_validate({
                 "respuesta": "Ocurrió un error procesando tu solicitud.",
                 "sources": sources or [],
-                "disclaimer": "COFEPRIS: Esta respuesta es informativa y no sustituye la consulta profesional."
+                "disclaimer": "Esta respuesta es informativa y no sustituye la consulta profesional."
             })

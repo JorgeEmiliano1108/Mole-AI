@@ -32,3 +32,7 @@ async def sources_endpoint():
 async def context_update_endpoint(request: ContextUpdateRequest):
     # ...implementation placeholder...
     return {"success": True}
+
+@router.get("/api/v1/health")
+async def health_check():
+    return {"status": "ok", "service": "ms2_rag_cag"}

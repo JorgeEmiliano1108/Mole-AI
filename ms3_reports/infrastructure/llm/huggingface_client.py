@@ -1,7 +1,7 @@
 import os
-import time
 import httpx
 from typing import List, Dict
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 class HuggingFaceClient:
@@ -44,6 +44,27 @@ class HuggingFaceClient:
         prompt = header + telemetry_section + "\n" + docs_section + "\n" + task + "\n" + output
         return prompt
 
+    @retry(
+        retry=retry_if_exception_type((httpx.RequestError, httpx.HTTPStatusError)),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True,
+    )
+    def _call_hf_api(self, url: str, headers: dict, payload: dict) -> str:
+        """Make a single HuggingFace API call with tenacity retry (M5)."""
+        resp = self._client.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        try:
+            j = resp.json()
+            if isinstance(j, dict) and "generated_text" in j:
+                return j["generated_text"]
+            elif isinstance(j, list) and len(j) > 0 and isinstance(j[0], dict) and "generated_text" in j[0]:
+                return j[0]["generated_text"]
+            else:
+                return resp.text
+        except Exception:
+            return resp.text
+
     def synthesize_insights(self, docs: List[dict], logs: List[dict]) -> Dict:
         prompt = self._build_prompt(logs, docs)
         if not self.api_key:
@@ -54,29 +75,10 @@ class HuggingFaceClient:
         headers = {"Authorization": f"Bearer {self.api_key}"}
         payload = {"inputs": prompt, "parameters": {"max_new_tokens": 512}}
 
-        # simple retry
-        for attempt in range(3):
-            try:
-                resp = self._client.post(url, headers=headers, json=payload)
-                if resp.status_code == 200:
-                    # HF may return a JSON or plain text depending on model
-                    try:
-                        j = resp.json()
-                        if isinstance(j, dict) and "generated_text" in j:
-                            text = j["generated_text"]
-                        elif isinstance(j, list) and len(j) > 0 and isinstance(j[0], dict) and "generated_text" in j[0]:
-                            text = j[0]["generated_text"]
-                        else:
-                            text = resp.text
-                    except Exception:
-                        text = resp.text
-                    return {"summary": text.splitlines()[0] if text else "", "text": text}
-                else:
-                    # transient
-                    time.sleep(1 + attempt)
-            except httpx.RequestError:
-                time.sleep(1 + attempt)
-                continue
+        try:
+            text = self._call_hf_api(url, headers, payload)
+            return {"summary": text.splitlines()[0] if text else "", "text": text}
+        except Exception:
+            return {"summary": "(error) LLM unreachable", "text": "The HuggingFace model did not respond."}
 
-        return {"summary": "(error) LLM unreachable", "text": "The HuggingFace model did not respond."}
 

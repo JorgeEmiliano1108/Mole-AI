@@ -7,6 +7,8 @@
     <title>Mole-IA TermLink</title>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+e2g6k6b6gKkK7v5P2bq3z2b7p3s3Z5d2m2b3yY/0=" crossorigin=""/>
 </head>
 <body>
 
@@ -129,6 +131,16 @@
 
                 <input type="file" accept="image/*" capture="environment" id="camera-input" hidden>
 
+                <!-- Mapa de Salud Fitosanitaria -->
+                <div id="map-section" style="margin:16px 8px;">
+                    <h3 style="color:var(--pip-green); font-size:16px; margin:8px 0;">Mapa de Salud Fitosanitaria</h3>
+                    <div id="mole-map" style="height:320px; width:100%; border:1px solid #2b2b2b;
+                        border-radius:6px;
+                        background:#0b0b0b;">
+                        <!-- Leaflet map will be injected here -->
+                    </div>
+                </div>
+
                 <div id="ai-modal">
                     <div class="chat-header">
                         <span>MOLE-AI CHAT</span>
@@ -164,6 +176,9 @@
     
     <script src="{% static 'js/apiService.js' %}"></script>
     
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j8k0yYw3gqvQbQf2sZb0aG3vY1j8JkG3gK8y+8A=" crossorigin=""></script>
+
     <script src="{% static 'js/main.js' %}"></script>
 
 </body>

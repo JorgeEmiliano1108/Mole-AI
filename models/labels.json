@@ -1,0 +1,50 @@
+{
+    "0": {
+        "condition": "Healthy",
+        "description": "No visible issues detected. The plant appears vigorous and green.",
+        "severity": "low",
+        "species": "Solanum lycopersicum"
+    },
+    "1": {
+        "condition": "Early Blight",
+        "description": "Concentric ring lesions (target spots) on lower leaves. Caused by Alternaria solani.",
+        "severity": "high",
+        "species": "Solanum lycopersicum"
+    },
+    "2": {
+        "condition": "Late Blight",
+        "description": "Water-soaked lesions with white mold on the underside of leaves. Caused by Phytophthora infestans.",
+        "severity": "high",
+        "species": "Solanum lycopersicum"
+    },
+    "3": {
+        "condition": "Powdery Mildew",
+        "description": "White powdery spots on leaf surface reducing photosynthesis.",
+        "severity": "medium",
+        "species": "Cucumis sativus"
+    },
+    "4": {
+        "condition": "Nitrogen Deficiency",
+        "description": "Yellowing (chlorosis) of lower/older leaves progressing upward.",
+        "severity": "medium",
+        "species": "Lactuca sativa"
+    },
+    "5": {
+        "condition": "Aphid Infestation",
+        "description": "Clusters of small insects on new growth, causing leaf curl and honeydew deposits.",
+        "severity": "medium",
+        "species": "Capsicum annuum"
+    },
+    "6": {
+        "condition": "Spider Mite Damage",
+        "description": "Tiny stippling marks on leaves with fine webbing underneath. Caused by Tetranychus urticae.",
+        "severity": "medium",
+        "species": "Phaseolus vulgaris"
+    },
+    "7": {
+        "condition": "Bacterial Spot",
+        "description": "Small, dark, water-soaked spots on leaves and fruit. Caused by Xanthomonas spp.",
+        "severity": "high",
+        "species": "Capsicum annuum"
+    }
+}

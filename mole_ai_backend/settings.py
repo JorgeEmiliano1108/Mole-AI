@@ -1,3 +1,15 @@
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 """
 Django settings for mole_ai_backend project.
 
@@ -37,6 +49,14 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me-in-production')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
+# ── Security Hardening (M3) ─────────────────────────────────────────────────
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
+SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+
 def _split_env_list(var_name, default=None):
     raw = os.getenv(var_name)
     if raw is None:
@@ -61,7 +81,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'storages',
     'pgvector',
-    # 'django_ratelimit',  # Temporarily disabled
+    'axes',  # M3/M4: brute-force protection
     'core',
     'ai_models',
     'authentication',
@@ -78,6 +98,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'axes.middleware.AxesMiddleware',  # M3/M4: brute-force lockout
 ]
 
 ROOT_URLCONF = 'mole_ai_backend.urls'
@@ -119,7 +140,7 @@ else:
             'USER': os.getenv('SUPABASE_DB_USER'),
             'PASSWORD': os.getenv('SUPABASE_DB_PASSWORD'),
             'HOST': os.getenv('SUPABASE_DB_HOST'),
-            'PORT': os.getenv('SUPABASE_DB_PORT', '5432'),
+            'PORT': os.getenv('SUPABASE_DB_PORT', '6543'),  # M4: Transaction Pooler
             'OPTIONS': {
                 'sslmode': 'require',
             },
@@ -129,6 +150,24 @@ else:
 
 # Password validation - Disabled for Supabase auth
 AUTH_PASSWORD_VALIDATORS = []
+
+# ── M5: Argon2 Password Hashing ────────────────────────────────────────────
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.ScryptPasswordHasher',
+]
+
+# ── M4: django-axes brute-force protection ─────────────────────────────────
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+AXES_FAILURE_LIMIT = int(os.getenv('AXES_FAILURE_LIMIT', '5'))
+AXES_COOLOFF_TIME = 1  # hours
+AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
 
 # Custom user model — activated Sprint 2
 AUTH_USER_MODEL = 'authentication.User'
@@ -271,10 +310,15 @@ SUPABASE_JWT_ALGORITHM = os.getenv('SUPABASE_JWT_ALGORITHM', 'HS256')
 
 # Hugging Face Configuration
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
-HF_MODEL_NAME = os.getenv('HF_MODEL_NAME', 'microsoft/Phi-3.5-vision-instruct')
-HF_INFERENCE_API_URL = os.getenv('HF_INFERENCE_API_URL', 'https://api-inference.huggingface.co/models/microsoft/Phi-3.5-vision-instruct')
+HF_MODEL_NAME = os.getenv('HF_MODEL_NAME', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B')
+HF_INFERENCE_API_URL = os.getenv('HF_INFERENCE_API_URL', 'https://api-inference.huggingface.co/models/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B')
 HF_API_TIMEOUT = int(os.getenv('HF_API_TIMEOUT', '30'))
 HF_MAX_RETRIES = int(os.getenv('HF_MAX_RETRIES', '3'))
+
+# DeepSeek Ecosystem — model identifiers (must match .env)
+VISION_MODEL_NAME = os.getenv('VISION_MODEL_NAME', 'deepseek-ai/deepseek-vl2-tiny')
+EMBEDDING_MODEL_ID = os.getenv('EMBEDDING_MODEL_ID', 'BAAI/bge-small-en-v1.5')
+LLM_MODEL_ID = os.getenv('LLM_MODEL_ID', 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B')
 
 # pgvector settings
 PGVECTOR_AUTO_INSTALL = True
@@ -366,9 +410,27 @@ else:
 
 # Mole-AI Service Configuration
 # Configure Mole-AI (FastAPI) service URL. In Render we'll set FASTAPI_URL env var to point to the FastAPI service.
-MOLE_AI_SERVICE_URL = os.getenv('FASTAPI_URL', 'http://127.0.0.1:8001/api/v1/mole-ai/chat')
+MOLE_AI_SERVICE_URL = os.environ.get('FASTAPI_URL')
 MOLE_AI_TIMEOUT = int(os.getenv('MOLE_AI_TIMEOUT', '120'))
-MOLE_AI_API_KEY = os.getenv('MOLE_AI_API_KEY', None)
+MOLE_AI_API_KEY = os.environ.get('MOLE_AI_API_KEY')
+
+# ── Fail-fast: critical inter-service variables ────────────────────────────
+_missing_vars = []
+if not MOLE_AI_SERVICE_URL:
+    _missing_vars.append('FASTAPI_URL')
+if not MOLE_AI_API_KEY:
+    _missing_vars.append('MOLE_AI_API_KEY')
+if _missing_vars and not DEBUG:
+    raise RuntimeError(
+        f"❌ Variables de entorno obligatorias no configuradas: {', '.join(_missing_vars)}. "
+        "El servidor no puede arrancar de forma segura sin la comunicación inter-servicio."
+    )
+elif _missing_vars:
+    import warnings
+    warnings.warn(
+        f"⚠️ Variables inter-servicio faltantes: {', '.join(_missing_vars)}. "
+        "Las llamadas al microservicio de IA fallarán."
+    )
 
 # Hardware IoT Authentication (Machine-to-Machine)
 # API Key for IoT devices (ESP32, Raspberry Pi, etc.) to authenticate when sending telemetry

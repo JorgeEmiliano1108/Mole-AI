@@ -185,6 +185,11 @@ secrets/
 # ── Docker (runtime) ───────────────────────────────────────────────────────
 .docker/
 
+# Host data mounts used by docker-compose; ensure local data directories aren't committed
+/data/minio
+/data/postgres
+/data/redis
+
 # ── Misc ───────────────────────────────────────────────────────────────────
 *.bak
 *.tmp

@@ -1,3 +1,15 @@
+// =============================================================================
+// Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+//
+// AVISO DE PROPIEDAD INTELECTUAL:
+// Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+// Queda estrictamente prohibida la copia, modificación, distribución,
+// sublicenciamiento o uso comercial de este código, total o parcialmente,
+// sin la autorización expresa y por escrito de los titulares del Copyright.
+//
+// Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+// del Derecho de Autor (México) y tratados internacionales aplicables.
+// =============================================================================
 // ==========================================================================
 // ESP32 – Mole-AI Sensor Data POST (Wide Table format)
 // ==========================================================================
@@ -5,11 +17,17 @@
 // Django: POST /api/v1/sensor-data/
 //
 // Dependencias: ArduinoJson 7.x, WiFi, HTTPClient
+//
+// ETSI EN 303 645 — Anti-replay:
+//   El servidor rechaza lecturas con timestamp > 60s de antigüedad.
+//   Se sincroniza el reloj NTP al boot para garantizar que recorded_at
+//   sea válido dentro de la ventana permitida.
 // ==========================================================================
 
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <time.h>   // NTP sync
 
 // ---- Configuración ----
 const char* WIFI_SSID     = "TU_SSID";
@@ -18,8 +36,25 @@ const char* SERVER_URL    = "http://TU_SERVER:8000/api/v1/sensor-data/";
 const char* API_KEY       = "TU_HARDWARE_API_KEY";
 const char* PLANT_ID      = "11111111-1111-1111-1111-111111111111"; // UUID de la planta
 
+// ---- NTP ----
+const char* NTP_SERVER    = "pool.ntp.org";
+const long  GMT_OFFSET    = 0;   // UTC
+const int   DST_OFFSET    = 0;
+
 // ---- Intervalo de envío (ms) ----
 const unsigned long SEND_INTERVAL = 60000;  // 1 minuto
+
+// Genera un timestamp ISO 8601 UTC a partir del reloj NTP sincronizado.
+String getISO8601Timestamp() {
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("⚠️ NTP no sincronizado — omitiendo recorded_at");
+        return "";
+    }
+    char buf[30];
+    strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+    return String(buf);
+}
 
 void setup() {
     Serial.begin(115200);
@@ -29,6 +64,18 @@ void setup() {
         Serial.print(".");
     }
     Serial.println("\nWiFi conectado");
+
+    // Sincronizar reloj NTP (ETSI EN 303 645 — requisito anti-replay)
+    configTime(GMT_OFFSET, DST_OFFSET, NTP_SERVER);
+    Serial.print("Sincronizando NTP");
+    struct tm timeinfo;
+    int retries = 0;
+    while (!getLocalTime(&timeinfo) && retries < 10) {
+        delay(1000);
+        Serial.print(".");
+        retries++;
+    }
+    Serial.println("\nNTP sincronizado ✅");
 }
 
 void sendSensorData(float soilHumidity, float airTemp,
@@ -43,7 +90,14 @@ void sendSensorData(float soilHumidity, float airTemp,
     // Construir JSON plano (Wide Table)
     JsonDocument doc;
     doc["plant_id"]        = PLANT_ID;
-    // recorded_at es opcional: el servidor puede usar now() si se omite
+
+    // ETSI EN 303 645: incluir recorded_at con timestamp NTP sincronizado.
+    // El servidor rechazará payloads con timestamp > 60s de antigüedad.
+    String ts = getISO8601Timestamp();
+    if (ts.length() > 0) {
+        doc["recorded_at"] = ts;
+    }
+
     doc["soil_humidity"]    = soilHumidity;
     doc["air_temperature"]  = airTemp;
     doc["uv_index"]         = uvIndex;

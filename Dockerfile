@@ -14,6 +14,9 @@ RUN apt-get update && \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user (M3: hardening)
+RUN useradd --create-home --shell /bin/bash appuser
+
 # Copy requirements
 COPY requirements.txt .
 
@@ -26,6 +29,11 @@ COPY . .
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
+
+# Ensure non-root user owns the code
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8000
 

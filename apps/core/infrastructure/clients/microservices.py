@@ -1,3 +1,15 @@
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 """
 Base HTTP clients for external microservices.
 
@@ -12,6 +24,7 @@ from dataclasses import dataclass
 import requests
 from django.conf import settings
 from django.utils import timezone
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 logger = logging.getLogger(__name__)
@@ -89,43 +102,19 @@ class BaseMicroserviceClient(ABC):
                 response_time_ms=response_time_ms
             )
     
+    @retry(
+        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(4),
+        reraise=True,
+    )
     def _make_request_with_retry(self, method: str, *args, **kwargs) -> requests.Response:
-        """Make HTTP request with retry logic."""
-        last_exception = None
-        
-        for attempt in range(self.config.max_retries + 1):
-            try:
-                response = self.session.request(method, *args, **kwargs)
-                
-                # Don't retry on client errors (4xx)
-                if 400 <= response.status_code < 500:
-                    return response
-                
-                # Retry on server errors (5xx)
-                if response.status_code >= 500:
-                    if attempt < self.config.max_retries:
-                        logger.warning(
-                            f"Service {self.config.name} request failed (attempt {attempt + 1}), "
-                            f"retrying in {self.config.retry_delay_seconds}s"
-                        )
-                        time.sleep(self.config.retry_delay_seconds)
-                        continue
-                
-                return response
-                
-            except (requests.exceptions.Timeout, 
-                   requests.exceptions.ConnectionError) as e:
-                last_exception = e
-                if attempt < self.config.max_retries:
-                    logger.warning(
-                        f"Service {self.config.name} connection failed (attempt {attempt + 1}), "
-                        f"retrying in {self.config.retry_delay_seconds}s"
-                    )
-                    time.sleep(self.config.retry_delay_seconds)
-                    continue
-        
-        # All retries failed
-        raise last_exception
+        """Make HTTP request with tenacity exponential-backoff retry (M5)."""
+        response = self.session.request(method, *args, **kwargs)
+        # Raise on server errors to trigger retry
+        if response.status_code >= 500:
+            response.raise_for_status()
+        return response
     
     def get(self, endpoint: str, params: Optional[Dict] = None) -> ServiceResponse:
         """Make GET request to microservice."""
