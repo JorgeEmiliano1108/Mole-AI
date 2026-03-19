@@ -1,0 +1,14 @@
+fastapi[all]==0.95.2
+uvicorn==0.22.0
+celery==5.3.1
+redis==4.6.0
+weasyprint==57.0
+matplotlib==3.8.1
+httpx==0.24.1
+boto3==1.28.0
+jinja2==3.1.2
+python-dotenv==1.0.0
+supabase
+# faiss-cpu removed for lightweight dev container; use FAISS via external index or provide MS3_FAISS_DOCS_JSON fallback
+# Pin pydyf to a version compatible with WeasyPrint 57.x
+pydyf<0.12
