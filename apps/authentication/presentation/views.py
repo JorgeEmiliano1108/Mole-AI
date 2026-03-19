@@ -1,3 +1,15 @@
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -5,12 +17,16 @@ from rest_framework.response import Response
 from rest_framework import status
 
 
-@api_view(["GET", "PATCH"])
+@api_view(["GET", "PATCH", "DELETE"])
 @permission_classes([IsAuthenticated])
 def user_profile_view(request):
     """
-    GET  /api/v1/auth/profile/ — Return the authenticated user's profile.
-    PATCH /api/v1/auth/profile/ — Update mutable profile fields.
+    GET    /api/v1/auth/profile/ — Return the authenticated user's profile.
+    PATCH  /api/v1/auth/profile/ — Update mutable profile fields.
+    DELETE /api/v1/auth/profile/ — Derecho ARCO: eliminación de cuenta.
+           Anonimiza PII y elimina el usuario. Los registros científicos
+           (SensorLog, AIDiagnostic) se conservan con user_id/plant_id = NULL
+           gracias a on_delete=SET_NULL en las FK relacionadas.
     """
     user = request.user
 
@@ -26,7 +42,32 @@ def user_profile_view(request):
             "supabase_uid": getattr(user, "supabase_uid", None),
             "supabase_role": getattr(user, "supabase_role", "authenticated"),
             "is_premium": getattr(user, "is_premium", False),
+            "data_consent": getattr(user, "data_consent", False),
+            "data_consent_date": getattr(user, "data_consent_date", None),
         })
+
+    if request.method == "DELETE":
+        import logging
+        logger = logging.getLogger(__name__)
+        user_id = user.id
+        # Wipe PII before deletion for LFPDPPP compliance (Derecho de Cancelación)
+        user.first_name = ""
+        user.last_name = ""
+        user.email = f"deleted_{user_id}@anonimizado.mole.ai"
+        user.phone_number = None
+        user.avatar_url = None
+        user.supabase_uid = None
+        user.supabase_user_metadata = {}
+        user.is_active = False
+        user.save()
+        # Flush session before deletion
+        if hasattr(request, "session"):
+            request.session.flush()
+        # Delete triggers SET_NULL on UserPlant, DiagnosticoGeolocalizado,
+        # FeedbackTicket — preserving scientific data integrity.
+        user.delete()
+        logger.info("ARCO DELETE: User %s account deleted and PII wiped.", user_id)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # PATCH — only allow safe mutable fields
     allowed = {"first_name", "last_name", "avatar_url", "phone_number"}

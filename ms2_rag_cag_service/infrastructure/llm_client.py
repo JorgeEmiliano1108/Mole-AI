@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Any, Optional
 
-from langchain_community.llms import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import PydanticOutputParser
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 from pydantic import ValidationError

@@ -1,5 +1,5 @@
-fastapi[all]==0.95.2
-uvicorn==0.22.0
+fastapi[all]==0.104.1
+uvicorn==0.24.0
 celery==5.3.1
 redis==4.6.0
 weasyprint==57.0
@@ -9,6 +9,10 @@ boto3==1.28.0
 jinja2==3.1.2
 python-dotenv==1.0.0
 supabase
+# Resilience (M5)
+tenacity>=8.2
+# Pydantic v2 (M1)
+pydantic>=2.7
 # faiss-cpu removed for lightweight dev container; use FAISS via external index or provide MS3_FAISS_DOCS_JSON fallback
 # Pin pydyf to a version compatible with WeasyPrint 57.x
 pydyf<0.12

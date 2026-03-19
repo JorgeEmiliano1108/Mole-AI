@@ -1,8 +1,20 @@
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 """
-Hugging Face Vision Client for Phi-3.5 Vision Integration
+Hugging Face Vision Client adapted for DeepSeek-VL integration
 
-This module provides a complete client for interacting with Microsoft Phi-3.5 Vision
-through the Hugging Face Inference API with proper error handling and formatting.
+This module provides a client for interacting with vision models (DeepSeek-VL)
+through the Hugging Face Inference API with error handling and parsing utilities.
 """
 
 import requests
@@ -14,20 +26,17 @@ from datetime import datetime
 
 logger = logging.getLogger('ai_models')
 
-class HuggingFaceVisionClient:
+class DeepSeekVisionClient:
     """
-    Cliente especializado para Hugging Face Inference API con Phi-3.5 Vision
-    
-    Proporciona métodos para analizar imágenes usando el formato específico
-    requerido por Phi-3.5 Vision con manejo robusto de errores.
+    Cliente especializado para Hugging Face Inference API con DeepSeek-VL
     """
-    
+
     def __init__(self):
         """Inicializa el cliente con configuración desde settings.py"""
         self.api_key = getattr(settings, 'HUGGINGFACE_API_KEY', None)
-        self.model_name = getattr(settings, 'HF_MODEL_NAME', 'microsoft/Phi-3.5-vision-instruct')
-        self.api_url = getattr(settings, 'HF_INFERENCE_API_URL', 
-                               'https://api-inference.huggingface.co/models/microsoft/Phi-3.5-vision-instruct')
+        self.model_name = getattr(settings, 'VISION_MODEL_NAME', getattr(settings, 'HF_MODEL_NAME', 'deepseek-ai/deepseek-vl2-tiny'))
+        # Allow vision-specific API URL override
+        self.api_url = getattr(settings, 'VISION_API_URL', getattr(settings, 'HF_INFERENCE_API_URL', f'https://api-inference.huggingface.co/models/{self.model_name}'))
         self.timeout = getattr(settings, 'HF_API_TIMEOUT', 30)
         self.max_retries = getattr(settings, 'HF_MAX_RETRIES', 3)
         
@@ -41,7 +50,7 @@ class HuggingFaceVisionClient:
             'Content-Type': 'application/json'
         })
         
-        logger.info(f"HuggingFace Vision Client initialized for model: {self.model_name}")
+        logger.info(f"DeepSeek Vision Client initialized for model: {self.model_name}")
     
     def prepare_image_for_analysis(self, image_file) -> str:
         """
@@ -69,24 +78,19 @@ class HuggingFaceVisionClient:
     
     def analyze_plant_image(self, image_data: str, prompt_usuario: str = None) -> Dict[str, Any]:
         """
-        Analiza imagen de planta usando Phi-3.5 Vision
-        
-        Args:
-            image_data: Imagen codificada en base64
-            prompt_usuario: Prompt personalizado del usuario
-            
-        Returns:
-            Dict: Resultado del análisis con predicciones
+        Analiza imagen de planta usando DeepSeek-VL (via HF Inference API)
+
+        Returns estructura compatible con la app (predictions, confidence, raw_response)
         """
         if not prompt_usuario:
             prompt_usuario = "Analiza esta imagen de planta y describe cualquier enfermedad o condición visible. Sé específico sobre síntomas y posibles tratamientos."
         
-        # Formato Phi-3.5 Vision - REQUISITO CRÍTICO
-        prompt_phi35 = f"<|user|>\n<|image_1|>\n{prompt_usuario}<|end|>\n<|assistant|>\n"
-        
-        # Payload para HF Inference API
+        # Build a generic multimodal payload compatible with HF Inference for vision-capable models
         payload = {
-            "inputs": prompt_phi35,
+            "inputs": {
+                "text": prompt_usuario,
+                "images": [image_data] if image_data else []
+            },
             "parameters": {
                 "max_new_tokens": 500,
                 "temperature": 0.7,
@@ -96,14 +100,7 @@ class HuggingFaceVisionClient:
             }
         }
         
-        # Estructura específica para Phi-3.5 Vision con imagen
-        if image_data:
-            payload["inputs"] = {
-                "text": prompt_phi35,
-                "images": [image_data]
-            }
-        
-        logger.info(f"Sending request to HF API: {self.api_url}")
+        logger.info(f"Sending request to HF API: {self.api_url} (model={self.model_name})")
         logger.debug(f"Payload structure: {list(payload.keys())}")
         
         for attempt in range(self.max_retries):
@@ -215,7 +212,7 @@ class HuggingFaceVisionClient:
     
     def _extract_predictions_from_text(self, text: str) -> list:
         """
-        Extrae predicciones estructuradas del texto generado por Phi-3.5
+        Extrae predicciones estructuradas del texto generado por el modelo de visión (DeepSeek-VL)
         
         Args:
             text: Texto generado por el modelo
@@ -299,7 +296,7 @@ class HuggingFaceVisionClient:
 
 def consultar_phi_vision(image_file, prompt_usuario: str) -> Dict[str, Any]:
     """
-    Función principal para analizar imagen con Phi-3.5 Vision
+    Función principal para analizar imagen con DeepSeek-VL (mantiene nombre por compatibilidad)
     
     Args:
         image_file: Archivo de imagen
@@ -309,8 +306,8 @@ def consultar_phi_vision(image_file, prompt_usuario: str) -> Dict[str, Any]:
         Dict: Resultado del análisis compatible con la estructura existente
     """
     try:
-        # Inicializar cliente
-        client = HuggingFaceVisionClient()
+        # Inicializar cliente (DeepSeekVisionClient mantiene compatibilidad)
+        client = DeepSeekVisionClient()
         
         # Preparar imagen
         image_b64 = client.prepare_image_for_analysis(image_file)

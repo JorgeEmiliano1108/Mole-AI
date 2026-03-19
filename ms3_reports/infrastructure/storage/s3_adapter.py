@@ -2,6 +2,7 @@ import os
 import boto3
 from urllib.parse import urlparse
 from botocore.exceptions import ClientError
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 class S3Adapter:
@@ -26,6 +27,12 @@ class S3Adapter:
             settings.S3_BUCKET,
         )
 
+    @retry(
+        retry=retry_if_exception_type(ClientError),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True,
+    )
     def upload_bytes(self, data: bytes, key: str) -> str:
         # Ensure the target bucket exists (idempotent). This prevents
         # race conditions where tasks try to upload before the bucket

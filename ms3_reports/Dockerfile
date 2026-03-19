@@ -16,4 +16,11 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+
+# Create non-root user (M3: hardening)
+RUN useradd --create-home --shell /bin/bash appuser \
+    && chown -R appuser:appuser /srv/ms3_reports
+
+USER appuser
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]

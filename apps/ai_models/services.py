@@ -1,3 +1,15 @@
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 """
 Services Layer - AI Models Service Integration
 
@@ -13,6 +25,7 @@ import aiohttp
 from django.conf import settings
 from django.utils import timezone
 from asgiref.sync import sync_to_async
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # Import domain models - usar imports absolutos para ASGI
 import sys
@@ -110,6 +123,12 @@ class MoleAIClient:
         
         logger.info(f"Mole-AI client initialized with URL: {self.base_url}")
     
+    @retry(
+        retry=retry_if_exception_type((asyncio.TimeoutError, aiohttp.ClientConnectionError)),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True,
+    )
     async def _make_request(self, endpoint: str, method: str = 'POST', 
                             data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
@@ -133,7 +152,7 @@ class MoleAIClient:
         }
         
         if self.api_key:
-            headers['Authorization'] = f'Bearer {self.api_key}'
+            headers['X-API-Key'] = self.api_key
         
         try:
             logger.info(f"Making {method} request to {url}")

@@ -1,0 +1,105 @@
+Implementación Fase 2: Motor de PDF y Cliente de Visión Real
+Fecha: 2026-03-14
+Autor: GitHub Copilot (asistente de desarrollo)
+
+Resumen
+-------
+Se implementaron y registraron los componentes necesarios para la Fase 2:
+- Cliente real de visión (DeepSeek) para el microservicio FastAPI.
+- Motor generador de PDFs usando ReportLab integrado en Django.
+- Endpoint protegido en Django para descargar informes PDF.
+
+Archivos creados
+--------------
+- ai_rag_service/infrastructure/external/deepseek_vision_client.py
+  - Cliente asíncrono basado en httpx.AsyncClient.
+  - Normaliza la respuesta al contrato de `VisionClientPort` con keys:
+    `species`, `ph`, `condition`, `description`, `severity`, `confidence`,
+    `predictions`, `confidence_scores`, `model_used`.
+  - Manejo de timeouts y errores; devuelve un diccionario de error que
+    respeta el contrato en caso de fallo (no lanza excepción al pipeline).
+
+- apps/core/services/pdf_generator.py
+  - Función pública `generate_diagnostic_pdf(diagnostic_id) -> bytes`.
+  - Resuelve logo estático vía `django.contrib.staticfiles.finders.find` y
+    fallback a `STATICFILES_DIRS`.
+  - Implementa la regla de resiliencia: si NO existe `SensorLog` reciente,
+    el PDF se genera igualmente mostrando: "Datos de sensor no disponibles".
+  - Incluye diagnóstico, metadatos y lecturas de sensor (si existen).
+
+Archivos modificados
+--------------------
+- ai_rag_service/app/main.py
+  - Importado e inyectado `DeepSeekVisionClient` bajo la variable
+    de entorno `VISION_BACKEND=deepseek`.
+  - Lógica:
+    if VISION_BACKEND=="deepseek": vision_client = DeepSeekVisionClient(http_client=_http_client)
+    elif VISION_BACKEND=="mock": vision_client = MockVisionClient()
+
+- apps/core/presentation/views.py
+  - Añadida vista protegida `download_diagnostic_pdf(request, id)` con
+    `@permission_classes([IsAuthenticated])`. Devuelve attachment PDF
+    nombrado `diagnostico_{id}.pdf`.
+
+- apps/core/presentation/urls.py
+  - Registrada la ruta:
+    path('diagnostics/<uuid:id>/download/', views.download_diagnostic_pdf, name='diagnostic_download')
+
+- requirements.txt
+  - Añadida dependencia: `reportlab>=4.0`
+
+Decisiones y detalles técnicos
+------------------------------
+- Timeout recomendado para httpx hacia DeepSeek:
+  `httpx.Timeout(connect=10.0, read=30.0, write=10.0, pool=10.0)`.
+  Razonamiento: 10s para handshake/conn, 30s para lectura (modelos de visión
+  pueden tardar 10-25s), evitando bloquear workers indefinidamente.
+
+- El cliente DeepSeek envía un prompt instruyendo al modelo a responder
+  un JSON con las keys esperadas. Si DeepSeek devuelve texto no-JSON,
+  el cliente retorna un diccionario de error conforme al contrato.
+
+- La función `generate_diagnostic_pdf` usa ReportLab y genera un PDF en
+  memoria retornando `bytes` (apto para `HttpResponse` o `FileResponse`).
+
+Pruebas ejecutadas localmente
+----------------------------
+- Comprobación de sintaxis (py_compile) para los archivos nuevos/modificados:
+  - apps/core/services/pdf_generator.py  → OK
+  - apps/core/presentation/views.py     → OK
+  - ai_rag_service/infrastructure/external/deepseek_vision_client.py → OK
+  - ai_rag_service/app/main.py         → OK
+
+Cómo activar y probar
+---------------------
+1) Instalar dependencia:
+
+   pip install -r requirements.txt
+
+2) Variables de entorno importantes (FastAPI / DeepSeek):
+   - VISION_BACKEND=deepseek
+   - DEEPSEEK_URL (opcional, por defecto https://api.deepseek.com)
+   - DEEPSEEK_API_KEY
+   - DEEPSEEK_VISION_MODEL (opcional)
+
+3) Ejecutar servicios:
+   - Arrancar FastAPI (mole AI service) y Django como ya lo haces en el
+     entorno de desarrollo.
+
+4) Probar endpoint de descarga (Django):
+   - Autenticarse con un usuario válido (token/session) y hacer GET a:
+     /api/v1/diagnostics/<uuid:id>/download/
+   - Se descargará `diagnostico_<id>.pdf` aunque no existan lecturas de sensor.
+
+Notas finales y recomendaciones
+-------------------------------
+- Para producción, considerar:
+  - Circuit breaker y backoff (e.g., `tenacity`) alrededor de llamadas a DeepSeek.
+  - Monitoring y métricas (latencia, error-rate) en el cliente de visión.
+  - Streaming del PDF desde archivo temporal si los reportes crecen mucho.
+
+Si quieres, puedo:
+- Añadir tests unitarios que simulen `DeepSeekVisionClient.analyze()` y
+  validen la forma del dict retornado.
+- Añadir tests que verifiquen `generate_diagnostic_pdf()` tanto con y sin
+  `SensorLog` para asegurar la regla de resiliencia.

@@ -47,7 +47,17 @@ class ReportBuilder:
             {% endif %}
             <h2>IA Insights</h2>
             <p>{{ insights.text }}</p>
-            <footer>Disclaimer COFEPRIS</footer>
+            <footer style="border-top:1px solid #ccc;margin-top:20px;padding-top:10px;font-size:10px;">
+            <strong>AVISO LEGAL — COFEPRIS:</strong> La información contenida en este reporte es de carácter
+            estrictamente informativo y no constituye una recomendación profesional, receta agronómica ni
+            prescripción de uso de plaguicidas o agroquímicos. Cualquier aplicación de productos
+            fitosanitarios debe realizarse bajo la supervisión de un profesional certificado y conforme a
+            las disposiciones de la Comisión Federal para la Protección contra Riesgos Sanitarios (COFEPRIS),
+            la Ley General de Salud, el Reglamento en Materia de Registros, Autorizaciones de Importación y
+            Exportación y Certificados de Exportación de Plaguicidas, Nutrientes Vegetales y Sustancias y
+            Materiales Tóxicos o Peligrosos, y demás normativa aplicable. Mole.AI no se hace responsable
+            por el uso indebido de la información aquí presentada.
+            </footer>
             </body>
             </html>
             """

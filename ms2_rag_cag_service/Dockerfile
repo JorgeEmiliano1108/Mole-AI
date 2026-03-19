@@ -23,8 +23,8 @@ COPY requirements.txt /app/requirements.txt
 RUN python -m pip install --upgrade pip setuptools wheel \
     && python -m pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy application
-COPY . /app
+# Copy application into proper module namespace
+COPY . /app/ms2_rag_cag_service
 RUN chown -R app:app /app
 
 USER app
@@ -32,5 +32,6 @@ USER app
 EXPOSE 8002
 
 ENV PORT=8002
+ENV PYTHONPATH=/app
 
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8002", "ms2_rag_cag_service.app.main:app"]

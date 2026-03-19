@@ -5,6 +5,8 @@
 
 // --- 1. INICIALIZACIÓN ---
 let pendingImageBase64 = null;
+let pendingImageLat = null;
+let pendingImageLon = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar Cliente Supabase
@@ -41,6 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const reader = new FileReader();
             reader.onload = function (ev) {
                 pendingImageBase64 = ev.target.result; // data:image/...;base64,...
+                    // Intentar capturar geolocalización al elegir la imagen
+                    if (navigator && navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(function(pos) {
+                            pendingImageLat = pos.coords.latitude;
+                            pendingImageLon = pos.coords.longitude;
+                            console.log('Geo captured:', pendingImageLat, pendingImageLon);
+                        }, function(err) {
+                            console.warn('Geo denied or failed:', err.message);
+                            pendingImageLat = null; pendingImageLon = null;
+                        }, { enableHighAccuracy: true, timeout: 8000 });
+                    }
                 // Mostrar preview
                 const previewContainer = document.getElementById('image-preview-container');
                 const previewThumb = document.getElementById('image-preview-thumb');
@@ -54,6 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     console.log("Mole-IA System Online.");
+    // Inicializar mapa de focos si Leaflet está disponible
+    if (typeof L !== 'undefined') {
+        try { initMoleMap(); loadMoleMapMarkers(); } catch (e) { console.warn('Mapa no inicializado:', e); }
+    }
 });
 
 // --- 2. INTRODUCCIÓN (Visual) ---
@@ -285,6 +302,33 @@ function removerImagen() {
     if (cameraInput) cameraInput.value = '';
 }
 
+/**
+ * Helper: preparar FormData para enviar diagnóstico al backend (incluye coords si disponibles)
+ * imageFile: File object from input
+ * plantId: optional
+ */
+async function enviarDiagnosticoConCoords(imageFile, plantId = null) {
+    if (!imageFile) return;
+    const form = new FormData();
+    form.append('image', imageFile, imageFile.name || 'upload.jpg');
+    if (plantId) form.append('plant_id', plantId);
+    if (pendingImageLat !== null && pendingImageLon !== null) {
+        form.append('latitude', String(pendingImageLat));
+        form.append('longitude', String(pendingImageLon));
+    }
+
+    try {
+        const res = await window.apiService.upload('diagnostics/', form);
+        console.log('Diagnóstico enviado:', res);
+        // Después de enviar, refrescar marcadores en el mapa
+        if (typeof loadMoleMapMarkers === 'function') loadMoleMapMarkers();
+        return res;
+    } catch (e) {
+        console.error('Error enviando diagnóstico:', e);
+        throw e;
+    }
+}
+
 async function enviarComandoAI() {
     const input = document.getElementById('ai-input');
     const chatContainer = document.getElementById('ai-chat-container');
@@ -397,6 +441,68 @@ function mostrarError(msg) {
 function mostrarExito(msg) {
     const errorDiv = document.getElementById('login-error');
     errorDiv.textContent = msg; errorDiv.style.display = 'block'; errorDiv.style.color = '#44ff44';
+}
+
+// --- MAPA: Leaflet integration ---
+let moleMap = null;
+let moleMarkersLayer = null;
+
+function initMoleMap() {
+    if (moleMap) return;
+    // Default view centered on Mexico
+    moleMap = L.map('mole-map', { zoomControl: true, attributionControl: false }).setView([23.6345, -102.5528], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+    }).addTo(moleMap);
+
+    moleMarkersLayer = L.layerGroup().addTo(moleMap);
+}
+
+async function loadMoleMapMarkers() {
+    if (!window.apiService) return;
+    try {
+        const res = await window.apiService.get('diagnosticos/geolocalizados/');
+        const items = res.results || [];
+        moleMarkersLayer.clearLayers();
+
+        items.forEach(item => {
+            if (!item.latitude || !item.longitude) return;
+            const color = severityToColor(item.severity);
+            const marker = L.circleMarker([item.latitude, item.longitude], {
+                radius: 8,
+                fillColor: color,
+                color: '#000',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.9
+            });
+            const popupHtml = `<b>${escapeHtml(item.condition_name || 'Sin nombre')}</b><br/>Gravedad: ${item.severity}<br/>Fecha: ${item.created_at}`;
+            marker.bindPopup(popupHtml);
+            marker.addTo(moleMarkersLayer);
+        });
+    } catch (e) {
+        console.warn('No se pudieron cargar marcadores:', e);
+    }
+}
+
+function severityToColor(sev) {
+    switch ((sev || '').toLowerCase()) {
+        case 'high': return '#ff4d4f';
+        case 'critical': return '#a8071a';
+        case 'medium': return '#ff8c1a';
+        case 'low': return '#52c41a';
+        default: return '#ff4d4f';
+    }
+}
+
+function escapeHtml(unsafe) {
+    return String(unsafe)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
 }
 function limpiarFormulario() {
     document.getElementById('email-input').value = '';

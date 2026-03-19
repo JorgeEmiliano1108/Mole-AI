@@ -1,0 +1,59 @@
+IMPLEMENTATION REPORT — Parte 1: CNN Vision Client & PDF Summary
+Date: 2026-03-14
+Author: Dev Assistant
+
+Resumen ejecutivo
+-----------------
+Se implementó la Parte 1 del plan: integración de un cliente CNN local (.tflite)
+para inferencia en FastAPI y la optimización del generador de PDF para pedir
+resúmenes al LLM centralizado en FastAPI (sin cargar modelos LLM en Django).
+
+Cambios realizados
+------------------
+1) ai_rag_service/infrastructure/external/cnn_vision_client.py
+   - Nuevo cliente `CNNVisionClient` que implementa `VisionClientPort`.
+   - Carga modelo TFLite vía `tflite_runtime.interpreter` (fallback a `tensorflow.lite`).
+   - Preprocesamiento: PIL resize 224x224, normalización [0,1], soporte uint8.
+   - Inferencia ejecutada en `asyncio.to_thread` para no bloquear el event loop.
+   - Mapea índices a etiquetas desde `labels.json` (formato JSON con condition/description/severity/species).
+   - Responde con el dict requerido: species, ph, condition, description, severity, confidence, predictions, confidence_scores, model_used, inference_time_ms.
+
+2) ai_rag_service/app/main.py
+   - Importado y añadido branch para `VISION_BACKEND=cnn`:
+     `vision_client = CNNVisionClient(http_client=_http_client)`
+
+3) docker-compose.yml
+   - Añadido mount `./models:/models:ro` para permitir actualizar el `.tflite` y `labels.json` sin rebuild.
+   - Añadidas variables de entorno: `CNN_MODEL_PATH`, `CNN_LABELS_PATH`.
+
+4) ai_rag_service/requirements.txt
+   - Añadidas dependencias: `tflite-runtime` (con selector), `Pillow`, `numpy`.
+
+5) apps/core/services/pdf_generator.py
+   - Añadida función helper `request_summary(diagnostic_data)` que hace POST a FastAPI LLM endpoint.
+   - Timeout: connect=3s, read=10s; fallback textual definido para casos de error.
+   - El PDF ahora incluye sección "Resumen Ejecutivo" generada vía LLM.
+
+6) models/labels.json
+   - Archivo scaffold con mapeo índice→label/description/severity/species.
+
+Verificaciones realizadas
+-----------------------
+- Sintaxis Python compilada (`py_compile`) para:
+  - ai_rag_service/infrastructure/external/cnn_vision_client.py — OK
+  - ai_rag_service/app/main.py — OK
+  - apps/core/services/pdf_generator.py — OK
+- docker-compose.yml validado como YAML.
+
+Decisiones y recomendaciones
+---------------------------
+- Se eligió formato JSON para labels (`labels.json`) por su riqueza semántica.
+- Mantener `/models` montado como volumen read-only y usar SHA256 para evitar duplicados al persistir documentos externos (parte 2).
+- Para producción, monitorizar latencia y tasa de error del cliente CNN y habilitar circuit-breaker/backoff si se combina con fallbacks remotos.
+
+Siguientes pasos (Parte 2)
+-------------------------
+1. Implementar Self-Updating RAG (knowledge harvesting): fallback a Trefle/FarmVillage cuando FAISS retorna baja similitud, generar embedding y persistir en `BotanicalKnowledge` + FAISS.
+2. Añadir tests unitarios e integración para Harvesting flow y para el cliente CNN.
+
+Archivo creado por la herramienta de implementación en: /home/deepmole/Escritorio/Mole-AI/IMPLEMENTATION_REPORT_PART1_CNN_PDF.txt

@@ -1,0 +1,204 @@
+IMPLEMENTATION REPORT — Self-Updating RAG (Knowledge Harvesting) — DETAILED
+Date: 2026-03-14
+Author: Dev Assistant
+
+1) Resumen ejecutivo
+--------------------
+Esta entrega implementa la capacidad de "Self-Updating RAG" (harvesting de
+conocimiento) en el servicio `ai_rag_service`. Cuando la búsqueda vectorial (FAISS)
+no devuelve resultados con calidad suficiente, el sistema consulta APIs botánicas
+externas (Trefle / FarmVillage) mediante `BotanicalFallbackGateway`, transforma
+esa respuesta en contenido textual, deduplica con SHA-256, genera embeddings y
+persiste el contenido en una tabla `botanical_knowledge` en Supabase y en el
+vectorstore FAISS. Crucialmente, por directiva de seguridad, la persistencia se
+realiza en **Supabase primero** y **FAISS sólo si Supabase tuvo éxito** — si
+Supabase falla se evita por completo la escritura en FAISS para mantener
+consistencia entre almacenamiento durable y el índice local.
+
+2) Objetivos funcionales
+-----------------------
+- Proveer fallback de conocimiento cuando FAISS no aporte contexto útil.
+- Harvesting idempotente: evitar duplicados mediante hash SHA-256.
+- Persistencia dual (durable + rápida) con regla transaccional definida.
+- Inyectar el nuevo conocimiento en el prompt del LLM para la misma petición.
+- Añadir pruebas unitarias que cubren los caminos críticos (éxito, fallo en
+  Supabase, deduplicación).
+
+3) Cambios realizados (lista y propósito)
+----------------------------------------
+- Creado: `ai_rag_service/infrastructure/database/supabase_botanical_repo.py`
+  • Adapter PostgREST para la tabla `botanical_knowledge`.
+  • Métodos públicos: `get_by_hash(content_hash)` y `save_botanical_entry(entry)`.
+  • Diseño: usa `httpx.AsyncClient` y cabeceras con `apikey`/`Authorization`.
+
+- Reescrito: `ai_rag_service/application/use_cases/mole_ai_chat_use_case.py`
+  • Se añadió el flujo de harvesting privado `_harvest_external(query)`.
+  • Integración en `execute(...)`: cuando `vector_store.retrieve` no devuelve
+    chunks de confianza (score < HARVEST_THRESHOLD = 0.35), se invoca
+    `_harvest_external`.
+  • Dedupe por SHA-256: `content_hash = sha256(content.encode('utf-8')).hexdigest()`.
+  • Persistencia segura: `knowledge_repo.save_botanical_entry(...)` y sólo si OK:
+    `vector_store.add_documents(...)`.
+  • En caso de error en Supabase: FAISS no se actualiza y se registra el error.
+  • En caso de fallo en FAISS post-Supabase: se registra y se planifica
+    reconciliación manual/posterior.
+  • El contenido harvestado se inyecta en `rag_context` para uso inmediato
+    por el LLM aunque no se haya persistido (caso Supabase fallo).
+
+- Modificado: `ai_rag_service/app/main.py`
+  • Import agregado: `SupabaseBotanicalRepo`.
+  • En el `lifespan` se instancia `SupabaseBotanicalRepo(...)` y se inyecta en
+    `mole_ai_chat_use_case.botanical_gateway` y `mole_ai_chat_use_case.knowledge_repo`.
+  • Mantiene la inicialización previa de `botanical_gateway = BotanicalFallbackGateway(...)`.
+
+- Tests añadidos: `ai_rag_service/tests/conftest.py` y
+  `ai_rag_service/tests/test_mole_ai_chat_use_case.py` (3 tests async):
+  1) `test_harvesting_success` — simula falta de hits en FAISS, gateway devuelve
+     datos, verifica `save_botanical_entry` y `add_documents` llamados.
+  2) `test_supabase_failure_prevents_faiss` — simula excepción en
+     `save_botanical_entry`, verifica que `add_documents` **NO** se llama.
+  3) `test_deduplication_no_persist` — simula `get_by_hash` devolviendo fila
+     existente; verifica que no se intenta regrabar ni en Supabase ni en FAISS.
+
+- Archivo de informe resumido: `IMPLEMENTATION_REPORT_SELF_UPDATING_RAG.txt`.
+- Archivo de informe detallado: `IMPLEMENTATION_REPORT_SELF_UPDATING_RAG_DETAILED.txt` (este archivo).
+
+4) Contratos y supuestos (importantes)
+--------------------------------------
+- `VectorStorePort`:
+  • `async def add_documents(self, documents: List[str], metadata: List[dict]) -> int`
+  • `async def retrieve(self, query: str, top_k: int = 3) -> List[RAGChunk]`
+  RAGChunk.score se espera en escala 0..1 (implementación FAISS la normaliza).
+
+- `EmbeddingPort` (usada indirectamente por vector_store): se mantiene la
+  convención `generate_embedding(EmbeddingRequest)` asincrónica en el adaptador
+  principal (GenerateEmbeddingUseCase delega a `embedding_service.generate_embedding`).
+
+- `BotanicalFallbackGateway.fetch_tolerance(species_name)` → Optional[dict]
+  retorna un dict con `min`, `max`, `optimal`, `source`, `scientific_name`.
+
+- `SupabaseBotanicalRepo` usa PostgREST: requerimientos en env: `SUPABASE_URL`,
+  `SUPABASE_KEY` (service role) para inserts/upserts.
+
+5) Lógica crítica: pseudocódigo del flujo de harvesting
+------------------------------------------------------
+- Si no hay `vector_store` o `knowledge_repo` configurados → return None.
+- Llamar `ext_data = botanical_gateway.fetch_tolerance(query)`.
+- Si `ext_data` es None → no hay nada que persistir.
+- Construir `content` textual y `content_hash` SHA-256.
+- Si `knowledge_repo.get_by_hash(content_hash)` devuelve fila → dedupe: skip.
+- Intentar `knowledge_repo.save_botanical_entry(...)`:
+  • Si falla → log error; return contenido en memoria (no persistido).
+  • Si OK → intentar `vector_store.add_documents(... )`.
+    - Si FAISS falla → log error para reconciliación (no revertimos Supabase).
+- Devolver dict con keys: content, source, persisted/bools.
+
+6) Pruebas unitarias: diseño y cómo se simulan
+----------------------------------------------
+- Se usan `pytest` y `pytest-asyncio`.
+- `ai_rag_service/tests/conftest.py` define fixtures con `unittest.mock.AsyncMock`:
+  • `llm_service`, `vector_store`, `botanical_gateway`, `knowledge_repo`,
+    `mole_use_case`.
+- Tests verifican interacciones vía `assert_awaited()` y/o `assert_not_awaited()`.
+
+7) Cómo ejecutar localmente (comandos exactos)
+----------------------------------------------
+- Instalar requisitos de test básicos (si no están ya):
+
+```bash
+python3 -m pip install pytest pytest-asyncio
+```
+
+- Ejecutar únicamente los tests nuevos:
+
+```bash
+python3 -m pytest ai_rag_service/tests/test_mole_ai_chat_use_case.py -q
+```
+
+- Ejecutar todos los tests del microservicio:
+
+```bash
+python3 -m pytest ai_rag_service/tests/ -q
+```
+
+- Comprobar sintaxis de ficheros modificados (ejemplo):
+
+```bash
+python3 -m py_compile ai_rag_service/application/use_cases/mole_ai_chat_use_case.py
+```
+
+8) Verificación manual del flujo (end-to-end sugerido)
+------------------------------------------------------
+1. Arrancar FastAPI (desde root):
+
+```bash
+uvicorn ai_rag_service.app.main:app --reload --port 8000
+```
+
+2. Enviar petición de prueba a endpoint de chat/explain (según rutas expuestas)
+   con una query que no exista en FAISS.
+3. Observar logs durante la petición:
+   - Debería registrarse el intento `BotanicalFallbackGateway.fetch_tolerance`.
+   - Posteriormente, la petición POST a `SUPABASE_URL/rest/v1/botanical_knowledge`.
+4. Confirmar en Supabase que la fila existe y que la tabla `botanical_knowledge`
+   contiene `content_hash`, `content`, `source`, `species`.
+5. Confirmar en disco/FAISS index que `faiss_index` se actualizó (o en la API del
+   vector store si aplica).
+6. Repetir la misma query: la segunda vez debería obtener contenido desde FAISS
+   (index local) — comprobar logs y tiempos.
+
+9) Observabilidad, monitorización y reconciliación
+-------------------------------------------------
+- Recomendado añadir métricas Prometheus/Logging structured: contadores para
+  `harvest_attempts`, `harvest_successes`, `harvest_supabase_failures`,
+  `harvest_faiss_failures`.
+- Implementar job de reconciliación (worker/cron) que consulte Supabase por
+  filas `botanical_knowledge` sin su correspondiente `content_hash` en FAISS
+  y las indexe.
+
+10) Riesgos y mitigaciones
+--------------------------
+- Licensing: contenido externo puede tener restricciones — guardar `source` y
+  `provenance` (URL) junto al texto; añadir flags para excluir fuentes no
+  permitidas.
+- Rate limits: Trefle/FarmVillage tienen límites — proteger con backoff,
+  caché por `content_hash` y circuit-breaker.
+- Consistencia: decidimos Supabase como fuente de verdad. No implementamos
+  transacciones distribuidas; mitigación: reconciliador y logs para auditoría.
+
+11) Archivos clave modificados (resumen con path)
+-----------------------------------------------
+- `ai_rag_service/infrastructure/database/supabase_botanical_repo.py` (nuevo)
+- `ai_rag_service/application/use_cases/mole_ai_chat_use_case.py` (reemplazado)
+- `ai_rag_service/app/main.py` (inyección DI actualizada)
+- `ai_rag_service/tests/conftest.py` (nuevo)
+- `ai_rag_service/tests/test_mole_ai_chat_use_case.py` (nuevo)
+- `IMPLEMENTATION_REPORT_SELF_UPDATING_RAG.txt` (resumen previo)
+- `IMPLEMENTATION_REPORT_SELF_UPDATING_RAG_DETAILED.txt` (este archivo)
+
+12) Siguientes pasos recomendados (priorizados)
+------------------------------------------------
+P1 — Añadir métricas + logs estructurados (urgente)
+P2 — Implementar reconciliador (worker) y tareas de backfill
+P3 — Tests de integración end-to-end con entorno de dev Supabase y FAISS
+P4 — Documentar la tabla `botanical_knowledge` (migraciones) y políticas de retención
+P5 — Añadir validaciones de licencia/provenance antes de persistir en producción
+
+13) Notas operativas para despliegue
+-----------------------------------
+- Variables de entorno obligatorias para harvesting en producción:
+  `SUPABASE_URL`, `SUPABASE_KEY` (service-role key), `TREFLE_API_TOKEN`, `FARMVILLAGE_API_KEY`.
+- Asegurar que el contenedor de FastAPI tenga conectividad saliente a las APIs
+  botánicas y a Supabase.
+- Proteger `SUPABASE_KEY` como secret en orquestador; no exponer en logs.
+
+14) Resumen final
+-----------------
+Se introdujo una solución de harvesting robusta, idempotente y diseñada para
+minimizar incoherencias entre el índice local (FAISS) y la base duradera
+(Supabase). Se añadieron adaptadores, pruebas unitarias, y documentación de
+verificación. La regla transaccional solicitada (Supabase primero, FAISS solo si
+Supabase OK) está implementada en `_harvest_external` y cubierta por tests
+unitarios que validan el comportamiento crítico.
+
+Archivo generado por Dev Assistant.

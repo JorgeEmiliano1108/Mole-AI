@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+# =============================================================================
+# Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+#
+# AVISO DE PROPIEDAD INTELECTUAL:
+# Este archivo es propiedad exclusiva de Mole.AI y sus autores originales.
+# Queda estrictamente prohibida la copia, modificación, distribución,
+# sublicenciamiento o uso comercial de este código, total o parcialmente,
+# sin la autorización expresa y por escrito de los titulares del Copyright.
+#
+# Cualquier uso no autorizado será perseguido conforme a la Ley Federal
+# del Derecho de Autor (México) y tratados internacionales aplicables.
+# =============================================================================
 """
 Ajuste de configuración para estructura con carpeta 'apps'.
 
@@ -28,8 +40,8 @@ if str(BASE_DIR) not in sys.path:
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Información para debugging
-print(f"🔧 Django Apps Path configurado: {APPS_DIR}")
-print(f"📂 sys.path actualizado: apps/ agregada")
-print(f"🎯 Proyecto base: {BASE_DIR}")
-print(f"🐛 Modo DEBUG: {DEBUG}")
+print(f" Django Apps Path configurado: {APPS_DIR}")
+print(f" sys.path actualizado: apps/ agregada")
+print(f" Proyecto base: {BASE_DIR}")
+print(f" Modo DEBUG: {DEBUG}")
 print("=" * 50)

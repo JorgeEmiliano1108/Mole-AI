@@ -2,6 +2,7 @@ import os
 import httpx
 from datetime import datetime, timedelta
 from typing import List, Optional
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 
 class SupabaseClient:
@@ -21,6 +22,12 @@ class SupabaseClient:
             "Content-Type": "application/json",
         }
 
+    @retry(
+        retry=retry_if_exception_type(httpx.RequestError),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True,
+    )
     def fetch_sensor_logs(self, days: int = 90, sensors: Optional[List[str]] = None) -> List[dict]:
         """
         Fetch sensor_logs rows for the past `days` days. Returns list of dicts with at least
@@ -43,6 +50,12 @@ class SupabaseClient:
             return []
         return resp.json()
 
+    @retry(
+        retry=retry_if_exception_type(httpx.RequestError),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        stop=stop_after_attempt(3),
+        reraise=True,
+    )
     def fetch_ai_diagnostics(self, days: int = 90) -> List[dict]:
         if not self.url:
             return []
