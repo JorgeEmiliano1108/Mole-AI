@@ -16,6 +16,7 @@ from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework import status
 import json
+import os
 from datetime import datetime, timedelta
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
@@ -57,9 +58,16 @@ class HardwareOnlyPermission(BasePermission):
 
 def index_view(request):
     """
-    Vista principal para la aplicación Mole AI
+    Vista principal para la aplicación Mole AI.
+    Injects Supabase public config into template context for JS consumption
+    via data-* attributes (Zero Trust: no hardcoded keys in static files).
     """
-    return render(request, 'index.html')
+    from django.conf import settings
+    context = {
+        'SUPABASE_URL': getattr(settings, 'SUPABASE_URL', '') or '',
+        'SUPABASE_KEY': os.getenv('SUPABASE_KEY', ''),
+    }
+    return render(request, 'index.html', context)
 
 
 from django.db import transaction
