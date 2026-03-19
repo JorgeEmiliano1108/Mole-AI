@@ -1,336 +1,462 @@
-/* =========================================
-   MOLE-AI TERMLINK - ESTILOS UNIFICADOS
-   Base: Fallout Style (Pip-Boy)
-   Addons: WebSocket Chat & Alerts
-   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-/* --- 1. BASE GENERAL (PIP-BOY STYLE) --- */
+/* =============================================================================
+   CSS Custom Properties — Retro Terminal Palette
+   ============================================================================= */
 :root {
-    --pip-green: #1eff00;
-    --pip-dim: #124d08;
-    --pip-bg: #000;
-    --pip-alert: #ffaa00;
-    --pip-danger: #ff0000;
+    --term-bg: #000;
+    --term-fg: #00ffaa;
+    --term-fg-dim: rgba(0, 255, 170, 0.7);
+    --term-fg-border: rgba(0, 255, 170, 0.3);
+    --term-glow: rgba(0, 255, 170, 0.5);
+    --term-red: #ff4444;
+    --term-amber: #ffaa00;
+    --term-amber-toxic: #ff8c00;
+    --term-cyan: #00e5ff;
+    --term-font: 'Share Tech Mono', monospace;
+    --min-target: 48px;
 }
-
-* { box-sizing: border-box; }
 
 body {
-    background-color: var(--pip-bg);
-    margin: 0; height: 100vh;
-    font-family: 'VT323', monospace;
-    color: var(--pip-green);
-    overflow: hidden; user-select: none;
+    font-family: var(--term-font);
+    background-color: var(--term-bg);
+    color: var(--term-fg);
+    overflow-x: hidden;
 }
 
-/* Scanlines Globales */
-body::after {
-    content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-    background-size: 100% 4px; z-index: 1000; pointer-events: none;
+/* =============================================================================
+   1. TEXT SELECTION
+   ============================================================================= */
+::selection {
+    background: var(--term-fg);
+    color: var(--term-bg);
 }
 
-/* CLASES DE UTILIDAD */
-.screen { display: none; width: 100%; height: 100%; position: relative; z-index: 10; }
-.screen.active { display: flex; }
-
-/* --- PANTALLA 1: INICIO --- */
-#start-screen {
-    flex-direction: column; justify-content: center; align-items: center; padding: 40px;
+#admin-dashboard ::selection {
+    background: var(--term-cyan);
+    color: var(--term-bg);
 }
 
-.intro-header {
-    width: 100%; max-width: 1000px;
-    border-bottom: 2px solid var(--pip-green);
-    margin-bottom: 20px; padding-bottom: 10px;
-}
-.intro-title { font-size: 2.5rem; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
-.intro-sub { color: var(--pip-dim); font-size: 1rem; }
-
-.intro-layout {
-    display: flex; width: 100%; max-width: 1000px; height: 60vh;
-    border-bottom: 2px solid var(--pip-dim);
-}
-
-.intro-menu {
-    width: 35%; padding-right: 20px; border-right: 2px solid var(--pip-green);
-    display: flex; flex-direction: column; justify-content: center; gap: 20px;
+/* =============================================================================
+   2. CRT SCANLINE EFFECT
+   ============================================================================= */
+.scanline {
+    width: 100%;
+    height: 100px;
+    z-index: 9999;
+    position: absolute;
+    pointer-events: none;
+    background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,255,170,0.15) 50%, rgba(0,0,0,0) 100%);
+    opacity: 0.1;
+    animation: scanline 8s linear infinite;
 }
 
-.menu-item {
-    font-size: 1.5rem; color: var(--pip-dim); cursor: pointer; transition: 0.2s;
-    padding: 5px 0; text-transform: uppercase;
-}
-.menu-item:hover, .menu-item.active-menu { 
-    color: var(--pip-green); text-shadow: 0 0 10px var(--pip-green); padding-left: 10px; 
+@keyframes scanline {
+    0% { top: -100px; }
+    100% { top: 100%; }
 }
 
-.start-btn-box {
-    margin-top: 30px; border: 2px solid var(--pip-green);
-    padding: 10px; text-align: center; cursor: pointer;
-    transition: 0.3s; background: transparent; color: var(--pip-green);
-    font-family: 'VT323'; font-size: 1.6rem; width: 100%;
+/* =============================================================================
+   3. SCROLLBARS (Terminal Style)
+   ============================================================================= */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track {
+    background: #001105;
+    border-left: 1px solid var(--term-fg-border);
 }
-.start-btn-box:hover { background: var(--pip-green); color: #000; box-shadow: 0 0 20px var(--pip-green); }
+::-webkit-scrollbar-thumb { background: var(--term-fg); }
 
-.intro-display {
-    width: 65%; padding: 30px;
-    display: flex; align-items: flex-start; justify-content: flex-start;
-    border: 1px solid var(--pip-dim); margin: 20px;
-    background: rgba(0, 20, 0, 0.3); box-shadow: inset 0 0 30px #000;
-    overflow-y: auto;
+#admin-dashboard ::-webkit-scrollbar-track {
+    background: #000511;
+    border-left: 1px solid rgba(0, 229, 255, 0.2);
 }
+#admin-dashboard ::-webkit-scrollbar-thumb { background: var(--term-cyan); }
 
-.display-text { 
-    font-size: 1.4rem; line-height: 1.6; color: var(--pip-green);
-    text-shadow: 0 0 5px var(--pip-green); min-height: 50px; width: 100%;
-}
-
-.cursor-blink { animation: blink 1s infinite; font-weight: bold; }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-.intro-footer {
-    margin-top: 20px; font-size: 0.8rem; color: var(--pip-dim); text-align: center; width: 100%;
-}
-
-/* --- PANTALLA 2: LOGIN --- */
-#login-screen { flex-direction: column; align-items: center; justify-content: center; }
-.login-box {
-    border: 2px solid var(--pip-green); padding: 40px; width: 400px; text-align: center;
-    box-shadow: 0 0 30px rgba(30, 255, 0, 0.1); background: #000;
-}
-.login-title { margin-top:0; border-bottom: 1px solid var(--pip-green); padding-bottom:10px; }
-.input-group { margin-bottom: 20px; text-align: left; }
-.input-group label { display: block; color: var(--pip-green); font-size: 1.2rem; margin-bottom: 5px; }
-.term-input {
-    width: 100%; background: #000; border: 1px solid var(--pip-dim); 
-    color: var(--pip-green); padding: 10px; font-family: 'VT323'; font-size: 1.5rem; outline: none;
-}
-.term-input:focus { border-color: var(--pip-green); box-shadow: 0 0 10px var(--pip-dim); }
-.login-btn {
-    width:100%; border:2px solid var(--pip-green); background:transparent; 
-    color:var(--pip-green); padding:10px; cursor:pointer; font-family: 'VT323'; font-size: 1.2rem;
-}
-.login-btn:hover { background: var(--pip-green); color: #000; }
-
-/* --- PANTALLA 3: DASHBOARD --- */
-#app-screen { flex-direction: column; align-items: center; justify-content: center; }
-.pipboy-casing {
-    width: 98%; max-width: 1200px; height: 95vh;
-    background: #222; padding: 20px; border-radius: 30px;
-    box-shadow: inset 0 0 50px #000, 0 0 20px #111;
-    display: flex; flex-direction: column;
-}
-.screen-container {
-    flex-grow: 1; background: radial-gradient(circle, #0f240f 0%, #000500 90%);
-    border: 4px solid #555; border-radius: 20px; position: relative;
-    overflow: hidden; padding: 20px; box-shadow: inset 0 0 80px rgba(0,0,0,0.8);
-    display: flex; flex-direction: column;
+/* =============================================================================
+   4. BUTTONS — Brutalist 48px minimum (a11y)
+   All interactive elements: min 48x48, zero radius, terminal hover
+   ============================================================================= */
+.nav-btn,
+.exit-btn,
+button,
+[role="button"],
+input[type="submit"],
+a.btn {
+    min-height: var(--min-target);
+    min-width: var(--min-target);
+    border-radius: 0;
+    font-family: var(--term-font);
+    cursor: pointer;
 }
 
-/* Header & Topo */
-.pip-header-container {
-    display: flex; align-items: end; gap: 20px;
-    border-bottom: 2px solid var(--pip-green);
-    padding-bottom: 10px; margin-bottom: 20px; height: 70px;
+.nav-btn {
+    padding: 10px 16px;
+    border: 1px solid var(--term-fg-border);
+    color: var(--term-fg);
+    background: transparent;
+    transition: all 0.15s ease;
 }
-.agent-toggle {
-    width: 70px; height: 70px;
-    border: 1px solid var(--pip-dim); 
-    margin-right: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-    transition: all 0.2s; overflow: hidden; position: relative;
-    background: #000;
-}
-.agent-toggle:hover { border-color: var(--pip-green); box-shadow: 0 0 15px var(--pip-green); }
-
-/* --- IMÁGENES DE TOPO/PLANTA --- */
-.mole-img, .default-icon { 
-    display: block; width: 100%; height: 100%; 
-    object-fit: contain; image-rendering: pixelated; background: #000;
-}
-.plant-img, .hover-icon { 
-    display: none; width: 100%; height: 100%; 
-    object-fit: contain; image-rendering: pixelated; background: #000;
-}
-.agent-toggle:hover .mole-toggle-icon.default-icon { display: none; }
-.agent-toggle:hover .mole-toggle-icon.hover-icon { display: block; }
-
-.header-tabs { 
-    flex-grow: 1; display: flex; justify-content: flex-start; gap: 15px;
-    margin-bottom: 0; font-size: 1.3rem; text-transform: uppercase; overflow-x: auto; 
-    align-items: center; height: 100%;
-}
-.header-tabs::-webkit-scrollbar { display: none; }
-.tab-btn { cursor: pointer; opacity: 0.5; transition: 0.2s; padding: 5px 10px; white-space: nowrap; }
-.tab-btn.active { opacity: 1; font-weight: bold; text-shadow: 0 0 10px var(--pip-green); border-bottom: 3px solid var(--pip-green); }
-.tab-btn:hover { color: #fff; opacity: 1; }
-.btn-exit { color: red; opacity: 0.8; }
-
-/* Main Dashboard */
-.main-display { flex-grow: 1; display: flex; position: relative; z-index: 15; }
-.col-stats { width: 25%; display: flex; flex-direction: column; justify-content: center; gap: 40px; }
-.stat-block { 
-    border: 2px solid var(--pip-green); background: rgba(0, 20, 0, 0.6); 
-    padding: 10px; position: relative; text-align: center; transition: all 0.3s;
-}
-.stat-title { font-size: 1rem; background: var(--pip-green); color: #000; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); padding: 0 5px; white-space: nowrap; }
-.stat-value { font-size: 2rem; display: block; text-shadow: 0 0 5px var(--pip-green); }
-.clickable-stat { cursor: pointer; }
-
-/* Alertas Dashboard */
-.stat-block.warning { border-color: var(--pip-alert); box-shadow: 0 0 10px var(--pip-alert); animation: pulseWarn 1s infinite; }
-.stat-block.warning .stat-title { background: var(--pip-alert); }
-.stat-block.warning .stat-value { color: var(--pip-alert); text-shadow: 0 0 5px var(--pip-alert); }
-.stat-block.danger { border-color: var(--pip-danger); box-shadow: 0 0 15px var(--pip-danger); animation: pulseDanger 0.5s infinite; }
-.stat-block.danger .stat-title { background: var(--pip-danger); color: #fff; }
-.stat-block.danger .stat-value { color: var(--pip-danger); text-shadow: 0 0 5px var(--pip-danger); }
-@keyframes pulseWarn { 50% { opacity: 0.7; } }
-@keyframes pulseDanger { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; border-color: transparent; } }
-
-.col-visual { width: 50%; display: flex; justify-content: center; align-items: center; position: relative; }
-.focus-bracket { position: absolute; width: 20px; height: 20px; border: 3px solid var(--pip-green); box-shadow: 0 0 10px var(--pip-green); }
-.fb-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
-.fb-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
-.fb-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
-.fb-br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
-.plant-icon { width: 200px; height: 200px; display: none; filter: drop-shadow(0 0 10px var(--pip-green)); animation: float 6s infinite ease-in-out; }
-.plant-icon.active { display: block; }
-@keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
-/* --- 2. CHAT & WEBSOCKET ENHANCEMENTS (AÑADIDO) --- */
-
-/* Contenedor del Chat */
-#ai-modal {
-    display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-    width: 90%; max-width: 600px; height: 500px;
-    background: #000; border: 3px solid var(--pip-green); z-index: 200; 
-    padding: 15px; box-shadow: 0 0 50px rgba(30, 255, 0, 0.3); flex-direction: column;
-}
-.chat-header { 
-    display: flex; justify-content: space-between; align-items: center; 
-    padding-bottom: 10px; border-bottom: 2px solid var(--pip-green); 
-    font-size: 1.5rem; color: var(--pip-green); 
+.nav-btn:hover,
+.nav-btn:focus-visible,
+.nav-btn.active {
+    background: var(--term-fg);
+    color: var(--term-bg);
+    box-shadow: 0 0 10px var(--term-glow);
 }
 
-/* Área de Mensajes */
-#ai-chat-container {
-    flex-grow: 1; overflow-y: auto; margin-top: 10px; margin-bottom: 10px;
-    padding: 10px; border: 1px solid var(--pip-dim); display: flex; flex-direction: column;
-    background-repeat: no-repeat; background-position: center; background-size: 200px;
-    /* Ajustado para asegurar visibilidad */
-    background-color: rgba(0, 15, 0, 0.9);
+.exit-btn {
+    padding: 10px 16px;
+    color: var(--term-red);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    background: transparent;
+    transition: all 0.15s ease;
+}
+.exit-btn:hover,
+.exit-btn:focus-visible {
+    background: var(--term-red);
+    color: var(--term-bg);
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
 }
 
-/* Estilos de Mensajes (Base + Nuevos) */
-.ai-message { 
-    margin-bottom: 15px; padding: 10px; border: 1px solid var(--pip-dim); 
-    max-width: 90%; font-size: 1.1rem; position: relative; transition: all 0.3s ease;
-}
-.ai-message:hover { transform: translateX(2px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
-
-.ai-message.bot { 
-    background: rgba(30, 255, 0, 0.05); color: var(--pip-green); align-self: flex-start; 
-    border-left: 3px solid var(--pip-green);
-}
-.ai-message.user { 
-    background: rgba(0, 0, 0, 0.8); color: #fff; align-self: flex-end; text-align: right; 
-    border-right: 3px solid #fff;
+/* =============================================================================
+   5. FOCUS-VISIBLE — Keyboard/Screen-reader navigation
+   ============================================================================= */
+:focus-visible {
+    outline: 2px solid var(--term-fg);
+    outline-offset: 2px;
+    box-shadow: 0 0 8px var(--term-glow);
 }
 
-/* Input Area */
-.ai-input-area { display: flex; align-items: center; border: 2px solid var(--pip-green); padding: 5px; background: #000; }
-#ai-input { 
-    flex-grow: 1; background: transparent; border: none; 
-    color: var(--pip-green); font-family: 'VT323'; font-size: 1.2rem; padding: 5px; outline: none; 
+/* =============================================================================
+   6. STAT CARDS
+   ============================================================================= */
+.stat-card {
+    border: 1px solid var(--term-fg-border);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 255, 170, 0.02);
+}
+.stat-card .label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+}
+.stat-card .value {
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0,255,170,0.3);
 }
 
-/* --- INDICADORES TÁCTICOS (NUEVO) --- */
+.analysis-trigger {
+    width: 100%;
+    border: 1px dashed var(--term-fg);
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+.analysis-trigger:hover {
+    background: rgba(0, 255, 170, 0.1);
+    text-shadow: 0 0 5px var(--term-fg);
+}
 
-/* Indicador de Estado WebSocket */
+.close-modal-btn:hover {
+    color: white;
+    text-shadow: 0 0 5px white;
+}
+
+/* =============================================================================
+   7. PLANT IMAGE FILTER
+   ============================================================================= */
+.plant-filter {
+    filter: sepia(1) saturate(1.2) contrast(1.1) brightness(0.9);
+    transition: filter 0.5s ease;
+}
+.group:hover .plant-filter { filter: none; }
+
+/* =============================================================================
+   8. TV SHUTDOWN ANIMATION
+   ============================================================================= */
+.tv-off {
+    animation: tv-shutdown 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    pointer-events: none;
+}
+
+@keyframes tv-shutdown {
+    0%  { transform: scale(1, 1);       filter: brightness(1) contrast(1); }
+    40% { transform: scale(1, 0.005);   filter: brightness(5) contrast(2); background: #fff; }
+    100%{ transform: scale(0, 0);       filter: brightness(10); opacity: 0; }
+}
+
+/* =============================================================================
+   9. TOAST NOTIFICATIONS — Terminal Critical Error Style
+   ============================================================================= */
+#toast-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 420px;
+    width: 100%;
+    pointer-events: none;
+}
+
+.terminal-toast {
+    font-family: var(--term-font);
+    font-size: 0.85rem;
+    padding: 12px 16px;
+    border: 2px solid var(--term-fg-border);
+    background: rgba(0, 0, 0, 0.95);
+    color: var(--term-fg);
+    pointer-events: auto;
+    animation: toast-slide-in 0.3s ease;
+}
+
+.terminal-toast--error {
+    border-color: var(--term-red);
+    color: var(--term-red);
+}
+.terminal-toast--warn {
+    border-color: var(--term-amber-toxic);
+    color: var(--term-amber-toxic);
+}
+.terminal-toast--success {
+    border-color: var(--term-fg);
+    color: var(--term-fg);
+}
+
+.toast-prefix {
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+.toast-fade-out {
+    animation: toast-fade 0.4s ease forwards;
+}
+
+@keyframes toast-slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes toast-fade {
+    to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* =============================================================================
+   10. COFEPRIS DISCLAIMER BANNER — System Alert Terminal Style
+   ============================================================================= */
+#disclaimer-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+}
+
+.disclaimer-banner {
+    font-family: var(--term-font);
+    border: 3px solid var(--term-amber-toxic);
+    border-bottom: none;
+    background: rgba(0, 0, 0, 0.97);
+    padding: 16px 20px;
+    color: var(--term-amber-toxic);
+}
+
+.disclaimer-header {
+    font-size: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 0.15em;
+    border-bottom: 2px dashed var(--term-amber-toxic);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px rgba(255, 140, 0, 0.4);
+}
+
+.disclaimer-body {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    opacity: 0.9;
+    margin-bottom: 12px;
+}
+
+.disclaimer-dismiss {
+    background: transparent;
+    color: var(--term-amber-toxic);
+    border: 1px solid var(--term-amber-toxic);
+    padding: 8px 20px;
+    font-family: var(--term-font);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.disclaimer-dismiss:hover,
+.disclaimer-dismiss:focus-visible {
+    background: var(--term-amber-toxic);
+    color: var(--term-bg);
+}
+
+/* =============================================================================
+   11. CHAT MESSAGES
+   ============================================================================= */
+.chat-msg {
+    font-family: var(--term-font);
+    padding: 8px 0;
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+.chat-msg--user {
+    color: var(--term-fg);
+}
+.chat-msg--bot {
+    color: var(--term-cyan);
+}
+.chat-msg--loading {
+    color: var(--term-fg-dim);
+    animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0.3; }
+}
+
+/* Terminal spinner */
+.terminal-spinner {
+    display: inline-block;
+    width: 10px;
+    animation: spin-chars 0.8s steps(4) infinite;
+}
+.terminal-spinner::before {
+    content: '|';
+}
+@keyframes spin-chars {
+    0%  { content: '|'; }
+    25% { content: '/'; }
+    50% { content: '—'; }
+    75% { content: '\\'; }
+}
+
+/* =============================================================================
+   12. LOADING STATE (Skeleton)
+   ============================================================================= */
+.is-loading {
+    position: relative;
+    overflow: hidden;
+}
+.is-loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        rgba(0, 255, 170, 0.05) 40%,
+        transparent 80%
+    );
+    animation: loading-sweep 1.5s linear infinite;
+}
+
+@keyframes loading-sweep {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+}
+
+/* =============================================================================
+   13. WEBSOCKET INDICATOR
+   ============================================================================= */
 .websocket-indicator {
-    padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-right: 10px;
+    font-family: var(--term-font);
+    font-size: 0.75rem;
+    padding: 4px 10px;
 }
-.websocket-indicator.connected { background: var(--pip-green); color: #000; box-shadow: 0 0 5px var(--pip-green); }
-.websocket-indicator.disconnected { background: var(--pip-danger); color: #fff; animation: pulse 1s infinite; }
-
-/* Alertas Especiales en Chat */
-.tactical-alert-indicator {
-    background: linear-gradient(45deg, var(--pip-dim), #000);
-    color: var(--pip-alert); border: 1px solid var(--pip-alert);
-    padding: 5px; margin-bottom: 5px; display: inline-block;
-    font-size: 0.9em; text-transform: uppercase;
+.websocket-indicator.connected {
+    color: var(--term-fg);
 }
-.ai-message.tactical-alert {
-    border-left: 6px solid var(--pip-alert);
-    background: linear-gradient(to right, rgba(255, 170, 0, 0.1), transparent);
-}
-.ai-message.error {
-    background: rgba(255, 0, 0, 0.1); border-left: 4px solid var(--pip-danger); color: #ff6666;
+.websocket-indicator.disconnected {
+    color: var(--term-red);
 }
 
-/* Metadatos */
-.ai-message .ai-metadata {
-    font-size: 0.8em; color: #888; margin-top: 8px; padding-top: 5px;
-    border-top: 1px solid var(--pip-dim); font-family: 'Courier New', monospace;
+/* =============================================================================
+   14. DAYLIGHT OVERRIDE MODE (Alto contraste para campo / luz solar)
+   Estilo E-Ink / Terminal antigua de alto contraste.
+   NO rompe la estética retro — tipografía monospace + bordes rígidos.
+   ============================================================================= */
+body.daylight-override {
+    --term-bg: #d4e8c0;
+    --term-fg: #0a0a0a;
+    --term-fg-dim: rgba(10, 10, 10, 0.65);
+    --term-fg-border: rgba(10, 10, 10, 0.4);
+    --term-glow: rgba(10, 10, 10, 0.2);
+    --term-red: #8b0000;
+    --term-amber: #8b5a00;
+    --term-amber-toxic: #6b3a00;
+    --term-cyan: #004d40;
+
+    background-color: var(--term-bg);
+    color: var(--term-fg);
 }
 
-/* Animaciones */
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-@keyframes fadeInOut { 0% { opacity: 0; transform: translateY(-10px); } 100% { opacity: 1; transform: translateY(0); } }
-
-/* --- CAMERA & IMAGE PREVIEW (VISION MODULE) --- */
-
-/* Camera Button */
-.camera-btn {
-    background: transparent; border: 1px solid var(--pip-green); color: var(--pip-green);
-    font-size: 1.3rem; cursor: pointer; padding: 4px 8px; margin-right: 5px;
-    font-family: 'VT323', monospace; transition: all 0.2s;
-}
-.camera-btn:hover {
-    background: var(--pip-green); color: #000;
-    box-shadow: 0 0 10px var(--pip-green); text-shadow: none;
+body.daylight-override .scanline {
+    background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(10,10,10,0.08) 50%, rgba(0,0,0,0) 100%);
 }
 
-/* Image Preview Container */
-#image-preview-container {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px; border: 1px dashed var(--pip-dim);
-    background: rgba(30, 255, 0, 0.03); margin-bottom: 5px;
+body.daylight-override ::-webkit-scrollbar-track {
+    background: #c0d8a8;
+    border-left: 1px solid var(--term-fg-border);
 }
-.image-preview-thumb {
-    width: 60px; height: 60px; object-fit: cover;
-    border: 2px solid var(--pip-green); image-rendering: pixelated;
-    box-shadow: 0 0 6px rgba(30, 255, 0, 0.4);
-}
-.remove-image-btn {
-    cursor: pointer; font-size: 1.1rem; transition: 0.2s;
-    color: var(--pip-danger); padding: 2px;
-}
-.remove-image-btn:hover { text-shadow: 0 0 8px var(--pip-danger); transform: scale(1.2); }
-.image-preview-label {
-    font-size: 0.9rem; color: var(--pip-dim); font-style: italic;
+body.daylight-override ::-webkit-scrollbar-thumb {
+    background: var(--term-fg);
 }
 
-/* Images inside chat bubbles */
-.image-in-chat {
-    max-width: 120px; max-height: 90px; object-fit: cover;
-    border: 1px solid var(--pip-green); margin-bottom: 6px;
-    display: block; image-rendering: auto;
-    box-shadow: 0 0 4px rgba(30, 255, 0, 0.3);
+body.daylight-override ::selection {
+    background: var(--term-fg);
+    color: var(--term-bg);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .intro-layout { flex-direction: column; height: auto; }
-    .intro-menu { width: 100%; border-right: none; border-bottom: 1px solid var(--pip-dim); padding-bottom: 20px; }
-    .intro-display { width: 100%; margin: 20px 0; height: 200px; }
-    .pipboy-casing { width: 100%; height: 100vh; border-radius: 0; padding: 5px; border: none; }
-    .screen-container { border-width: 2px; }
-    .pip-header-container { flex-wrap: wrap; height: auto; }
-    .main-display { flex-direction: column; align-items: center; overflow-y: auto; }
-    .col-visual { width: 100%; height: 200px; order: 1; margin-bottom: 10px; }
-    .col-stats { width: 100%; flex-direction: row; order: 2; margin-bottom: 10px; gap: 10px; }
-    .plant-icon { width: 140px; height: 140px; }
-    .camera-btn { font-size: 1.1rem; padding: 3px 6px; }
-    .image-preview-thumb { width: 45px; height: 45px; }
+body.daylight-override .terminal-toast {
+    background: rgba(212, 232, 192, 0.97);
+    border-color: var(--term-fg-border);
+    color: var(--term-fg);
+}
+body.daylight-override .terminal-toast--error {
+    border-color: var(--term-red);
+    color: var(--term-red);
+}
+body.daylight-override .terminal-toast--warn {
+    border-color: var(--term-amber-toxic);
+    color: var(--term-amber-toxic);
+}
+
+body.daylight-override .disclaimer-banner {
+    background: rgba(212, 232, 192, 0.97);
+}
+
+body.daylight-override .stat-card {
+    background: rgba(10, 10, 10, 0.03);
+}
+
+/* Daylight toggle button */
+#daylight-toggle-btn {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    z-index: 9999;
+    background: transparent;
+    color: var(--term-fg);
+    border: 1px solid var(--term-fg-border);
+    padding: 10px 16px;
+    font-family: var(--term-font);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: var(--min-target);
+    min-width: var(--min-target);
+}
+#daylight-toggle-btn:hover,
+#daylight-toggle-btn:focus-visible {
+    background: var(--term-fg);
+    color: var(--term-bg);
+    box-shadow: 0 0 10px var(--term-glow);
 }

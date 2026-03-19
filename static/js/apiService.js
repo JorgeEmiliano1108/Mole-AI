@@ -1,113 +1,109 @@
 /**
- * API Service - Wrapper para fetch con autenticación Supabase
- * Maneja todas las comunicaciones con el backend Django
+ * API Service — Zero Trust HTTP Gateway + WebSocket
+ * ─────────────────────────────────────────────────
+ * • No hardcoded URLs — reads from window.APP_CONFIG only
+ * • AbortController timeouts (30s default, 120s AI)
+ * • Exponential backoff retry (max 3 for network errors)
+ * • Friendly Spanish error messages for field conditions
+ * • COFEPRIS disclaimer detection + event dispatch
+ * • Toast notification utility
+ * • Loading state management
  */
 
 class ApiService {
-    constructor(baseUrl = null, supabaseClient = null) {
-        // Resolve baseUrl from window.APP_CONFIG or fallback dynamic detection
-        const detectedBase = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || baseUrl || null;
-        const hostname = window.location.hostname;
-        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-        const defaultLocal = 'http://127.0.0.1:8000/api/v1/';
-        const defaultProd = '/api/v1/';
+    constructor(supabaseClient = null) {
+        'use strict';
 
-        const finalBase = detectedBase || (isLocal ? defaultLocal : defaultProd);
+        const cfg = window.APP_CONFIG;
+        if (!cfg || !cfg.API_URL) {
+            throw new Error('[ApiService] window.APP_CONFIG.API_URL no definido.');
+        }
 
-        // Ensure trailing slash
-        this.baseUrl = finalBase.endsWith('/') ? finalBase : finalBase + '/';
+        this.baseUrl = cfg.API_URL.endsWith('/') ? cfg.API_URL : cfg.API_URL + '/';
         this.supabase = supabaseClient;
         this.defaultHeaders = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         };
 
-        // WebSocket fallback flag: when true, the client will send chat via HTTP POST
-        this.useHttpFallback = false;
+        // Timeout config
+        this.defaultTimeout = cfg.TIMEOUTS?.DEFAULT || 30000;
+        this.aiTimeout = cfg.TIMEOUTS?.AI || 120000;
+
+        // Retry config
+        this.maxRetries = cfg.RETRY?.MAX_ATTEMPTS || 3;
+        this.retryBaseDelay = cfg.RETRY?.BASE_DELAY || 1000;
+
+        // AI endpoints that get longer timeouts
+        this._aiEndpoints = ['chat', 'diagnostic', 'llm', 'vision', 'rag'];
+
+        // WebSocket state
+        this.websocket = null;
+        this.wsConnected = false;
+        this.wsReconnectAttempts = 0;
     }
 
-    /**
-     * Obtener token de autenticación de Supabase
-     */
+    // ─── AUTH ────────────────────────────────────────────────────────────
+
     async getAuthToken() {
         if (!this.supabase) return null;
-
         try {
             const { data, error } = await this.supabase.auth.getSession();
             if (error) throw error;
             return data.session?.access_token || null;
-        } catch (error) {
-            console.warn('Error obteniendo token:', error);
+        } catch (err) {
+            console.warn('[ApiService] Error obteniendo token:', err.message);
             return null;
         }
     }
 
-    /**
-     * Construir headers mezclando defaults + auth + custom
-     */
-    /**
-     * Construir headers mezclando defaults + auth + custom
-     */
     async buildHeaders(additionalHeaders = {}) {
         const headers = { ...this.defaultHeaders, ...additionalHeaders };
-
         const token = await this.getAuthToken();
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-
         return headers;
     }
 
-    /**
-     * Obtener headers de autenticación para uso externo
-     */
-    async getAuthHeaders() {
-        return this.buildHeaders();
+    // ─── TIMEOUT HELPER ─────────────────────────────────────────────────
+
+    _getTimeout(endpoint) {
+        const ep = endpoint.toLowerCase();
+        return this._aiEndpoints.some(ai => ep.includes(ai))
+            ? this.aiTimeout
+            : this.defaultTimeout;
     }
 
-    /**
-     * Manejar la respuesta HTTP
-     */
+    // ─── RESPONSE HANDLER ───────────────────────────────────────────────
+
     async handleResponse(response) {
         const contentType = response.headers.get('content-type');
         const isJson = contentType && contentType.includes('application/json');
 
         let data;
-
         try {
-            if (isJson) {
-                data = await response.json();
-            } else {
-                data = await response.text();
-            }
-        } catch (e) {
+            data = isJson ? await response.json() : await response.text();
+        } catch (_) {
             data = null;
         }
 
-        if (!response.ok) {
-            // Crear un error personalizado
-            const errorMessage = (data && data.detail) ? data.detail :
-                ((data && data.message) ? data.message : `Error HTTP ${response.status}`);
+        // ── COFEPRIS Disclaimer detection ──
+        if (isJson && data && typeof data === 'object' && data.disclaimer) {
+            window.dispatchEvent(new CustomEvent('disclaimerReceived', {
+                detail: { text: data.disclaimer }
+            }));
+        }
 
+        if (!response.ok) {
+            const errorMessage = (data && data.message) ? data.message : `Error HTTP ${response.status}`;
             const error = new Error(errorMessage);
             error.status = response.status;
             error.data = data;
 
-            // Lógica específica por código de estado
-            if (response.status === 401) {
-                console.warn('Sesión expirada o inválida (401)');
-                // Si tenemos cliente Supabase, intentamos limpiar o refrescar?
-                // Por ahora, asumimos que el Token expiró y forzamos logout lógica en el frontend
-                // al propagar el error.
-                if (this.supabase) {
-                    // Opcional: intentar refresh si el cliente lo soporta transparentemente
-                    // pero si llegamos aquí, es probable que ya sea inválido.
-                    const { data: sessionData, error: sessionError } = await this.supabase.auth.getSession();
-                    if (!sessionData?.session) {
-                        // Realmente no hay sesión válida
-                    }
-                }
+            // Session expired
+            if (response.status === 401 && this.supabase) {
+                console.warn('[ApiService] Sesión expirada o inválida');
             }
 
             throw error;
@@ -116,263 +112,224 @@ class ApiService {
         return data;
     }
 
-    /**
-     * Método principal REQUEST
-     */
+    // ─── FRIENDLY ERROR MESSAGES ────────────────────────────────────────
+
+    _friendlyMessage(error) {
+        if (error instanceof TypeError) {
+            // Network error (offline, DNS, CORS preflight failure)
+            return 'Sin conexión a internet. Verifica tu señal.';
+        }
+        if (error.name === 'AbortError') {
+            return 'La conexión en el campo es inestable. Reintentando...';
+        }
+        const s = error.status;
+        if (s === 503) return 'El servicio de IA está procesando. Intenta en unos segundos.';
+        if (s === 504) return 'La conexión en el campo es inestable. Reintentando...';
+        if (s === 429) return 'Demasiadas solicitudes. Espera un momento.';
+        if (s === 401) return 'Sesión expirada. Vuelve a iniciar sesión.';
+        if (s >= 500) return 'Error interno del servidor. Intenta más tarde.';
+        return error.message || 'Error desconocido.';
+    }
+
+    // ─── REQUEST WITH RETRY + TIMEOUT ───────────────────────────────────
+
     async request(endpoint, method = 'GET', body = null, customHeaders = {}) {
-        // Limpiar endpoint para evitar dobles slashes (ej: base/ + /ruta)
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
         const url = `${this.baseUrl}${cleanEndpoint}`;
+        const timeout = this._getTimeout(cleanEndpoint);
 
-        // Determinar si debemos enviar token (Guard)
-        const token = await this.getAuthToken();
-        if (!token && !endpoint.includes('sensor-data')) {
-            // Si es una ruta protegida y no hay token, ¿debemos abortar?
-            // Dejamos pasar sensor-data para modo público/demo
-            // console.warn("Request sin token a endpoint:", endpoint);
-        }
+        let lastError = null;
 
-        // Preparar opciones
-        const options = {
-            method: method.toUpperCase(),
-            headers: await this.buildHeaders(customHeaders)
-        };
+        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeout);
 
-        // Manejo del Body
-        if (body !== null && method !== 'GET' && method !== 'HEAD') {
-            if (body instanceof FormData) {
-                // CRUCIAL: Al enviar FormData, el navegador debe poner el Content-Type automáticamente
-                // con el boundary correcto. Debemos borrarlo de nuestros defaults.
-                delete options.headers['Content-Type'];
-                options.body = body;
-            } else {
-                options.body = JSON.stringify(body);
+            try {
+                const options = {
+                    method: method.toUpperCase(),
+                    headers: await this.buildHeaders(customHeaders),
+                    signal: controller.signal,
+                };
+
+                // Body handling
+                if (body !== null && method !== 'GET' && method !== 'HEAD') {
+                    if (body instanceof FormData) {
+                        delete options.headers['Content-Type'];
+                        options.body = body;
+                    } else {
+                        options.body = JSON.stringify(body);
+                    }
+                }
+
+                const response = await fetch(url, options);
+                clearTimeout(timer);
+                return await this.handleResponse(response);
+
+            } catch (error) {
+                clearTimeout(timer);
+                lastError = error;
+
+                // Only retry on network errors or timeouts, not HTTP errors
+                const isRetryable = (error instanceof TypeError) || (error.name === 'AbortError');
+
+                if (!isRetryable || attempt >= this.maxRetries) {
+                    break;
+                }
+
+                // Exponential backoff: 1s, 2s, 4s
+                const delay = this.retryBaseDelay * Math.pow(2, attempt);
+                console.warn(`[ApiService] Retry ${attempt + 1}/${this.maxRetries} en ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
 
-        try {
-            const response = await fetch(url, options);
-            return await this.handleResponse(response);
-        } catch (error) {
-            console.error(`API Error [${method} ${endpoint}]:`, error);
-            throw error;
+        // All retries exhausted
+        const friendlyMsg = this._friendlyMessage(lastError);
+        ApiService.showToast(friendlyMsg, 'error');
+        console.error(`[ApiService] ${method} ${endpoint} falló:`, lastError);
+        throw lastError;
+    }
+
+    // ─── HELPER METHODS ─────────────────────────────────────────────────
+
+    get(endpoint) { return this.request(endpoint, 'GET'); }
+    post(endpoint, body) { return this.request(endpoint, 'POST', body); }
+    put(endpoint, body) { return this.request(endpoint, 'PUT', body); }
+    delete(endpoint) { return this.request(endpoint, 'DELETE'); }
+    upload(endpoint, formData) { return this.request(endpoint, 'POST', formData); }
+
+    // ─── TOAST NOTIFICATIONS (Terminal Style) ───────────────────────────
+
+    static showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const prefixes = {
+            error: '[ ERROR ]',
+            warn: '[ WARN  ]',
+            info: '[ INFO  ]',
+            success: '[ OK    ]'
+        };
+        const prefix = prefixes[type] || prefixes.info;
+
+        const toast = document.createElement('div');
+        toast.className = `terminal-toast terminal-toast--${type}`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `<span class="toast-prefix">${prefix}</span> ${message}`;
+
+        container.appendChild(toast);
+
+        // Auto-remove after 6s
+        setTimeout(() => {
+            toast.classList.add('toast-fade-out');
+            setTimeout(() => toast.remove(), 400);
+        }, 6000);
+    }
+
+    // ─── LOADING STATE ──────────────────────────────────────────────────
+
+    static setLoading(elementId, isLoading) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (isLoading) {
+            el.classList.add('is-loading');
+            el.setAttribute('aria-busy', 'true');
+        } else {
+            el.classList.remove('is-loading');
+            el.removeAttribute('aria-busy');
         }
     }
 
-    // --- Métodos Helper ---
+    // ─── WEBSOCKET ──────────────────────────────────────────────────────
 
-    get(endpoint) {
-        return this.request(endpoint, 'GET');
-    }
-
-    post(endpoint, body) {
-        return this.request(endpoint, 'POST', body);
-    }
-
-    put(endpoint, body) {
-        return this.request(endpoint, 'PUT', body);
-    }
-
-    delete(endpoint) {
-        return this.request(endpoint, 'DELETE');
-    }
-
-    // Helper específico para subir archivos
-    upload(endpoint, formData) {
-        return this.request(endpoint, 'POST', formData);
-    }
-
-    // --- WEBSOCKET METHODS FOR MOLE-AI CHAT ---
-
-    /**
-     * Inicializar conexión WebSocket para chat en tiempo real
-     */
     initWebSocket() {
-        // Cerrar conexión existente si hay una
         if (this.websocket) {
             this.websocket.close();
         }
 
-        // Determinar protocolo WebSocket basado en HTTP/HTTPS
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        let wsUrl = `${protocol}//${window.location.host}/ws/chat/`;
+        const wsUrl = `${protocol}//${window.location.host}/ws/chat/`;
 
-        // BUILDER FIX: Inject Auth Token
-        this.getAuthToken().then(token => {
-            if (token) {
-                // Encode token to handle special chars safe
-                wsUrl += `?token=${encodeURIComponent(token)}`;
-            } else {
-                console.warn("Iniciando WebSocket sin token (Modo Anónimo)");
-            }
+        try {
+            this.websocket = new WebSocket(wsUrl);
 
-            console.log('Conectando WebSocket a Mole-AI:', wsUrl);
+            this.websocket.onopen = () => {
+                this.wsConnected = true;
+                this.wsReconnectAttempts = 0;
+                this.updateConnectionIndicator(true);
+            };
 
-            try {
-                this.websocket = new WebSocket(wsUrl);
-                this.useHttpFallback = false; // Reset fallback on new attempt
-                this._setupWebSocketHandlers();
-            } catch (e) {
-                console.error('WebSocket init failed, enabling HTTP fallback', e);
-                this.useHttpFallback = true;
-            }
-        });
-    }
-
-    _setupWebSocketHandlers() {
-        if (!this.websocket) return;
-
-        // Event handlers
-        this.websocket.onopen = () => {
-            console.log('✅ WebSocket conectado a Mole-AI');
-            this.wsConnected = true;
-            this.wsReconnectAttempts = 0;
-            this.updateConnectionIndicator(true);
-        };
-
-        this.websocket.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                this.handleWebSocketMessage(data);
-            } catch (error) {
-                console.error('Error parsing WebSocket message:', error, event.data);
-            }
-        };
-
-        this.websocket.onerror = (error) => {
-            console.error('❌ WebSocket error:', error);
-            this.wsConnected = false;
-            this.updateConnectionIndicator(false);
-        };
-
-        this.websocket.onclose = (event) => {
-            console.log('🔌 WebSocket desconectado:', event.code, event.reason);
-            this.wsConnected = false;
-            this.updateConnectionIndicator(false);
-            // In serverless platforms WebSocket may be closed; activate fallback
-            this.useHttpFallback = true;
-
-            // Intentar reconexión automática (máximo 5 intentos)
-            // NO reconectar si el código es 4004 (Auth fallida) o similar 1006 repetitivo
-            if (event.code !== 1000 && event.code !== 1001 && this.wsReconnectAttempts < 5) {
-                // Exponential backoff
-                const delay = Math.min(1000 * (2 ** this.wsReconnectAttempts), 10000);
-                this.wsReconnectAttempts = (this.wsReconnectAttempts || 0) + 1;
-                console.log(`🔄 Intentando reconectar en ${delay}ms (${this.wsReconnectAttempts}/5)...`);
-                setTimeout(() => this.initWebSocket(), delay);
-            }
-        };
-    }
-
-    /**
-     * Enviar mensaje de chat a través de WebSocket
-     */
-    sendChatMessage(question, plantId = null, imageBase64 = null) {
-        // If HTTP fallback is enabled, send via HTTP immediately
-        if (this.useHttpFallback) {
-            console.warn('Using HTTP fallback for chat (WebSocket disabled)');
-            this._sendChatViaHttp(question, plantId, imageBase64);
-            return;
-        }
-
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-            console.log('WebSocket no conectado, inicializando...');
-            if (!this.websocket || this.websocket.readyState === WebSocket.CLOSED) {
-                this.initWebSocket();
-            }
-
-            // Esperar a que readyState sea OPEN antes de enviar
-            const checkConnection = setInterval(() => {
-                if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                    clearInterval(checkConnection);
-                    this._doSendChatMessage(question, plantId, imageBase64);
+            this.websocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleWebSocketMessage(data);
+                } catch (err) {
+                    console.error('[WS] Error parsing message:', err);
                 }
-            }, 150);
+            };
 
-            // Timeout después de 10 segundos
+            this.websocket.onerror = () => {
+                this.wsConnected = false;
+                this.updateConnectionIndicator(false);
+            };
+
+            this.websocket.onclose = (event) => {
+                this.wsConnected = false;
+                this.updateConnectionIndicator(false);
+
+                if (this.wsReconnectAttempts < 5) {
+                    this.wsReconnectAttempts = (this.wsReconnectAttempts || 0) + 1;
+                    const delay = 3000 * this.wsReconnectAttempts;
+                    setTimeout(() => this.initWebSocket(), delay);
+                }
+            };
+
+        } catch (err) {
+            console.error('[WS] Error creando WebSocket:', err);
+            this.wsConnected = false;
+        }
+    }
+
+    sendChatMessage(question, plantId = null) {
+        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+            this.initWebSocket();
+            const checkConnection = setInterval(() => {
+                if (this.wsConnected) {
+                    clearInterval(checkConnection);
+                    this._doSendChatMessage(question, plantId);
+                }
+            }, 100);
             setTimeout(() => {
                 clearInterval(checkConnection);
-                if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                    console.error('❌ Timeout esperando conexión WebSocket — usando fallback HTTP');
-                    this.useHttpFallback = true;
-                    this._sendChatViaHttp(question, plantId, imageBase64);
+                if (!this.wsConnected) {
+                    ApiService.showToast('Sin conexión a internet. Verifica tu señal.', 'error');
                 }
             }, 10000);
         } else {
-            this._doSendChatMessage(question, plantId, imageBase64);
+            this._doSendChatMessage(question, plantId);
         }
     }
 
-    /**
-     * Fallback: enviar chat vía HTTP POST al endpoint del backend
-     */
-    async _sendChatViaHttp(question, plantId = null, imageBase64 = null) {
-        try {
-            const payload = {
-                question: question,
-                plant_id: plantId
-            };
-            if (imageBase64) payload.image_base64 = imageBase64;
+    _doSendChatMessage(question, plantId) {
+        const message = { question, plant_id: plantId };
+        this.websocket.send(JSON.stringify(message));
+    }
 
-            // El endpoint espera JSON en: /api/v1/chat/fallback/
-            const res = await this.post('chat/fallback/', payload);
-
-            // Emitir evento con la respuesta para que el UI lo procese igual que WS
-            window.dispatchEvent(new CustomEvent('chatMessage', { detail: res }));
-        } catch (err) {
-            console.error('Error sending chat via HTTP fallback:', err);
-            window.dispatchEvent(new CustomEvent('chatMessage', {
-                detail: { type: 'error', message: '❌ Falla de fallback HTTP: ' + (err.message || err) }
+    handleWebSocketMessage(data) {
+        // COFEPRIS Disclaimer detection in WS messages
+        if (data && data.disclaimer) {
+            window.dispatchEvent(new CustomEvent('disclaimerReceived', {
+                detail: { text: data.disclaimer }
             }));
         }
+
+        window.dispatchEvent(new CustomEvent('chatMessage', { detail: data }));
     }
 
-    /**
-     * Método interno para enviar mensaje WebSocket
-     */
-    _doSendChatMessage(question, plantId, imageBase64 = null) {
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-            console.warn('⚠️ WebSocket no está OPEN, reintentando...');
-            this.sendChatMessage(question, plantId, imageBase64);
-            return;
-        }
-
-        const message = {
-            question: question,
-            plant_id: plantId
-        };
-
-        // Adjuntar imagen si existe
-        if (imageBase64) {
-            message.image_base64 = imageBase64;
-        }
-
-        this.websocket.send(JSON.stringify(message));
-        console.log('📤 Mensaje enviado a Mole-AI:', { question, plant_id: plantId, has_image: !!imageBase64 });
-    }
-
-    /**
-     * Manejar mensajes recibidos del WebSocket
-     */
-    handleWebSocketMessage(data) {
-        console.log('📥 Mensaje recibido de Mole-AI:', data);
-
-        // Disparar evento personalizado para que el UI lo maneje
-        window.dispatchEvent(new CustomEvent('chatMessage', {
-            detail: data
-        }));
-    }
-
-    /**
-     * Verificar estado de conexión WebSocket
-     */
     isWebSocketConnected() {
         return this.wsConnected && this.websocket && this.websocket.readyState === WebSocket.OPEN;
     }
 
-    /**
-     * Cerrar conexión WebSocket manualmente
-     */
     closeWebSocket() {
         if (this.websocket) {
             this.websocket.close();
@@ -382,22 +339,18 @@ class ApiService {
         }
     }
 
-    /**
-     * Actualizar indicador visual de conexión
-     */
     updateConnectionIndicator(connected) {
         const indicator = document.getElementById('websocket-indicator');
-        if (indicator) {
-            if (connected) {
-                indicator.className = 'websocket-indicator connected';
-                indicator.textContent = '🟢 Online';
-            } else {
-                indicator.className = 'websocket-indicator disconnected';
-                indicator.textContent = '🔴 Offline';
-            }
+        if (!indicator) return;
+        if (connected) {
+            indicator.className = 'websocket-indicator connected';
+            indicator.textContent = '■ ONLINE';
+        } else {
+            indicator.className = 'websocket-indicator disconnected';
+            indicator.textContent = '■ OFFLINE';
         }
     }
 }
 
-// Asignar a window para que esté disponible globalmente sin 'import'
+// Global export (no ES modules)
 window.ApiService = ApiService;
