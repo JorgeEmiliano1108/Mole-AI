@@ -19,6 +19,9 @@ urlpatterns = [
     # Login handshake — validates Supabase JWT and returns user info
     path('validate-token/', views.validate_token_view, name='validate_token'),
 
+    # Local Registration endpoint for new Farmers
+    path('register/', views.register_view, name='register'),
+
     # User Profile endpoints
     path('profile/', views.user_profile_view, name='user_profile'),
     

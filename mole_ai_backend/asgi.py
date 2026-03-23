@@ -33,12 +33,12 @@ django.setup()
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.security.websocket import AllowedHostsOriginValidator
-from authentication.middleware import JwtAuthMiddleware
+from apps.authentication.middleware import JwtAuthMiddleware
 
 # Importar routing con fallback mejorado
 try:
-    from core.routing import websocket_urlpatterns
-    print("✅ WebSocket routes loaded from core.routing")
+    from apps.core.routing import websocket_urlpatterns
+    print("✅ WebSocket routes loaded from apps.core.routing")
 except ImportError as e:
     print(f"⚠️ Error loading core.routing: {e}")
     websocket_urlpatterns = []

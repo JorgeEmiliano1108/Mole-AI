@@ -16,12 +16,12 @@ async def chat_endpoint(request: ChatRequest):
 @router.post("/api/v1/embeddings", response_model=EmbeddingResponse)
 async def embeddings_endpoint(request: EmbeddingRequest):
     # ...implementation placeholder...
-    return EmbeddingResponse(embeddings=[], disclaimer="COFEPRIS: Esta respuesta es informativa.", sources=[])
+    return EmbeddingResponse(embeddings=[], disclaimer="Esta respuesta es informativa.", sources=[])
 
 @router.post("/api/v1/knowledge/ingest-pdf", response_model=IngestPDFResponse)
 async def ingest_pdf_endpoint(request: IngestPDFRequest):
     # ...implementation placeholder...
-    return IngestPDFResponse(success=True, disclaimer="COFEPRIS: Esta respuesta es informativa.", sources=[])
+    return IngestPDFResponse(success=True, disclaimer="Esta respuesta es informativa.", sources=[])
 
 @router.get("/api/v1/knowledge/sources", response_model=SourcesResponse)
 async def sources_endpoint():

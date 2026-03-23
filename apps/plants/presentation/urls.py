@@ -11,13 +11,22 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 from django.urls import path
+from rest_framework.routers import DefaultRouter
 from . import views
 
 app_name = "plants"
 
 urlpatterns = [
+    path("search/", views.species_search_view, name="species_search"),
+    path("my-collection/", views.my_collection_view, name="my_collection"),
     path("", views.plant_list_view, name="plant_list"),
     path("<uuid:plant_id>/", views.plant_detail_view, name="plant_detail"),
     path("favorites/", views.favorite_plant_list_view, name="favorite_plant_list"),
     path("favorites/<int:fav_id>/", views.favorite_plant_detail_view, name="favorite_plant_detail"),
 ]
+
+# Register species router (CRUD surface)
+router = DefaultRouter()
+router.register(r'species', views.SpeciesViewSet, basename='species')
+
+urlpatterns += router.urls

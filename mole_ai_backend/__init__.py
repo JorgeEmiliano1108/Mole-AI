@@ -10,3 +10,7 @@
 # Cualquier uso no autorizado será perseguido conforme a la Ley Federal
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
+
+from .celery import app as celery_app
+
+__all__ = ('celery_app',)

@@ -41,8 +41,8 @@ def _create_unmanaged_tables(django_db_setup, django_db_blocker):
     with django_db_blocker.unblock():
         from django.db import connection
         with connection.schema_editor() as editor:
-            from plants.infrastructure.repositories.models import UserPlant
-            from core.infrastructure.repositories.models import SensorLog
+            from apps.plants.infrastructure.repositories.models import UserPlant
+            from apps.core.infrastructure.repositories.models import SensorLog
             for model in (UserPlant, SensorLog):
                 try:
                     editor.create_model(model)

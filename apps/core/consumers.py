@@ -20,7 +20,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 # Import con manejo de errores
 try:
-    from ai_models.services import get_enhanced_ai_response
+    from apps.ai_models.services import get_enhanced_ai_response
 except ImportError as e:
     print(f"⚠️ No se puede importar AI services: {e}")
     get_enhanced_ai_response = None

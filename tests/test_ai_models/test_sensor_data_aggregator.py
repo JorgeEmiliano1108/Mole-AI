@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from ai_models.services import SensorDataAggregator
+from apps.ai_models.services import SensorDataAggregator
 
 
 def test_aggregator_returns_empty_dict_when_no_rows():

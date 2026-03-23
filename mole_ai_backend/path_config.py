@@ -26,13 +26,10 @@ from pathlib import Path
 # Ruta base del proyecto
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Agregar carpeta 'apps' al sys.path de Python
-# Esto permite que from ai_models..., from authentication..., from core... funcione
-APPS_DIR = BASE_DIR / 'apps'
-if str(APPS_DIR) not in sys.path:
-    sys.path.insert(0, str(APPS_DIR))
-
-# También agregar la carpeta raíz por si hay importaciones relativas
+# NOTA: Para evitar múltiples nombres de paquete (p.ej. 'core' vs 'apps.core')
+# no añadimos la carpeta 'apps' directamente al sys.path. Todas las apps
+# deben importarse con el prefijo 'apps.' (p.ej. 'apps.core').
+# Añadimos únicamente la carpeta raíz del proyecto al sys.path.
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 
@@ -40,8 +37,7 @@ if str(BASE_DIR) not in sys.path:
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Información para debugging
-print(f" Django Apps Path configurado: {APPS_DIR}")
-print(f" sys.path actualizado: apps/ agregada")
+print(" Django Apps Path configurado: NOT ADDED (use 'apps.' imports)")
 print(f" Proyecto base: {BASE_DIR}")
 print(f" Modo DEBUG: {DEBUG}")
 print("=" * 50)

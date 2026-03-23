@@ -30,6 +30,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
 from django.conf import settings
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     # Admin interface
@@ -37,14 +38,18 @@ urlpatterns = [
     
     # Core app endpoints mapped primarily under api/v1/
     path('api/v1/', include([
-        path('auth/', include('authentication.presentation.urls')),
-        path('ai/', include('ai_models.presentation.urls')),
-        path('', include('core.presentation.urls')),
-        path('plants/', include('plants.presentation.urls')),
+        path('auth/', include('apps.authentication.presentation.urls')),
+        path('ai/', include('apps.ai_models.presentation.urls')),
+        path('', include('apps.core.presentation.urls')),
+        path('plants/', include('apps.plants.presentation.urls')),
     ])),
     
+    # Swagger API Docs
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+
     # Fallback to root for index_view (handled in a separate file or directly)
-    path('', include('core.presentation.urls_root')),
+    path('', include('apps.core.presentation.urls_root')),
     
     # Serve favicon from staticfiles (shortcut to avoid 404 in browsers/devtools)
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.ico')),

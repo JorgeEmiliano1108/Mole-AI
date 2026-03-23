@@ -65,7 +65,7 @@ def _split_env_list(var_name, default=None):
 
 
 # Hosts allowed to serve the application (read from env, default localhost)
-ALLOWED_HOSTS = _split_env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = _split_env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1,*')
 
 # Application definition
 INSTALLED_APPS = [
@@ -82,10 +82,11 @@ INSTALLED_APPS = [
     'storages',
     'pgvector',
     'axes',  # M3/M4: brute-force protection
-    'core',
-    'ai_models',
-    'authentication',
-    'plants',
+    'drf_spectacular',
+    'apps.core',
+    'apps.ai_models',
+    'apps.authentication',
+    'apps.plants',
 ]
 
 MIDDLEWARE = [
@@ -142,7 +143,7 @@ else:
             'HOST': os.getenv('SUPABASE_DB_HOST'),
             'PORT': os.getenv('SUPABASE_DB_PORT', '6543'),  # M4: Transaction Pooler
             'OPTIONS': {
-                'sslmode': 'require',
+                'sslmode': os.getenv('PG_SSL_MODE', 'require'),
             },
         }
     }
@@ -175,9 +176,12 @@ AUTH_USER_MODEL = 'authentication.User'
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'authentication.infrastructure.authentication.SupabaseAuthentication',
-        'authentication.infrastructure.authentication.HardwareAPIKeyAuthentication',
+        'apps.authentication.infrastructure.authentication.SupabaseAuthentication',
+        # Removed external dependency 'rest_framework_simplejwt' to avoid ModuleNotFoundError
+        # If you intend to use SimpleJWT, add it to requirements.txt and the image build.
+        'apps.authentication.infrastructure.authentication.HardwareAPIKeyAuthentication',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
@@ -197,7 +201,7 @@ REST_FRAMEWORK = {
      ],
      'DEFAULT_THROTTLE_RATES': {
          'anon': '100/hour',
-         'user': '1000/hour',
+         'user': '10000/minute',
          'llm_chat': '60/minute',
          'diagnostics': '30/minute',
          'sensor_data': '200/minute'
@@ -285,7 +289,9 @@ STATICFILES_DIRS = [
 WHITENOISE_USE_FINDERS = True
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_MAX_AGE = 0 if DEBUG else 31557600  # 1 year in production
-WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz']
+WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'ico', 'js', 'css', 'map']
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+WHITENOISE_MANIFEST_STRICT = False
 
 # Media files - Supabase S3
 MEDIA_URL = '/media/'
@@ -368,17 +374,30 @@ os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 # Cache configuration for django-ratelimit - Redis for production
 REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'KEY_PREFIX': 'mole_ai',
-        'TIMEOUT': 300,
+# Allow an explicit override to use local in-memory cache for quick local testing
+USE_LOCAL_CACHE = os.getenv('DJANGO_LOCAL_CACHE', '').lower() == 'true'
+
+# If running in DEBUG or explicitly requested, use LocMemCache to avoid Redis dependency
+if USE_LOCAL_CACHE or DEBUG or 'sqlite' in os.getenv('DATABASE_URL', '').lower():
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+            'TIMEOUT': 300,
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'mole_ai',
+            'TIMEOUT': 300,
+        }
+    }
 
 # Create cache directory
 os.makedirs(BASE_DIR / 'cache', exist_ok=True)
@@ -444,3 +463,18 @@ if not HARDWARE_API_KEY:
 import mimetypes
 mimetypes.add_type("text/css", ".css", True)
 mimetypes.add_type("application/javascript", ".js", True)
+
+# Configuracion CELERY para Docker
+import os
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Mole.AI API Documentación',
+    'DESCRIPTION': 'Documentación oficial generada para la transición Gold Master.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+}

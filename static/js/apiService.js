@@ -1,130 +1,183 @@
 /**
- * API Service — Zero Trust HTTP Gateway + WebSocket
- * ─────────────────────────────────────────────────
- * • No hardcoded URLs — reads from window.APP_CONFIG only
- * • AbortController timeouts (30s default, 120s AI)
- * • Exponential backoff retry (max 3 for network errors)
- * • Friendly Spanish error messages for field conditions
+ * ApiService — Clean HTTP client for Mole-AI Django API Gateway
+ * ──────────────────────────────────────────────────────────────
+ * • Points to http://localhost:8000/api/v1/
+ * • fetch-based with AbortController timeouts
+ * • Exponential backoff retry for network errors
+ * • FormData support (auto-drops Content-Type)
  * • COFEPRIS disclaimer detection + event dispatch
  * • Toast notification utility
- * • Loading state management
+ * • Spanish-friendly error messages
  */
 
 class ApiService {
-    constructor(supabaseClient = null) {
-        'use strict';
 
-        const cfg = window.APP_CONFIG;
-        if (!cfg || !cfg.API_URL) {
-            throw new Error('[ApiService] window.APP_CONFIG.API_URL no definido.');
-        }
+    constructor() {
+        this.baseUrl = 'http://localhost:8000/api/v1/';
+        this.defaultTimeout = 30000;   // 30s for standard requests
+        this.aiTimeout = 120000;       // 120s for AI/LLM endpoints
+        this.maxRetries = 3;
+        this.retryBaseDelay = 1000;    // 1s base, exponential backoff
+        this._aiEndpoints = ['chat', 'diagnostic', 'llm', 'vision', 'rag', 'cnn'];
 
-        this.baseUrl = cfg.API_URL.endsWith('/') ? cfg.API_URL : cfg.API_URL + '/';
-        this.supabase = supabaseClient;
-        this.defaultHeaders = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-        };
-
-        // Timeout config
-        this.defaultTimeout = cfg.TIMEOUTS?.DEFAULT || 30000;
-        this.aiTimeout = cfg.TIMEOUTS?.AI || 120000;
-
-        // Retry config
-        this.maxRetries = cfg.RETRY?.MAX_ATTEMPTS || 3;
-        this.retryBaseDelay = cfg.RETRY?.BASE_DELAY || 1000;
-
-        // AI endpoints that get longer timeouts
-        this._aiEndpoints = ['chat', 'diagnostic', 'llm', 'vision', 'rag'];
-
-        // WebSocket state
-        this.websocket = null;
-        this.wsConnected = false;
-        this.wsReconnectAttempts = 0;
+        // Session token (set after login)
+        this.authToken = null;
+        // Authorization prefix (use Bearer to match backend SupabaseAuthentication)
+        this.authPrefix = 'Bearer ';
     }
 
-    // ─── AUTH ────────────────────────────────────────────────────────────
+    // ─── AUTH TOKEN MANAGEMENT ──────────────────────────────────────────
 
-    async getAuthToken() {
-        if (!this.supabase) return null;
+    setToken(token) {
+        return new Promise(resolve => {
+            // Defensive: only accept non-empty string tokens
+            if (typeof token !== 'string' || token.trim() === '') {
+                console.warn('ApiService.setToken: invalid token received, refusing to persist.', token);
+                // Ensure we don't keep partial/invalid token in memory/storage
+                this.clearToken();
+                resolve(false);
+                return;
+            }
+
+            this.authToken = token;
+            sessionStorage.setItem('mole_jwt', token);
+            console.log("CRITICAL: Token guardado físicamente");
+            // Mecanismo de verificación síncrono
+            if (sessionStorage.getItem('mole_jwt') !== token) {
+                console.error("CRITICAL: Token no se ha guardado correctamente en sessionStorage");
+            }
+            // Return a resolved promise so callers can `await` this operation
+            resolve(true);
+        });
+    }
+
+    getToken() {
+        if (this.authToken) return this.authToken;
+        var saved = sessionStorage.getItem('mole_jwt');
+        if (saved) {
+            this.authToken = saved;
+            return saved;
+        }
+        return null;
+    }
+
+    clearToken() {
+        this.authToken = null;
+        sessionStorage.removeItem('mole_jwt');
+    }
+
+    // Allow runtime override of the Authorization prefix (e.g. 'Token ', 'JWT ')
+    setAuthPrefix(prefix) {
+        if (typeof prefix !== 'string') return;
+        this.authPrefix = prefix;
+    }
+
+    // Ensure token saved (Promise-friendly wrapper)
+    ensureTokenSaved(token) {
+        return this.setToken(token);
+    }
+
+    // ─── HEADER BUILDER ─────────────────────────────────────────────────
+
+    buildHeaders(extra) {
+        var headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        };
+        var token = this.getToken();
+        if (token) {
+            headers['Authorization'] = (this.authPrefix || 'Bearer ') + token;
+        }
+        if (extra) {
+            for (var key in extra) {
+                if (extra.hasOwnProperty(key)) {
+                    headers[key] = extra[key];
+                }
+            }
+        }
+        return headers;
+    }
+
+    // ─── JWT HELPERS ─────────────────────────────────────────────────
+
+    _decodeJwtPayload(token) {
         try {
-            const { data, error } = await this.supabase.auth.getSession();
-            if (error) throw error;
-            return data.session?.access_token || null;
-        } catch (err) {
-            console.warn('[ApiService] Error obteniendo token:', err.message);
+            var parts = token.split('.');
+            if (parts.length < 2) return null;
+            var payload = parts[1];
+            // atob can throw if invalid
+            var json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+            return JSON.parse(json);
+        } catch (e) {
             return null;
         }
     }
 
-    async buildHeaders(additionalHeaders = {}) {
-        const headers = { ...this.defaultHeaders, ...additionalHeaders };
-        const token = await this.getAuthToken();
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        return headers;
+    isTokenExpired(token) {
+        token = token || this.getToken();
+        if (!token) return true;
+        var payload = this._decodeJwtPayload(token);
+        if (!payload || !payload.exp) return false; // cannot determine -> assume valid
+        var now = Math.floor(Date.now() / 1000);
+        return payload.exp <= now;
+    }
+
+    isTokenPresent() {
+        return !!this.getToken();
     }
 
     // ─── TIMEOUT HELPER ─────────────────────────────────────────────────
 
     _getTimeout(endpoint) {
-        const ep = endpoint.toLowerCase();
-        return this._aiEndpoints.some(ai => ep.includes(ai))
-            ? this.aiTimeout
-            : this.defaultTimeout;
+        var ep = endpoint.toLowerCase();
+        for (var i = 0; i < this._aiEndpoints.length; i++) {
+            if (ep.indexOf(this._aiEndpoints[i]) !== -1) {
+                return this.aiTimeout;
+            }
+        }
+        return this.defaultTimeout;
     }
 
     // ─── RESPONSE HANDLER ───────────────────────────────────────────────
 
-    async handleResponse(response) {
-        const contentType = response.headers.get('content-type');
-        const isJson = contentType && contentType.includes('application/json');
+    handleResponse(response) {
+        var contentType = response.headers.get('content-type');
+        var isJson = contentType && contentType.indexOf('application/json') !== -1;
 
-        let data;
-        try {
-            data = isJson ? await response.json() : await response.text();
-        } catch (_) {
-            data = null;
-        }
+        var dataPromise = isJson ? response.json() : response.text();
 
-        // ── COFEPRIS Disclaimer detection ──
-        if (isJson && data && typeof data === 'object' && data.disclaimer) {
-            window.dispatchEvent(new CustomEvent('disclaimerReceived', {
-                detail: { text: data.disclaimer }
-            }));
-        }
-
-        if (!response.ok) {
-            const errorMessage = (data && data.message) ? data.message : `Error HTTP ${response.status}`;
-            const error = new Error(errorMessage);
-            error.status = response.status;
-            error.data = data;
-
-            // Session expired
-            if (response.status === 401 && this.supabase) {
-                console.warn('[ApiService] Sesión expirada o inválida');
+        return dataPromise.then(function (data) {
+            // COFEPRIS Disclaimer detection
+            if (isJson && data && typeof data === 'object' && data.disclaimer) {
+                window.dispatchEvent(new CustomEvent('disclaimerReceived', {
+                    detail: { text: data.disclaimer }
+                }));
             }
 
-            throw error;
-        }
+            if (!response.ok) {
+                var errorMessage = (data && data.message) ? data.message : 'Error HTTP ' + response.status;
+                var error = new Error(errorMessage);
+                error.status = response.status;
+                error.data = data;
+                throw error;
+            }
 
-        return data;
+            return data;
+        });
     }
 
     // ─── FRIENDLY ERROR MESSAGES ────────────────────────────────────────
 
     _friendlyMessage(error) {
         if (error instanceof TypeError) {
-            // Network error (offline, DNS, CORS preflight failure)
-            return 'Sin conexión a internet. Verifica tu señal.';
+            return 'Sin conexión al servidor. Verifica tu red.';
         }
         if (error.name === 'AbortError') {
-            return 'La conexión en el campo es inestable. Reintentando...';
+            return 'La conexión es inestable. Reintentando...';
         }
-        const s = error.status;
+        var s = error.status;
         if (s === 503) return 'El servicio de IA está procesando. Intenta en unos segundos.';
-        if (s === 504) return 'La conexión en el campo es inestable. Reintentando...';
+        if (s === 504) return 'Timeout del servidor. La conexión es inestable.';
         if (s === 429) return 'Demasiadas solicitudes. Espera un momento.';
         if (s === 401) return 'Sesión expirada. Vuelve a iniciar sesión.';
         if (s >= 500) return 'Error interno del servidor. Intenta más tarde.';
@@ -133,27 +186,65 @@ class ApiService {
 
     // ─── REQUEST WITH RETRY + TIMEOUT ───────────────────────────────────
 
-    async request(endpoint, method = 'GET', body = null, customHeaders = {}) {
-        const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-        const url = `${this.baseUrl}${cleanEndpoint}`;
-        const timeout = this._getTimeout(cleanEndpoint);
+    request(endpoint, method, body, customHeaders, options = {}) {
+        var self = this;
+        var cleanEndpoint = endpoint.charAt(0) === '/' ? endpoint.slice(1) : endpoint;
+        var url = self.baseUrl + cleanEndpoint;
+        var timeout = self._getTimeout(cleanEndpoint);
+        method = method || 'GET';
+        var silent = options.silent || false;
 
-        let lastError = null;
+        // Enforce strict JWT presence and validity (Zero-Trust)
+        var token = self.getToken();
+        if (!options.allowAnonymous) {
+            if (!token) {
+                var errNoToken = new Error('NO_TOKEN');
+                errNoToken.status = 401;
+                if (!silent) {
+                    ApiService.showToast('Sesión no autenticada. Inicia sesión.', 'error');
+                }
+                return Promise.reject(errNoToken);
+            }
 
-        for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-            const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), timeout);
+            if (self.isTokenExpired(token)) {
+                var errExpired = new Error('EXPIRED_TOKEN');
+                errExpired.status = 401;
+                if (!silent) {
+                    ApiService.showToast('Token vencido. Inicia sesión de nuevo.', 'error');
+                }
+                return Promise.reject(errExpired);
+            }
+        } else if (token && self.isTokenExpired(token)) {
+            // Drop expired token so it doesn't pollute the anonymous request
+            self.clearToken();
+            token = null;
+        }
 
-            try {
-                const options = {
+        // Defensive guard: if a token exists but is not a plain string, clear it and fail early
+        if (token && typeof token !== 'string') {
+            console.error('[ApiService] Invalid token format detected in client. Clearing token.');
+            self.clearToken();
+            var errInvalid = new Error('INVALID_TOKEN_FORMAT');
+            errInvalid.status = 401;
+            if (!silent) ApiService.showToast('Token inválido en cliente. Reautentifica.', 'error');
+            return Promise.reject(errInvalid);
+        }
+        function attemptRequest(attempt) {
+            return new Promise(function (resolve, reject) {
+                var controller = new AbortController();
+                var timer = setTimeout(function () { controller.abort(); }, timeout);
+
+                var headers = self.buildHeaders(customHeaders);
+                var options = {
                     method: method.toUpperCase(),
-                    headers: await this.buildHeaders(customHeaders),
-                    signal: controller.signal,
+                    headers: headers,
+                    signal: controller.signal
                 };
 
                 // Body handling
-                if (body !== null && method !== 'GET' && method !== 'HEAD') {
+                if (body !== null && body !== undefined && method !== 'GET' && method !== 'HEAD') {
                     if (body instanceof FormData) {
+                        // Let browser set Content-Type with boundary for multipart
                         delete options.headers['Content-Type'];
                         options.body = body;
                     } else {
@@ -161,196 +252,104 @@ class ApiService {
                     }
                 }
 
-                const response = await fetch(url, options);
-                clearTimeout(timer);
-                return await this.handleResponse(response);
+                // Telemetry: log exact token and headers sent for debugging (Supervisor)
+                try {
+                    console.log("🔥 TOKEN EXACTO ENVIADO:", token);
+                } catch (e) { /* ignore logging errors */ }
+                try {
+                    console.log("🔥 HEADERS COMPLETOS:", headers);
+                } catch (e) { /* ignore logging errors */ }
 
-            } catch (error) {
-                clearTimeout(timer);
-                lastError = error;
+                fetch(url, options)
+                    .then(function (response) {
+                        clearTimeout(timer);
+                        return self.handleResponse(response);
+                    })
+                    .then(resolve)
+                    .catch(function (error) {
+                        clearTimeout(timer);
 
-                // Only retry on network errors or timeouts, not HTTP errors
-                const isRetryable = (error instanceof TypeError) || (error.name === 'AbortError');
+                        // Only retry on network/timeout errors
+                        var isRetryable = (error instanceof TypeError) || (error.name === 'AbortError');
 
-                if (!isRetryable || attempt >= this.maxRetries) {
-                    break;
-                }
+                        if (!isRetryable || attempt >= self.maxRetries) {
+                            reject(error);
+                            return;
+                        }
 
-                // Exponential backoff: 1s, 2s, 4s
-                const delay = this.retryBaseDelay * Math.pow(2, attempt);
-                console.warn(`[ApiService] Retry ${attempt + 1}/${this.maxRetries} en ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
+                        // Exponential backoff: 1s, 2s, 4s
+                        var delay = self.retryBaseDelay * Math.pow(2, attempt);
+                        console.warn('[ApiService] Retry ' + (attempt + 1) + '/' + self.maxRetries + ' en ' + delay + 'ms...');
+                        setTimeout(function () {
+                            attemptRequest(attempt + 1).then(resolve).catch(reject);
+                        }, delay);
+                    });
+            });
         }
 
-        // All retries exhausted
-        const friendlyMsg = this._friendlyMessage(lastError);
-        ApiService.showToast(friendlyMsg, 'error');
-        console.error(`[ApiService] ${method} ${endpoint} falló:`, lastError);
-        throw lastError;
+        return attemptRequest(0).catch(function (error) {
+            if (!silent) {
+                var friendlyMsg = self._friendlyMessage(error);
+                ApiService.showToast(friendlyMsg, 'error');
+                console.error('[ApiService] ' + method + ' ' + endpoint + ' falló:', error);
+            }
+            throw error;
+        });
     }
 
     // ─── HELPER METHODS ─────────────────────────────────────────────────
 
-    get(endpoint) { return this.request(endpoint, 'GET'); }
-    post(endpoint, body) { return this.request(endpoint, 'POST', body); }
-    put(endpoint, body) { return this.request(endpoint, 'PUT', body); }
-    delete(endpoint) { return this.request(endpoint, 'DELETE'); }
-    upload(endpoint, formData) { return this.request(endpoint, 'POST', formData); }
+    get(endpoint, options = {}) {
+        return this.request(endpoint, 'GET', null, options.headers, options);
+    }
+
+    post(endpoint, body, options = {}) {
+        return this.request(endpoint, 'POST', body, options.headers, options);
+    }
+
+    put(endpoint, body, options = {}) {
+        return this.request(endpoint, 'PUT', body, options.headers, options);
+    }
+
+    upload(endpoint, formData, options = {}) {
+        return this.request(endpoint, 'POST', formData, options.headers, options);
+    }
 
     // ─── TOAST NOTIFICATIONS (Terminal Style) ───────────────────────────
 
-    static showToast(message, type = 'info') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
+    static showToast(message, type) {
+        type = type || 'info';
+        var container = document.getElementById('toast-container');
 
-        const prefixes = {
+        // Fallback to alert if toast container doesn't exist
+        if (!container) {
+            alert('[' + type.toUpperCase() + '] ' + message);
+            return;
+        }
+
+        var prefixes = {
             error: '[ ERROR ]',
             warn: '[ WARN  ]',
             info: '[ INFO  ]',
             success: '[ OK    ]'
         };
-        const prefix = prefixes[type] || prefixes.info;
+        var prefix = prefixes[type] || prefixes.info;
 
-        const toast = document.createElement('div');
-        toast.className = `terminal-toast terminal-toast--${type}`;
+        var toast = document.createElement('div');
+        toast.className = 'terminal-toast terminal-toast--' + type;
         toast.setAttribute('role', 'alert');
-        toast.innerHTML = `<span class="toast-prefix">${prefix}</span> ${message}`;
+        toast.innerHTML = '<span class="toast-prefix">' + prefix + '</span> ' + message;
 
         container.appendChild(toast);
 
         // Auto-remove after 6s
-        setTimeout(() => {
+        setTimeout(function () {
             toast.classList.add('toast-fade-out');
-            setTimeout(() => toast.remove(), 400);
+            setTimeout(function () { toast.remove(); }, 400);
         }, 6000);
-    }
-
-    // ─── LOADING STATE ──────────────────────────────────────────────────
-
-    static setLoading(elementId, isLoading) {
-        const el = document.getElementById(elementId);
-        if (!el) return;
-        if (isLoading) {
-            el.classList.add('is-loading');
-            el.setAttribute('aria-busy', 'true');
-        } else {
-            el.classList.remove('is-loading');
-            el.removeAttribute('aria-busy');
-        }
-    }
-
-    // ─── WEBSOCKET ──────────────────────────────────────────────────────
-
-    initWebSocket() {
-        if (this.websocket) {
-            this.websocket.close();
-        }
-
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/chat/`;
-
-        try {
-            this.websocket = new WebSocket(wsUrl);
-
-            this.websocket.onopen = () => {
-                this.wsConnected = true;
-                this.wsReconnectAttempts = 0;
-                this.updateConnectionIndicator(true);
-            };
-
-            this.websocket.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    this.handleWebSocketMessage(data);
-                } catch (err) {
-                    console.error('[WS] Error parsing message:', err);
-                }
-            };
-
-            this.websocket.onerror = () => {
-                this.wsConnected = false;
-                this.updateConnectionIndicator(false);
-            };
-
-            this.websocket.onclose = (event) => {
-                this.wsConnected = false;
-                this.updateConnectionIndicator(false);
-
-                if (this.wsReconnectAttempts < 5) {
-                    this.wsReconnectAttempts = (this.wsReconnectAttempts || 0) + 1;
-                    const delay = 3000 * this.wsReconnectAttempts;
-                    setTimeout(() => this.initWebSocket(), delay);
-                }
-            };
-
-        } catch (err) {
-            console.error('[WS] Error creando WebSocket:', err);
-            this.wsConnected = false;
-        }
-    }
-
-    sendChatMessage(question, plantId = null) {
-        if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-            this.initWebSocket();
-            const checkConnection = setInterval(() => {
-                if (this.wsConnected) {
-                    clearInterval(checkConnection);
-                    this._doSendChatMessage(question, plantId);
-                }
-            }, 100);
-            setTimeout(() => {
-                clearInterval(checkConnection);
-                if (!this.wsConnected) {
-                    ApiService.showToast('Sin conexión a internet. Verifica tu señal.', 'error');
-                }
-            }, 10000);
-        } else {
-            this._doSendChatMessage(question, plantId);
-        }
-    }
-
-    _doSendChatMessage(question, plantId) {
-        const message = { question, plant_id: plantId };
-        this.websocket.send(JSON.stringify(message));
-    }
-
-    handleWebSocketMessage(data) {
-        // COFEPRIS Disclaimer detection in WS messages
-        if (data && data.disclaimer) {
-            window.dispatchEvent(new CustomEvent('disclaimerReceived', {
-                detail: { text: data.disclaimer }
-            }));
-        }
-
-        window.dispatchEvent(new CustomEvent('chatMessage', { detail: data }));
-    }
-
-    isWebSocketConnected() {
-        return this.wsConnected && this.websocket && this.websocket.readyState === WebSocket.OPEN;
-    }
-
-    closeWebSocket() {
-        if (this.websocket) {
-            this.websocket.close();
-            this.websocket = null;
-            this.wsConnected = false;
-            this.updateConnectionIndicator(false);
-        }
-    }
-
-    updateConnectionIndicator(connected) {
-        const indicator = document.getElementById('websocket-indicator');
-        if (!indicator) return;
-        if (connected) {
-            indicator.className = 'websocket-indicator connected';
-            indicator.textContent = '■ ONLINE';
-        } else {
-            indicator.className = 'websocket-indicator disconnected';
-            indicator.textContent = '■ OFFLINE';
-        }
     }
 }
 
-// Global export (no ES modules)
+// Global instance
 window.ApiService = ApiService;
+window.moleApi = new ApiService();

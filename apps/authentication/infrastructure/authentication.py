@@ -57,6 +57,7 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         """
         Authenticate the token with Supabase JWT secret and return user.
         """
+        is_local_superuser = False
         try:
             # Auto-detect algorithm and get correct verification key
             from apps.authentication.jwks import get_verification_key
@@ -78,10 +79,35 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         except jwt.ExpiredSignatureError:
             raise exceptions.AuthenticationFailed('Token has expired.')
         except jwt.InvalidTokenError as e:
-            raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
+            # Fallback: token might be a locally-signed Superadmin token using Django SECRET_KEY
+            try:
+                payload = jwt.decode(
+                    token,
+                    settings.SECRET_KEY,
+                    algorithms=['HS256'],
+                    options={'verify_exp': True}
+                )
+                if payload.get('username') != 'EmiMole':
+                    raise exceptions.AuthenticationFailed('Emergency local access strictly limited to EmiMole account.')
+                is_local_superuser = True
+            except jwt.ExpiredSignatureError:
+                raise exceptions.AuthenticationFailed('Token has expired.')
+            except Exception:
+                raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
         except Exception as e:
             raise exceptions.AuthenticationFailed(f'Token validation error: {str(e)}')
             
+        User = get_user_model()
+        
+        # If it's a locally signed superuser token
+        if is_local_superuser:
+            user_id = payload.get('sub')
+            try:
+                user = User.objects.get(id=user_id, username='EmiMole')
+                return (user, token)
+            except User.DoesNotExist:
+                raise exceptions.AuthenticationFailed('Local Superuser EmiMole not found.')
+                
         # Extract user information from payload
         user_id = payload.get('sub')
         email = payload.get('email')

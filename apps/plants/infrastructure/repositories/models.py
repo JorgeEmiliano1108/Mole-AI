@@ -28,6 +28,7 @@ class SpeciesCatalog(models.Model):
     ideal_ph_min = models.FloatField(null=True, blank=True)
     ideal_ph_max = models.FloatField(null=True, blank=True)
     ideal_ph_optimal = models.FloatField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = "species_catalog"

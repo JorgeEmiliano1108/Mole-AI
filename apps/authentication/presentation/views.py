@@ -47,9 +47,8 @@ def user_profile_view(request):
         })
 
     if request.method == "DELETE":
-        import logging
-        logger = logging.getLogger(__name__)
         user_id = user.id
+        ip_addr = request.META.get("REMOTE_ADDR")
         # Wipe PII before deletion for LFPDPPP compliance (Derecho de Cancelación)
         user.first_name = ""
         user.last_name = ""
@@ -60,13 +59,18 @@ def user_profile_view(request):
         user.supabase_user_metadata = {}
         user.is_active = False
         user.save()
-        # Flush session before deletion
-        if hasattr(request, "session"):
-            request.session.flush()
         # Delete triggers SET_NULL on UserPlant, DiagnosticoGeolocalizado,
         # FeedbackTicket — preserving scientific data integrity.
         user.delete()
-        logger.info("ARCO DELETE: User %s account deleted and PII wiped.", user_id)
+        
+        # MoProSoft: Trazabilidad inmutable
+        from apps.core.infrastructure.repositories.models import AuditLog
+        AuditLog.objects.create(
+            user_id=user_id,
+            action="DELETE_ACCOUNT_ARCO",
+            ip_address=ip_addr,
+            details=f"Account {user_id} deleted and PII wiped."
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # PATCH — only allow safe mutable fields
@@ -130,13 +134,48 @@ def user_metadata_view(request):
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     """
-    POST /api/v1/auth/logout/ — Server-side session invalidation.
-    JWT invalidation is handled by Supabase; this clears the Django session.
+    POST /api/v1/auth/logout/ — Stateless API Logout
+    En REST JWT, la invalidación del token debe hacerse borrando el token 
+    en el cliente (Frontend). No mantenemos sesiones de lado del servidor.
     """
-    if hasattr(request, "session"):
-        request.session.flush()
-    return Response({"status": "logged_out"})
+    return Response({
+        "status": "logged_out", 
+        "message": "Token must be discarded by client."
+    }, status=status.HTTP_200_OK)
 
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def register_view(request):
+    """
+    POST /api/v1/auth/register/
+    Registra a un nuevo agricultor u operador de manera local con la contraseña hasheada.
+    """
+    username = request.data.get("username")
+    password = request.data.get("password")
+    email = request.data.get("email")
+
+    if not username or not password:
+        return Response({"error": "Faltan credenciales."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if "@" in username and not email:
+        email = username
+        username = username.split("@")[0] + "_user"
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    if User.objects.filter(username=username).exists():
+        return Response({"error": "El usuario ya existe."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.create_user(username=username, email=email, password=password)
+    user.is_active = True
+    user.save()
+
+    return Response({
+        "status": "created",
+        "username": user.username
+    }, status=status.HTTP_201_CREATED)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -147,7 +186,53 @@ def validate_token_view(request):
     creates/updates the Django user, and returns user info.
     Used as the "login" handshake for the mobile/web client.
     """
-    from authentication.infrastructure.authentication import SupabaseAuthentication
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    # Hybrid Auth Protocol: Local authentication bypass
+    if username and password:
+        from django.contrib.auth import authenticate, get_user_model
+        from django.conf import settings
+        import jwt
+        from datetime import datetime, timedelta, timezone
+        
+        User = get_user_model()
+        if "@" in username:
+            user_obj = User.objects.filter(email=username).first()
+            if user_obj:
+                username = user_obj.username
+
+        user = authenticate(request=request, username=username, password=password)
+        if user is not None:
+            # Generar JWT local compatible con SupabaseAuthentication
+            role = "superuser" if user.is_superuser else "user"
+            # Preferimos usar SUPABASE_JWT_SECRET/ALGORITHM si están disponibles
+            signing_key = getattr(settings, 'SUPABASE_JWT_SECRET', None) or settings.SECRET_KEY
+            signing_alg = getattr(settings, 'SUPABASE_JWT_ALGORITHM', 'HS256')
+
+            payload = {
+                "sub": str(user.id),
+                "username": user.username,
+                "email": user.email,
+                "role": role,
+                "aud": "authenticated",
+                "exp": datetime.now(timezone.utc) + timedelta(days=1),
+                "iat": datetime.now(timezone.utc),
+            }
+
+            token = jwt.encode(payload, signing_key, algorithm=signing_alg)
+            return Response({
+                "token": token,
+                "role": role
+            })
+        else:
+            return Response(
+                {"error": "Credenciales inválidas."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+    # Supabase authentication fallback
+    from apps.authentication.infrastructure.authentication import SupabaseAuthentication
 
     auth = SupabaseAuthentication()
     try:
