@@ -89,155 +89,168 @@ function submitRegistration() {
     }
 }
 
-// --- NUEVA VERSIÓN DE ATTEMPT LOGIN CON ANIMACIONES PRIME Y SOPORTE MULTIUSUARIO ---
-function attemptLogin() {
+// --- NUEVA VERSIÓN DE ATTEMPT LOGIN 100% REAL Y DINÁMICA ---
+async function attemptLogin() {
     const user = document.getElementById('user-input').value.trim();
     const pass = document.getElementById('pass-input').value.trim();
     const errorMsg = document.getElementById('login-error');
-
+    
     errorMsg.classList.add('hidden');
-    const users = JSON.parse(localStorage.getItem('moleia_users'));
 
-    if (users[user] && users[user] === pass) {
+    try {
+        // 1. Reemplaza esta URL con la ruta real de tu servidor Backend
+        const backendURL = 'http://TU-BACKEND-REAL.com/api/login'; 
         
-        const loginScreen = document.getElementById('login-screen');
+        // 2. Hacemos la petición al servidor
+        const response = await fetch(backendURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: user, password: pass }) 
+        });
 
-        // =========================================================
-        // ANIMACIÓN PARA EL ADMIN (ESTÁTICA Y PODER)
-        // =========================================================
-        if (user.toLowerCase() === 'admin') {
-            
-            if (!document.getElementById('admin-glitch-style')) {
-                const style = document.createElement('style');
-                style.id = 'admin-glitch-style';
-                style.innerHTML = `
-                    @keyframes pure-static {
-                        0% { background-position: 0% 0%; filter: invert(0%) sepia(100%) hue-rotate(180deg) saturate(500%); }
-                        25% { background-position: 50% 50%; filter: invert(100%); }
-                        50% { background-position: -20% 30%; filter: invert(0%); }
-                        75% { background-position: 80% -10%; filter: invert(100%); }
-                        100% { background-position: 100% 100%; filter: invert(0%); }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
+        if (response.ok) {
+            // 3. AQUÍ RECIBIMOS LOS DATOS REALES DEL USUARIO DESDE EL BACKEND
+            // Descomenta la siguiente línea cuando sepas qué te devuelve el servidor
+            // const userData = await response.json(); 
 
-            const overlay = document.createElement('div');
-            overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black';
-            document.body.appendChild(overlay);
+            const loginScreen = document.getElementById('login-screen');
 
-            const noise = document.createElement('div');
-            noise.className = 'absolute inset-0';
-            noise.style.backgroundImage = 'repeating-radial-gradient(circle at 17% 32%, #ffffff, #000000 0.001px)';
-            noise.style.animation = 'pure-static 0.1s infinite';
-            noise.style.opacity = '0.85';
-            overlay.appendChild(noise);
-
-            loginScreen.classList.add('hidden');
-
-            setTimeout(() => {
-                noise.remove(); 
+            // =========================================================
+            // ANIMACIÓN PARA EL ADMIN (ESTÁTICA Y PODER)
+            // =========================================================
+            if (user.toLowerCase() === 'admin') {
                 
-                const msg = document.createElement('h1');
-                msg.innerText = "> BIENVENIDO SUPERVISOR";
-                msg.className = "text-[#00e5ff] font-bold text-3xl md:text-5xl tracking-[0.3em] uppercase drop-shadow-[0_0_15px_#00e5ff] animate-pulse text-center px-4";
-                msg.style.fontFamily = "'Share Tech Mono', monospace";
-                overlay.appendChild(msg);
+                if (!document.getElementById('admin-glitch-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'admin-glitch-style';
+                    style.innerHTML = `
+                        @keyframes pure-static {
+                            0% { background-position: 0% 0%; filter: invert(0%) sepia(100%) hue-rotate(180deg) saturate(500%); }
+                            25% { background-position: 50% 50%; filter: invert(100%); }
+                            50% { background-position: -20% 30%; filter: invert(0%); }
+                            75% { background-position: 80% -10%; filter: invert(100%); }
+                            100% { background-position: 100% 100%; filter: invert(0%); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black';
+                document.body.appendChild(overlay);
+
+                const noise = document.createElement('div');
+                noise.className = 'absolute inset-0';
+                noise.style.backgroundImage = 'repeating-radial-gradient(circle at 17% 32%, #ffffff, #000000 0.001px)';
+                noise.style.animation = 'pure-static 0.1s infinite';
+                noise.style.opacity = '0.85';
+                overlay.appendChild(noise);
+
+                loginScreen.classList.add('hidden');
 
                 setTimeout(() => {
-                    overlay.style.transition = 'opacity 0.8s ease';
-                    overlay.style.opacity = '0';
+                    noise.remove(); 
                     
-                    const adminDash = document.getElementById('admin-dashboard');
-                    adminDash.classList.remove('hidden');
-                    adminDash.classList.add('flex');
-                    initAdminCharts(); 
-                    renderAdminReports();
+                    const msg = document.createElement('h1');
+                    msg.innerText = "> BIENVENIDO SUPERVISOR";
+                    msg.className = "text-[#00e5ff] font-bold text-3xl md:text-5xl tracking-[0.3em] uppercase drop-shadow-[0_0_15px_#00e5ff] animate-pulse text-center px-4";
+                    msg.style.fontFamily = "'Share Tech Mono', monospace";
+                    overlay.appendChild(msg);
 
-                    setTimeout(() => overlay.remove(), 800); 
-                }, 2500);
-
-            }, 1500); 
-        }
-        
-        // =========================================================
-        // ANIMACIÓN PARA EL USUARIO (APAGADO Y ENCENDIDO DE TV VIEJA)
-        // =========================================================
-        else {
-            // 1. Efecto "Apagar TV"
-            loginScreen.style.transformOrigin = 'center';
-            loginScreen.style.transition = 'transform 0.2s ease-in, filter 0.2s ease-in';
-            loginScreen.style.filter = 'brightness(8) contrast(2)';
-            loginScreen.style.transform = 'scale(1, 0.005)'; 
-            
-            setTimeout(() => {
-                // Se chupa al centro y desaparece
-                loginScreen.style.transform = 'scale(0, 0.005)'; 
-                
-                setTimeout(() => {
-                    loginScreen.classList.add('hidden');
-                    
-                    // Limpiamos estilos para que no haya bugs al cerrar sesión
-                    loginScreen.style.transform = '';
-                    loginScreen.style.filter = '';
-                    loginScreen.style.transition = '';
-
-        // LÓGICA DE RUTEO: DAVID VS NUEVO USUARIO
-                    const davidNav = document.getElementById('david-plants');
-                    const newUserNav = document.getElementById('new-user-plants');
-
-                    if (user === 'david@gmail.com') {
-                        if (davidNav) { davidNav.classList.remove('hidden'); davidNav.classList.add('flex'); }
-                        if (newUserNav) { newUserNav.classList.add('hidden'); newUserNav.classList.remove('flex'); }
-                        updatePlant('Manzanilla'); // Cargamos datos de David
-                    } else {
-                        if (davidNav) { davidNav.classList.add('hidden'); davidNav.classList.remove('flex'); }
-                        if (newUserNav) { newUserNav.classList.remove('hidden'); newUserNav.classList.add('flex'); }
-                        setEmptyDashboardState(); // Cargamos estado vacío
-                    }            
-                    
-                    // 2. Tiempo de Oscuridad (Pantalla muerta)
                     setTimeout(() => {
+                        overlay.style.transition = 'opacity 0.8s ease';
+                        overlay.style.opacity = '0';
                         
-                        // 3. Efecto "Encender TV"
-                        const dashboard = document.getElementById('main-dashboard');
-                        dashboard.classList.remove('hidden');
-                        dashboard.classList.add('flex');
-                        
-                        dashboard.style.transformOrigin = 'center';
-                        dashboard.style.transform = 'scale(0, 0.005)';
-                        dashboard.style.filter = 'brightness(8) contrast(2)';
-                        
-                        void dashboard.offsetWidth; // Forzamos reflow
+                        const adminDash = document.getElementById('admin-dashboard');
+                        adminDash.classList.remove('hidden');
+                        adminDash.classList.add('flex');
+                        initAdminCharts(); 
+                        renderAdminReports();
 
-                        dashboard.style.transition = 'transform 0.2s ease-out, filter 0.2s ease-out';
-                        dashboard.style.transform = 'scale(1, 0.005)'; 
+                        setTimeout(() => overlay.remove(), 800); 
+                    }, 2500);
+
+                }, 1500); 
+            }
+            
+            // =========================================================
+            // ANIMACIÓN PARA EL USUARIO (APAGADO Y ENCENDIDO DE TV VIEJA)
+            // =========================================================
+            else {
+                // 1. Efecto "Apagar TV"
+                loginScreen.style.transformOrigin = 'center';
+                loginScreen.style.transition = 'transform 0.2s ease-in, filter 0.2s ease-in';
+                loginScreen.style.filter = 'brightness(8) contrast(2)';
+                loginScreen.style.transform = 'scale(1, 0.005)'; 
+                
+                setTimeout(() => {
+                    // Se chupa al centro y desaparece
+                    loginScreen.style.transform = 'scale(0, 0.005)'; 
+                    
+                    setTimeout(() => {
+                        loginScreen.classList.add('hidden');
                         
+                        // Limpiamos estilos para que no haya bugs al cerrar sesión
+                        loginScreen.style.transform = '';
+                        loginScreen.style.filter = '';
+                        loginScreen.style.transition = '';
+
+                        // =========================================================
+                        // 🚀 LÓGICA DE CARGA REAL
+                        // Aquí, en lugar de "David", llamarás a la función que pinta 
+                        // en la pantalla los cultivos que el backend te mandó.
+                        // Ejemplo: loadUserPlants(userData.cultivos);
+                        // =========================================================
+                        
+                        // 2. Tiempo de Oscuridad (Pantalla muerta)
                         setTimeout(() => {
-                            dashboard.style.transform = 'scale(1, 1)'; 
-                            dashboard.style.filter = 'brightness(1) contrast(1)'; 
+                            
+                            // 3. Efecto "Encender TV"
+                            const dashboard = document.getElementById('main-dashboard');
+                            dashboard.classList.remove('hidden');
+                            dashboard.classList.add('flex');
+                            
+                            dashboard.style.transformOrigin = 'center';
+                            dashboard.style.transform = 'scale(0, 0.005)';
+                            dashboard.style.filter = 'brightness(8) contrast(2)';
+                            
+                            void dashboard.offsetWidth; // Forzamos reflow
+
+                            dashboard.style.transition = 'transform 0.2s ease-out, filter 0.2s ease-out';
+                            dashboard.style.transform = 'scale(1, 0.005)'; 
                             
                             setTimeout(() => {
-                                dashboard.style.transform = '';
-                                dashboard.style.filter = '';
-                                dashboard.style.transition = '';
-                                dashboard.style.transformOrigin = '';
-                                loadChatHistory();
-                            }, 250);
-                        }, 200);
+                                dashboard.style.transform = 'scale(1, 1)'; 
+                                dashboard.style.filter = 'brightness(1) contrast(1)'; 
+                                
+                                setTimeout(() => {
+                                    dashboard.style.transform = '';
+                                    dashboard.style.filter = '';
+                                    dashboard.style.transition = '';
+                                    dashboard.style.transformOrigin = '';
+                                    
+                                    // Si tienes un historial de chat real que cargar desde el backend:
+                                    // loadChatHistory();
+                                }, 250);
+                            }, 200);
 
-                    }, 2500); // Tiempo apagado
+                        }, 2500); // Tiempo apagado
 
+                    }, 200);
                 }, 200);
-            }, 200);
-        }
-        
-        // Limpiamos los campos del formulario
-        document.getElementById('user-input').value = '';
-        document.getElementById('pass-input').value = '';
+            }
+            
+            // Limpiamos los campos del formulario
+            document.getElementById('user-input').value = '';
+            document.getElementById('pass-input').value = '';
 
-    } else {
-        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        } else {
+            errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+            errorMsg.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error("Error en la petición de login:", error);
+        errorMsg.innerText = "ERROR CRÍTICO: NO SE PUDO CONECTAR AL SERVIDOR.";
         errorMsg.classList.remove('hidden');
     }
 }
@@ -421,12 +434,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ==========================================================
-// 4. FUNCIONES EXCLUSIVAS DEL ADMINISTRADOR (AZUL)
+// 4. FUNCIONES EXCLUSIVAS DEL ADMINISTRADOR (AZUL) [BACKEND READY]
 // ==========================================================
 
 let adminChart1, adminChart2, adminChart3;
 
-function initAdminCharts() {
+async function initAdminCharts() {
+    // 1. Limpiamos gráficas anteriores por si acaso
     if(adminChart1) adminChart1.destroy();
     if(adminChart2) adminChart2.destroy();
     if(adminChart3) adminChart3.destroy();
@@ -435,60 +449,87 @@ function initAdminCharts() {
         color: '#00e5ff', font: { family: 'Share Tech Mono' }
     };
 
-    const ctx1 = document.getElementById('admin-chart-users').getContext('2d');
-    adminChart1 = new Chart(ctx1, {
-        type: 'doughnut',
-        data: {
-            labels: ['Activos', 'Inactivos', 'Suspendidos'],
-            datasets: [{
-                data: [12, 5, 2],
-                backgroundColor: ['#00e5ff', '#005577', '#ff4444'],
-                borderColor: '#000511',
-                borderWidth: 2
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: chartStyle } } }
-    });
+    try {
+        // ====================================================================
+        // 🚀 CONEXIÓN AL BACKEND: Pedimos las estadísticas al servidor
+        // Cambia esta URL por la ruta real de tu API para los datos del admin
+        // ====================================================================
+        const response = await fetch('http://TU-BACKEND-REAL.com/api/admin/estadisticas');
+        
+        // Si no hay respuesta del servidor, lanzamos un error para ir al catch
+        if (!response.ok) throw new Error("Error al obtener datos del servidor");
 
-    const ctx2 = document.getElementById('admin-chart-regs').getContext('2d');
-    adminChart2 = new Chart(ctx2, {
-        type: 'line',
-        data: {
-            labels: ['LUN','MAR','MIE','JUE','VIE','SAB','DOM'],
-            datasets: [{
-                label: 'Nuevos Operadores', data: [1, 3, 2, 5, 4, 8, 6],
-                borderColor: '#00e5ff', backgroundColor: 'rgba(0, 229, 255, 0.2)', fill: true, tension: 0.3
-            }]
-        },
-        options: { 
-            responsive: true, maintainAspectRatio: false, 
-            scales: { 
-                x: { ticks: chartStyle, grid: { color: 'rgba(0,229,255,0.1)' } },
-                y: { ticks: chartStyle, grid: { color: 'rgba(0,229,255,0.1)' } }
+        const data = await response.json();
+
+        // 2. Extraemos los datos que nos mandó el backend
+        // (Asegúrate de que tu backend mande los nombres así, o cámbialos aquí)
+        const usuariosStats = data.usuarios || [0, 0, 0]; // Ej: [Activos, Inactivos, Suspendidos]
+        const registrosStats = data.registros_semana || [0, 0, 0, 0, 0, 0, 0]; // Ej: Lunes a Domingo
+        const plantasStats = data.salud_plantas || [0, 0, 0, 0, 0]; // Ej: Humedad, Temp, Nutrientes, UV, pH
+
+        // 3. DIBUJAMOS GRÁFICA 1: USUARIOS (Doughnut)
+        const ctx1 = document.getElementById('admin-chart-users').getContext('2d');
+        adminChart1 = new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Activos', 'Inactivos', 'Suspendidos'],
+                datasets: [{
+                    data: usuariosStats, // <--- ¡DATOS REALES DEL SERVIDOR!
+                    backgroundColor: ['#00e5ff', '#005577', '#ff4444'],
+                    borderColor: '#000511',
+                    borderWidth: 2
+                }]
             },
-            plugins: { legend: { display: false } }
-        }
-    });
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: chartStyle } } }
+        });
 
-    const ctx3 = document.getElementById('admin-chart-plants').getContext('2d');
-    adminChart3 = new Chart(ctx3, {
-        type: 'radar',
-        data: {
-            labels: ['Humedad', 'Temp.', 'Nutrientes', 'Radiación UV', 'pH'],
-            datasets: [{
-                label: 'Nivel Global',
-                data: [80, 70, 90, 40, 65],
-                backgroundColor: 'rgba(0, 229, 255, 0.2)',
-                borderColor: '#00e5ff',
-                pointBackgroundColor: '#fff'
-            }]
-        },
-        options: { 
-            responsive: true, maintainAspectRatio: false,
-            scales: { r: { grid: { color: 'rgba(0,229,255,0.3)' }, pointLabels: chartStyle, ticks: { display: false } } },
-            plugins: { legend: { display: false } }
-        }
-    });
+        // 4. DIBUJAMOS GRÁFICA 2: REGISTROS (Line)
+        const ctx2 = document.getElementById('admin-chart-regs').getContext('2d');
+        adminChart2 = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: ['LUN','MAR','MIE','JUE','VIE','SAB','DOM'],
+                datasets: [{
+                    label: 'Nuevos Operadores', 
+                    data: registrosStats, // <--- ¡DATOS REALES DEL SERVIDOR!
+                    borderColor: '#00e5ff', backgroundColor: 'rgba(0, 229, 255, 0.2)', fill: true, tension: 0.3
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                scales: { 
+                    x: { ticks: chartStyle, grid: { color: 'rgba(0,229,255,0.1)' } },
+                    y: { ticks: chartStyle, grid: { color: 'rgba(0,229,255,0.1)' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // 5. DIBUJAMOS GRÁFICA 3: SALUD DEL ECOSISTEMA (Radar)
+        const ctx3 = document.getElementById('admin-chart-plants').getContext('2d');
+        adminChart3 = new Chart(ctx3, {
+            type: 'radar',
+            data: {
+                labels: ['Humedad', 'Temp.', 'Nutrientes', 'Radiación UV', 'pH'],
+                datasets: [{
+                    label: 'Nivel Global',
+                    data: plantasStats, // <--- ¡DATOS REALES DEL SERVIDOR!
+                    backgroundColor: 'rgba(0, 229, 255, 0.2)',
+                    borderColor: '#00e5ff',
+                    pointBackgroundColor: '#fff'
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                scales: { r: { grid: { color: 'rgba(0,229,255,0.3)' }, pointLabels: chartStyle, ticks: { display: false } } },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+    } catch (error) {
+        console.error("> Alerta de Supervisor: No se pudieron cargar las estadísticas del sistema.", error);
+        // Opcional: Aquí podrías mostrar un alert o un texto en la UI diciendo "Error al cargar datos"
+    }
 }
 
 function downloadAdminReport() {
@@ -780,21 +821,40 @@ function sendReport() {
     btnStatus.className = "text-center mt-4 text-xs font-bold text-[#f97316] animate-pulse tracking-widest";
     btnStatus.classList.remove('hidden');
 
-    setTimeout(() => {
-        // Guardar en la memoria global
-        const timestamp = new Date().toLocaleTimeString('en-GB');
-        const user = document.getElementById('contact-user').value;
-        const type = document.getElementById('contact-type').value;
-        
-        systemReports.push({ time: timestamp, user: user, type: type, message: msg });
-        renderAdminReports(); // Dibuja el reporte en la bandeja del admin
+  setTimeout(async () => {
+    // 1. Capturamos los datos
+    const user = document.getElementById('contact-user').value;
+    const type = document.getElementById('contact-type').value;
+    // (Asumo que la variable 'msg' ya la tienes capturada un par de líneas más arriba en tu código)
 
-        btnStatus.innerText = "TRANSMISIÓN EXITOSA. CENTRAL NOTIFICADA.";
-        btnStatus.className = "text-center mt-4 text-xs font-bold text-[#00ffaa] tracking-widest";
-        msgInput.value = ''; 
-        
-        setTimeout(() => { closeContactModal(); }, 2000);
-    }, 1500); 
+    const reportData = { user: user, type: type, message: msg };
+
+    try {
+        // 2. ENVIAMOS AL BACKEND (Método POST)
+        const response = await fetch('http://TU-BACKEND-REAL.com/api/reportes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reportData)
+        });
+
+        if (response.ok) {
+            btnStatus.innerText = "TRANSMISIÓN EXITOSA. CENTRAL NOTIFICADA.";
+            btnStatus.className = "text-center mt-4 text-xs font-bold text-[#00ffaa] tracking-widest";
+            msgInput.value = '';
+            
+            setTimeout(() => { closeContactModal(); }, 2000);
+        } else {
+            // El servidor rechazó el reporte
+            btnStatus.innerText = "ERROR: LA CENTRAL RECHAZÓ EL MENSAJE.";
+            btnStatus.className = "text-center mt-4 text-xs font-bold text-[#ff4444] tracking-widest";
+        }
+    } catch (error) {
+        // Si no hay internet o el servidor está caído
+        console.error("Fallo de red al enviar reporte:", error);
+        btnStatus.innerText = "ERROR CRÍTICO: SIN CONEXIÓN A LA CENTRAL.";
+        btnStatus.className = "text-center mt-4 text-xs font-bold text-[#ff4444] tracking-widest animate-pulse";
+    }
+}, 1500);
 }
 
 // Termina la función de los reportes que se cortó en tu mensaje
@@ -1446,6 +1506,7 @@ function startHardwareProvisioning() {
         console.log("> Datos enviados al endpoint de aprovisionamiento IoT.");
     }, 3000);
 }
+
 
 // Funciones para el Perfil del Operador
 function openUserProfile() {
