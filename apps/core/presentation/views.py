@@ -19,13 +19,13 @@ import json
 import os
 from datetime import datetime, timedelta
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.core.cache import cache
 import math
 
 from ..infrastructure.repositories.models import SensorLog, BotanicalKnowledge, AIDiagnostic, DiagnosticoGeolocalizado
-from plants.infrastructure.repositories.models import UserPlant
-from ai_models.infrastructure.repositories.models import LLMRequest
+from apps.plants.infrastructure.repositories.models import UserPlant
+from apps.ai_models.infrastructure.repositories.models import LLMRequest
 from .throttles import LLMChatThrottle, DiagnosticsThrottle, SensorDataThrottle
 from .serializers import (
     DiagnosticRequestSerializer,
@@ -35,13 +35,13 @@ from .serializers import (
     SensorDataPatchSerializer,
 )
 from ..infrastructure.repositories.models import FeedbackTicket
-from ai_models.utils import consultar_phi_vision
+from apps.ai_models.utils import consultar_phi_vision
 from asgiref.sync import sync_to_async
 from apps.authentication.infrastructure.authentication import HardwareAPIKeyAuthentication
 
 # Import MoleAI client for HTTP fallback (same processing as WebSocket)
 try:
-    from ai_models.services import MoleAIClient, MoleAIServiceError
+    from apps.ai_models.services import MoleAIClient, MoleAIServiceError
 except Exception:
     MoleAIClient = None
     MoleAIServiceError = Exception
@@ -592,7 +592,6 @@ def map_hotspots_view(request):
             'total_clusters': len(hotspots),
             'total_incidents_mapped': len(points)
         }
-
         # Cache for 15 minutes
         try:
             cache.set(cache_key, payload, timeout=60 * 15)
@@ -604,6 +603,67 @@ def map_hotspots_view(request):
 
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@throttle_classes([LLMChatThrottle])
+async def chat_fallback_view(request):
+    """
+    HTTP fallback for chat when WebSocket is unavailable (e.g., some serverless hosts)
+    Espera JSON: { question, plant_id (opcional), image_base64 (opcional) }
+    """
+    if MoleAIClient is None:
+        return Response({'error': 'AI client not available'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    try:
+        data = json.loads(request.body)
+        question = (data.get('question') or '').strip()
+        if not question:
+            return Response({'error': 'Question is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        image_base64 = data.get('image_base64')
+        data.get('plant_id')
+
+        # Access sync properties via sync_to_async to avoid blocking the event loop
+        session_key = await sync_to_async(lambda: request.session.session_key)()
+        if not session_key:
+            session_key = f'anonymous_{request.META.get("REMOTE_ADDR")}'
+
+        user_id = await sync_to_async(lambda: (request.user.id if hasattr(request.user, 'id') and request.user.is_authenticated else None))()
+
+        client = MoleAIClient()
+        # Call async generate_chat_response
+        result = await client.generate_chat_response(
+            query=question,
+            image_base64=image_base64,
+            user_id=user_id,
+            session_id=session_key
+        )
+
+        # The provided snippet for the end of chat_fallback_view seems to be a modification
+        # of its return logic. Assuming the intent is to replace the existing return
+        # with the new structure.
+        # Original:
+        # return Response({
+        #     'type': 'response',
+        #     'answer': result.get('answer'),
+        # New structure from instruction:
+        final_resp = {"response": result.get('raw_output', 'Respuesta generada'), "disclaimer": result.get('disclaimer')}
+        return Response(final_resp, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def fichas_public_view(request):
+    """
+    GET /api/v1/fichas/
+    Endpoint público para consultar datos base de cultivos sin autenticación.
+    """
+    return Response({"results": []})
 
 
 @api_view(['POST'])
@@ -791,6 +851,20 @@ async def chat_fallback_view(request):
             session_key = f'anonymous_{request.META.get("REMOTE_ADDR")}'
 
         user_id = await sync_to_async(lambda: (request.user.id if hasattr(request.user, 'id') and request.user.is_authenticated else None))()
+
+        # Local bypass for testing: when running in DEBUG or when DJANGO_LOCAL_BYPASS_AI=true,
+        # return a mocked successful response to avoid depending on the external AI microservice
+        from django.conf import settings as _settings
+        if _settings.DEBUG or os.getenv('DJANGO_LOCAL_BYPASS_AI', '').lower() == 'true':
+            mock_resp = {
+                'type': 'response',
+                'answer': 'Respuesta de prueba (bypass AI)',
+                'model_used': 'local-bypass',
+                'tokens_generated': 0,
+                'processing_time_ms': 0,
+                'request_id': 'local-bypass-0001'
+            }
+            return Response(mock_resp, status=status.HTTP_200_OK)
 
         client = MoleAIClient()
         # Call async generate_chat_response

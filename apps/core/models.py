@@ -11,7 +11,7 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 """Re-export models so Django can discover them for the 'core' app."""
-from core.infrastructure.repositories.models import (  # noqa: F401
+from apps.core.infrastructure.repositories.models import (  # noqa: F401
     SensorLog,
     BotanicalKnowledge,
     AIDiagnostic,

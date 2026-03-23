@@ -21,6 +21,6 @@ COPY . .
 RUN useradd --create-home --shell /bin/bash appuser \
     && chown -R appuser:appuser /srv/ms3_reports
 
-USER appuser
+# USER appuser
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]

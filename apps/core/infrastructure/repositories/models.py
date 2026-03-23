@@ -28,18 +28,21 @@ class SensorLog(models.Model):
     recorded_at = models.DateTimeField(default=timezone.now, db_index=True)
 
     # Wide-table sensor columns  ── ESP32 physical sensors
-    soil_humidity = models.FloatField(null=True, blank=True)
+    soil_humidity = models.FloatField(null=True, blank=True, db_index=True)
     air_humidity = models.FloatField(null=True, blank=True)
-    air_temperature = models.FloatField(null=True, blank=True)
-    uv_index = models.FloatField(null=True, blank=True)
+    air_temperature = models.FloatField(null=True, blank=True, db_index=True)
+    uv_index = models.FloatField(null=True, blank=True, db_index=True)
     light_level = models.FloatField(null=True, blank=True)
     # ── CNN-inferred (populated async by AI micro-service PATCH)
-    ph_level = models.FloatField(null=True, blank=True)
+    ph_level = models.FloatField(null=True, blank=True, db_index=True)
 
     class Meta:
         db_table = 'sensor_logs'
         managed = True
         ordering = ['-recorded_at']
+        indexes = [
+            models.Index(fields=['plant_id', 'recorded_at']),
+        ]
 
     def __str__(self):
         return f"plant={self.plant_id} at {self.recorded_at}"
@@ -153,3 +156,31 @@ class FeedbackTicket(models.Model):
 
     def __str__(self):
         return f"[{self.topic}] {self.user} — {self.status}"
+
+class AuditLog(models.Model):
+    """
+    Tabla Inmutable de Auditoría para trazabilidad de acciones críticas 
+    alineada a la normativa MoProSoft y lineamientos DevSecOps.
+    """
+    id = models.BigAutoField(primary_key=True)
+    user_id = models.IntegerField(null=True, blank=True)
+    action = models.CharField(max_length=255)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    details = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'audit_logs'
+        managed = True
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.timestamp}] {self.action} by User {self.user_id}"
+
+    def delete(self, *args, **kwargs):
+        raise PermissionError("MoProSoft Compliance: Audit logs are immutable and cannot be deleted.")
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            raise PermissionError("MoProSoft Compliance: Audit logs are append-only and cannot be modified.")
+        super().save(*args, **kwargs)

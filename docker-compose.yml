@@ -14,19 +14,19 @@ services:
     env_file:
       - .env
     environment:
-      - DEBUG=${DEBUG}
-      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME}
-      - SUPABASE_DB_USER=${SUPABASE_DB_USER}
-      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
-      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
-      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT}
-      - REDIS_URL=${REDIS_URL}
-      - FASTAPI_URL=${FASTAPI_URL}
-      - MOLE_AI_API_KEY=${MOLE_AI_API_KEY}
-      - MOLE_AI_TIMEOUT=${MOLE_AI_TIMEOUT}
-      - HARDWARE_API_KEY=${HARDWARE_API_KEY}
-      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST}
-      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
+      - DEBUG=${DEBUG:-True}
+      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME:-mole_ai_db}
+      - SUPABASE_DB_USER=${SUPABASE_DB_USER:-postgres}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD:-postgres}
+      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST:-db}
+      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT:-5432}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - FASTAPI_URL=${FASTAPI_URL:-http://fastapi_rag:8002/api/v1/mole-ai/chat}
+      - MOLE_AI_API_KEY=${MOLE_AI_API_KEY:-dummy_key_dev}
+      - MOLE_AI_TIMEOUT=${MOLE_AI_TIMEOUT:-30}
+      - HARDWARE_API_KEY=${HARDWARE_API_KEY:-hw_dummy_dev}
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-mqtt_broker}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-1883}
     depends_on:
       db:
         condition: service_started
@@ -35,6 +35,34 @@ services:
       fastapi_rag:
         condition: service_healthy
       mqtt_broker:
+        condition: service_started
+    networks:
+      - mole-ai-net
+
+  # --- BACKEND CELERY WORKER ---
+  django_celery_worker:
+    build: .
+    container_name: django_celery_worker
+    entrypoint: ["celery", "-A", "mole_ai_backend", "worker", "-l", "info"]
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME:-mole_ai_db}
+      - SUPABASE_DB_USER=${SUPABASE_DB_USER:-postgres}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD:-postgres}
+      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST:-db}
+      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT:-5432}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - FASTAPI_URL=${FASTAPI_URL:-http://fastapi_rag:8002/api/v1/mole-ai/chat}
+      - MOLE_AI_API_KEY=${MOLE_AI_API_KEY:-dummy_key_dev}
+      - MOLE_AI_TIMEOUT=${MOLE_AI_TIMEOUT:-30}
+    depends_on:
+      db:
+        condition: service_started
+      redis:
         condition: service_started
     networks:
       - mole-ai-net
@@ -56,7 +84,7 @@ services:
       - HOST=${HOST}
       - API_PORT=${API_PORT}
       - VECTOR_DB_PATH=${VECTOR_DB_PATH}
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
       - MOLE_AI_API_KEY=${MOLE_AI_API_KEY}
       - HARDWARE_API_KEY=${HARDWARE_API_KEY}
@@ -87,9 +115,9 @@ services:
     image: pgvector/pgvector:pg16
     container_name: mole_ai_db
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-mole_ai_db}
     expose:
       - "5432"  # M4: internal only
     volumes:
@@ -124,8 +152,8 @@ services:
     image: minio/minio:latest
     container_name: mole_ai_minio
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
     command: server /data
     expose:
       - "9000"  # M4: internal only
@@ -143,8 +171,8 @@ services:
     env_file:
       - .env
     environment:
-      - REDIS_URL=${REDIS_URL}
-      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/mole_ai_db}
       - S3_ENDPOINT=${S3_ENDPOINT}
     depends_on:
       - db
@@ -162,8 +190,8 @@ services:
     env_file:
       - .env
     environment:
-      - REDIS_URL=${REDIS_URL}
-      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/mole_ai_db}
       - S3_ENDPOINT=${S3_ENDPOINT}
     depends_on:
       - db
@@ -176,17 +204,19 @@ services:
   ms3_reports:
     build: ./ms3_reports
     container_name: ms3_reports
+    volumes:
+      - ./media:/app/media
     expose:
       - "8003"  # M4: internal only
     env_file:
       - .env
     environment:
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
       - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
       - MS3_S3_ACCESS_KEY=${MS3_S3_ACCESS_KEY}
       - MS3_S3_SECRET_KEY=${MS3_S3_SECRET_KEY}
       - MS3_S3_BUCKET=${MS3_S3_BUCKET}
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/mole_ai_db}
     depends_on:
       - redis
       - minio
@@ -198,16 +228,18 @@ services:
   ms3_celery_worker:
     build: ./ms3_reports
     container_name: ms3_celery_worker
+    volumes:
+      - ./media:/app/media
     command: ["celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1"]
     env_file:
       - .env
     environment:
-      - REDIS_URL=${REDIS_URL}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
       - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
       - MS3_S3_ACCESS_KEY=${MS3_S3_ACCESS_KEY}
       - MS3_S3_SECRET_KEY=${MS3_S3_SECRET_KEY}
       - MS3_S3_BUCKET=${MS3_S3_BUCKET}
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/mole_ai_db}
     depends_on:
       - ms3_reports
       - redis

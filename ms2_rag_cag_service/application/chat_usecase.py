@@ -48,7 +48,7 @@ class MoleAIChatUseCase:
                 raw_validated.sources = sources or []
             # ensure disclaimer present (default safe message if missing)
             if raw_validated.disclaimer in (None, ""):
-                raw_validated.disclaimer = "COFEPRIS: Esta respuesta es informativa y no sustituye la consulta profesional."
+                raw_validated.disclaimer = "Esta respuesta es informativa y no sustituye la consulta profesional."
             return raw_validated
         except Exception as e:
             logging.error(f"[MoleAIChatUseCase] LLM error: {e}")

@@ -28,6 +28,14 @@ urlpatterns = [
     # AI Model Configuration endpoints
     path('config/', views.ai_model_config_view, name='ai_model_config'),
     
+    # AI Training endpoints
+    path('train/rag/', views.train_rag_view, name='train_rag'),
+    path('train/vision/', views.train_vision_view, name='train_vision'),
+    
     # Health Check endpoint
     path('health/', views.AIHealthCheckView.as_view(), name='ai_health_check'),
+    
+    # AI Vision End-to-End endpoints
+    path('vision/analyze/', views.analyze_vision_view, name='analyze_vision'),
+    path('vision/status/<str:task_id>/', views.vision_task_status_view, name='vision_task_status'),
 ]

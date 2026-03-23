@@ -18,7 +18,6 @@ class GenerateReportUseCase:
         self.job_store = JobMetadataStore.from_env()
         self.supabase = SupabaseClient.from_env()
         self.hf = HuggingFaceClient.from_env()
-        self.s3 = S3Adapter.from_env()
 
     def _detect_anomalies(self, logs: list) -> list:
         # Simple statistical anomaly detection: points outside mean +/- 2*std
@@ -105,10 +104,16 @@ class GenerateReportUseCase:
             pdf_bytes = WeasyPrintReportGenerator.generate_pdf(html)
             self.job_store.set_progress(job_id, 95)
 
-            # 6) Upload PDF to S3
-            s3_key = f"reports/{job_id}.pdf"
-            path = self.s3.upload_bytes(pdf_bytes, s3_key)
-            self.job_store.set_result(job_id, path)
+            # 6) Upload PDF to local volume
+            import os
+            reports_dir = "/app/media/reports"
+            os.makedirs(reports_dir, exist_ok=True)
+            local_path = os.path.join(reports_dir, f"{job_id}.pdf")
+            with open(local_path, "wb") as f:
+                f.write(pdf_bytes)
+            
+            public_url = f"/static/reports/{job_id}.pdf"
+            self.job_store.set_result(job_id, public_url)
             self.job_store.set_progress(job_id, 100)
             self.job_store.update_status(job_id, "SUCCESS")
 
@@ -117,7 +122,7 @@ class GenerateReportUseCase:
                 audit_payload = {
                     "job_id": job_id,
                     "status": "SUCCESS",
-                    "s3_path": path,
+                    "s3_path": public_url,
                     "started_at": start_ts,
                     "finished_at": datetime.utcnow().isoformat() + "Z",
                 }

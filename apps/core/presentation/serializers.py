@@ -150,7 +150,22 @@ class DiagnosticRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 f"Invalid image type. Must be one of: {valid_types}"
             )
+            
+        # Validación OWASP estricta (Magic Bytes) previniendo ejecutables camuflados
+        header = value.read(2048)
+        value.seek(0)
         
+        is_jpeg = header.startswith(b'\xff\xd8\xff')
+        is_png = header.startswith(b'\x89PNG\r\n\x1a\n')
+        is_webp = header.startswith(b'RIFF') and header[8:12] == b'WEBP'
+        
+        if not (is_jpeg or is_png or is_webp):
+            raise serializers.ValidationError("Firma de archivo inválida. Posible binario camuflado.")
+            
+        # Medida draconiana contra inyecciones directas de cabeceras
+        if b'MZ' in header[:2] or b'\x7fELF' in header[:4]:
+            raise serializers.ValidationError("Ejecutable malicioso detectado.")
+            
         return value
 
 
@@ -200,7 +215,7 @@ class PlantKnowledgeQuerySerializer(serializers.Serializer):
         required=False,
         allow_blank=True
     )
-from core.infrastructure.repositories.models import SensorLog, AIDiagnostic
+from apps.core.infrastructure.repositories.models import SensorLog, AIDiagnostic
 
 class HistorySerializer(serializers.Serializer):
     id = serializers.CharField(max_length=100)

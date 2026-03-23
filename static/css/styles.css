@@ -1,45 +1,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-/* =============================================================================
-   CSS Custom Properties — Retro Terminal Palette
-   ============================================================================= */
-:root {
-    --term-bg: #000;
-    --term-fg: #00ffaa;
-    --term-fg-dim: rgba(0, 255, 170, 0.7);
-    --term-fg-border: rgba(0, 255, 170, 0.3);
-    --term-glow: rgba(0, 255, 170, 0.5);
-    --term-red: #ff4444;
-    --term-amber: #ffaa00;
-    --term-amber-toxic: #ff8c00;
-    --term-cyan: #00e5ff;
-    --term-font: 'Share Tech Mono', monospace;
-    --min-target: 48px;
-}
-
 body {
-    font-family: var(--term-font);
-    background-color: var(--term-bg);
-    color: var(--term-fg);
+    font-family: 'Share Tech Mono', monospace;
+    background-color: #000;
     overflow-x: hidden;
 }
 
-/* =============================================================================
-   1. TEXT SELECTION
-   ============================================================================= */
+/* =========================================
+   1. COLOR DE SELECCIÓN DE TEXTO
+   ========================================= */
 ::selection {
-    background: var(--term-fg);
-    color: var(--term-bg);
+    background: #00ffaa;
+    color: #000;
 }
 
 #admin-dashboard ::selection {
-    background: var(--term-cyan);
-    color: var(--term-bg);
+    background: #00e5ff;
+    color: #000;
 }
 
-/* =============================================================================
-   2. CRT SCANLINE EFFECT
-   ============================================================================= */
+/* =========================================
+   2. EFECTO DE MONITOR VIEJO (SCANLINE)
+   ========================================= */
 .scanline {
     width: 100%;
     height: 100px;
@@ -56,82 +38,57 @@ body {
     100% { top: 100%; }
 }
 
-/* =============================================================================
-   3. SCROLLBARS (Terminal Style)
-   ============================================================================= */
-::-webkit-scrollbar { width: 6px; }
+/* =========================================
+   3. BARRAS DE SCROLL PERSONALIZADAS
+   ========================================= */
+::-webkit-scrollbar {
+    width: 6px;
+}
 ::-webkit-scrollbar-track {
     background: #001105;
-    border-left: 1px solid var(--term-fg-border);
+    border-left: 1px solid rgba(0, 255, 170, 0.2);
 }
-::-webkit-scrollbar-thumb { background: var(--term-fg); }
+::-webkit-scrollbar-thumb {
+    background: #00ffaa;
+}
 
 #admin-dashboard ::-webkit-scrollbar-track {
     background: #000511;
     border-left: 1px solid rgba(0, 229, 255, 0.2);
 }
-#admin-dashboard ::-webkit-scrollbar-thumb { background: var(--term-cyan); }
-
-/* =============================================================================
-   4. BUTTONS — Brutalist 48px minimum (a11y)
-   All interactive elements: min 48x48, zero radius, terminal hover
-   ============================================================================= */
-.nav-btn,
-.exit-btn,
-button,
-[role="button"],
-input[type="submit"],
-a.btn {
-    min-height: var(--min-target);
-    min-width: var(--min-target);
-    border-radius: 0;
-    font-family: var(--term-font);
-    cursor: pointer;
+#admin-dashboard ::-webkit-scrollbar-thumb {
+    background: #00e5ff;
 }
 
+/* =========================================
+   4. BOTONES Y TARJETAS (MODO USUARIO)
+   ========================================= */
 .nav-btn {
-    padding: 10px 16px;
-    border: 1px solid var(--term-fg-border);
-    color: var(--term-fg);
-    background: transparent;
-    transition: all 0.15s ease;
+    padding: 4px 12px;
+    border: 1px solid rgba(0, 255, 170, 0.3);
+    color: #00ffaa;
+    transition: all 0.3s ease;
 }
-.nav-btn:hover,
-.nav-btn:focus-visible,
-.nav-btn.active {
-    background: var(--term-fg);
-    color: var(--term-bg);
-    box-shadow: 0 0 10px var(--term-glow);
+.nav-btn:hover, .nav-btn.active {
+    background: #00ffaa;
+    color: #000;
+    box-shadow: 0 0 10px rgba(0,255,170,0.5);
 }
 
 .exit-btn {
-    padding: 10px 16px;
-    color: var(--term-red);
+    padding: 4px 12px;
+    color: #ff4444;
     border: 1px solid rgba(255, 68, 68, 0.3);
-    background: transparent;
-    transition: all 0.15s ease;
+    transition: all 0.3s ease;
 }
-.exit-btn:hover,
-.exit-btn:focus-visible {
-    background: var(--term-red);
-    color: var(--term-bg);
-    box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+.exit-btn:hover {
+    background: #ff4444;
+    color: #000;
+    box-shadow: 0 0 10px rgba(255,68,68,0.5);
 }
 
-/* =============================================================================
-   5. FOCUS-VISIBLE — Keyboard/Screen-reader navigation
-   ============================================================================= */
-:focus-visible {
-    outline: 2px solid var(--term-fg);
-    outline-offset: 2px;
-    box-shadow: 0 0 8px var(--term-glow);
-}
-
-/* =============================================================================
-   6. STAT CARDS
-   ============================================================================= */
 .stat-card {
-    border: 1px solid var(--term-fg-border);
+    border: 1px solid rgba(0, 255, 170, 0.3);
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -149,14 +106,14 @@ a.btn {
 
 .analysis-trigger {
     width: 100%;
-    border: 1px dashed var(--term-fg);
+    border: 1px dashed #00ffaa;
     padding: 1rem;
     text-align: center;
     transition: all 0.3s ease;
 }
 .analysis-trigger:hover {
     background: rgba(0, 255, 170, 0.1);
-    text-shadow: 0 0 5px var(--term-fg);
+    text-shadow: 0 0 5px #00ffaa;
 }
 
 .close-modal-btn:hover {
@@ -164,32 +121,45 @@ a.btn {
     text-shadow: 0 0 5px white;
 }
 
-/* =============================================================================
-   7. PLANT IMAGE FILTER
-   ============================================================================= */
+/* =========================================
+   5. FILTRO DE CÁMARA PARA LAS PLANTAS
+   ========================================= */
 .plant-filter {
     filter: sepia(1) saturate(1.2) contrast(1.1) brightness(0.9);
-    transition: filter 0.5s ease;
+    transition: filter 0.5s ease; 
 }
-.group:hover .plant-filter { filter: none; }
+.group:hover .plant-filter {
+    filter: none;
+}
 
-/* =============================================================================
-   8. TV SHUTDOWN ANIMATION
-   ============================================================================= */
+/* =========================================
+   6. ANIMACIÓN DE APAGADO (EFECTO TV VIEJA)
+   ========================================= */
 .tv-off {
     animation: tv-shutdown 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
     pointer-events: none;
 }
 
 @keyframes tv-shutdown {
-    0%  { transform: scale(1, 1);       filter: brightness(1) contrast(1); }
-    40% { transform: scale(1, 0.005);   filter: brightness(5) contrast(2); background: #fff; }
-    100%{ transform: scale(0, 0);       filter: brightness(10); opacity: 0; }
+    0% { 
+        transform: scale(1, 1); 
+        filter: brightness(1) contrast(1);
+    }
+    40% { 
+        transform: scale(1, 0.005); 
+        filter: brightness(5) contrast(2);
+        background: #fff;
+    }
+    100% { 
+        transform: scale(0, 0); 
+        filter: brightness(10);
+        opacity: 0;
+    }
 }
 
-/* =============================================================================
-   9. TOAST NOTIFICATIONS — Terminal Critical Error Style
-   ============================================================================= */
+/* =========================================
+   7. TOAST NOTIFICATIONS (Terminal Style)
+   ========================================= */
 #toast-container {
     position: fixed;
     top: 16px;
@@ -204,27 +174,27 @@ a.btn {
 }
 
 .terminal-toast {
-    font-family: var(--term-font);
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.85rem;
     padding: 12px 16px;
-    border: 2px solid var(--term-fg-border);
+    border: 2px solid rgba(0, 255, 170, 0.3);
     background: rgba(0, 0, 0, 0.95);
-    color: var(--term-fg);
+    color: #00ffaa;
     pointer-events: auto;
     animation: toast-slide-in 0.3s ease;
 }
 
 .terminal-toast--error {
-    border-color: var(--term-red);
-    color: var(--term-red);
+    border-color: #ff4444;
+    color: #ff4444;
 }
 .terminal-toast--warn {
-    border-color: var(--term-amber-toxic);
-    color: var(--term-amber-toxic);
+    border-color: #ff8c00;
+    color: #ff8c00;
 }
 .terminal-toast--success {
-    border-color: var(--term-fg);
-    color: var(--term-fg);
+    border-color: #00ffaa;
+    color: #00ffaa;
 }
 
 .toast-prefix {
@@ -245,9 +215,9 @@ a.btn {
     to { opacity: 0; transform: translateY(-10px); }
 }
 
-/* =============================================================================
-   10. COFEPRIS DISCLAIMER BANNER — System Alert Terminal Style
-   ============================================================================= */
+/* =========================================
+   8. COFEPRIS DISCLAIMER BANNER
+   ========================================= */
 #disclaimer-container {
     position: fixed;
     bottom: 0;
@@ -257,19 +227,19 @@ a.btn {
 }
 
 .disclaimer-banner {
-    font-family: var(--term-font);
-    border: 3px solid var(--term-amber-toxic);
+    font-family: 'Share Tech Mono', monospace;
+    border: 3px solid #ff8c00;
     border-bottom: none;
     background: rgba(0, 0, 0, 0.97);
     padding: 16px 20px;
-    color: var(--term-amber-toxic);
+    color: #ff8c00;
 }
 
 .disclaimer-header {
     font-size: 1.1rem;
     font-weight: bold;
     letter-spacing: 0.15em;
-    border-bottom: 2px dashed var(--term-amber-toxic);
+    border-bottom: 2px dashed #ff8c00;
     padding-bottom: 8px;
     margin-bottom: 10px;
     text-shadow: 0 0 8px rgba(255, 140, 0, 0.4);
@@ -284,179 +254,15 @@ a.btn {
 
 .disclaimer-dismiss {
     background: transparent;
-    color: var(--term-amber-toxic);
-    border: 1px solid var(--term-amber-toxic);
+    color: #ff8c00;
+    border: 1px solid #ff8c00;
     padding: 8px 20px;
-    font-family: var(--term-font);
+    font-family: 'Share Tech Mono', monospace;
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s;
 }
-.disclaimer-dismiss:hover,
-.disclaimer-dismiss:focus-visible {
-    background: var(--term-amber-toxic);
-    color: var(--term-bg);
-}
-
-/* =============================================================================
-   11. CHAT MESSAGES
-   ============================================================================= */
-.chat-msg {
-    font-family: var(--term-font);
-    padding: 8px 0;
-    font-size: 0.9rem;
-    word-break: break-word;
-}
-.chat-msg--user {
-    color: var(--term-fg);
-}
-.chat-msg--bot {
-    color: var(--term-cyan);
-}
-.chat-msg--loading {
-    color: var(--term-fg-dim);
-    animation: blink 1s step-end infinite;
-}
-
-@keyframes blink {
-    50% { opacity: 0.3; }
-}
-
-/* Terminal spinner */
-.terminal-spinner {
-    display: inline-block;
-    width: 10px;
-    animation: spin-chars 0.8s steps(4) infinite;
-}
-.terminal-spinner::before {
-    content: '|';
-}
-@keyframes spin-chars {
-    0%  { content: '|'; }
-    25% { content: '/'; }
-    50% { content: '—'; }
-    75% { content: '\\'; }
-}
-
-/* =============================================================================
-   12. LOADING STATE (Skeleton)
-   ============================================================================= */
-.is-loading {
-    position: relative;
-    overflow: hidden;
-}
-.is-loading::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-        90deg,
-        transparent,
-        rgba(0, 255, 170, 0.05) 40%,
-        transparent 80%
-    );
-    animation: loading-sweep 1.5s linear infinite;
-}
-
-@keyframes loading-sweep {
-    from { transform: translateX(-100%); }
-    to   { transform: translateX(100%); }
-}
-
-/* =============================================================================
-   13. WEBSOCKET INDICATOR
-   ============================================================================= */
-.websocket-indicator {
-    font-family: var(--term-font);
-    font-size: 0.75rem;
-    padding: 4px 10px;
-}
-.websocket-indicator.connected {
-    color: var(--term-fg);
-}
-.websocket-indicator.disconnected {
-    color: var(--term-red);
-}
-
-/* =============================================================================
-   14. DAYLIGHT OVERRIDE MODE (Alto contraste para campo / luz solar)
-   Estilo E-Ink / Terminal antigua de alto contraste.
-   NO rompe la estética retro — tipografía monospace + bordes rígidos.
-   ============================================================================= */
-body.daylight-override {
-    --term-bg: #d4e8c0;
-    --term-fg: #0a0a0a;
-    --term-fg-dim: rgba(10, 10, 10, 0.65);
-    --term-fg-border: rgba(10, 10, 10, 0.4);
-    --term-glow: rgba(10, 10, 10, 0.2);
-    --term-red: #8b0000;
-    --term-amber: #8b5a00;
-    --term-amber-toxic: #6b3a00;
-    --term-cyan: #004d40;
-
-    background-color: var(--term-bg);
-    color: var(--term-fg);
-}
-
-body.daylight-override .scanline {
-    background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(10,10,10,0.08) 50%, rgba(0,0,0,0) 100%);
-}
-
-body.daylight-override ::-webkit-scrollbar-track {
-    background: #c0d8a8;
-    border-left: 1px solid var(--term-fg-border);
-}
-body.daylight-override ::-webkit-scrollbar-thumb {
-    background: var(--term-fg);
-}
-
-body.daylight-override ::selection {
-    background: var(--term-fg);
-    color: var(--term-bg);
-}
-
-body.daylight-override .terminal-toast {
-    background: rgba(212, 232, 192, 0.97);
-    border-color: var(--term-fg-border);
-    color: var(--term-fg);
-}
-body.daylight-override .terminal-toast--error {
-    border-color: var(--term-red);
-    color: var(--term-red);
-}
-body.daylight-override .terminal-toast--warn {
-    border-color: var(--term-amber-toxic);
-    color: var(--term-amber-toxic);
-}
-
-body.daylight-override .disclaimer-banner {
-    background: rgba(212, 232, 192, 0.97);
-}
-
-body.daylight-override .stat-card {
-    background: rgba(10, 10, 10, 0.03);
-}
-
-/* Daylight toggle button */
-#daylight-toggle-btn {
-    position: fixed;
-    bottom: 16px;
-    left: 16px;
-    z-index: 9999;
-    background: transparent;
-    color: var(--term-fg);
-    border: 1px solid var(--term-fg-border);
-    padding: 10px 16px;
-    font-family: var(--term-font);
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    min-height: var(--min-target);
-    min-width: var(--min-target);
-}
-#daylight-toggle-btn:hover,
-#daylight-toggle-btn:focus-visible {
-    background: var(--term-fg);
-    color: var(--term-bg);
-    box-shadow: 0 0 10px var(--term-glow);
+.disclaimer-dismiss:hover {
+    background: #ff8c00;
+    color: #000;
 }

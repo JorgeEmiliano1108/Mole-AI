@@ -31,9 +31,41 @@ class PlantResponseSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
-# class FavoritePlantSerializer
+class FavoritePlantSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    user = serializers.IntegerField(read_only=True)
+    plant = serializers.UUIDField()
+    created_at = serializers.DateTimeField(read_only=True)
+
+
+class SpeciesSerializer(serializers.ModelSerializer):
     class Meta:
-        # model = FavoritePlant
-        fields = ['id', 'user', 'plant', 'created_at']
-        read_only_fields = ['id', 'user', 'created_at']
+        from apps.plants.infrastructure.repositories.models import SpeciesCatalog
+
+        model = SpeciesCatalog
+        fields = [
+            'id',
+            'scientific_name',
+            'common_name',
+            'description',
+            'ideal_humidity_min',
+            'ideal_humidity_max',
+            'ideal_temp_min',
+            'ideal_temp_max',
+            'ideal_ph_min',
+            'ideal_ph_max',
+            'ideal_ph_optimal',
+            'image_url',
+        ]
+        read_only_fields = ['id']
+
+    def validate(self, data):
+        # Basic cross-field validation: ensure min <= max when both present
+        if data.get('ideal_humidity_min') is not None and data.get('ideal_humidity_max') is not None:
+            if data['ideal_humidity_min'] > data['ideal_humidity_max']:
+                raise serializers.ValidationError('ideal_humidity_min cannot be greater than ideal_humidity_max')
+        if data.get('ideal_temp_min') is not None and data.get('ideal_temp_max') is not None:
+            if data['ideal_temp_min'] > data['ideal_temp_max']:
+                raise serializers.ValidationError('ideal_temp_min cannot be greater than ideal_temp_max')
+        return data
 

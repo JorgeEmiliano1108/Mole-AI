@@ -45,9 +45,6 @@ def download_report(job_id: str, job_store: JobMetadataStore = Depends(get_job_s
     s3_path = data.get("pdf_s3_path")
     if not s3_path:
         raise HTTPException(status_code=500, detail="no pdf path stored")
-    # Return a presigned URL
-    from infrastructure.storage.s3_adapter import S3Adapter
-
-    s3 = S3Adapter.from_env()
-    url = s3.generate_presigned_url(s3_path)
-    return {"download_url": url}
+    
+    # Return directly the static URL
+    return {"download_url": f"/static/reports/{job_id}.pdf"}

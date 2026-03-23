@@ -11,4 +11,4 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 """Re-export models so Django can discover them."""
-from plants.infrastructure.repositories.models import UserPlant  # noqa: F401
+from apps.plants.infrastructure.repositories.models import UserPlant  # noqa: F401
