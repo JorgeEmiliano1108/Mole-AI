@@ -9,6 +9,21 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Efecto de encendido y apagado de TV para modales */
+        @keyframes tvOn {
+            0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); }
+            50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); }
+            100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); }
+        }
+        @keyframes tvOff {
+            0% { transform: scale(1, 1); opacity: 1; filter: brightness(1); }
+            50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3); }
+            100% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10); }
+        }
+        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+        .tv-off { animation: tvOff 0.25s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+    </style>
 </head>
 <body class="bg-black text-[#00ffaa] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
     <div class="scanline"></div>
@@ -25,14 +40,12 @@
                         <button onclick="typeContent('vision')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
                         <button onclick="typeContent('flora')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
                         <button onclick="typeContent('acerca')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">ACERCA DE LA WEB</button>
-                        <button onclick="openIotWizard()" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-[#00ffaa]/30 mt-4 text-[#00ffaa] font-bold">[+] VINCULAR ESP32</button>
-
                     </div>
                 </div>
                 <button onclick="startSystem()" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
             </div>
             <div class="border border-[#00ffaa]/30 p-6 md:p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)] min-h-[250px] md:min-h-0">
-                <p id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></p>
+                <p id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap text-left w-full min-h-[150px] font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></p>
             </div>
         </div>
     </div>
@@ -58,7 +71,7 @@
                 <button onclick="showRegisterScreen()" class="border border-[#00ffaa]/30 py-2 text-xs hover:bg-[#00ffaa]/20 transition-all tracking-widest opacity-80 hover:opacity-100">[ CREAR NUEVO USUARIO ]</button>
             </div>
 
-            <button onclick="backToIntro()" class="text-xs text-center opacity-50 hover:opacity-100 transition-opacity mt-2 tracking-widest">Volver a inicio</button>
+            <button onclick="showModule('intro')" class="text-xs text-center opacity-50 hover:opacity-100 transition-opacity mt-2 tracking-widest">Volver a inicio</button>
             
             <p id="login-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
         </div>
@@ -106,104 +119,101 @@
     </div>
     
     <main id="main-dashboard" class="hidden h-screen md:overflow-hidden overflow-y-auto p-4 md:p-6 flex-col relative">
-        <header class="flex flex-col xl:flex-row justify-between items-center border-b-2 border-[#00ffaa] pb-4 mb-6 gap-4">
-    
-    <div class="flex flex-col items-center xl:items-start shrink-0">
-        <h1 class="text-3xl md:text-4xl font-bold tracking-tighter leading-none text-[#00ffaa]">MOLE-IA</h1>
-        <span class="text-[9px] mt-1 animate-pulse uppercase text-[#00ffaa]">● System Online</span>
-    </div>
-
-    <nav class="flex flex-wrap items-center justify-center gap-2 md:gap-3 w-full xl:w-auto">
-
-        <div id="david-plants" class="flex flex-wrap justify-center gap-2">
-            <button onclick="changePlant('manzanilla')" class="nav-btn active">MANZANILLA</button>
-            <button onclick="changePlant('sabila')" class="nav-btn">SÁBILA</button>
-            <button onclick="changePlant('menta')" class="nav-btn">MENTA</button>
-            <button onclick="changePlant('lavanda')" class="nav-btn">LAVANDA</button>
-            <button onclick="changePlant('cempasuchil')" class="nav-btn">CEMPASÚCHIL</button>
-            <button onclick="changePlant('bugambilia')" class="nav-btn">BUGAMBILIA</button>
-            <button onclick="changePlant('toronjil')" class="nav-btn">TORONJIL</button>
-            <button onclick="changePlant('peyote')" class="nav-btn">PEYOTE</button>
-            <button onclick="changePlant('hongos')" class="nav-btn">HONGOS</button>
-        </div>
-
-        <div id="new-user-plants" class="hidden flex flex-wrap items-center justify-center gap-2">
-            
-            <div class="relative group">
-                <button onclick="toggleCultivosMenu()" class="text-[#00ffaa]/70 hover:text-[#00ffaa] text-xs md:text-sm tracking-widest font-bold transition-colors flex items-center gap-2 px-2 border border-transparent hover:border-[#00ffaa]/50 py-1">
-                    > CATEGORÍAS <span class="text-[10px]">▼</span>
-                </button>
-                <div id="dropdown-cultivos" class="hidden absolute top-full left-0 mt-2 border border-[#00ffaa] bg-[#001105] min-w-[200px] z-[110] shadow-[0_0_15px_rgba(0,255,170,0.2)]">
-                    <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-[#00ffaa]/20 hover:text-[#00ffaa] transition-colors border-b border-[#00ffaa]/20">> PLANTAS FRUTALES</button>
-                    <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-[#00ffaa]/20 hover:text-[#00ffaa] transition-colors border-b border-[#00ffaa]/20">> PLANTAS DE DESIERTO</button>
-                    <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-[#00ffaa]/20 hover:text-[#00ffaa] transition-colors border-b border-[#00ffaa]/20">> HIDROPONÍA</button>
-                    <button class="w-full text-left px-4 py-2 text-xs text-white hover:bg-[#00ffaa]/20 hover:text-[#00ffaa] transition-colors">> VEGETALES</button>
-                </div>
+        <header class="flex flex-col xl:flex-row justify-between items-center border-b-2 border-[#00ffaa] pb-4 mb-6 gap-4 relative z-50">
+            <div class="flex flex-col items-center xl:items-start shrink-0">
+                <h1 class="text-3xl md:text-4xl font-bold tracking-tighter leading-none text-[#00ffaa]">MOLE-IA</h1>
+                <span class="text-[9px] mt-1 animate-pulse uppercase text-[#00ffaa]">● System Online</span>
             </div>
 
-            <button onclick="openAddPlantModal()" class="border border-dashed border-[#f97316] text-[#f97316] px-3 py-1 text-xs hover:bg-[#f97316] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
-                [+ VINCULAR CULTIVO ]
-            </button>
-        </div>
+            <nav class="flex flex-wrap items-center justify-center gap-2 md:gap-3 w-full xl:w-auto">
+                <button onclick="openModalWithTV('iot-wizard-modal')" class="border-2 border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest whitespace-nowrap shadow-[0_0_10px_rgba(0,255,170,0.2)]">
+                    [ VINCULAR ESP32 ]
+                </button>
 
-        <button onclick="openHistoryModal()" class="border border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
-            [ MI HUERTO / HISTORIAL ]
-        </button>
+                <div id="new-user-plants" class="hidden flex flex-wrap items-center justify-center gap-2">
+                    <button onclick="openModalWithTV('add-plant-modal')" class="border border-dashed border-[#f97316] text-[#f97316] px-3 py-1 text-xs hover:bg-[#f97316] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
+                        [+ VINCULAR CULTIVO ]
+                    </button>
+                </div>
 
-        <button onclick="openMapModal()" class="border border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
-            [ MAPA EPIDEMIOLÓGICO ]
-        </button>
-    </nav>
+                <button onclick="openModalWithTV('history-modal')" class="border border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
+                    [ MI HUERTO / HISTORIAL ]
+                </button>
 
-    <div class="flex flex-col md:flex-row items-center gap-4 shrink-0 mt-2 xl:mt-0">
-        <div class="flex gap-2">
-            <button onclick="openContactModal()" class="nav-btn whitespace-nowrap">CONTÁCTANOS</button>
-            <button onclick="logout()" class="exit-btn font-bold whitespace-nowrap">[ SALIR ]</button>
-        </div>
-        <div id="clock" class="text-3xl md:text-4xl font-bold tracking-tighter text-[#00ffaa]">00:00:00</div>
-    </div>
-</header>
+                <button onclick="openModalWithTV('map-modal')" class="border border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
+                    [ MAPA EPIDEMIOLÓGICO ]
+                </button>
+            </nav>
+
+            <div class="flex flex-col md:flex-row items-center gap-4 shrink-0 mt-2 xl:mt-0 relative">
+                <div id="clock" class="text-2xl md:text-3xl font-bold tracking-tighter text-[#00ffaa]">00:00:00</div>
+                
+                <div class="relative group ml-auto">
+                    <button onclick="toggleProfileDropdown()" class="flex items-center gap-2 border border-[#00ffaa]/50 hover:bg-[#00ffaa] hover:text-black text-[#00ffaa] px-3 py-1 transition-all shadow-[0_0_15px_rgba(0,255,170,0.1)]">
+                        <span class="text-lg font-bold">[ :() ]</span>
+                        <span class="text-[10px] font-bold tracking-widest uppercase">PERFIL</span>
+                    </button>
+                    
+                    <div id="profile-dropdown" class="hidden absolute top-full right-0 mt-2 border-2 border-[#00ffaa] bg-[#000502] min-w-[220px] shadow-[0_0_20px_rgba(0,255,170,0.3)] p-4 flex-col gap-2 origin-top-right transition-all">
+                        <p class="text-[10px] text-[#00ffaa]/70">OPERADOR: <span class="text-white font-bold" id="dropdown-user-name">AGENTE MOLE</span></p>
+                        <p class="text-[10px] text-[#00ffaa]/70 border-b border-[#00ffaa]/30 pb-2 mb-2">STATUS: <span class="text-green-400 animate-pulse font-bold">ONLINE</span></p>
+                        <button onclick="logout()" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all tracking-widest">
+                            [ CERRAR SESIÓN ]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1 items-center min-h-0 pb-20 md:pb-0">
             <div class="md:col-span-3 space-y-6 order-2 md:order-1">
                 <div class="stat-card">
                     <span class="label">HUMEDAD AMBIENTE</span>
-                    <span id="txt-hum" class="value text-5xl md:text-6xl">65%</span>
+                    <span id="txt-hum" class="value text-5xl md:text-6xl">--%</span>
                 </div>
                 <div class="stat-card">
                     <span class="label">TEMPERATURA</span>
-                    <span id="txt-temp" class="value text-5xl md:text-6xl">24°C</span>
+                    <span id="txt-temp" class="value text-5xl md:text-6xl">--°C</span>
                 </div>
-                <button onclick="openModal()" class="w-full border-2 border-[#f97316] text-[#f97316] py-3 mt-4 hover:bg-[#f97316] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(249,115,22,0.3)] text-sm md:text-base">
+                <button onclick="openModalWithTV('analysis-modal')" class="w-full border-2 border-[#f97316] text-[#f97316] py-3 mt-4 hover:bg-[#f97316] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(249,115,22,0.3)] text-sm md:text-base">
                     VER ANÁLISIS DETALLADO 
                 </button>
             </div>
 
             <div class="md:col-span-6 flex justify-center order-1 md:order-2">
-                <div class="relative w-full aspect-square border-2 border-[#00ffaa] p-1 bg-black group overflow-hidden max-w-[500px]">
-                    <div class="absolute top-4 left-4 z-20 bg-black/80 border border-[#00ffaa] px-2 py-1 text-[10px]">LIVE_FEED // <span id="plant-tag">MANZANILLA</span></div>
-                    <img id="main-img" src="img/manzanilla.jpg" class="w-full h-full object-cover plant-filter group-hover:filter-none">
-                    <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
-                
-                <button onclick="document.getElementById('camera-input').click()" class="w-full max-w-[500px] border-2 border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-3 mt-4 hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest text-sm md:text-base animate-pulse hover:animate-none flex justify-center items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                    [ INICIAR ESCANEO DE FLORA ]
-                </button>
-                </div>
+    <div class="relative w-full aspect-square border-2 border-[#00ffaa] p-1 bg-black group overflow-hidden max-w-[500px] flex flex-col">
+        
+        <div class="relative flex-1 w-full h-full overflow-hidden">
+            <div class="absolute top-4 left-4 z-20 bg-black/80 border border-[#00ffaa] px-2 py-1 text-[10px]">LIVE_FEED // <span id="plant-tag">SIN ASIGNAR</span></div>
+            
+            <div id="video-placeholder" class="w-full h-full flex flex-col items-center justify-center text-[#00ffaa]/40 font-bold border border-dashed border-[#00ffaa]/20 text-xs md:text-sm animate-pulse p-10 text-center">
+                <svg class="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                [ ESPERANDO VINCULACIÓN DE CULTIVO ]
             </div>
-
+            
+            <img id="main-img" src="img/manzanilla.jpg" class="w-full h-full object-cover plant-filter group-hover:filter-none hidden absolute inset-0">
+        </div>
+        
+        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+    
+        <button onclick="document.getElementById('camera-input').click()" class="w-full border-2 border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-3 mt-1 hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest text-sm animate-pulse hover:animate-none flex justify-center items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            [ INICIAR ESCANEO DE BIOMASA ]
+        </button>
+    </div>
+</div>
             <div class="md:col-span-3 space-y-6 md:text-right order-3">
-                <button onclick="openUserProfile()" class="w-full h-24 border border-[#00ffaa]/50 bg-[#001105] hover:bg-[#00ffaa] hover:text-black text-[#00ffaa] flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,255,170,0.05)] cursor-pointer">
-                    <span class="text-2xl font-bold mb-1">[ :() ]</span>
-                    <span class="text-xs font-bold tracking-widest">> PERFIL</span>
-                    </button>
+                <button onclick="openModalWithTV('contact-modal')" class="w-full h-24 border border-[#00ffaa]/50 bg-[#001105] hover:bg-[#00ffaa] hover:text-black text-[#00ffaa] flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,255,170,0.05)] cursor-pointer">
+                    <span class="text-2xl font-bold mb-1">(!)</span>
+                    <span class="text-xs font-bold tracking-widest">> CONTÁCTANOS</span>
+                </button>
                 <div class="stat-card">
                     <span class="label">pH DEL SUELO</span>
-                    <span id="txt-ph" class="value text-5xl md:text-6xl">6.8</span>
+                    <span id="txt-ph" class="value text-5xl md:text-6xl">--</span>
                 </div>
                 <div class="stat-card">
                     <span class="label">ÍNDICE UV</span>
-                    <span id="txt-uv" class="value text-3xl md:text-4xl pt-4 block">MODERADO</span>
+                    <span id="txt-uv" class="value text-3xl md:text-4xl pt-4 block">ESPERANDO...</span>
                 </div>
             </div>
         </div>
@@ -222,7 +232,7 @@
             </div>
             
             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-mono">
-                </div>
+            </div>
 
             <div class="border-t-2 border-[#00ffaa] p-2 flex bg-black">
                 <span class="text-[#00ffaa] mr-2 mt-1">></span>
@@ -272,86 +282,40 @@
                 </div>
             </div>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mt-8 shrink-0 pb-10">
-            <div class="border border-[#ff4444]/60 p-4 md:p-6 flex flex-col bg-[#110000] shadow-[inset_0_0_20px_rgba(255,68,68,0.1)]">
-                <span class="text-xs md:text-sm font-bold tracking-widest mb-4 text-[#ff4444] border-b border-[#ff4444]/30 pb-2">>> OVERRIDE DE CULTIVOS (SABOTAJE)</span>
-                <p class="text-[10px] md:text-xs mb-4 opacity-70 text-white">Fuerza parámetros críticos en los huertos de los operadores.</p>
-                <div class="flex flex-col gap-3">
-                    <button onclick="triggerOverride('sequia')" class="border border-[#ff4444] p-3 md:p-2 hover:bg-[#ff4444] hover:text-black font-bold transition-colors text-xs md:text-sm">INDUCIR SEQUÍA (PEYOTE)</button>
-                    <button onclick="triggerOverride('fallo_riego')" class="border border-[#ff4444] p-3 md:p-2 hover:bg-[#ff4444] hover:text-black font-bold transition-colors text-xs md:text-sm">FALLO DE RIEGO (SÁBILA)</button>
-                    <button onclick="triggerOverride('restaurar')" class="border border-[#00e5ff] p-3 md:p-2 hover:bg-[#00e5ff] hover:text-black font-bold transition-colors text-xs md:text-sm text-[#00e5ff] mt-2">RESTAURAR SISTEMAS A LA NORMALIDAD</button>
-                </div>
-            </div>
-
-            <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative">
-                <span class="text-xs md:text-sm font-bold tracking-widest mb-4 border-b border-[#00e5ff]/30 pb-2">>> ESCÁNER DE INTEGRIDAD DEL BÚNKER</span>
-                <button onclick="runDiagnostic()" class="w-full border-2 border-[#00e5ff] py-3 md:py-2 mb-4 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-all text-xs md:text-base">
-                    [ EJECUTAR DIAGNÓSTICO DE CULTIVOS ]
-                </button>
-                <div class="flex-1 bg-[#000511] border border-[#00e5ff]/20 p-4 font-mono text-[10px] md:text-xs overflow-y-auto h-[150px]">
-                    <ul id="diagnostic-term" class="space-y-1 opacity-80">
-                        <li>> Esperando comando de inicio...</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative mt-8 shrink-0 mb-10 overflow-hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#00e5ff]/30 pb-2 mb-4 gap-4">
-                <span class="text-xs md:text-sm font-bold tracking-widest text-[#00e5ff]">> BANDEJA DE REPORTES INTERCEPTADOS</span>
-                <button onclick="generateMasterReport()" class="border border-[#00e5ff] px-4 py-2 text-[10px] md:text-xs hover:bg-[#00e5ff] hover:text-black font-bold transition-all shadow-[0_0_10px_rgba(0,229,255,0.2)] w-full md:w-auto">
-                    [ EXPORTAR REPORTE MAESTRO ]
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <div class="min-w-[700px]">
-                    <div class="grid grid-cols-12 gap-4 text-[10px] opacity-70 mb-2 px-2 uppercase tracking-widest">
-                        <div class="col-span-2">HORA</div>
-                        <div class="col-span-3">OPERADOR</div>
-                        <div class="col-span-3">CLASIFICACIÓN</div>
-                        <div class="col-span-4">DETALLE DEL PROBLEMA</div>
-                    </div>
-                    
-                    <div id="admin-reports-list" class="bg-[#000511] border border-[#00e5ff]/20 p-2 overflow-y-auto h-[250px] custom-scrollbar space-y-2">
-                        <div class="text-center opacity-50 text-xs py-8">> NO HAY REPORTES EN LA BANDEJA...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </main>
 
-    <div id="analysis-modal" class="hidden fixed inset-0 bg-black z-50 p-4 md:p-10 flex-col overflow-y-auto md:overflow-hidden">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-[#00ffaa] pb-4 mb-6 md:mb-8 gap-4">
-            <div class="flex items-center gap-4">
-                <h2 class="text-xl md:text-3xl tracking-widest font-bold uppercase">ANÁLISIS DE DATOS</h2>
+    <div id="analysis-modal" class="hidden fixed inset-0 bg-black/90 z-50 p-4 md:p-10 flex-col overflow-y-auto md:overflow-hidden items-center justify-center">
+        <div class="border-2 border-[#00ffaa] bg-[#001105] w-full h-full max-w-7xl flex flex-col p-6 shadow-[0_0_30px_rgba(0,255,170,0.2)]">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-[#00ffaa] pb-4 mb-6 md:mb-8 gap-4">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl md:text-3xl tracking-widest font-bold uppercase">ANÁLISIS DE DATOS</h2>
+                </div>
+                <button onclick="closeModalWithTV('analysis-modal')" class="border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black font-bold transition-colors uppercase tracking-widest w-full md:w-auto">
+                    [ X CERRAR ]
+                </button>
             </div>
-            <button onclick="closeModal()" class="border border-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black font-bold transition-colors uppercase tracking-widest w-full md:w-auto">
-                [ &lt;- VOLVER ]
-            </button>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 h-auto md:h-[45%] mb-6 md:mb-8 shrink-0">
-            <div class="border border-[#00ffaa]/30 p-4 bg-black relative h-[250px] md:h-full">
-                <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE HUMEDAD</span>
-                <canvas id="chart-hum"></canvas>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 h-auto md:h-[45%] mb-6 md:mb-8 shrink-0">
+                <div class="border border-[#00ffaa]/30 p-4 bg-black relative h-[250px] md:h-full">
+                    <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE HUMEDAD</span>
+                    <canvas id="chart-hum"></canvas>
+                </div>
+                <div class="border border-[#00ffaa]/30 p-4 bg-black relative h-[250px] md:h-full">
+                    <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE TEMPERATURA</span>
+                    <canvas id="chart-temp"></canvas>
+                </div>
             </div>
-            <div class="border border-[#00ffaa]/30 p-4 bg-black relative h-[250px] md:h-full">
-                <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE TEMPERATURA</span>
-                <canvas id="chart-temp"></canvas>
-            </div>
-        </div>
 
-        <div class="flex-1 border border-[#00ffaa] flex flex-col overflow-hidden min-h-[300px] md:min-h-0 shrink-0 mb-10 md:mb-0">
-            <div class="bg-[#00ffaa] text-black px-4 py-2 text-sm font-bold uppercase shrink-0">REGISTRO DE EVENTOS</div>
-            <div class="p-4 md:p-6 flex-1 bg-black overflow-y-auto custom-scrollbar">
-                <div id="log-list" class="space-y-4 text-[11px] md:text-[13px]"></div>
+            <div class="flex-1 border border-[#00ffaa] flex flex-col overflow-hidden min-h-[300px] md:min-h-0 shrink-0 mb-10 md:mb-0">
+                <div class="bg-[#00ffaa] text-black px-4 py-2 text-sm font-bold uppercase shrink-0">REGISTRO DE EVENTOS</div>
+                <div class="p-4 md:p-6 flex-1 bg-black overflow-y-auto custom-scrollbar">
+                    <div id="log-list" class="space-y-4 text-[11px] md:text-[13px]"></div>
+                </div>
             </div>
         </div>
     </div>
     
-    <div id="contact-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 md:p-6">
+    <div id="contact-modal" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center p-4 md:p-6">
         <div class="border-2 border-[#00ffaa] bg-black p-6 md:p-8 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.2)] max-h-[90vh] overflow-y-auto">
             <h2 class="text-2xl md:text-3xl font-bold tracking-widest mb-6 border-b border-[#00ffaa]/30 pb-2 text-center uppercase">Comentario</h2>
             
@@ -360,17 +324,6 @@
                     <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">ID de Operador:</label>
                     <input type="text" id="contact-user" class="bg-[#001105] border border-[#00ffaa]/50 p-3 md:p-2 text-[#00ffaa] outline-none font-mono text-xs md:text-sm" readonly>
                 </div>
-                
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">Clasificación de Anomalía:</label>
-                    <select id="contact-type" class="bg-[#001105] border border-[#00ffaa]/50 p-3 md:p-2 text-[#00ffaa] outline-none font-mono text-xs md:text-sm appearance-none cursor-pointer">
-                        <option value="estado_planta">Estado Crítico de Especímen</option>
-                        <option value="falla_tecnica">Falla de Hardware/Sensores</option>
-                        <option value="brecha_seguridad">Brecha de Seguridad / Sabotaje</option>
-                        <option value="otro">Otro (Especificar en texto)</option>
-                    </select>
-                </div>
-
                 <div class="flex flex-col gap-2">
                     <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">Detalles del Reporte:</label>
                     <textarea id="contact-msg" rows="4" class="bg-[#001105] border border-[#00ffaa]/50 p-3 md:p-2 text-[#00ffaa] outline-none font-mono text-xs md:text-sm resize-none custom-scrollbar" placeholder="Describa la situación..."></textarea>
@@ -381,46 +334,21 @@
                 <button onclick="sendReport()" class="w-full border-2 border-[#00ffaa] bg-[#00ffaa]/10 py-4 md:py-3 hover:bg-[#00ffaa] hover:text-black font-bold uppercase tracking-widest transition-all text-sm md:text-base">
                     [ TRANSMITIR DATOS ]
                 </button>
-                <button onclick="closeContactModal()" class="w-full border border-red-500 text-red-500 py-3 md:py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
+                <button onclick="closeModalWithTV('contact-modal')" class="w-full border border-red-500 text-red-500 py-3 md:py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
                     [ ABORTAR TRANSMISIÓN ]
                 </button>
             </div>
-            
-            <p id="contact-status" class="hidden text-center mt-4 text-xs font-bold tracking-widest"></p>
         </div>
     </div>
 
-    <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 md:p-6">
+    <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center p-4 md:p-6">
         <div class="border-2 border-[#f97316] bg-black p-6 md:p-8 w-full max-w-lg shadow-[0_0_30px_rgba(249,115,22,0.2)]">
             <h2 class="text-2xl font-bold tracking-widest mb-6 border-b border-[#f97316]/30 pb-2 text-center uppercase text-[#f97316]">Vincular Nuevo Cultivo</h2>
-            
             <div class="space-y-4 mb-6">
                 <p class="text-xs text-white/70 font-mono mb-4 animate-pulse">> SISTEMA ESPERANDO INGRESO DE DATOS...</p>
-                
                 <div class="flex flex-col gap-2">
-                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Alias / Nombre de la Planta:</label>
+                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Alias de la Planta:</label>
                     <input type="text" id="new-plant-name" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Mi Tomate Cherry" autocomplete="off">
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Especie Botánica:</label>
-                    <select id="new-plant-type" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs cursor-pointer focus:border-[#f97316]">
-                        <option value="hortaliza">Hortaliza / Vegetal</option>
-                        <option value="medicinal">Planta Medicinal</option>
-                        <option value="frutal">Árbol Frutal</option>
-                        <option value="ornamental">Ornamental / Flor</option>
-                        <option value="otro">Otra Especie</option>
-                    </select>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Sector o Ubicación:</label>
-                    <input type="text" id="new-plant-sector" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Huerto Trasero / Maceta 1">
-                </div>
-                
-                <div class="flex flex-col gap-2">
-                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Fecha de Siembra:</label>
-                    <input type="date" id="new-plant-date" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316] color-scheme-dark">
                 </div>
             </div>
 
@@ -428,94 +356,60 @@
                 <button onclick="registerNewPlant()" class="w-full border-2 border-[#f97316] bg-[#f97316]/10 py-3 hover:bg-[#f97316] hover:text-black font-bold uppercase tracking-widest transition-all text-sm text-[#f97316]">
                     [ INICIALIZAR SENSORES ]
                 </button>
-                <button onclick="closeAddPlantModal()" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
+                <button onclick="closeModalWithTV('add-plant-modal')" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
                     [ CANCELAR ]
                 </button>
             </div>
         </div>
     </div>
 
-    <div id="loading-scan-modal" class="hidden fixed inset-0 bg-black/95 z-[110] flex flex-col items-center justify-center p-4">
-        <div class="border border-[#00ffaa] p-8 max-w-sm w-full bg-[#001105] shadow-[0_0_30px_rgba(0,255,170,0.2)] text-center flex flex-col items-center">
-            <svg class="w-12 h-12 text-[#00ffaa] animate-spin mb-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <p class="text-[#00ffaa] font-bold tracking-widest text-sm mb-2 animate-pulse">> ANALIZANDO BIOMETRÍA...</p>
-            <p class="text-xs text-[#00ffaa]/70">Motor: DeepSeek AI v2.4</p>
-            <div class="w-full bg-[#00ffaa]/20 h-1 mt-4 relative overflow-hidden">
-                <div class="absolute top-0 left-0 h-full bg-[#00ffaa] w-1/3 animate-[translateX_1s_infinite]"></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="diagnosis-result-modal" class="hidden fixed inset-0 bg-black/95 z-[105] flex items-center justify-center p-4">
+    <div id="diagnosis-result-modal" class="hidden fixed inset-0 bg-black/95 z-[105] items-center justify-center p-4">
         <div class="border-2 border-[#00ffaa] bg-black p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.2)] flex flex-col">
             <h2 class="text-xl md:text-2xl font-bold tracking-widest mb-2 border-b border-[#00ffaa]/30 pb-2 uppercase text-white">> REPORTE FITOSANITARIO</h2>
-            
-            <div class="flex gap-4 mt-4">
-                <div class="w-24 h-24 border border-[#00ffaa]/50 bg-[#001105] shrink-0 overflow-hidden relative">
-                    <img id="scanned-image-preview" src="" class="w-full h-full object-cover opacity-80 mix-blend-screen">
-                    <div class="absolute inset-0 bg-[#00ffaa]/10 scanline"></div>
-                </div>
-                <div class="flex-1 space-y-2 text-xs md:text-sm">
-                    <p><span class="text-[#00ffaa]/70 uppercase">Especie Detectada:</span> <br><strong id="diag-species" class="text-white">--</strong></p>
-                    <p><span class="text-[#00ffaa]/70 uppercase">Estado / Plaga:</span> <br><strong id="diag-status" class="text-red-400">--</strong></p>
-                    <p><span class="text-[#00ffaa]/70 uppercase">Nivel pH Estimado:</span> <br><strong id="diag-ph" class="text-white">--</strong></p>
-                </div>
-            </div>
-
             <div class="mt-6 border border-[#00ffaa]/30 bg-[#001105] p-3">
                 <p class="text-[10px] md:text-xs text-[#00ffaa]/70 uppercase mb-2">> RECOMENDACIÓN DE TRATAMIENTO:</p>
                 <p id="diag-treatment" class="text-xs text-white/90 font-mono leading-relaxed custom-scrollbar max-h-32 overflow-y-auto">
                     --
                 </p>
             </div>
-
             <div class="flex flex-col sm:flex-row gap-3 mt-6">
                 <button onclick="saveToFavorites()" class="flex-1 border border-[#f97316] text-[#f97316] py-2 hover:bg-[#f97316] hover:text-black font-bold uppercase tracking-widest transition-all text-xs">
-                    [ GUARDAR EN FAVORITOS ]
+                    [ GUARDAR FAVORITO ]
                 </button>
-                <button onclick="closeDiagnosisModal()" class="flex-1 border border-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black font-bold uppercase tracking-widest transition-all text-xs">
-                    [ CERRAR REPORTE ]
+                <button onclick="closeModalWithTV('diagnosis-result-modal')" class="flex-1 border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase tracking-widest transition-all text-xs">
+                    [ X CERRAR ]
                 </button>
             </div>
         </div>
     </div>
     
-    <div id="history-modal" class="hidden fixed inset-0 bg-black/95 z-[105] flex items-center justify-center p-4">
+    <div id="history-modal" class="hidden fixed inset-0 bg-black/95 z-[105] items-center justify-center p-4">
         <div class="border-2 border-[#00ffaa] bg-[#001105] p-6 w-full max-w-4xl shadow-[0_0_30px_rgba(0,255,170,0.2)] flex flex-col h-[80vh]">
             <div class="flex justify-between items-center border-b border-[#00ffaa]/30 pb-4 mb-4">
                 <h2 class="text-xl md:text-2xl font-bold tracking-widest uppercase text-white">> BASE DE DATOS: MI HUERTO</h2>
-                <button onclick="closeHistoryModal()" class="text-[#00ffaa] hover:text-red-500 font-bold text-xs md:text-sm tracking-widest">[ CERRAR ]</button>
+                <button onclick="closeModalWithTV('history-modal')" class="text-red-500 border border-red-500 px-2 py-1 hover:bg-red-500 hover:text-black font-bold text-xs md:text-sm tracking-widest">[ X CERRAR ]</button>
             </div>
-            
-            <div class="flex gap-4 mb-4 border-b border-[#00ffaa]/10 pb-2">
-                <button onclick="switchHistoryTab('history')" id="tab-history" class="text-[#00ffaa] border-b-2 border-[#00ffaa] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all">HISTORIAL DE ESCANEOS</button>
-                <button onclick="switchHistoryTab('favorites')" id="tab-favorites" class="text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all">ESPECÍMENES FAVORITOS</button>
-            </div>
-            
             <div id="history-list-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
-                </div>
+            </div>
         </div>
     </div>
 
-    <div id="map-modal" class="hidden fixed inset-0 bg-black/95 z-[105] flex items-center justify-center p-4">
+    <div id="map-modal" class="hidden fixed inset-0 bg-black/95 z-[105] items-center justify-center p-4">
         <div class="border-2 border-[#00ffaa] bg-[#001105] p-6 w-full max-w-5xl shadow-[0_0_30px_rgba(0,255,170,0.2)] flex flex-col h-[85vh]">
             <div class="flex justify-between items-center border-b border-[#00ffaa]/30 pb-4 mb-4">
                 <h2 class="text-xl md:text-2xl font-bold tracking-widest uppercase text-white">> GEO-RASTREO DE FOCOS DE INFECCIÓN</h2>
-                <button onclick="closeMapModal()" class="text-[#00ffaa] hover:text-red-500 font-bold text-xs md:text-sm tracking-widest">[ CERRAR ]</button>
+                <button onclick="closeModalWithTV('map-modal')" class="text-red-500 border border-red-500 px-2 py-1 hover:bg-red-500 hover:text-black font-bold text-xs md:text-sm tracking-widest">[ X CERRAR ]</button>
             </div>
-            
             <div id="map-container" class="flex-1 w-full border border-[#00ffaa]/30 relative bg-[#001105] z-0">
-                </div>
+            </div>
         </div>
     </div>
 
-    <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4 font-mono">
+    <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/95 z-[110] items-center justify-center p-4 font-mono">
         <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.15)] relative">
-            
             <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
                 > ENLACE DE HARDWARE: ESP32_NODE
             </h2>
-
             <div id="iot-step-1" class="iot-step block">
                 <p class="text-white/80 text-sm mb-4">> Escaneando frecuencias locales en busca de hardware AgroGuard...</p>
                 <div class="animate-pulse text-[#00ffaa] text-center my-8 text-2xl">[ RADARES ACTIVOS ]</div>
@@ -523,82 +417,9 @@
                     > SIMULAR DISPOSITIVO ENCONTRADO
                 </button>
             </div>
-
-            <div id="iot-step-2" class="iot-step hidden">
-                <p class="text-white/80 text-sm mb-4">> Dispositivo detectado. Ingrese credenciales de red local (2.4 GHz).</p>
-                
-                <label class="block text-[#00ffaa] text-xs mb-1">> SSID (Nombre de red)</label>
-                <input type="text" id="wifi-ssid" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 mb-4 outline-none focus:border-[#00ffaa]" placeholder="Ej. Red_Casa_2.4G">
-                
-                <label class="block text-[#00ffaa] text-xs mb-1">> PASSWORD</label>
-                <div class="relative mb-6">
-                    <input type="password" id="wifi-pass" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 outline-none focus:border-[#00ffaa] font-sans" placeholder="********">
-                    <button onclick="toggleWifiPassword()" class="absolute right-2 top-2 text-[#00ffaa]/70 hover:text-[#00ffaa] text-xs">
-                        [ VER ]
-                    </button>
-                </div>
-
-                <div class="flex justify-between">
-                    <button onclick="nextIotStep(1)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
-                    <button onclick="nextIotStep(3)" class="border border-[#00ffaa] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs">> SIGUIENTE</button>
-                </div>
-            </div>
-
-            <div id="iot-step-3" class="iot-step hidden">
-                <p class="text-yellow-400 text-sm mb-4">> ADVERTENCIA: Verifique los datos antes de inyectar el payload al ESP32.</p>
-                <div class="bg-[#001105] border border-[#00ffaa]/30 p-4 mb-6 text-sm text-white/80 space-y-2">
-                    <p>TARGET: <span class="text-[#00ffaa]">ESP32_AGRO_01</span></p>
-                    <p>SSID: <span id="confirm-ssid" class="text-[#00ffaa]">---</span></p>
-                    <p>ENCRIPTACIÓN: <span class="text-[#00ffaa]">WPA2-PSK</span></p>
-                </div>
-                
-                <div class="flex justify-between">
-                    <button onclick="nextIotStep(2)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
-                    <button onclick="startHardwareProvisioning()" class="border border-[#00ffaa] bg-[#001105] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> INYECTAR DATOS</button>
-                </div>
-            </div>
-
-            <div id="iot-step-4" class="iot-step hidden text-center py-8">
-                <p class="text-[#00ffaa] text-lg mb-2 animate-pulse">> ESTABLECIENDO HANDSHAKE...</p>
-                <p class="text-white/50 text-xs font-mono">Transfiriendo paquetes cifrados al microcontrolador. No apague el equipo.</p>
-            </div>
-
-            <div id="iot-step-5" class="iot-step hidden text-center py-6">
-                <div class="text-[#00ffaa] text-4xl mb-4">[ OK ]</div>
-                <p class="text-white mb-6">> Hardware provisionado exitosamente. El dispositivo se reiniciará y se conectará al servidor de Mole.AI.</p>
-                <button onclick="closeIotWizard()" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> CERRAR PANEL</button>
-            </div>
-
-            <button id="iot-close-btn" onclick="closeIotWizard()" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">
+            <button id="iot-close-btn" onclick="closeModalWithTV('iot-wizard-modal')" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">
                 [X]
             </button>
-        </div>
-    </div>
-
-    <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 font-mono">
-        <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-md shadow-[0_0_30px_rgba(0,255,170,0.15)] relative text-left">
-            
-            <button onclick="closeUserProfile()" class="absolute top-4 right-4 text-[#00ffaa] hover:text-white font-bold text-xl">
-                [X]
-            </button>
-            
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-6">
-                > STATUS DEL OPERADOR
-            </h2>
-            
-            <div class="space-y-4 text-sm mb-8">
-                <p><span class="text-[#00ffaa]">NOMBRE:</span> <span class="text-white" id="profile-name">Agente Mole</span></p>
-                <p><span class="text-[#00ffaa]">ID:</span> <span class="text-white">M-A1-9982</span></p>
-                <p><span class="text-[#00ffaa]">RANGO:</span> <span class="text-white">SUPERVISOR DE CULTIVOS</span></p>
-                <p><span class="text-[#00ffaa]">SESIÓN:</span> <span class="text-green-400 animate-pulse">ACTIVA</span></p>
-            </div>
-
-            <div class="border-t border-red-500/50 pt-6">
-                <p class="text-red-500 text-[10px] mb-3 font-bold uppercase tracking-tighter">Zona de Peligro / Derechos ARCO</p>
-                <button onclick="openDeleteModal()" class="w-full text-center text-red-500 hover:text-white hover:bg-red-600 py-2 transition-colors border border-red-500/50 font-bold text-xs">
-                    ELIMINAR MI CUENTA DEL SISTEMA
-                </button>
-            </div>
         </div>
     </div>
 
