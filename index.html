@@ -64,29 +64,47 @@
         </div>
     </div>
 
-    <div id="register-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-4 md:p-10">
-        <div class="border border-[#00ffaa] p-6 md:p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6">
-            <h2 class="text-2xl md:text-3xl text-center font-bold tracking-widest mt-2">REGISTRO DE OPERADOR</h2>
+    <div id="register-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-4 md:p-10 overflow-y-auto">
+        <div class="border border-[#00ffaa] p-6 md:p-8 w-full max-w-2xl relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6 my-auto">
+            <h2 class="text-2xl md:text-3xl text-center font-bold tracking-widest mt-2 text-[#00ffaa] drop-shadow-[0_0_8px_rgba(0,255,170,0.5)]">REGISTRO DE OPERADOR</h2>
             
-            <div class="flex flex-col gap-3">
-                <label class="tracking-widest text-sm">NUEVO USUARIO:</label>
-                <input type="text" id="reg-user-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="Ej. Operador_01" autocomplete="off">
-            </div>
-            <div class="flex flex-col gap-3">
-                <label class="tracking-widest text-sm">NUEVA CLAVE:</label>
-                <input type="password" id="reg-pass-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="••••••••">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="flex flex-col gap-2 md:col-span-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> NOMBRE DE USUARIO:</label>
+                    <input type="text" id="reg-user-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="Ej. Operador_01" autocomplete="off">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CORREO ELECTRÓNICO:</label>
+                    <input type="email" id="reg-email-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="agente@mole.ia">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CONFIRMAR CORREO:</label>
+                    <input type="email" id="reg-email-confirm-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="agente@mole.ia">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CONTRASEÑA:</label>
+                    <input type="password" id="reg-pass-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="••••••••">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CONFIRMAR CONTRASEÑA:</label>
+                    <input type="password" id="reg-pass-confirm-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="••••••••">
+                </div>
             </div>
             
-            <div class="flex flex-col gap-2 mt-4">
-                <button onclick="submitRegistration()" class="border border-[#00ffaa]/50 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold">CREAR CREDENCIALES</button>
-                <button onclick="backToLogin()" class="border border-[#00ffaa]/30 py-2 text-xs hover:bg-[#00ffaa]/20 transition-all tracking-widest opacity-80 hover:opacity-100">[ VOLVER AL LOGIN ]</button>
+            <div class="flex flex-col gap-3 mt-2">
+                <button onclick="submitRegistration()" class="border border-[#00ffaa]/50 bg-[#00ffaa]/10 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold text-[#00ffaa] hover:shadow-[0_0_15px_rgba(0,255,170,0.6)]">[ CREAR CREDENCIALES ]</button>
+                <button onclick="backToLogin()" class="border border-[#00ffaa]/30 py-2 text-xs text-[#00ffaa]/70 hover:text-[#00ffaa] hover:bg-[#00ffaa]/20 transition-all tracking-widest">[ VOLVER AL LOGIN ]</button>
             </div>
 
-            <p id="reg-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
-            <p id="reg-success" class="text-[#00ffaa] text-center text-xs hidden font-bold tracking-widest">USUARIO CREADO.</p>
+            <p id="reg-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR: LOS DATOS NO COINCIDEN.</p>
+            <p id="reg-success" class="text-[#00ffaa] text-center text-xs hidden font-bold tracking-widest">USUARIO CREADO EN LA BASE DE DATOS.</p>
         </div>
     </div>
-
+    
     <main id="main-dashboard" class="hidden h-screen md:overflow-hidden overflow-y-auto p-4 md:p-6 flex-col relative">
         <header class="flex flex-col xl:flex-row justify-between items-center border-b-2 border-[#00ffaa] pb-4 mb-6 gap-4">
     
@@ -302,31 +320,6 @@
                 </div>
             </div>
         </div>
-
-        <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative mt-8 shrink-0 mb-10 overflow-hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#00e5ff]/30 pb-2 mb-4 gap-4">
-                <span class="text-xs md:text-sm font-bold tracking-widest text-[#00e5ff]">> BANDEJA DE REPORTES INTERCEPTADOS</span>
-                <button onclick="generateMasterReport()" class="border border-[#00e5ff] px-4 py-2 text-[10px] md:text-xs hover:bg-[#00e5ff] hover:text-black font-bold transition-all shadow-[0_0_10px_rgba(0,229,255,0.2)] w-full md:w-auto">
-                    [ EXPORTAR REPORTE MAESTRO ]
-                </button>
-            </div>
-            
-            <div class="overflow-x-auto">
-                <div class="min-w-[700px]">
-                    <div class="grid grid-cols-12 gap-4 text-[10px] opacity-70 mb-2 px-2 uppercase tracking-widest">
-                        <div class="col-span-2">HORA</div>
-                        <div class="col-span-3">OPERADOR</div>
-                        <div class="col-span-3">CLASIFICACIÓN</div>
-                        <div class="col-span-4">DETALLE DEL PROBLEMA</div>
-                    </div>
-                    
-                    <div id="admin-reports-list-2" class="bg-[#000511] border border-[#00e5ff]/20 p-2 overflow-y-auto h-[250px] custom-scrollbar space-y-2">
-                        <div class="text-center opacity-50 text-xs py-8">> NO HAY REPORTES EN LA BANDEJA...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </main>
 
     <div id="analysis-modal" class="hidden fixed inset-0 bg-black z-50 p-4 md:p-10 flex-col overflow-y-auto md:overflow-hidden">
@@ -397,98 +390,52 @@
         </div>
     </div>
 
-    <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/95 z-[105] flex items-center justify-center p-4">
-        <div class="border-2 border-[#f97316] bg-[#000502] p-6 w-full max-w-md shadow-[0_0_30px_rgba(249,115,22,0.15)] flex flex-col relative">
-        
-        <h2 class="text-2xl font-bold tracking-widest uppercase text-[#f97316] text-center border-b border-[#f97316]/30 pb-4 mb-4">
-            NUEVO CULTIVO
-        </h2>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-[10px] text-[#f97316] mb-1 uppercase tracking-widest">Nombre/Especie:</label>
-                <input type="text" placeholder="Ej. Tomate Cherry" class="w-full bg-[#001105] border border-[#00ffaa]/30 text-[#00ffaa] p-2 text-sm focus:outline-none focus:border-[#f97316] font-mono transition-colors">
-            </div>
-
-            <div>
-                <label class="block text-[10px] text-[#f97316] mb-1 uppercase tracking-widest">Clasificación:</label>
-                <select class="w-full bg-[#001105] border border-[#00ffaa]/30 text-[#00ffaa] p-2 text-sm focus:outline-none focus:border-[#f97316] font-mono transition-colors appearance-none cursor-crosshair">
-                    <option value="frutales">Plantas Frutales</option>
-                    <option value="desierto">Plantas de Desierto</option>
-                    <option value="hidroponia">Hidroponía</option>
-                    <option value="vegetales">Vegetales</option>
-                </select>
-            </div>
-
-            <div class="flex gap-4">
-                <div class="flex-1">
-                    <label class="block text-[10px] text-[#f97316] mb-1 uppercase tracking-widest">Cantidad:</label>
-                    <input type="number" min="1" value="1" class="w-full bg-[#001105] border border-[#00ffaa]/30 text-[#00ffaa] p-2 text-sm focus:outline-none focus:border-[#f97316] font-mono transition-colors">
-                </div>
-                <div class="flex-1">
-                    <label class="block text-[10px] text-[#f97316] mb-1 uppercase tracking-widest">Fecha Inicial:</label>
-                    <input type="date" class="w-full bg-[#001105] border border-[#00ffaa]/30 text-[#00ffaa] p-2 text-sm focus:outline-none focus:border-[#f97316] font-mono transition-colors" style="color-scheme: dark;">
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-8 space-y-3">
-            <button type="button" onclick="registerNewPlant()" class="w-full border border-[#00ffaa] bg-[#001105] text-[#00ffaa] py-3 hover:bg-[#00ffaa] hover:text-black font-bold transition-colors mt-6 text-sm tracking-widest">
-                > GUARDAR E INICIALIZAR
-            </button>
-            <button onclick="closeAddPlantModal()" class="w-full border border-red-500/50 text-red-500 py-2 hover:bg-red-500 hover:text-black transition-colors font-bold tracking-widest uppercase text-xs">
-                [ CANCELAR ]
-            </button>
-        </div>
-        </div>
-    </div>>
-
     <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 md:p-6">
-    <div class="border-2 border-[#f97316] bg-black p-6 md:p-8 w-full max-w-lg shadow-[0_0_30px_rgba(249,115,22,0.2)]">
-        <h2 class="text-2xl font-bold tracking-widest mb-6 border-b border-[#f97316]/30 pb-2 text-center uppercase text-[#f97316]">Vincular Nuevo Cultivo</h2>
-        
-        <div class="space-y-4 mb-6">
-            <p class="text-xs text-white/70 font-mono mb-4 animate-pulse">> SISTEMA ESPERANDO INGRESO DE DATOS...</p>
+        <div class="border-2 border-[#f97316] bg-black p-6 md:p-8 w-full max-w-lg shadow-[0_0_30px_rgba(249,115,22,0.2)]">
+            <h2 class="text-2xl font-bold tracking-widest mb-6 border-b border-[#f97316]/30 pb-2 text-center uppercase text-[#f97316]">Vincular Nuevo Cultivo</h2>
             
-            <div class="flex flex-col gap-2">
-                <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Alias / Nombre de la Planta:</label>
-                <input type="text" id="new-plant-name" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Mi Tomate Cherry" autocomplete="off">
+            <div class="space-y-4 mb-6">
+                <p class="text-xs text-white/70 font-mono mb-4 animate-pulse">> SISTEMA ESPERANDO INGRESO DE DATOS...</p>
+                
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Alias / Nombre de la Planta:</label>
+                    <input type="text" id="new-plant-name" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Mi Tomate Cherry" autocomplete="off">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Especie Botánica:</label>
+                    <select id="new-plant-type" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs cursor-pointer focus:border-[#f97316]">
+                        <option value="hortaliza">Hortaliza / Vegetal</option>
+                        <option value="medicinal">Planta Medicinal</option>
+                        <option value="frutal">Árbol Frutal</option>
+                        <option value="ornamental">Ornamental / Flor</option>
+                        <option value="otro">Otra Especie</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Sector o Ubicación:</label>
+                    <input type="text" id="new-plant-sector" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Huerto Trasero / Maceta 1">
+                </div>
+                
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Fecha de Siembra:</label>
+                    <input type="date" id="new-plant-date" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316] color-scheme-dark">
+                </div>
             </div>
 
-            <div class="flex flex-col gap-2">
-                <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Especie Botánica:</label>
-                <select id="new-plant-type" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs cursor-pointer focus:border-[#f97316]">
-                    <option value="hortaliza">Hortaliza / Vegetal</option>
-                    <option value="medicinal">Planta Medicinal</option>
-                    <option value="frutal">Árbol Frutal</option>
-                    <option value="ornamental">Ornamental / Flor</option>
-                    <option value="otro">Otra Especie</option>
-                </select>
+            <div class="flex flex-col gap-3">
+                <button onclick="registerNewPlant()" class="w-full border-2 border-[#f97316] bg-[#f97316]/10 py-3 hover:bg-[#f97316] hover:text-black font-bold uppercase tracking-widest transition-all text-sm text-[#f97316]">
+                    [ INICIALIZAR SENSORES ]
+                </button>
+                <button onclick="closeAddPlantModal()" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
+                    [ CANCELAR ]
+                </button>
             </div>
-
-            <div class="flex flex-col gap-2">
-                <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Sector o Ubicación:</label>
-                <input type="text" id="new-plant-sector" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Huerto Trasero / Maceta 1">
-            </div>
-            
-            <div class="flex flex-col gap-2">
-                <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Fecha de Siembra:</label>
-                <input type="date" id="new-plant-date" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316] color-scheme-dark">
-            </div>
-        </div>
-
-        <div class="flex flex-col gap-3">
-            <button onclick="registerNewPlant()" class="w-full border-2 border-[#f97316] bg-[#f97316]/10 py-3 hover:bg-[#f97316] hover:text-black font-bold uppercase tracking-widest transition-all text-sm text-[#f97316]">
-                [ INICIALIZAR SENSORES ]
-            </button>
-            <button onclick="closeAddPlantModal()" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
-                [ CANCELAR ]
-            </button>
         </div>
     </div>
-</div>
 
-<div id="loading-scan-modal" class="hidden fixed inset-0 bg-black/95 z-[110] flex flex-col items-center justify-center p-4">
+    <div id="loading-scan-modal" class="hidden fixed inset-0 bg-black/95 z-[110] flex flex-col items-center justify-center p-4">
         <div class="border border-[#00ffaa] p-8 max-w-sm w-full bg-[#001105] shadow-[0_0_30px_rgba(0,255,170,0.2)] text-center flex flex-col items-center">
             <svg class="w-12 h-12 text-[#00ffaa] animate-spin mb-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             <p class="text-[#00ffaa] font-bold tracking-widest text-sm mb-2 animate-pulse">> ANALIZANDO BIOMETRÍA...</p>
@@ -563,97 +510,97 @@
     </div>
 
     <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4 font-mono">
-    <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.15)] relative">
-        
-        <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
-            > ENLACE DE HARDWARE: ESP32_NODE
-        </h2>
-
-        <div id="iot-step-1" class="iot-step block">
-            <p class="text-white/80 text-sm mb-4">> Escaneando frecuencias locales en busca de hardware AgroGuard...</p>
-            <div class="animate-pulse text-[#00ffaa] text-center my-8 text-2xl">[ RADARES ACTIVOS ]</div>
-            <button onclick="nextIotStep(2)" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
-                > SIMULAR DISPOSITIVO ENCONTRADO
-            </button>
-        </div>
-
-        <div id="iot-step-2" class="iot-step hidden">
-            <p class="text-white/80 text-sm mb-4">> Dispositivo detectado. Ingrese credenciales de red local (2.4 GHz).</p>
+        <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.15)] relative">
             
-            <label class="block text-[#00ffaa] text-xs mb-1">> SSID (Nombre de red)</label>
-            <input type="text" id="wifi-ssid" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 mb-4 outline-none focus:border-[#00ffaa]" placeholder="Ej. Red_Casa_2.4G">
-            
-            <label class="block text-[#00ffaa] text-xs mb-1">> PASSWORD</label>
-            <div class="relative mb-6">
-                <input type="password" id="wifi-pass" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 outline-none focus:border-[#00ffaa] font-sans" placeholder="********">
-                <button onclick="toggleWifiPassword()" class="absolute right-2 top-2 text-[#00ffaa]/70 hover:text-[#00ffaa] text-xs">
-                    [ VER ]
+            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
+                > ENLACE DE HARDWARE: ESP32_NODE
+            </h2>
+
+            <div id="iot-step-1" class="iot-step block">
+                <p class="text-white/80 text-sm mb-4">> Escaneando frecuencias locales en busca de hardware AgroGuard...</p>
+                <div class="animate-pulse text-[#00ffaa] text-center my-8 text-2xl">[ RADARES ACTIVOS ]</div>
+                <button onclick="nextIotStep(2)" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
+                    > SIMULAR DISPOSITIVO ENCONTRADO
                 </button>
             </div>
 
-            <div class="flex justify-between">
-                <button onclick="nextIotStep(1)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
-                <button onclick="nextIotStep(3)" class="border border-[#00ffaa] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs">> SIGUIENTE</button>
+            <div id="iot-step-2" class="iot-step hidden">
+                <p class="text-white/80 text-sm mb-4">> Dispositivo detectado. Ingrese credenciales de red local (2.4 GHz).</p>
+                
+                <label class="block text-[#00ffaa] text-xs mb-1">> SSID (Nombre de red)</label>
+                <input type="text" id="wifi-ssid" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 mb-4 outline-none focus:border-[#00ffaa]" placeholder="Ej. Red_Casa_2.4G">
+                
+                <label class="block text-[#00ffaa] text-xs mb-1">> PASSWORD</label>
+                <div class="relative mb-6">
+                    <input type="password" id="wifi-pass" class="w-full bg-transparent border border-[#00ffaa]/50 text-white p-2 outline-none focus:border-[#00ffaa] font-sans" placeholder="********">
+                    <button onclick="toggleWifiPassword()" class="absolute right-2 top-2 text-[#00ffaa]/70 hover:text-[#00ffaa] text-xs">
+                        [ VER ]
+                    </button>
+                </div>
+
+                <div class="flex justify-between">
+                    <button onclick="nextIotStep(1)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
+                    <button onclick="nextIotStep(3)" class="border border-[#00ffaa] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs">> SIGUIENTE</button>
+                </div>
             </div>
-        </div>
 
-        <div id="iot-step-3" class="iot-step hidden">
-            <p class="text-yellow-400 text-sm mb-4">> ADVERTENCIA: Verifique los datos antes de inyectar el payload al ESP32.</p>
-            <div class="bg-[#001105] border border-[#00ffaa]/30 p-4 mb-6 text-sm text-white/80 space-y-2">
-                <p>TARGET: <span class="text-[#00ffaa]">ESP32_AGRO_01</span></p>
-                <p>SSID: <span id="confirm-ssid" class="text-[#00ffaa]">---</span></p>
-                <p>ENCRIPTACIÓN: <span class="text-[#00ffaa]">WPA2-PSK</span></p>
+            <div id="iot-step-3" class="iot-step hidden">
+                <p class="text-yellow-400 text-sm mb-4">> ADVERTENCIA: Verifique los datos antes de inyectar el payload al ESP32.</p>
+                <div class="bg-[#001105] border border-[#00ffaa]/30 p-4 mb-6 text-sm text-white/80 space-y-2">
+                    <p>TARGET: <span class="text-[#00ffaa]">ESP32_AGRO_01</span></p>
+                    <p>SSID: <span id="confirm-ssid" class="text-[#00ffaa]">---</span></p>
+                    <p>ENCRIPTACIÓN: <span class="text-[#00ffaa]">WPA2-PSK</span></p>
+                </div>
+                
+                <div class="flex justify-between">
+                    <button onclick="nextIotStep(2)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
+                    <button onclick="startHardwareProvisioning()" class="border border-[#00ffaa] bg-[#001105] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> INYECTAR DATOS</button>
+                </div>
             </div>
-            
-            <div class="flex justify-between">
-                <button onclick="nextIotStep(2)" class="border border-gray-500 text-gray-500 px-4 py-2 hover:bg-gray-500 hover:text-black text-xs">> ATRÁS</button>
-                <button onclick="startHardwareProvisioning()" class="border border-[#00ffaa] bg-[#001105] text-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> INYECTAR DATOS</button>
+
+            <div id="iot-step-4" class="iot-step hidden text-center py-8">
+                <p class="text-[#00ffaa] text-lg mb-2 animate-pulse">> ESTABLECIENDO HANDSHAKE...</p>
+                <p class="text-white/50 text-xs font-mono">Transfiriendo paquetes cifrados al microcontrolador. No apague el equipo.</p>
             </div>
-        </div>
 
-        <div id="iot-step-4" class="iot-step hidden text-center py-8">
-            <p class="text-[#00ffaa] text-lg mb-2 animate-pulse">> ESTABLECIENDO HANDSHAKE...</p>
-            <p class="text-white/50 text-xs font-mono">Transfiriendo paquetes cifrados al microcontrolador. No apague el equipo.</p>
-        </div>
+            <div id="iot-step-5" class="iot-step hidden text-center py-6">
+                <div class="text-[#00ffaa] text-4xl mb-4">[ OK ]</div>
+                <p class="text-white mb-6">> Hardware provisionado exitosamente. El dispositivo se reiniciará y se conectará al servidor de Mole.AI.</p>
+                <button onclick="closeIotWizard()" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> CERRAR PANEL</button>
+            </div>
 
-        <div id="iot-step-5" class="iot-step hidden text-center py-6">
-            <div class="text-[#00ffaa] text-4xl mb-4">[ OK ]</div>
-            <p class="text-white mb-6">> Hardware provisionado exitosamente. El dispositivo se reiniciará y se conectará al servidor de Mole.AI.</p>
-            <button onclick="closeIotWizard()" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black text-xs font-bold">> CERRAR PANEL</button>
-        </div>
-
-        <button id="iot-close-btn" onclick="closeIotWizard()" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">
-            [X]
-        </button>
-        </div>
-        </div>
-
-        <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 font-mono">
-    <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-md shadow-[0_0_30px_rgba(0,255,170,0.15)] relative text-left">
-        
-        <button onclick="closeUserProfile()" class="absolute top-4 right-4 text-[#00ffaa] hover:text-white font-bold text-xl">
-            [X]
-        </button>
-        
-        <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-6">
-            > STATUS DEL OPERADOR
-        </h2>
-        
-        <div class="space-y-4 text-sm mb-8">
-            <p><span class="text-[#00ffaa]">NOMBRE:</span> <span class="text-white" id="profile-name">Agente Mole</span></p>
-            <p><span class="text-[#00ffaa]">ID:</span> <span class="text-white">M-A1-9982</span></p>
-            <p><span class="text-[#00ffaa]">RANGO:</span> <span class="text-white">SUPERVISOR DE CULTIVOS</span></p>
-            <p><span class="text-[#00ffaa]">SESIÓN:</span> <span class="text-green-400 animate-pulse">ACTIVA</span></p>
-        </div>
-
-        <div class="border-t border-red-500/50 pt-6">
-            <p class="text-red-500 text-[10px] mb-3 font-bold uppercase tracking-tighter">Zona de Peligro / Derechos ARCO</p>
-            <button onclick="openDeleteModal()" class="w-full text-center text-red-500 hover:text-white hover:bg-red-600 py-2 transition-colors border border-red-500/50 font-bold text-xs">
-                ELIMINAR MI CUENTA DEL SISTEMA
+            <button id="iot-close-btn" onclick="closeIotWizard()" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">
+                [X]
             </button>
         </div>
     </div>
-</div>
+
+    <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4 font-mono">
+        <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-md shadow-[0_0_30px_rgba(0,255,170,0.15)] relative text-left">
+            
+            <button onclick="closeUserProfile()" class="absolute top-4 right-4 text-[#00ffaa] hover:text-white font-bold text-xl">
+                [X]
+            </button>
+            
+            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-6">
+                > STATUS DEL OPERADOR
+            </h2>
+            
+            <div class="space-y-4 text-sm mb-8">
+                <p><span class="text-[#00ffaa]">NOMBRE:</span> <span class="text-white" id="profile-name">Agente Mole</span></p>
+                <p><span class="text-[#00ffaa]">ID:</span> <span class="text-white">M-A1-9982</span></p>
+                <p><span class="text-[#00ffaa]">RANGO:</span> <span class="text-white">SUPERVISOR DE CULTIVOS</span></p>
+                <p><span class="text-[#00ffaa]">SESIÓN:</span> <span class="text-green-400 animate-pulse">ACTIVA</span></p>
+            </div>
+
+            <div class="border-t border-red-500/50 pt-6">
+                <p class="text-red-500 text-[10px] mb-3 font-bold uppercase tracking-tighter">Zona de Peligro / Derechos ARCO</p>
+                <button onclick="openDeleteModal()" class="w-full text-center text-red-500 hover:text-white hover:bg-red-600 py-2 transition-colors border border-red-500/50 font-bold text-xs">
+                    ELIMINAR MI CUENTA DEL SISTEMA
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="main.js"></script>
 </body>
