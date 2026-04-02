@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Efecto de encendido y apagado de TV para modales */
+        @keyframes tvOn {
+            0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); }
+            50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); }
+            100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); }
+        }
+        @keyframes tvOff {
+            0% { transform: scale(1, 1); opacity: 1; filter: brightness(1); }
+            50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3); }
+            100% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10); }
+        }
+        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+        .tv-off { animation: tvOff 0.25s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+    </style>
+</head>
+<body class="bg-black text-[#00ffaa] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
+    <div class="scanline"></div>
+
+    <div id="intro-screen" class="fixed inset-0 bg-black z-40 flex items-center justify-center p-4 md:p-10 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 w-full max-w-6xl h-auto md:h-full md:max-h-[650px] my-auto">
+            <div class="border-2 border-[#00ffaa] p-6 md:p-10 flex flex-col justify-between relative bg-black shadow-[0_0_20px_rgba(0,255,170,0.1)]">
+                <div>
+                    <h1 class="text-5xl md:text-7xl font-bold mb-2 tracking-wider text-[#00ffaa] drop-shadow-[0_0_15px_rgba(0,255,170,0.5)]">MoleAI</h1>
+                    <h2 class="text-sm md:text-xl tracking-[0.3em] md:tracking-[0.5em] mb-6 md:mb-8 opacity-70">MONITORING-TOOL</h2>
+                    <hr class="border-[#00ffaa]/40 mb-6 md:mb-10">
+                    <div class="flex flex-col gap-4 md:gap-6 text-lg md:text-xl tracking-widest">
+                        <button onclick="typeContent('objetivo')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">OBJETIVO</button>
+                        <button onclick="typeContent('vision')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
+                        <button onclick="typeContent('flora')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
+                        <button onclick="typeContent('acerca')" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">ACERCA DE LA WEB</button>
+                    </div>
+                </div>
+                <button onclick="startSystem()" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
+            </div>
+            <div class="border border-[#00ffaa]/30 p-6 md:p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)] min-h-[250px] md:min-h-0">
+                <p id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap text-left w-full min-h-[150px] font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="login-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-4 md:p-10">
+        <div class="border border-[#00ffaa] p-6 md:p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6">
+            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 border border-[#00ffaa] bg-black px-4 py-1">
+                <svg class="w-5 h-5 text-[#00ffaa]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            </div>
+            <h2 class="text-2xl md:text-3xl text-center font-bold tracking-widest mt-2">ACCESO SEGURO</h2>
+            
+            <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">USUARIO:</label>
+                <input type="text" id="user-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="admin / usuario" autocomplete="off">
+            </div>
+            <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">CLAVE:</label>
+                <input type="password" id="pass-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="••••••••">
+            </div>
+            
+            <div class="flex flex-col gap-2 mt-4">
+                <button onclick="attemptLogin()" class="border border-[#00ffaa]/50 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold">ENTRAR >></button>
+                <button onclick="showRegisterScreen()" class="border border-[#00ffaa]/30 py-2 text-xs hover:bg-[#00ffaa]/20 transition-all tracking-widest opacity-80 hover:opacity-100">[ CREAR NUEVO USUARIO ]</button>
+            </div>
+
+            <button onclick="showModule('intro')" class="text-xs text-center opacity-50 hover:opacity-100 transition-opacity mt-2 tracking-widest">Volver a inicio</button>
+            
+            <p id="login-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
+        </div>
+    </div>
+
+    <div id="register-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-4 md:p-10 overflow-y-auto">
+        <div class="border border-[#00ffaa] p-6 md:p-8 w-full max-w-2xl relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6 my-auto">
+            <h2 class="text-2xl md:text-3xl text-center font-bold tracking-widest mt-2 text-[#00ffaa] drop-shadow-[0_0_8px_rgba(0,255,170,0.5)]">REGISTRO DE OPERADOR</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="flex flex-col gap-2 md:col-span-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> NOMBRE DE USUARIO:</label>
+                    <input type="text" id="reg-user-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="Ej. Operador_01" autocomplete="off">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CORREO ELECTRÓNICO:</label>
+                    <input type="email" id="reg-email-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="agente@mole.ia">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CONFIRMAR CORREO:</label>
+                    <input type="email" id="reg-email-confirm-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="agente@mole.ia">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CONTRASEÑA:</label>
+                    <input type="password" id="reg-pass-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="••••••••">
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="tracking-widest text-xs text-[#00ffaa] opacity-80">> CONFIRMAR CONTRASEÑA:</label>
+                    <input type="password" id="reg-pass-confirm-input" class="bg-[#000502] border border-[#00ffaa]/30 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full text-sm" placeholder="••••••••">
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-3 mt-2">
+                <button onclick="submitRegistration()" class="border border-[#00ffaa]/50 bg-[#00ffaa]/10 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold text-[#00ffaa] hover:shadow-[0_0_15px_rgba(0,255,170,0.6)]">[ CREAR CREDENCIALES ]</button>
+                <button onclick="backToLogin()" class="border border-[#00ffaa]/30 py-2 text-xs text-[#00ffaa]/70 hover:text-[#00ffaa] hover:bg-[#00ffaa]/20 transition-all tracking-widest">[ VOLVER AL LOGIN ]</button>
+            </div>
+
+            <p id="reg-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR: LOS DATOS NO COINCIDEN.</p>
+            <p id="reg-success" class="text-[#00ffaa] text-center text-xs hidden font-bold tracking-widest">USUARIO CREADO EN LA BASE DE DATOS.</p>
+        </div>
+    </div>
+    
+    <main id="main-dashboard" class="hidden h-screen md:overflow-hidden overflow-y-auto p-4 md:p-6 flex-col relative">
+        <header class="flex flex-col xl:flex-row justify-between items-center border-b-2 border-[#00ffaa] pb-4 mb-6 gap-4 relative z-50">
+            <div class="flex flex-col items-center xl:items-start shrink-0">
+                <h1 class="text-3xl md:text-4xl font-bold tracking-tighter leading-none text-[#00ffaa]">MOLE-IA</h1>
+                <span class="text-[9px] mt-1 animate-pulse uppercase text-[#00ffaa]">● System Online</span>
+            </div>
+
+            <nav class="flex flex-wrap items-center justify-center gap-2 md:gap-3 w-full xl:w-auto">
+                <button onclick="openModalWithTV('iot-wizard-modal')" class="border-2 border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest whitespace-nowrap shadow-[0_0_10px_rgba(0,255,170,0.2)]">
+                    [ VINCULAR ESP32 ]
+                </button>
+
+                <div id="new-user-plants" class="hidden flex flex-wrap items-center justify-center gap-2">
+                    <button onclick="openModalWithTV('add-plant-modal')" class="border border-dashed border-[#f97316] text-[#f97316] px-3 py-1 text-xs hover:bg-[#f97316] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
+                        [+ VINCULAR CULTIVO ]
+                    </button>
+                </div>
+
+                <button onclick="openModalWithTV('history-modal')" class="border border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
+                    [ MI HUERTO / HISTORIAL ]
+                </button>
+
+                <button onclick="openModalWithTV('map-modal')" class="border border-[#00ffaa] text-[#00ffaa] px-3 py-1 text-xs hover:bg-[#00ffaa] hover:text-black transition-colors font-bold tracking-widest whitespace-nowrap">
+                    [ MAPA EPIDEMIOLÓGICO ]
+                </button>
+            </nav>
+
+            <div class="flex flex-col md:flex-row items-center gap-4 shrink-0 mt-2 xl:mt-0 relative">
+                <div id="clock" class="text-2xl md:text-3xl font-bold tracking-tighter text-[#00ffaa]">00:00:00</div>
+                
+                <div class="relative group ml-auto">
+                    <button onclick="toggleProfileDropdown()" class="flex items-center gap-2 border border-[#00ffaa]/50 hover:bg-[#00ffaa] hover:text-black text-[#00ffaa] px-3 py-1 transition-all shadow-[0_0_15px_rgba(0,255,170,0.1)]">
+                        <span class="text-lg font-bold">[ :() ]</span>
+                        <span class="text-[10px] font-bold tracking-widest uppercase">PERFIL</span>
+                    </button>
+                    
+                    <div id="profile-dropdown" class="hidden absolute top-full right-0 mt-2 border-2 border-[#00ffaa] bg-[#000502] min-w-[220px] shadow-[0_0_20px_rgba(0,255,170,0.3)] p-4 flex-col gap-2 origin-top-right transition-all">
+                        <p class="text-[10px] text-[#00ffaa]/70">OPERADOR: <span class="text-white font-bold" id="dropdown-user-name">AGENTE MOLE</span></p>
+                        <p class="text-[10px] text-[#00ffaa]/70 border-b border-[#00ffaa]/30 pb-2 mb-2">STATUS: <span class="text-green-400 animate-pulse font-bold">ONLINE</span></p>
+                        <button onclick="logout()" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all tracking-widest">
+                            [ CERRAR SESIÓN ]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 flex-1 items-center min-h-0 pb-20 md:pb-0">
+            <div class="md:col-span-3 space-y-6 order-2 md:order-1">
+                <div class="stat-card">
+                    <span class="label">HUMEDAD AMBIENTE</span>
+                    <span id="txt-hum" class="value text-5xl md:text-6xl">--%</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">TEMPERATURA</span>
+                    <span id="txt-temp" class="value text-5xl md:text-6xl">--°C</span>
+                </div>
+                <button onclick="openModalWithTV('analysis-modal')" class="w-full border-2 border-[#f97316] text-[#f97316] py-3 mt-4 hover:bg-[#f97316] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(249,115,22,0.3)] text-sm md:text-base">
+                    VER ANÁLISIS DETALLADO 
+                </button>
+            </div>
+
+            <div class="md:col-span-6 flex justify-center order-1 md:order-2">
+    <div class="relative w-full aspect-square border-2 border-[#00ffaa] p-1 bg-black group overflow-hidden max-w-[500px] flex flex-col">
+        
+        <div class="relative flex-1 w-full h-full overflow-hidden">
+            <div class="absolute top-4 left-4 z-20 bg-black/80 border border-[#00ffaa] px-2 py-1 text-[10px]">LIVE_FEED // <span id="plant-tag">SIN ASIGNAR</span></div>
+            
+            <div id="video-placeholder" class="w-full h-full flex flex-col items-center justify-center text-[#00ffaa]/40 font-bold border border-dashed border-[#00ffaa]/20 text-xs md:text-sm animate-pulse p-10 text-center">
+                <svg class="w-12 h-12 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                [ ESPERANDO VINCULACIÓN DE CULTIVO ]
+            </div>
+            
+            <img id="main-img" src="img/manzanilla.jpg" class="w-full h-full object-cover plant-filter group-hover:filter-none hidden absolute inset-0">
+        </div>
+        
+        <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageUpload(event)">
+    
+        <button onclick="document.getElementById('camera-input').click()" class="w-full border-2 border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-3 mt-1 hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest text-sm animate-pulse hover:animate-none flex justify-center items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            [ INICIAR ESCANEO DE BIOMASA ]
+        </button>
+    </div>
+</div>
+            <div class="md:col-span-3 space-y-6 md:text-right order-3">
+                <button onclick="openModalWithTV('contact-modal')" class="w-full h-24 border border-[#00ffaa]/50 bg-[#001105] hover:bg-[#00ffaa] hover:text-black text-[#00ffaa] flex flex-col items-center justify-center transition-all shadow-[0_0_15px_rgba(0,255,170,0.05)] cursor-pointer">
+                    <span class="text-2xl font-bold mb-1">(!)</span>
+                    <span class="text-xs font-bold tracking-widest">> CONTÁCTANOS</span>
+                </button>
+                <div class="stat-card">
+                    <span class="label">pH DEL SUELO</span>
+                    <span id="txt-ph" class="value text-5xl md:text-6xl">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="label">ÍNDICE UV</span>
+                    <span id="txt-uv" class="value text-3xl md:text-4xl pt-4 block">ESPERANDO...</span>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="toggleChat()" class="fixed md:absolute bottom-4 md:bottom-8 right-4 md:right-8 w-14 h-14 border-2 border-[#00ffaa] bg-black text-[#00ffaa] flex items-center justify-center shadow-[0_0_15px_rgba(0,255,170,0.2)] hover:bg-[#00ffaa] hover:text-black transition-all z-50 group rounded-full md:rounded-none">
+            <svg class="w-6 h-6 animate-pulse group-hover:animate-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+        </button>
+
+        <div id="chat-window" class="hidden fixed md:absolute bottom-20 md:bottom-24 right-4 md:right-8 w-[90%] md:w-80 h-[400px] border-2 border-[#00ffaa] bg-black z-50 flex-col shadow-[0_0_20px_rgba(0,255,170,0.15)]">
+            <div class="border-b-2 border-[#00ffaa] p-3 flex justify-between items-center bg-[#001105]">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-[#f97316] rounded-full animate-ping"></span>
+                    <span class="font-bold tracking-widest text-sm text-[#00ffaa]">ASISTENTE MOLE-IA</span>
+                </div>
+                <button onclick="toggleChat()" class="text-sm hover:text-red-500 font-bold tracking-widest p-2">[X]</button>
+            </div>
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-mono">
+            </div>
+
+            <div class="border-t-2 border-[#00ffaa] p-2 flex bg-black">
+                <span class="text-[#00ffaa] mr-2 mt-1">></span>
+                <input type="text" id="chat-input" class="flex-1 bg-transparent text-[#00ffaa] outline-none placeholder-[#00ffaa]/30 font-mono text-xs" placeholder="Ingresa comando..." autocomplete="off">
+                <button onclick="sendChatMessage()" class="ml-2 text-[#00ffaa] hover:text-white font-bold transition-colors text-xs p-2">ENVIAR</button>
+            </div>
+        </div>
+    </main>
+
+    <main id="admin-dashboard" class="hidden h-screen overflow-y-auto p-4 md:p-6 flex-col relative text-[#00e5ff] font-mono bg-[#000511]">
+        <header class="flex flex-col md:flex-row justify-between items-start border-b-2 border-[#00e5ff] pb-4 mb-6 shrink-0 gap-4">
+            <div class="flex gap-6">
+                <div class="flex flex-col border-b md:border-b-0 md:border-r border-[#00e5ff]/30 pb-4 md:pb-0 md:pr-6">
+                    <h1 class="text-2xl md:text-3xl font-bold tracking-tighter leading-none text-[#00e5ff] drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]">OVERRIDE DE ADMIN</h1>
+                    <span class="text-[12px] mt-1 animate-pulse uppercase font-bold text-white">> BIENVENIDO SUPERVISOR</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 md:gap-4 w-full md:w-auto">
+                <button onclick="downloadAdminReport()" class="flex-1 md:flex-none border-2 border-[#00e5ff] px-2 md:px-4 py-2 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-colors shadow-[0_0_10px_rgba(0,229,255,0.3)] text-xs md:text-sm text-center">
+                    [ DESCARGAR REPORTE ]
+                </button>
+                <button onclick="logout()" class="flex-1 md:flex-none border-2 border-[#ff4444] text-[#ff4444] px-2 md:px-4 py-2 hover:bg-[#ff4444] hover:text-black font-bold tracking-widest transition-colors text-xs md:text-sm text-center">
+                    [ SALIR ]
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 min-h-[350px] shrink-0">
+            <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 relative shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] h-[250px] md:h-auto">
+                <span class="text-xs md:text-sm font-bold tracking-widest mb-4 opacity-80 border-b border-[#00e5ff]/30 pb-2">ESTADO DE USUARIOS EN RED</span>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="admin-chart-users"></canvas>
+                </div>
+            </div>
+
+            <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 relative shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] h-[250px] md:h-auto">
+                <span class="text-xs md:text-sm font-bold tracking-widest mb-4 opacity-80 border-b border-[#00e5ff]/30 pb-2">TASA DE NUEVOS REGISTROS (7 DÍAS)</span>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="admin-chart-regs"></canvas>
+                </div>
+            </div>
+
+            <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 relative shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] h-[250px] md:h-auto">
+                <span class="text-xs md:text-sm font-bold tracking-widest mb-4 opacity-80 border-b border-[#00e5ff]/30 pb-2">SALUD GLOBAL DEL HUERTO</span>
+                <div class="flex-1 relative w-full h-full">
+                    <canvas id="admin-chart-plants"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="analysis-modal" class="hidden fixed inset-0 bg-black/90 z-50 p-4 md:p-10 flex-col overflow-y-auto md:overflow-hidden items-center justify-center">
+        <div class="border-2 border-[#00ffaa] bg-[#001105] w-full h-full max-w-7xl flex flex-col p-6 shadow-[0_0_30px_rgba(0,255,170,0.2)]">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-[#00ffaa] pb-4 mb-6 md:mb-8 gap-4">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl md:text-3xl tracking-widest font-bold uppercase">ANÁLISIS DE DATOS</h2>
+                </div>
+                <button onclick="closeModalWithTV('analysis-modal')" class="border border-red-500 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black font-bold transition-colors uppercase tracking-widest w-full md:w-auto">
+                    [ X CERRAR ]
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 h-auto md:h-[45%] mb-6 md:mb-8 shrink-0">
+                <div class="border border-[#00ffaa]/30 p-4 bg-black relative h-[250px] md:h-full">
+                    <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE HUMEDAD</span>
+                    <canvas id="chart-hum"></canvas>
+                </div>
+                <div class="border border-[#00ffaa]/30 p-4 bg-black relative h-[250px] md:h-full">
+                    <span class="absolute top-2 left-4 text-[10px] opacity-50">HISTORIAL DE TEMPERATURA</span>
+                    <canvas id="chart-temp"></canvas>
+                </div>
+            </div>
+
+            <div class="flex-1 border border-[#00ffaa] flex flex-col overflow-hidden min-h-[300px] md:min-h-0 shrink-0 mb-10 md:mb-0">
+                <div class="bg-[#00ffaa] text-black px-4 py-2 text-sm font-bold uppercase shrink-0">REGISTRO DE EVENTOS</div>
+                <div class="p-4 md:p-6 flex-1 bg-black overflow-y-auto custom-scrollbar">
+                    <div id="log-list" class="space-y-4 text-[11px] md:text-[13px]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="contact-modal" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center p-4 md:p-6">
+        <div class="border-2 border-[#00ffaa] bg-black p-6 md:p-8 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.2)] max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl md:text-3xl font-bold tracking-widest mb-6 border-b border-[#00ffaa]/30 pb-2 text-center uppercase">Comentario</h2>
+            
+            <div class="space-y-4 mb-6">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">ID de Operador:</label>
+                    <input type="text" id="contact-user" class="bg-[#001105] border border-[#00ffaa]/50 p-3 md:p-2 text-[#00ffaa] outline-none font-mono text-xs md:text-sm" readonly>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#00ffaa]">Detalles del Reporte:</label>
+                    <textarea id="contact-msg" rows="4" class="bg-[#001105] border border-[#00ffaa]/50 p-3 md:p-2 text-[#00ffaa] outline-none font-mono text-xs md:text-sm resize-none custom-scrollbar" placeholder="Describa la situación..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 relative">
+                <button onclick="sendReport()" class="w-full border-2 border-[#00ffaa] bg-[#00ffaa]/10 py-4 md:py-3 hover:bg-[#00ffaa] hover:text-black font-bold uppercase tracking-widest transition-all text-sm md:text-base">
+                    [ TRANSMITIR DATOS ]
+                </button>
+                <button onclick="closeModalWithTV('contact-modal')" class="w-full border border-red-500 text-red-500 py-3 md:py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
+                    [ ABORTAR TRANSMISIÓN ]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/95 z-[100] items-center justify-center p-4 md:p-6">
+        <div class="border-2 border-[#f97316] bg-black p-6 md:p-8 w-full max-w-lg shadow-[0_0_30px_rgba(249,115,22,0.2)]">
+            <h2 class="text-2xl font-bold tracking-widest mb-6 border-b border-[#f97316]/30 pb-2 text-center uppercase text-[#f97316]">Vincular Nuevo Cultivo</h2>
+            <div class="space-y-4 mb-6">
+                <p class="text-xs text-white/70 font-mono mb-4 animate-pulse">> SISTEMA ESPERANDO INGRESO DE DATOS...</p>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[10px] uppercase opacity-80 text-[#f97316]">Alias de la Planta:</label>
+                    <input type="text" id="new-plant-name" class="bg-[#001105] border border-[#f97316]/50 p-2 text-[#f97316] outline-none font-mono text-xs focus:border-[#f97316]" placeholder="Ej. Mi Tomate Cherry" autocomplete="off">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="registerNewPlant()" class="w-full border-2 border-[#f97316] bg-[#f97316]/10 py-3 hover:bg-[#f97316] hover:text-black font-bold uppercase tracking-widest transition-all text-sm text-[#f97316]">
+                    [ INICIALIZAR SENSORES ]
+                </button>
+                <button onclick="closeModalWithTV('add-plant-modal')" class="w-full border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase text-xs transition-all">
+                    [ CANCELAR ]
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="diagnosis-result-modal" class="hidden fixed inset-0 bg-black/95 z-[105] items-center justify-center p-4">
+        <div class="border-2 border-[#00ffaa] bg-black p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.2)] flex flex-col">
+            <h2 class="text-xl md:text-2xl font-bold tracking-widest mb-2 border-b border-[#00ffaa]/30 pb-2 uppercase text-white">> REPORTE FITOSANITARIO</h2>
+            <div class="mt-6 border border-[#00ffaa]/30 bg-[#001105] p-3">
+                <p class="text-[10px] md:text-xs text-[#00ffaa]/70 uppercase mb-2">> RECOMENDACIÓN DE TRATAMIENTO:</p>
+                <p id="diag-treatment" class="text-xs text-white/90 font-mono leading-relaxed custom-scrollbar max-h-32 overflow-y-auto">
+                    --
+                </p>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3 mt-6">
+                <button onclick="saveToFavorites()" class="flex-1 border border-[#f97316] text-[#f97316] py-2 hover:bg-[#f97316] hover:text-black font-bold uppercase tracking-widest transition-all text-xs">
+                    [ GUARDAR FAVORITO ]
+                </button>
+                <button onclick="closeModalWithTV('diagnosis-result-modal')" class="flex-1 border border-red-500 text-red-500 py-2 hover:bg-red-500 hover:text-black font-bold uppercase tracking-widest transition-all text-xs">
+                    [ X CERRAR ]
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="history-modal" class="hidden fixed inset-0 bg-black/95 z-[105] items-center justify-center p-4">
+        <div class="border-2 border-[#00ffaa] bg-[#001105] p-6 w-full max-w-4xl shadow-[0_0_30px_rgba(0,255,170,0.2)] flex flex-col h-[80vh]">
+            <div class="flex justify-between items-center border-b border-[#00ffaa]/30 pb-4 mb-4">
+                <h2 class="text-xl md:text-2xl font-bold tracking-widest uppercase text-white">> BASE DE DATOS: MI HUERTO</h2>
+                <button onclick="closeModalWithTV('history-modal')" class="text-red-500 border border-red-500 px-2 py-1 hover:bg-red-500 hover:text-black font-bold text-xs md:text-sm tracking-widest">[ X CERRAR ]</button>
+            </div>
+            <div id="history-list-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
+            </div>
+        </div>
+    </div>
+
+    <div id="map-modal" class="hidden fixed inset-0 bg-black/95 z-[105] items-center justify-center p-4">
+        <div class="border-2 border-[#00ffaa] bg-[#001105] p-6 w-full max-w-5xl shadow-[0_0_30px_rgba(0,255,170,0.2)] flex flex-col h-[85vh]">
+            <div class="flex justify-between items-center border-b border-[#00ffaa]/30 pb-4 mb-4">
+                <h2 class="text-xl md:text-2xl font-bold tracking-widest uppercase text-white">> GEO-RASTREO DE FOCOS DE INFECCIÓN</h2>
+                <button onclick="closeModalWithTV('map-modal')" class="text-red-500 border border-red-500 px-2 py-1 hover:bg-red-500 hover:text-black font-bold text-xs md:text-sm tracking-widest">[ X CERRAR ]</button>
+            </div>
+            <div id="map-container" class="flex-1 w-full border border-[#00ffaa]/30 relative bg-[#001105] z-0">
+            </div>
+        </div>
+    </div>
+
+    <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/95 z-[110] items-center justify-center p-4 font-mono">
+        <div class="border-2 border-[#00ffaa] bg-[#000502] p-6 w-full max-w-lg shadow-[0_0_30px_rgba(0,255,170,0.15)] relative">
+            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
+                > ENLACE DE HARDWARE: ESP32_NODE
+            </h2>
+            <div id="iot-step-1" class="iot-step block">
+                <p class="text-white/80 text-sm mb-4">> Escaneando frecuencias locales en busca de hardware AgroGuard...</p>
+                <div class="animate-pulse text-[#00ffaa] text-center my-8 text-2xl">[ RADARES ACTIVOS ]</div>
+                <button onclick="nextIotStep(2)" class="w-full border border-[#00ffaa] text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
+                    > SIMULAR DISPOSITIVO ENCONTRADO
+                </button>
+            </div>
+            <button id="iot-close-btn" onclick="closeModalWithTV('iot-wizard-modal')" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">
+                [X]
+            </button>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
