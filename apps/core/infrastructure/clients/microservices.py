@@ -220,12 +220,13 @@ class MicroserviceClientFactory:
     
     @staticmethod
     def create_data_processing_client() -> DataProcessingMicroserviceClient:
-        """Create data processing microservice client."""
+        """Create data processing microservice client (Mole-AI Chat)."""
+        # Sincronizamos con la variable de entorno real de tu .env
         config = ServiceConfig(
-            name="Data Processing Service",
-            base_url=getattr(settings, 'DATA_PROCESSING_MICROSERVICE_URL', 'http://localhost:8002'),
-            api_key=getattr(settings, 'DATA_PROCESSING_MICROSERVICE_API_KEY', None),
-            timeout_seconds=30,
+            name="Mole-AI Service",
+            base_url=getattr(settings, 'MOLE_AI_SERVICE_URL', 'http://ms2_chat:8002'),
+            api_key=getattr(settings, 'MOLE_AI_API_KEY', None),
+            timeout_seconds=getattr(settings, 'MOLE_AI_TIMEOUT', 120),
         )
         return DataProcessingMicroserviceClient(config)
 

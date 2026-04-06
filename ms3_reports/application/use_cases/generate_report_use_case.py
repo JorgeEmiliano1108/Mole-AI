@@ -104,15 +104,35 @@ class GenerateReportUseCase:
             pdf_bytes = WeasyPrintReportGenerator.generate_pdf(html)
             self.job_store.set_progress(job_id, 95)
 
-            # 6) Upload PDF to local volume
+            # 6) Upload PDF to Cloud (S3) and Local Volume Backup
             import os
-            reports_dir = "/app/media/reports"
+            
+            # Ruta absoluta limpia para evitar la duplicación de carpetas
+            BASE_DIR = "/srv/ms3_reports" 
+            reports_dir = os.path.join(BASE_DIR, "media", "reports")
             os.makedirs(reports_dir, exist_ok=True)
-            local_path = os.path.join(reports_dir, f"{job_id}.pdf")
+            
+            filename = f"report_{job_id}.pdf"
+            local_path = os.path.join(reports_dir, filename)
+            
+            # Backup Local 
             with open(local_path, "wb") as f:
                 f.write(pdf_bytes)
             
-            public_url = f"/static/reports/{job_id}.pdf"
+            public_url = f"/static/reports/{filename}" # Fallback URL
+            
+            # Persistencia Principal en Nube (MinIO/S3)
+            try:
+                s3 = S3Adapter.from_env()
+                s3_key = f"reports/{filename}"
+                s3.upload_bytes(pdf_bytes, s3_key)
+                
+                # Si es exitoso, usar URL de S3 en lugar de la local
+                public_url = s3.generate_presigned_url(s3_key)
+                logger.info(f"Reporte subido exitosamente a MinIO: {s3_key}")
+            except Exception as e:
+                logger.error(f"Fallo al subir a S3, manteniendo URL local: {e}")
+
             self.job_store.set_result(job_id, public_url)
             self.job_store.set_progress(job_id, 100)
             self.job_store.update_status(job_id, "SUCCESS")

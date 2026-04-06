@@ -9,9 +9,15 @@ class DjangoPatchClient:
         self.api_key = api_key
         self.timeout = timeout
 
-    async def patch_ph_level(self, sensor_id: str, ph_level: float) -> None:
+    async def patch_ph_level(self, sensor_id: str, ph_level: float, token: Optional[str] = None) -> None:
         url = f"{self.base_url}/api/v1/sensor-data/{sensor_id}/"
-        headers = {"X-Hardware-Api-Key": self.api_key} if self.api_key else {}
+        headers: Dict[str, str] = {}
+        if self.api_key:
+            headers["X-Hardware-Api-Key"] = self.api_key
+        # Only include Authorization if token is truthy
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             # try once, retry once on failure
             for attempt in range(2):
@@ -20,13 +26,15 @@ class DjangoPatchClient:
                     if resp.status_code in (200, 204):
                         return
                 except Exception:
+                    # on last attempt, give up silently but caller should log
                     if attempt == 1:
                         return
                     await asyncio.sleep(0.5)
 
-    def schedule_patch(self, sensor_id: str, ph_level: float) -> None:
+    def schedule_patch(self, sensor_id: str, ph_level: float, token: Optional[str] = None) -> None:
         try:
-            asyncio.create_task(self.patch_ph_level(sensor_id, ph_level))
+            asyncio.create_task(self.patch_ph_level(sensor_id, ph_level, token=token))
         except RuntimeError:
             # no running loop -- fire-and-forget cannot be scheduled
-            pass
+            # Let caller handle/log this situation
+            raise

@@ -81,4 +81,13 @@ storage/vectors/
 # --- Documentation ---
 *.md
 docs/
-AUDITORIA*.md
+REportesSys/
+
+# --- AISLAMIENTO DE MICROSERVICIOS (CRÍTICO PARA EL PESO) ---
+ms1_vision/
+ms2_rag_cag_service/
+ms3_reports/
+
+# --- ARCHIVOS PESADOS ---
+models/
+media/

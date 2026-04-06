@@ -32,7 +32,7 @@ class ApiService {
         return new Promise(resolve => {
             // Defensive: only accept non-empty string tokens
             if (typeof token !== 'string' || token.trim() === '') {
-                console.warn('ApiService.setToken: invalid token received, refusing to persist.', token);
+                console.warn('ApiService.setToken: invalid token received, refusing to persist.');
                 // Ensure we don't keep partial/invalid token in memory/storage
                 this.clearToken();
                 resolve(false);
@@ -40,12 +40,15 @@ class ApiService {
             }
 
             this.authToken = token;
-            sessionStorage.setItem('mole_jwt', token);
-            console.log("CRITICAL: Token guardado físicamente");
-            // Mecanismo de verificación síncrono
-            if (sessionStorage.getItem('mole_jwt') !== token) {
-                console.error("CRITICAL: Token no se ha guardado correctamente en sessionStorage");
-            }
+            // Persist primarily in localStorage for session continuity; also write to sessionStorage for compatibility
+            try { localStorage.setItem('mole_jwt', token); } catch (e) { /* ignore */ }
+            try { sessionStorage.setItem('mole_jwt', token); } catch (e) { /* ignore */ }
+            console.log("CRITICAL: Token persisted to storage");
+            try {
+                if (!localStorage.getItem('mole_jwt') && !sessionStorage.getItem('mole_jwt')) {
+                    console.error("CRITICAL: Token no se ha guardado correctamente en storage");
+                }
+            } catch (e) { /* ignore */ }
             // Return a resolved promise so callers can `await` this operation
             resolve(true);
         });
@@ -53,7 +56,11 @@ class ApiService {
 
     getToken() {
         if (this.authToken) return this.authToken;
-        var saved = sessionStorage.getItem('mole_jwt');
+        var saved = null;
+        try { saved = localStorage.getItem('mole_jwt'); } catch (e) { saved = null; }
+        if (!saved) {
+            try { saved = sessionStorage.getItem('mole_jwt'); } catch (e) { saved = null; }
+        }
         if (saved) {
             this.authToken = saved;
             return saved;
@@ -63,7 +70,16 @@ class ApiService {
 
     clearToken() {
         this.authToken = null;
-        sessionStorage.removeItem('mole_jwt');
+        try { localStorage.removeItem('mole_jwt'); } catch (e) { /* ignore */ }
+        try { sessionStorage.removeItem('mole_jwt'); } catch (e) { /* ignore */ }
+    }
+
+    _maskToken(token) {
+        if (!token || typeof token !== 'string') return '';
+        try {
+            if (token.length <= 12) return token.replace(/.(?=.{4})/g, '*');
+            return token.slice(0,6) + '…' + token.slice(-6);
+        } catch (e) { return '***'; }
     }
 
     // Allow runtime override of the Authorization prefix (e.g. 'Token ', 'JWT ')
@@ -85,7 +101,8 @@ class ApiService {
             'Accept': 'application/json'
         };
         var token = this.getToken();
-        if (token) {
+        // Defensive: only attach Authorization when token is a non-empty string
+        if (token && typeof token === 'string' && token.trim() !== '') {
             headers['Authorization'] = (this.authPrefix || 'Bearer ') + token;
         }
         if (extra) {
@@ -119,7 +136,14 @@ class ApiService {
         var payload = this._decodeJwtPayload(token);
         if (!payload || !payload.exp) return false; // cannot determine -> assume valid
         var now = Math.floor(Date.now() / 1000);
-        return payload.exp <= now;
+        var buffer = 10; // seconds buffer to mitigate clock skew (was 60)
+        try {
+            // If token was just written, consider it fresh and not expired for a short window
+            if (this._freshToken && (Date.now() - this._freshToken) < 2000) {
+                return false;
+            }
+        } catch (e) { /* ignore */ }
+        return payload.exp <= now + buffer;
     }
 
     isTokenPresent() {
@@ -196,26 +220,36 @@ class ApiService {
 
         // Enforce strict JWT presence and validity (Zero-Trust)
         var token = self.getToken();
-        if (!options.allowAnonymous) {
-            if (!token) {
-                var errNoToken = new Error('NO_TOKEN');
-                errNoToken.status = 401;
-                if (!silent) {
-                    ApiService.showToast('Sesión no autenticada. Inicia sesión.', 'error');
-                }
-                return Promise.reject(errNoToken);
-            }
 
-            if (self.isTokenExpired(token)) {
-                var errExpired = new Error('EXPIRED_TOKEN');
-                errExpired.status = 401;
-                if (!silent) {
-                    ApiService.showToast('Token vencido. Inicia sesión de nuevo.', 'error');
-                }
-                return Promise.reject(errExpired);
+        // HARD REJECT: immediate fail if endpoint requires auth and token is missing
+        if (!options.allowAnonymous && (!token || typeof token !== 'string' || token.trim() === '')) {
+            var errNoToken = new Error('Local_401_Unauthorized: Missing token');
+            errNoToken.status = 401;
+            if (!silent) {
+                ApiService.showToast('Sesión no autenticada. Inicia sesión.', 'error');
             }
-        } else if (token && self.isTokenExpired(token)) {
-            // Drop expired token so it doesn't pollute the anonymous request
+            return Promise.reject(errNoToken);
+        }
+
+        // Pre-flight: avoid sending tokens that expire in <10s (with fresh-token bypass)
+        try {
+            if (token && typeof token === 'string' && token.trim() !== '') {
+                if (self.isTokenExpired(token)) {
+                    // Token about to expire — clear and redirect to login
+                    self.clearToken();
+                    ApiService.showToast('Sesión a punto de expirar. Vuelve a iniciar sesión.', 'error');
+                    window.location.href = '/login/';
+                    var err = new Error('TOKEN_EXPIRING');
+                    err.status = 401;
+                    return Promise.reject(err);
+                }
+            }
+        } catch (e) {
+            console.warn('[ApiService] Pre-flight token check failed, procediendo con limpieza.');
+            self.clearToken();
+        }
+        // If anonymous request and token was expired, clear it so we don't send Authorization
+        if (options.allowAnonymous && token && self.isTokenExpired(token)) {
             self.clearToken();
             token = null;
         }
@@ -252,12 +286,16 @@ class ApiService {
                     }
                 }
 
-                // Telemetry: log exact token and headers sent for debugging (Supervisor)
+                // Telemetry: log token presence and headers sent for debugging (Supervisor)
                 try {
-                    console.log("🔥 TOKEN EXACTO ENVIADO:", token);
+                    if (token && typeof token === 'string' && token.trim() !== '') {
+                        console.log(" SUCCESS ACCESS:", self._maskToken(token));
+                    } else {
+                        console.log(" ANONYMOUS ACCESS");
+                    }
                 } catch (e) { /* ignore logging errors */ }
                 try {
-                    console.log("🔥 HEADERS COMPLETOS:", headers);
+                    console.log(" HEADERs HIGH:", headers);
                 } catch (e) { /* ignore logging errors */ }
 
                 fetch(url, options)

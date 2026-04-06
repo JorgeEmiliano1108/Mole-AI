@@ -11,10 +11,20 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 import hmac
+import logging
+import json
 
 from rest_framework import authentication, exceptions
 from django.conf import settings
 import jwt
+from jwt import (
+    ExpiredSignatureError,
+    InvalidTokenError,
+    InvalidAudienceError,
+    InvalidSignatureError,
+    DecodeError,
+    InvalidAlgorithmError,
+)
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest
 
@@ -58,44 +68,106 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         Authenticate the token with Supabase JWT secret and return user.
         """
         is_local_superuser = False
+
+        # Helper: mask token for safe logging (never log full token)
+        def _mask_token(tok: str) -> str:
+            try:
+                if not tok or not isinstance(tok, str):
+                    return ''
+                if len(tok) <= 12:
+                    # keep last 4 characters visible
+                    return '*' * max(0, len(tok) - 4) + tok[-4:]
+                return tok[:6] + '…' + tok[-6:]
+            except Exception:
+                return '***'
+
+        logger = logging.getLogger(__name__)
+
+        payload = None
+
+        # Attempt primary verification using Supabase JWKS / verification key
         try:
-            # Auto-detect algorithm and get correct verification key
             from apps.authentication.jwks import get_verification_key
-            verification_key, algorithms = get_verification_key(
-                settings.SUPABASE_URL, token
-            )
-            
-            # Decode the JWT token using the resolved key
+
+            verification_key, algorithms = get_verification_key(settings.SUPABASE_URL, token)
+
+            # Debug: log resolved verification metadata without leaking token
+            try:
+                logger.debug(
+                    "JWT verification metadata: algorithms=%s key_type=%s",
+                    algorithms,
+                    getattr(verification_key, 'key_type', type(verification_key).__name__),
+                )
+            except Exception:
+                logger.debug("JWT verification metadata: unable to introspect verification_key")
+
+            # Use configurable leeway to mitigate clock skew
+            leeway = getattr(settings, 'SUPABASE_JWT_LEEWAY', 30)
+
             payload = jwt.decode(
                 token,
                 verification_key,
                 algorithms=algorithms,
-                audience='authenticated',
-                options={
-                    'verify_aud': True,
-                    'verify_exp': True,
-                }
+                audience=getattr(settings, 'SUPABASE_JWT_AUD', 'authenticated'),
+                options={'verify_aud': True, 'verify_exp': True},
+                leeway=leeway,
             )
-        except jwt.ExpiredSignatureError:
+
+        except ExpiredSignatureError as e:
+            logger.warning("Expired token for incoming request (masked=%s): %s", _mask_token(token), str(e))
             raise exceptions.AuthenticationFailed('Token has expired.')
-        except jwt.InvalidTokenError as e:
-            # Fallback: token might be a locally-signed Superadmin token using Django SECRET_KEY
+        except InvalidAudienceError as e:
+            logger.error(
+                "Invalid audience (expected=%s) for token (masked=%s): %s",
+                getattr(settings, 'SUPABASE_JWT_AUD', 'authenticated'),
+                _mask_token(token),
+                str(e),
+            )
+            raise exceptions.AuthenticationFailed('Invalid token audience.')
+        except InvalidSignatureError as e:
+            logger.error("Invalid token signature (masked=%s): %s", _mask_token(token), str(e))
+            # Debug: dump JWKS kids to help triage
             try:
+                jwks = fetch_jwks(settings.SUPABASE_URL)
+                kids = [k.get('kid') for k in jwks.get('keys', [])]
+                logger.debug("Available JWKS kids: %s", json.dumps(kids))
+            except Exception:
+                logger.debug("Unable to fetch/dump JWKS keys for debugging")
+            # fall through to HS256 fallback
+            payload = None
+        except (DecodeError, InvalidAlgorithmError, InvalidTokenError) as e:
+            logger.error("Token decode error (%s) for token (masked=%s): %s", e.__class__.__name__, _mask_token(token), str(e))
+            payload = None
+        except Exception as e:
+            logger.exception("Unexpected error during token verification (masked=%s): %s", _mask_token(token), str(e))
+            raise exceptions.AuthenticationFailed(f'Token validation error: {str(e)}')
+
+        # If primary verification failed (payload is None), attempt HS256 local fallback
+        if not payload:
+            try:
+                leeway = getattr(settings, 'SUPABASE_JWT_LEEWAY', 30)
                 payload = jwt.decode(
                     token,
                     settings.SECRET_KEY,
                     algorithms=['HS256'],
-                    options={'verify_exp': True}
+                    options={'verify_exp': True},
+                    leeway=leeway,
                 )
+                # Only allow emergency local superuser via this path
                 if payload.get('username') != 'EmiMole':
+                    logger.error(
+                        'HS256 fallback decoded token but username mismatch (masked=%s) payload_username=%s',
+                        _mask_token(token),
+                        payload.get('username'),
+                    )
                     raise exceptions.AuthenticationFailed('Emergency local access strictly limited to EmiMole account.')
                 is_local_superuser = True
-            except jwt.ExpiredSignatureError:
+            except ExpiredSignatureError as e:
+                logger.warning('Expired token on HS256 fallback (masked=%s): %s', _mask_token(token), str(e))
                 raise exceptions.AuthenticationFailed('Token has expired.')
-            except Exception:
+            except Exception as e:
+                logger.exception('HS256 fallback failed for token (masked=%s): %s', _mask_token(token), str(e))
                 raise exceptions.AuthenticationFailed(f'Invalid token: {str(e)}')
-        except Exception as e:
-            raise exceptions.AuthenticationFailed(f'Token validation error: {str(e)}')
             
         User = get_user_model()
         
@@ -116,14 +188,20 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         user_metadata = payload.get('user_metadata', {})
         
         if not user_id or not email:
+            logger.warning("Rejecting token due to missing user_id (%s) or email.", user_id)
             raise exceptions.AuthenticationFailed(
                 'Token payload missing required user information.'
             )
             
         # Create or get user from database
         User = get_user_model()
+        
+        # Muro 2 FIX: Identificar si es un token firmado localmente con el claim 'username' explícito
+        local_username = payload.get('username')
+        resolve_username = local_username if local_username else user_id
+
         user, created = User.objects.get_or_create(
-            username=user_id,
+            username=resolve_username,
             defaults={
                 'email': email,
                 'first_name': user_metadata.get('first_name', ''),
@@ -143,7 +221,24 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         user.supabase_role = role
         user.supabase_app_metadata = app_metadata
         user.supabase_user_metadata = user_metadata
-        
+
+        # Map Supabase `role` claim into Django `is_staff` / `is_superuser` flags
+        try:
+            logger = logging.getLogger(__name__)
+            resolved_role = (role or 'authenticated').lower()
+            # Log minimal auth info for audit (do not log token)
+            logger.info("auth: sub=%s email=%s role=%s", user_id, email, resolved_role)
+
+            # Promote to staff/superuser ONLY for explicitly privileged roles
+            if resolved_role in ('superuser', 'superadmin', 'admin'):
+                if not user.is_staff or not user.is_superuser:
+                    user.is_staff = True
+                    user.is_superuser = True
+                    user.save(update_fields=['is_staff', 'is_superuser'])
+        except Exception as e:
+            # Don't fail authentication due to DB save issues; log and continue
+            logging.getLogger(__name__).exception('Error mapping role to user flags: %s', e)
+
         return (user, token)
     
     def authenticate_header(self, request):

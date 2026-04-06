@@ -186,21 +186,23 @@ def validate_token_view(request):
     creates/updates the Django user, and returns user info.
     Used as the "login" handshake for the mobile/web client.
     """
-    username = request.data.get("username")
+    identifier = request.data.get("username")
     password = request.data.get("password")
 
     # Hybrid Auth Protocol: Local authentication bypass
-    if username and password:
+    if identifier and password:
         from django.contrib.auth import authenticate, get_user_model
         from django.conf import settings
         import jwt
         from datetime import datetime, timedelta, timezone
         
         User = get_user_model()
-        if "@" in username:
-            user_obj = User.objects.filter(email=username).first()
-            if user_obj:
-                username = user_obj.username
+        
+        if "@" in identifier:
+            user_obj = User.objects.filter(email=identifier).first()
+            username = user_obj.username if user_obj else identifier
+        else:
+            username = identifier
 
         user = authenticate(request=request, username=username, password=password)
         if user is not None:
@@ -219,6 +221,13 @@ def validate_token_view(request):
                 "exp": datetime.now(timezone.utc) + timedelta(days=1),
                 "iat": datetime.now(timezone.utc),
             }
+
+            # Anti-fixation: cycle session key after successful authentication
+            try:
+                request.session.cycle_key()
+            except Exception:
+                # If sessions are not used, ignore but continue
+                pass
 
             token = jwt.encode(payload, signing_key, algorithm=signing_alg)
             return Response({
@@ -250,6 +259,11 @@ def validate_token_view(request):
         )
 
     user, token = result
+    # Rotate session key on successful Supabase authentication to avoid session fixation
+    try:
+        request.session.cycle_key()
+    except Exception:
+        pass
     return Response({
         "status": "authenticated",
         "user": {

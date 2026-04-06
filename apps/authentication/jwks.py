@@ -122,3 +122,28 @@ def get_verification_key(supabase_url: str, token: str) -> tuple:
             )
     
     raise jwt.InvalidTokenError(f"Unsupported algorithm: {alg}")
+
+
+def fetch_jwks(supabase_url: str) -> dict:
+    """Public wrapper that returns JWKS in the expected dictionary format.
+
+    Ensures the internal cache is populated and returns a minimal
+    JWKS-like dictionary: {"keys": [{"kid": "..."}, ...]}.
+    This is intentionally lightweight and safe for debug logging in
+    authentication paths (does not expose private material).
+    """
+    global _jwks_cache
+
+    with _cache_lock:
+        now = time.time()
+        # Refresh cache if expired
+        if (now - _jwks_cache["last_fetched"] > _jwks_cache["ttl"]) or not _jwks_cache["keys"]:
+            _jwks_cache["keys"] = _fetch_jwks(supabase_url)
+            _jwks_cache["last_fetched"] = now
+
+        # Build a JWKS-like structure suitable for lightweight inspection
+        keys_list = []
+        for kid in _jwks_cache["keys"].keys():
+            keys_list.append({"kid": kid})
+
+    return {"keys": keys_list}
