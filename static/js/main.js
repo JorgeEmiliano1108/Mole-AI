@@ -10,6 +10,8 @@ const introData = {
 };
 
 let typeInterval;
+// Prevent concurrent login attempts to avoid race conditions
+let loginInProgress = false;
 
 function initUsers() {
     if (!localStorage.getItem('moleia_users')) {
@@ -18,6 +20,8 @@ function initUsers() {
     }
 }
 initUsers();
+// Ensure sessionReady flag exists and is false until successful login
+try { if (window.moleApi) window.moleApi.sessionReady = false; } catch (e) { /* ignore */ }
 
 function typeContent(section) {
     const resultContainer = document.getElementById('ficha-result-container');
@@ -237,6 +241,7 @@ function backToLogin() {
 
 async function submitRegistration() {
     const user = document.getElementById('reg-user-input').value.trim();
+    const emailStr = document.getElementById('reg-email-input').value.trim();
     const pass = document.getElementById('reg-pass-input').value.trim();
     const errorMsg = document.getElementById('reg-error');
     const successMsg = document.getElementById('reg-success');
@@ -244,8 +249,14 @@ async function submitRegistration() {
     errorMsg.classList.add('hidden');
     successMsg.classList.add('hidden');
 
+    if (!user || !emailStr || !pass) {
+        errorMsg.innerText = "ERROR: COMPLETAR TODOS LOS CAMPOS OBLIGATORIOS.";
+        errorMsg.classList.remove('hidden');
+        return;
+    }
+
     if (user.length < 3 || pass.length < 3) {
-        errorMsg.innerText = "ERROR: MÍNIMO 3 CARACTERES.";
+        errorMsg.innerText = "ERROR: MÍNIMO 3 CARACTERES PARA USUARIO Y CONTRASEÑA.";
         errorMsg.classList.remove('hidden');
         return;
     }
@@ -259,10 +270,7 @@ async function submitRegistration() {
     try {
         if (!window.moleApi) throw new Error("API no disponible");
         
-        const payload = { username: user, password: pass };
-        if (user.includes('@')) {
-            payload.email = user;
-        }
+        const payload = { username: user, email: emailStr, password: pass };
 
         const data = await window.moleApi.post('auth/register/', payload, { allowAnonymous: true, silent: true });
         
@@ -296,6 +304,9 @@ async function attemptLogin() {
         return;
     }
 
+    if (loginInProgress) return;
+    loginInProgress = true;
+
     try {
         // Zero-Trust: delegate authentication to Django API Gateway (allowAnonymous is CRITICAL to avoid NO_TOKEN on login)
         const data = await window.moleApi.post('auth/validate-token/', { username: user, password: pass }, { silent: true, allowAnonymous: true });
@@ -322,19 +333,28 @@ async function attemptLogin() {
 
         // Only persist when we have a plain string token. Otherwise treat as failure.
         if (token && typeof token === 'string') {
-            // Persist token immediately and await confirmation
+            // Immediate hydration to avoid race: set in-memory and localStorage BEFORE any other consumers run
+            try {
+                if (window.moleApi) window.moleApi.authToken = token;
+            } catch (e) { /* ignore */ }
+            try { localStorage.setItem('mole_jwt', token); } catch (e) { /* ignore */ }
+
+            // Persist via ApiService (keeps storages in sync and triggers any internal hooks)
             await window.moleApi.setToken(token);
 
-            // Bucle de espera (polling)
+            // Bucle de espera (polling) - prefer localStorage persistence
             let waitTime = 0;
-            while (!sessionStorage.getItem('mole_jwt') && waitTime < 500) {
+            while (!localStorage.getItem('mole_jwt') && waitTime < 500) {
                 await new Promise(res => setTimeout(res, 50));
                 waitTime += 50;
             }
 
             // Verificar presencia de token: si la API no persistió el token, tratar como fallo
-            if (!sessionStorage.getItem('mole_jwt')) {
-                throw new Error('NO_TOKEN');
+            if (!localStorage.getItem('mole_jwt')) {
+                // rollback any partial hydration
+                try { if (window.moleApi) window.moleApi.authToken = null; } catch(e){}
+                try { localStorage.removeItem('mole_jwt'); } catch(e){}
+                throw new Error('SESSION_NOT_STARTED');
             }
 
             // Validate token freshness
@@ -342,18 +362,36 @@ async function attemptLogin() {
                 window.moleApi.clearToken();
                 throw new Error('Sesión inválida o token expirado.');
             }
-            
+
             // Bypass de Emergencia para EmiMole: No forzar hard-refresh, sino cargar el DOM explícito de admin
         }
 
         // Debug verification as requested
-        console.log("DEBUG: Token persistido ->", !!sessionStorage.getItem('mole_jwt'));
+            // If login did not return a usable token, show error and stop here
+            if (!token || typeof token !== 'string' || token.trim() === '') {
+                errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            try { console.log("DEBUG: Token persistido ->", !!localStorage.getItem('mole_jwt')); } catch (e) { console.log('DEBUG: token persistence unknown'); }
+
+            // HARDENING: clear persisted chat history after successful login
+            try {
+                localStorage.removeItem('moleia_chat_history');
+            } catch (e) {
+                console.warn('Could not clear moleia_chat_history on login:', e);
+            }
+
+            // Mark session as ready so UI components can safely perform protected requests
+            try { if (window.moleApi) window.moleApi.sessionReady = true; } catch (e) { /* ignore */ }
 
         // Role assignment from backend
         let role = data.role || data.tipo || 'user';
         if (user === 'EmiMole') {
             role = 'admin'; // Forzar rol de admin explícitamente y cargar el dashboard
         }
+        try { localStorage.setItem('moleia_role', role); } catch(e) {}
         const loginScreen = document.getElementById('login-screen');
 
         if (role === 'admin' || role === 'superuser') {
@@ -398,6 +436,7 @@ async function attemptLogin() {
                     try {
                         if (typeof initAdminCharts === 'function') initAdminCharts();
                         if (typeof renderAdminReports === 'function') renderAdminReports();
+                        if (typeof pollLiveAlerts === 'function') pollLiveAlerts();
                     } catch (e) {
                         console.error('Error inicializando gráficas/informes:', e);
                     }
@@ -485,8 +524,11 @@ async function attemptLogin() {
         }
 
         errorMsg.classList.remove('hidden');
+    } finally {
+        // release login mutex
+        loginInProgress = false;
     }
-}
+    }
 
 function logout() {
     const mainDash = document.getElementById('main-dashboard');
@@ -510,6 +552,20 @@ function logout() {
 
         // Clear auth token on logout
         if (window.moleApi) { window.moleApi.clearToken(); }
+
+        // GATING POR ROL: Limpiar intervalos de admin y rol
+        try { clearInterval(window.telemetryIntervalId); window.telemetryIntervalId = null; } catch(e) {}
+        try { clearInterval(window.notificationsIntervalId); window.notificationsIntervalId = null; } catch(e) {}
+        try { localStorage.removeItem('moleia_role'); } catch(e) {}
+
+        // MOPROSOFT/ISO DATA ISOLATION: Clear chat state on logout
+        localStorage.removeItem('moleia_chat_history');
+        const chatBox = document.getElementById('chat-messages');
+        if (chatBox && typeof defaultChat !== 'undefined') {
+            chatBox.innerHTML = defaultChat;
+        } else if (chatBox) {
+            chatBox.innerHTML = '<div class="text-[#00ffaa] opacity-80">> CONEXIÓN ESTABLECIDA...</div>\n<div class="text-[#f97316]">> MOLE-IA: Saludos, Operador. Sistema de apoyo en línea.</div>';
+        }
     }, 400); 
 }
 
@@ -811,8 +867,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try { loadMyCollection(); } catch(e) { /* silent */ }
     }
     // Admin-only initializations: start telemetry polling and stats
-    // only when the admin notifications feed is present in the DOM.
-    if (document.getElementById('live-notifications-feed')) {
+    // only when the admin notifications feed is present in the DOM Y el rol es explícitamente admin.
+    let isAdmin = false;
+    try {
+        const storedRole = localStorage.getItem('moleia_role');
+        isAdmin = (storedRole === 'admin' || storedRole === 'superuser');
+    } catch(e) {}
+    
+    if (document.getElementById('live-notifications-feed') && isAdmin) {
         try { fetchAdminStats(); } catch(e) { /* silent */ }
         try { pollLiveAlerts(); } catch(e) { /* silent */ }
     }
@@ -880,8 +942,14 @@ function _showContainerError(containerId, message) {
 }
 
 function initAdminCharts() {
-    // Zero-Trust: only fetch admin stats if a valid JWT exists in memory
-    if (!window.moleApi || !window.moleApi.isTokenPresent() || window.moleApi.isTokenExpired()) {
+    // Zero-Trust: only fetch admin stats if a valid JWT exists in memory and role is admin
+    let isAdmin = false;
+    try {
+        const r = localStorage.getItem('moleia_role');
+        isAdmin = (r === 'admin' || r === 'superuser');
+    } catch(e) {}
+
+    if (!isAdmin || !window.moleApi || !window.moleApi.isTokenPresent() || window.moleApi.isTokenExpired()) {
         _showCanvasError('admin-chart-users', '> ERROR DE TELEMETRÍA: NO AUTORIZADO');
         _showCanvasError('admin-chart-regs', '> ERROR DE TELEMETRÍA: NO AUTORIZADO');
         _showCanvasError('admin-chart-plants', '> ERROR DE TELEMETRÍA: NO AUTORIZADO');
@@ -1027,6 +1095,15 @@ function pollLiveAlerts() {
     const adminFeed = document.getElementById('live-notifications-feed');
     if (!adminFeed) return;
     if (!window.moleApi || !window.moleApi.isTokenPresent() || window.moleApi.isTokenExpired()) return;
+
+    // GATING POR ROL ESTRUCTURAL
+    let isAdmin = false;
+    try {
+        const r = localStorage.getItem('moleia_role');
+        isAdmin = (r === 'admin' || r === 'superuser');
+    } catch(e) {}
+    if (!isAdmin) return;
+
     if (window.notificationsIntervalId) return;
 
     window.notificationsIntervalId = setInterval(async () => {
@@ -1385,12 +1462,26 @@ async function handleImageUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // 1. Mostrar la imagen en la tarjeta de resultados (preview)
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        document.getElementById('scanned-image-preview').src = e.target.result;
-    };
-    reader.readAsDataURL(file);
+    // 1. Mostrar la imagen en la tarjeta de resultados (preview dinámico)
+    // Usa URL.createObjectURL para previsualizar directamente desde el blob del usuario
+    const previewEl = document.getElementById('scanned-image-preview');
+    // Revocar URL anterior para evitar memory leaks
+    if (previewEl.src && previewEl.src.startsWith('blob:')) {
+        URL.revokeObjectURL(previewEl.src);
+    }
+    previewEl.src = URL.createObjectURL(file);
+
+    // If session is not ready, abort immediately (hard guard)
+    try {
+        if (!window.moleApi || !window.moleApi.sessionReady) {
+            // Hide loading UI and inform user
+            try { document.getElementById('loading-scan-modal').classList.add('hidden'); } catch (e) {}
+            try { document.getElementById('diagnosis-result-modal').classList.remove('hidden'); } catch (e) {}
+            try { document.getElementById('diag-treatment').className = 'text-red-500'; document.getElementById('diag-treatment').innerText = 'Sesión no iniciada. Inicia sesión para usar esta función.'; } catch (e) {}
+            try { if (window.ApiService && typeof window.ApiService.showToast === 'function') window.ApiService.showToast('Función restringida: inicia sesión primero.', 'error'); } catch (e) {}
+            return;
+        }
+    } catch (e) { /* ignore guard failures */ }
 
     // 2. Mostrar pantalla de carga
     document.getElementById('loading-scan-modal').classList.remove('hidden');
@@ -1423,7 +1514,7 @@ async function handleImageUpload(event) {
             throw new Error("API service no disponible.");
         }
 
-        // POLLING ASÍNCRONO
+        // POLLING ASÍNCRONO — maneja status: 'success' | 'failure' | 'pending'
         let data = null;
         if (taskResponse && taskResponse.task_id) {
             const taskId = taskResponse.task_id;
@@ -1431,12 +1522,19 @@ async function handleImageUpload(event) {
             while (attempts < 20) { // 40 seconds max timeout
                 await new Promise(r => setTimeout(r, 2000));
                 const pollRes = await window.moleApi.get(`ai/vision/status/${taskId}/`);
-                if (pollRes.state === 'SUCCESS') {
+
+                // ── ÉXITO: resolver la promesa con el resultado ──
+                if (pollRes.state === 'SUCCESS' || pollRes.status === 'success') {
                     data = pollRes.result;
                     break;
-                } else if (pollRes.state === 'FAILURE') {
-                    throw new Error("La red neural (Celery) reportó un fallo crítico.");
                 }
+
+                // ── FALLO: romper el bucle de inmediato y lanzar excepción ──
+                if (pollRes.state === 'FAILURE' || pollRes.status === 'failure') {
+                    const serverError = pollRes.error || pollRes.message || 'Error desconocido del motor de IA.';
+                    throw new Error(`La red neural reportó un fallo crítico: ${serverError}`);
+                }
+
                 attempts++;
             }
             if (!data) throw new Error("Timeout esperando al motor de IA.");

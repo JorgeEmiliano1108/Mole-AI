@@ -80,7 +80,7 @@ class AuditTests(TestCase):
         # En Eager Mode, Celery captura el primer Retry y reintenta de forma transparente.
         # La primera vez lanzará ConnectionError (falla). La segunda vez devolverá 200 (éxito).
         try:
-            analyze_vision_async.apply(args=[temp_path, "test.jpg", "image/jpeg"])
+            analyze_vision_async.apply(args=[temp_path], kwargs={'auth_token': 'Bearer test_token'})
         except Exception:
             pass
             

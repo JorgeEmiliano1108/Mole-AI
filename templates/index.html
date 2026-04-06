@@ -147,6 +147,12 @@
                     placeholder="Ej. Operador_01" autocomplete="off">
             </div>
             <div class="flex flex-col gap-3">
+                <label class="tracking-widest text-sm">CORREO ELECTRÓNICO:</label>
+                <input type="email" id="reg-email-input"
+                    class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full"
+                    placeholder="operador@mole.ai" autocomplete="off">
+            </div>
+            <div class="flex flex-col gap-3">
                 <label class="tracking-widest text-sm">NUEVA CLAVE:</label>
                 <input type="password" id="reg-pass-input"
                     class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full"
@@ -256,8 +262,10 @@
                     class="relative w-full aspect-square border-2 border-[#00ffaa] p-1 bg-black group overflow-hidden max-w-[500px]">
                     <div class="absolute top-4 left-4 z-20 bg-black/80 border border-[#00ffaa] px-2 py-1 text-[10px]">
                         LIVE_FEED // <span id="plant-tag">MANZANILLA</span></div>
-                    <img id="main-img" src="{% static 'img/manzanilla.jpg' %}"
-                        class="w-full h-full object-cover plant-filter group-hover:filter-none">
+                    <img id="main-img" src=""
+                        class="w-full h-full object-cover plant-filter group-hover:filter-none"
+                        style="background:#001105;"
+                        alt="Vista en vivo del cultivo vinculado">
                     <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden"
                         onchange="handleImageUpload(event)">
 

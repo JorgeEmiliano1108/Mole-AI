@@ -5,6 +5,7 @@ from datetime import datetime
 
 from ms1_vision.domain.ports.diagnostic_ports import VisionClientPort, DiagnosticRepositoryPort
 from ms1_vision.domain.schemas import DiagnosticModel, VisionOutputModel
+import logging
 
 
 class CreateDiagnosticUseCase:
@@ -20,7 +21,7 @@ class CreateDiagnosticUseCase:
         self.django_patch_client = django_patch_client
         self.redis_publisher = redis_publisher
 
-    async def execute(self, image_bytes: bytes, plant_id: str) -> DiagnosticModel:
+    async def execute(self, image_bytes: bytes, plant_id: str, token: str) -> DiagnosticModel:
         # 1. Run vision inference (support sync or async analyze)
         analyze = getattr(self.vision_client, "analyze")
         if inspect.iscoroutinefunction(analyze):
@@ -56,14 +57,20 @@ class CreateDiagnosticUseCase:
             diagnostic_dict["id"] = saved_id
 
         # 3. Fire-and-forget: PATCH Django with ph_level if available
+        logger = logging.getLogger("ms1_vision.usecases.create_diagnostic")
         if ph_predicted is not None:
             try:
                 if hasattr(self.django_patch_client, "schedule_patch"):
-                    self.django_patch_client.schedule_patch(f"/api/v1/sensor-data/{saved_id}/", {"ph_level": ph_predicted})
+                    # include token when scheduling
+                    try:
+                        self.django_patch_client.schedule_patch(f"/api/v1/sensor-data/{saved_id}/", {"ph_level": ph_predicted}, token=token)
+                    except RuntimeError:
+                        # fallback to explicit task scheduling
+                        asyncio.create_task(self.django_patch_client.patch_ph_level(str(saved_id), ph_predicted, token=token))
                 elif hasattr(self.django_patch_client, "patch_ph_level"):
-                    asyncio.create_task(self.django_patch_client.patch_ph_level(str(saved_id), ph_predicted))
-            except Exception:
-                pass
+                    asyncio.create_task(self.django_patch_client.patch_ph_level(str(saved_id), ph_predicted, token=token))
+            except Exception as e:
+                logger.error("Failed to schedule patch to Django: %s", e, exc_info=True)
 
         # 4. Fire-and-forget: publish to Redis pub/sub
         try:
@@ -79,9 +86,13 @@ class CreateDiagnosticUseCase:
                 try:
                     asyncio.create_task(self.redis_publisher.publish_diagnostic(payload))
                 except RuntimeError:
-                    asyncio.get_event_loop().run_in_executor(None, self.redis_publisher.publish_diagnostic, payload)
-        except Exception:
-            pass
+                    # Attempt to run in executor (sync fallback)
+                    try:
+                        asyncio.get_event_loop().run_in_executor(None, self.redis_publisher.publish_diagnostic, payload)
+                    except Exception as e:
+                        logger.error("Redis publish failed (fallback): %s", e, exc_info=True)
+        except Exception as e:
+            logger.error("Unexpected error preparing redis publish: %s", e, exc_info=True)
 
         # Build Pydantic DiagnosticModel and return
         return DiagnosticModel.model_validate(diagnostic_dict)

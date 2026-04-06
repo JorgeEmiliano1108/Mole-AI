@@ -67,6 +67,8 @@ class BotanicalKnowledge(models.Model):
 class AIDiagnostic(models.Model):
     import uuid
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Referencia al usuario que solicitó el diagnóstico (nullable para integraciones M2M)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_diagnostics')
     plant_id = models.UUIDField(db_index=True)
     analyzed_at = models.DateTimeField(default=timezone.now, db_index=True)
     image_path = models.TextField(null=True, blank=True)
@@ -81,6 +83,26 @@ class AIDiagnostic(models.Model):
     
     def __str__(self):
         return f"{self.plant_id} - {self.diagnosis_label}"
+    
+    # Compatibility properties for older code expecting these attributes
+    @property
+    def severity(self):
+        if self.metadata and isinstance(self.metadata, dict):
+            return self.metadata.get('severity')
+        return None
+
+    @property
+    def condition_name(self):
+        return self.diagnosis_label or (self.metadata.get('condition_name') if self.metadata and isinstance(self.metadata, dict) else None)
+
+    @property
+    def condition_description(self):
+        return (self.metadata.get('raw_output') if self.metadata and isinstance(self.metadata, dict) else None)
+
+    # Alias for created_at used by some views
+    @property
+    def created_at(self):
+        return self.analyzed_at
 
 
 class DiagnosticoGeolocalizado(models.Model):

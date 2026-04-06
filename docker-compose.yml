@@ -4,9 +4,11 @@ networks:
 
 services:
   # --- BACKEND (Django "Pip-Boy") ---
-  django_backend:
-    build: .
-    container_name: django_backend
+  django-backend:
+    build:
+      context: .
+      target: development
+    container_name: django-backend
     ports:
       - "8000:8000"
     volumes:
@@ -41,7 +43,9 @@ services:
 
   # --- BACKEND CELERY WORKER ---
   django_celery_worker:
-    build: .
+    build:
+      context: .
+      target: development
     container_name: django_celery_worker
     entrypoint: ["celery", "-A", "mole_ai_backend", "worker", "-l", "info"]
     volumes:
@@ -67,9 +71,38 @@ services:
     networks:
       - mole-ai-net
 
+# --- BACKEND CELERY BEAT (El Reloj / Garbage Collector) ---
+  django_celery_beat:
+    build:
+      context: .
+      target: development
+    container_name: django_celery_beat
+    entrypoint: ["celery", "-A", "mole_ai_backend", "worker", "-l", "info", "-Q", "celery"]
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME:-mole_ai_db}
+      - SUPABASE_DB_USER=${SUPABASE_DB_USER:-postgres}
+      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD:-postgres}
+      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST:-db}
+      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT:-5432}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - mole-ai-net
+
   # --- AI SERVICE (FastAPI "Cerebro") ---
   fastapi_rag:
-    build: ./ms2_rag_cag_service
+    build: 
+      context: ./ms2_rag_cag_service
+      target: production
     container_name: fastapi_rag
     expose:
       - "8002"  # M4: internal only, no host exposure
@@ -147,6 +180,7 @@ services:
       - ./mosquitto/log:/mosquitto/log
     networks:
       - mole-ai-net
+
   # --- MINIO (S3-compatible) ---
   minio:
     image: minio/minio:latest
@@ -166,6 +200,8 @@ services:
   ms1_vision:
     build: ./ms1_vision
     container_name: ms1_vision
+    volumes:
+      - ./models:/models:ro
     expose:
       - "8001"  # M4: internal only, no host exposure
     env_file:
@@ -174,6 +210,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
       - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/mole_ai_db}
       - S3_ENDPOINT=${S3_ENDPOINT}
+      - DJANGO_BASE_URL=${DJANGO_BASE_URL}
+      - DJANGO_VALIDATE_TOKEN_PATH=${DJANGO_VALIDATE_TOKEN_PATH}
     depends_on:
       - db
       - redis
@@ -183,7 +221,9 @@ services:
 
   # --- MS2: Chat / RAG (ms2_rag_cag_service) ---
   ms2_chat:
-    build: ./ms2_rag_cag_service
+    build: 
+      context: ./ms2_rag_cag_service
+      target: production
     container_name: ms2_chat
     expose:
       - "8002"  # M4: internal only
@@ -202,16 +242,18 @@ services:
 
   # --- MS3: Reports (FastAPI) ---
   ms3_reports:
-    build: ./ms3_reports
+    build:
+      context: ./ms3_reports
+      target: production
     container_name: ms3_reports
     volumes:
-      - ./media:/app/media
+      - ./media:/srv/ms3_reports/media
     expose:
       - "8003"  # M4: internal only
     env_file:
       - .env
     environment:
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - REDIS_URL=redis://redis:6379/2
       - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
       - MS3_S3_ACCESS_KEY=${MS3_S3_ACCESS_KEY}
       - MS3_S3_SECRET_KEY=${MS3_S3_SECRET_KEY}
@@ -226,15 +268,17 @@ services:
 
   # --- MS3: Celery worker ---
   ms3_celery_worker:
-    build: ./ms3_reports
+    build:
+      context: ./ms3_reports
+      target: production
     container_name: ms3_celery_worker
     volumes:
-      - ./media:/app/media
-    command: ["celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1"]
+      - ./media:/srv/ms3_reports/media
+    command: ["celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "reports_queue"]
     env_file:
       - .env
     environment:
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - REDIS_URL=redis://redis:6379/2
       - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
       - MS3_S3_ACCESS_KEY=${MS3_S3_ACCESS_KEY}
       - MS3_S3_SECRET_KEY=${MS3_S3_SECRET_KEY}
