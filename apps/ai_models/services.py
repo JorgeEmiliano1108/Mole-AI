@@ -27,8 +27,8 @@ if str(BASE_DIR / 'apps') not in sys.path:
     sys.path.insert(0, str(BASE_DIR / 'apps'))
 
 try:
-    from apps.ai_models.infrastructure.repositories.models import LLMRequest, CNNInference, ModelPerformance
-    from apps.core.infrastructure.repositories.models import SensorLog
+    from apps.ai_models.models import LLMRequest, CNNInference, ModelPerformance
+    from apps.core.models import SensorLog
 except ImportError as e:
     print(f"⚠️ Error importando modelos: {e}")
     LLMRequest = None

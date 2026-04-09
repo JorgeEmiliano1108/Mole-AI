@@ -1,6 +1,6 @@
 import logging
 from django.core.management.base import BaseCommand
-from apps.plants.infrastructure.repositories.models import SpeciesCatalog
+from apps.plants.models import SpeciesCatalog
 
 logger = logging.getLogger(__name__)
 

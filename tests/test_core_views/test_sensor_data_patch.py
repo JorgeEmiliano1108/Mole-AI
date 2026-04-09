@@ -4,7 +4,7 @@ import uuid
 import pytest
 from rest_framework.test import APIClient
 
-from apps.core.infrastructure.repositories.models import SensorLog
+from apps.core.models import SensorLog
 
 
 HARDWARE_API_KEY = "test-hardware-key-for-ci"

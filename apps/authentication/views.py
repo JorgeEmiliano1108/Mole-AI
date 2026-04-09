@@ -64,7 +64,7 @@ def user_profile_view(request):
         user.delete()
         
         # MoProSoft: Trazabilidad inmutable
-        from apps.core.infrastructure.repositories.models import AuditLog
+        from apps.core.models import AuditLog
         AuditLog.objects.create(
             user_id=user_id,
             action="DELETE_ACCOUNT_ARCO",

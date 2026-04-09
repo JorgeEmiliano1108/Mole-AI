@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
-from apps.plants.infrastructure.repositories.models import UserPlant
-from apps.core.infrastructure.repositories.models import SensorLog
+from apps.plants.models import UserPlant
+from apps.core.models import SensorLog
 
 
 class FarmerIntegrationTests(APITestCase):

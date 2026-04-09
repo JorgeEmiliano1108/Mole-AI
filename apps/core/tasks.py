@@ -4,7 +4,7 @@ import os
 import json
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from apps.plants.infrastructure.repositories.models import UserPlant
+from apps.plants.models import UserPlant
 
 @shared_task(name="generate_master_report_task")
 def generate_master_report_task():
@@ -18,7 +18,7 @@ def generate_master_report_task():
     os.makedirs(media_dir, exist_ok=True)
     file_path = os.path.join(media_dir, report_filename)
     
-    from apps.core.infrastructure.repositories.models import SensorLog
+    from apps.core.models import SensorLog
     from django.db.models import Avg
 
     aggs = SensorLog.objects.aggregate(

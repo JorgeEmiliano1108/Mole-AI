@@ -26,7 +26,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.test import APIClient
 
-from apps.core.infrastructure.repositories.models import DiagnosticoGeolocalizado
+from apps.core.models import DiagnosticoGeolocalizado
 
 User = get_user_model()
 

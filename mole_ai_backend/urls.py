@@ -38,10 +38,10 @@ urlpatterns = [
     
     # Core app endpoints mapped primarily under api/v1/
     path('api/v1/', include([
-        path('auth/', include('apps.authentication.presentation.urls')),
-        path('ai/', include('apps.ai_models.presentation.urls')),
-        path('', include('apps.core.presentation.urls')),
-        path('plants/', include('apps.plants.presentation.urls')),
+        path('auth/', include('apps.authentication.urls')),
+        path('ai/', include('apps.ai_models.urls')),
+        path('', include('apps.core.urls')),
+        path('plants/', include('apps.plants.urls')),
     ])),
     
     # Swagger API Docs
@@ -49,7 +49,7 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 
     # Fallback to root for index_view (handled in a separate file or directly)
-    path('', include('apps.core.presentation.urls_root')),
+    path('', include('apps.core.urls_root')),
     
     # Serve favicon from staticfiles (shortcut to avoid 404 in browsers/devtools)
     path('favicon.ico', RedirectView.as_view(url=settings.STATIC_URL + 'favicon.ico')),
