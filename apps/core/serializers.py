@@ -215,7 +215,7 @@ class PlantKnowledgeQuerySerializer(serializers.Serializer):
         required=False,
         allow_blank=True
     )
-from apps.core.infrastructure.repositories.models import SensorLog, AIDiagnostic
+from apps.core.models import SensorLog, AIDiagnostic
 
 class HistorySerializer(serializers.Serializer):
     id = serializers.CharField(max_length=100)

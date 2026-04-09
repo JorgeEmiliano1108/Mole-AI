@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from apps.ai_models.infrastructure.repositories.models import LLMRequest
+from apps.ai_models.models import LLMRequest
 
 
 class ChatHistoryIsolationTest(TestCase):

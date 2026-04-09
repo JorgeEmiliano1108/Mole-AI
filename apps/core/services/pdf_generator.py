@@ -191,7 +191,7 @@ def generate_diagnostic_pdf(diagnostic_id: UUID | str) -> bytes:
     Raises ``AIDiagnostic.DoesNotExist`` if the id is invalid.
     """
     # Late import to avoid circular / AppRegistry issues at module level.
-    from apps.core.infrastructure.repositories.models import AIDiagnostic, SensorLog
+    from apps.core.models import AIDiagnostic, SensorLog
 
     diagnostic = AIDiagnostic.objects.get(pk=diagnostic_id)
 

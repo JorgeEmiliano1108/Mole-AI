@@ -14,7 +14,7 @@ class VisionStatusViewTest(TestCase):
     def _call(self, task_id):
         return self.client.get(f'/api/v1/ai/vision/status/{task_id}/')
 
-    @patch('apps.ai_models.presentation.views.AsyncResult')
+    @patch('apps.ai_models.views.AsyncResult')
     def test_pending_returns_pending_status(self, mock_async):
         m = MagicMock()
         m.state = 'PENDING'
@@ -26,7 +26,7 @@ class VisionStatusViewTest(TestCase):
         data = resp.json()
         assert data['status'] == 'pending'
 
-    @patch('apps.ai_models.presentation.views.AsyncResult')
+    @patch('apps.ai_models.views.AsyncResult')
     def test_success_returns_result_serializable(self, mock_async):
         m = MagicMock()
         m.state = 'SUCCESS'
@@ -39,7 +39,7 @@ class VisionStatusViewTest(TestCase):
         assert data['status'] == 'success'
         assert isinstance(data['result'], dict)
 
-    @patch('apps.ai_models.presentation.views.AsyncResult')
+    @patch('apps.ai_models.views.AsyncResult')
     def test_success_handles_nonserializable_result(self, mock_async):
         class Bogus:
             def __str__(self):
@@ -57,7 +57,7 @@ class VisionStatusViewTest(TestCase):
         # result should be stringified fallback
         assert isinstance(data['result'], str) or data['result'] == 'bogus-object'
 
-    @patch('apps.ai_models.presentation.views.AsyncResult')
+    @patch('apps.ai_models.views.AsyncResult')
     def test_failure_stringifies_info(self, mock_async):
         class MyErr(Exception):
             def __str__(self):

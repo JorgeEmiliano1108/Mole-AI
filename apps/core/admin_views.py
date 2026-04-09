@@ -8,8 +8,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 
-from apps.core.infrastructure.repositories.models import FeedbackTicket, SensorLog
-from apps.plants.infrastructure.repositories.models import UserPlant
+from apps.core.models import FeedbackTicket, SensorLog
+from apps.plants.models import UserPlant
 from django.db.models import Avg, Count
 
 from celery.result import AsyncResult

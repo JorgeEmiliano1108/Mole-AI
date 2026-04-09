@@ -15,8 +15,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 import random
-from apps.core.infrastructure.repositories.models import SensorLog
-from apps.plants.infrastructure.repositories.models import UserPlant
+from apps.core.models import SensorLog
+from apps.plants.models import UserPlant
 from django.shortcuts import get_object_or_404
 
 @api_view(['GET'])

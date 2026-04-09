@@ -11,7 +11,7 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 from django.contrib import admin
-from apps.core.infrastructure.repositories.models import FeedbackTicket
+from apps.core.models import FeedbackTicket
 
 
 @admin.register(FeedbackTicket)

@@ -25,12 +25,12 @@ from rest_framework import status
 from asgiref.sync import async_to_sync
 
 # Repositorios y Modelos
-from ..infrastructure.repositories.models import (
+from .models import (
     SensorLog, BotanicalKnowledge, AIDiagnostic, 
     DiagnosticoGeolocalizado, FeedbackTicket
 )
-from apps.plants.infrastructure.repositories.models import UserPlant
-from apps.ai_models.infrastructure.repositories.models import LLMRequest
+from apps.plants.models import UserPlant
+from apps.ai_models.models import LLMRequest
 from apps.authentication.infrastructure.authentication import HardwareAPIKeyAuthentication
 
 # Servicios y Serializers
@@ -78,6 +78,15 @@ def sensor_data_view(request):
     # Cast explícito para silenciar el error de "type empty"
     v_data = cast(Dict[str, Any], serializer.validated_data)
     
+    # [RF-IOTSEC-001] Protección Anti-Replay (ETSI EN 303 645)
+    recorded_at = v_data.get('recorded_at')
+    if recorded_at:
+        delta_seconds = abs((timezone.now() - recorded_at).total_seconds())
+        if delta_seconds > 300:
+            logger.warning(f"Bloqueo Anti-Replay: Delta de {delta_seconds}s detectado en ESP32.")
+            return Response({"error": "Replay attack protection: Timestamp out of sync (> 300s)"}, status=403)
+
+    
     if not UserPlant.objects.filter(id=v_data['plant_id']).exists():
         return Response({"error": "plant_id no registrado"}, status=404)
 
@@ -103,6 +112,14 @@ def sensor_batch_view(request):
     serializer.is_valid(raise_exception=True)
     v_data = cast(Dict[str, Any], serializer.validated_data)
     batch = cast(List[Dict[str, Any]], v_data['batch'])
+    
+    # [RF-IOTSEC-001] Protección Anti-Replay para Lotes
+    if batch and 'recorded_at' in batch[0]:
+        delta_seconds = abs((timezone.now() - batch[0]['recorded_at']).total_seconds())
+        if delta_seconds > 300:
+            logger.warning(f"Bloqueo Anti-Replay en Lote: Delta de {delta_seconds}s detectado.")
+            return Response({"error": "Replay attack protection in batch: Timestamp out of sync (> 300s)"}, status=403)
+
     
     logs = [SensorLog(**item) for item in batch]
     with transaction.atomic():

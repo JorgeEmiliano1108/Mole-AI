@@ -40,7 +40,7 @@ class LLMRequest(models.Model):
     
     # Primary key and relationships
     id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     session_id = models.CharField(max_length=100, db_index=True)
     
     # Request information
@@ -113,7 +113,7 @@ class CNNInference(models.Model):
     
     # Primary key and relationships
     id = models.BigAutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     request_id = models.CharField(max_length=100, db_index=True)
     
     # Input information

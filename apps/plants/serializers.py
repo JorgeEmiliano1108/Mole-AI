@@ -40,7 +40,7 @@ class FavoritePlantSerializer(serializers.Serializer):
 
 class SpeciesSerializer(serializers.ModelSerializer):
     class Meta:
-        from apps.plants.infrastructure.repositories.models import SpeciesCatalog
+        from apps.plants.models import SpeciesCatalog
 
         model = SpeciesCatalog
         fields = [
