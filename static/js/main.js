@@ -59,7 +59,7 @@ function showModule(moduleKey) {
             if (typeof initAdminCharts === 'function') initAdminCharts();
             break;
         case 'map':
-            if (window.map) setTimeout(() => window.map.invalidateSize(), 250);
+            if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
             if (typeof fetchMapData === 'function') fetchMapData();
             break;
     }
@@ -80,7 +80,7 @@ function changeLanguage(lang) {
 }
 
 // ==========================================================
-// 1. SISTEMA DE LOGIN Y REGISTRO (100% BACKEND)
+// 1. SISTEMA DE LOGIN Y REGISTRO
 // ==========================================================
 
 const introData = {
@@ -133,7 +133,7 @@ function backToLogin() {
     showModule('login'); 
 }
 
-// --- REGISTRO ESTRICTO (SOLO BACKEND) ---
+// --- REGISTRO ---
 async function submitRegistration() {
     const user = document.getElementById('reg-user-input').value.trim();
     const pass = document.getElementById('reg-pass-input').value.trim();
@@ -149,13 +149,11 @@ async function submitRegistration() {
         errorMsg.classList.remove('hidden');
         return;
     }
-
     if (pass !== passConfirm) {
         errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
         errorMsg.classList.remove('hidden');
         return;
     }
-
     if (user.toLowerCase() === 'admin') {
         errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
         errorMsg.classList.remove('hidden');
@@ -163,25 +161,23 @@ async function submitRegistration() {
     }
 
     try {
-        const response = await fetch('http://localhost:3000/api/registro', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, password: pass })
+        // USO DE API SERVICE: Endpoint real 'auth/register/'
+        const response = await window.moleApi.post('auth/register/', { 
+            username: user, 
+            password: pass 
         });
-
-        if (!response.ok) throw new Error("Fallo en servidor");
 
         successMsg.innerText = `USUARIO "${user.toUpperCase()}" CREADO EN SERVIDOR.`;
         successMsg.classList.remove('hidden');
         setTimeout(() => showModule('login'), 2000); 
 
     } catch (error) {
-        errorMsg.innerText = "ERROR: NO SE PUDO CONECTAR AL SERVIDOR.";
+        errorMsg.innerText = error.message || "ERROR: NO SE PUDO CONECTAR AL SERVIDOR.";
         errorMsg.classList.remove('hidden');
     }
 }
 
-// --- LOGIN CON BYPASS TEMPORAL (MODO DESARROLLO) ---
+// --- LOGIN REAL CON BYPASS TEMPORAL ---
 async function attemptLogin() {
     const user = document.getElementById('user-input').value.trim();
     const pass = document.getElementById('pass-input').value.trim();
@@ -189,36 +185,33 @@ async function attemptLogin() {
     
     errorMsg.classList.add('hidden');
 
-    // Bypass rápido: Si escribes "dev" en ambos campos, entras directo.
+    // Bypass rápido para pruebas UI
     if (user === 'dev' && pass === 'dev') {
         console.warn("> MODO DEV ACTIVADO: Entrando sin backend.");
-        executeLoginSequence('admin'); // Te mete como admin para que veas todo
+        executeLoginSequence('admin');
         return;
     }
 
     try {
-        const response = await fetch('http://localhost:3000/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: user, password: pass }) 
+        // USO DE API SERVICE: Endpoint real 'auth/login/'
+        const userData = await window.moleApi.post('auth/login/', { 
+            username: user, 
+            password: pass 
         });
 
-        if (response.ok) {
-            const userData = await response.json();
-            localStorage.setItem('moleia_token', userData.token); 
+        // El ApiService guarda el JWT automáticamente. Si la API devuelve el token en otra llave, ajustamos:
+        const token = userData.token || userData.access || userData.access_token;
+        if (token) {
+            await window.moleApi.setToken(token);
             executeLoginSequence(user); 
         } else {
-            errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
-            errorMsg.classList.remove('hidden');
+            throw new Error("Token no recibido desde el servidor.");
         }
 
     } catch (error) {
-         // SI EL BACKEND ESTÁ APAGADO, TE DEJA ENTRAR DE TODOS MODOS PARA VER EL DISEÑO
-         console.warn("> SERVIDOR NO DETECTADO. Entrando en modo offline temporal...");
-         
-         // Si dejaste los campos vacíos, te asigna un nombre de prueba
-         const testUser = user !== '' ? user : 'Operador_Local';
-         executeLoginSequence(testUser);
+        console.warn("> Servidor rechazó credenciales o está offline.", error);
+        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        errorMsg.classList.remove('hidden');
     }
 }
 

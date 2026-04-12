@@ -3,7 +3,7 @@
 // ==========================================================
 
 // Definimos la URL base del servidor (esto idealmente viviría en tu Módulo 2 de variables globales)
-const API_BASE_URL = window.API_BASE_URL || 'https://tu-backend-real.com';
+var API_BASE_URL = window.API_BASE_URL || 'https://tu-backend-real.com';
 
 function openIotWizard() {
     const modal = document.getElementById('iot-wizard-modal');
