@@ -265,3 +265,5 @@ CELERY_TASK_ROUTES = {
     # Tareas de Reportes y MLOps (MS3) - Asignamos a una cola dedicada
     'apps.core.tasks.generate_master_report_task': {'queue': 'reports_queue'},
 }
+
+WHITENOISE_MANIFEST_STRICT = False

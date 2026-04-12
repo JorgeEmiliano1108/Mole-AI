@@ -58,49 +58,41 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     const chatMessages = document.getElementById('chat-messages');
     
     const query = customPrompt || input.value.trim();
-    const engine = forcedEngine || IA_ENGINES.CHAT; // Por defecto usa el chat
+    const engine = forcedEngine || IA_ENGINES.CHAT; 
 
     if (!query) return;
 
-    // 1. Mostrar mensaje en UI (Solo si el usuario escribió manualmente)
     if (!customPrompt) {
         chatMessages.innerHTML += `<div class="text-white text-right opacity-80 mb-2">> USUARIO: ${query}</div>`;
         input.value = '';
     }
     
-    // Indicador de "Pensando" dinámico según el motor
     const typingId = 'typing-' + Date.now();
     chatMessages.innerHTML += `<div id="${typingId}" class="text-[#00ffaa] opacity-50 animate-pulse">> [${engine.toUpperCase()}] PROCESANDO...</div>`;
     chatMessages.scrollTop = chatMessages.scrollHeight;
     saveChatHistory(); 
 
     try {
-        // 2. CONEXIÓN REAL CON BACKEND
-        // Cambia 'http://localhost:3000' por la URL de tu servidor
-        const response = await fetch('http://localhost:3000/api/chat/process', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('moleia_token')}`
-            },
-            body: JSON.stringify({ 
-                prompt: query,
-                engine: engine, // El servidor decide qué modelo de IA usar
-                user: localStorage.getItem('moleia_current_user'),
-                history: localStorage.getItem('moleia_chat_history') 
-            })
+        // 🚀 USO DE API SERVICE: Interceptamos 'chat_fallback/' o 'chat/' según tus URLs de backend
+        // Enviamos 'question' porque así lo espera tu backend en Django
+        const data = await window.moleApi.post('chat/', {
+            question: query,
+            prompt: query,     // Mantenemos prompt por compatibilidad futura
+            engine: engine,
+            session_id: localStorage.getItem('moleia_current_user') || 'anon'
         });
-
-        const data = await response.json();
         
-        // 3. Remover indicador y mostrar respuesta real
         const typingElement = document.getElementById(typingId);
         if(typingElement) typingElement.remove();
 
-        if (response.ok) {
-            chatMessages.innerHTML += `<div class="text-[#f97316] mb-4">> MOLE-IA: ${data.reply}</div>`;
-        } else {
-            throw new Error(data.error || "Fallo en enlace.");
+        // Extraemos la respuesta mapeando las distintas formas en que tu backend puede contestar
+        const serverReply = data.answer || data.reply || data.response || "Análisis completado.";
+        
+        chatMessages.innerHTML += `<div class="text-[#f97316] mb-4">> MOLE-IA: ${serverReply}</div>`;
+        
+        // Disparamos evento si trae disclaimer médico (COFEPRIS Fase 3)
+        if (data.disclaimer) {
+            window.dispatchEvent(new CustomEvent('disclaimerReceived', { detail: { text: data.disclaimer } }));
         }
 
     } catch (error) {
