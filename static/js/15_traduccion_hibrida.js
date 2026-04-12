@@ -2,7 +2,7 @@
 // 15. MÓDULO I18N: TRADUCCIÓN DINÁMICA [BACKEND ESTRICTO]
 // ==========================================================
 
-const API_BASE_URL = window.API_BASE_URL || 'https://tu-backend-real.com';
+var API_BASE_URL = window.API_BASE_URL || 'https://tu-backend-real.com';
 
 // Memoria volátil para no descargar el mismo idioma dos veces en la misma sesión (ahorra red)
 let loadedTranslations = {};
