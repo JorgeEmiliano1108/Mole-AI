@@ -92,7 +92,7 @@ async function registerNewPlant() {
     };
 
     try {
-        const token = localStorage.getItem('moleia_token');
+        const token = window.getAuthToken();
         const response = await fetch('http://TU-BACKEND-REAL.com/api/plantas/registro', {
             method: 'POST',
             headers: { 

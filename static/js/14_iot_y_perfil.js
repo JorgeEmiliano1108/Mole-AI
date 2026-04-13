@@ -3,7 +3,9 @@
 // ==========================================================
 
 // Definimos la URL base del servidor (esto idealmente viviría en tu Módulo 2 de variables globales)
-var API_BASE_URL = window.API_BASE_URL || 'https://tu-backend-real.com';
+// Use centralized AppConfig for API base URL (see static/js/config.js)
+// Avoid redeclaring API_BASE_URL in multiple modules.
+// Access via: window.AppConfig.API_BASE_URL
 
 function openIotWizard() {
     const modal = document.getElementById('iot-wizard-modal');
@@ -60,18 +62,18 @@ async function startHardwareProvisioning() {
     const ssid = document.getElementById('wifi-ssid')?.value;
     const password = document.getElementById('wifi-pass')?.value;
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
 
     try {
         if (!token) throw new Error("Autorización denegada. Token de seguridad faltante.");
         console.log(`> Transmitiendo credenciales al servidor central de producción...`);
 
         // Uso de la constante API_BASE_URL para despliegues reales
-        const response = await fetch(`${API_BASE_URL}/api/iot/provisioning`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/api/iot/provisioning`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
+                'Authorization': `Bearer ${window.getAuthToken()}` 
             },
             body: JSON.stringify({ 
                 ssid: ssid, 
@@ -102,45 +104,6 @@ async function startHardwareProvisioning() {
 // GESTIÓN DEL PERFIL DE OPERADOR
 // ==========================================================
 
-async function openUserProfile() {
-    console.log("> Accediendo a base de datos de personal...");
-    const modal = document.getElementById('user-profile-modal');
-    if (modal) modal.classList.remove('hidden');
-
-    const currentUser = localStorage.getItem('moleia_current_user');
-    const token = localStorage.getItem('moleia_token');
-    
-    if (!currentUser || !token) {
-        console.error("> [ ERROR ] Identidad o token comprometidos.");
-        return;
-    }
-
-    try {
-        // Uso de la constante API_BASE_URL
-        const response = await fetch(`${API_BASE_URL}/api/usuarios/perfil/${currentUser}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) throw new Error("El servidor rechazó el acceso al perfil.");
-
-        const userData = await response.json();
-        
-        const nameEl = document.getElementById('profile-name');
-        const rankEl = document.getElementById('profile-rank');
-        
-        if (nameEl) nameEl.innerText = userData.name || currentUser;
-        if (rankEl) rankEl.innerText = userData.rank || 'Operador Estándar';
-
-    } catch(e) {
-        console.error("> [ ERROR CRÍTICO ] Falla de red al obtener perfil:", e);
-        const nameEl = document.getElementById('profile-name');
-        if (nameEl) nameEl.innerText = "ERROR DE CONEXIÓN";
-    }
-}
 
 function closeUserProfile() {
     const modal = document.getElementById('user-profile-modal');

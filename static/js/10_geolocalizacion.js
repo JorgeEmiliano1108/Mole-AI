@@ -84,7 +84,7 @@ async function loadMapPins() {
 
     let geoData = [];
     const currentUser = localStorage.getItem('moleia_current_user') || 'GLOBAL';
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
 
     try {
         if (!token) throw new Error("Acceso denegado: Se requiere Token de Autenticación.");

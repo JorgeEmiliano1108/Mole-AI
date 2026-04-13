@@ -34,6 +34,19 @@ const translations = {
     }
 };
 
+// Helper: create a DOM node with optional classes, textContent and attributes
+function createNode(tag = 'div', className = '', text = '', attrs = {}) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined && text !== null) el.textContent = text;
+    Object.keys(attrs || {}).forEach(k => {
+        if (k === 'id') el.id = attrs[k];
+        else if (k.startsWith('data-')) el.setAttribute(k, attrs[k]);
+        else el.setAttribute(k, attrs[k]);
+    });
+    return el;
+}
+
 // Función Maestra de Navegación (CORREGIDA)
 function showModule(moduleKey) {
     const mainScreens = ['intro', 'login', 'register', 'dashboard', 'admin'];
@@ -115,6 +128,40 @@ function typeContent(section) {
     }, 20);
 }
 
+// Ensure typeContent is accessible from inline handlers and attach resilient listeners
+window.typeContent = typeContent;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Ensure router-driven actions exist on these elements; if template lacks `data-action`, set a safe default.
+    const map = { 'btn-objetivo': 'type:objetivo', 'btn-vision': 'type:vision', 'btn-flora': 'type:flora' };
+    Object.keys(map).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (!el.hasAttribute('data-action')) {
+                el.setAttribute('data-action', map[id]);
+            }
+        }
+    });
+});
+
+// Small compatibility shims for UI buttons referenced in templates but not defined
+function openUserCreationModal() {
+    if (typeof showRegisterScreen === 'function') return showRegisterScreen();
+    if (typeof showModule === 'function') return showModule('register');
+    console.warn('openUserCreationModal: no register UI available');
+}
+
+function openAdminAddPlantModal() {
+    if (typeof openAddPlantModal === 'function') return openAddPlantModal();
+    if (typeof showModule === 'function') return showModule('admin');
+    console.warn('openAdminAddPlantModal: no add-plant UI available');
+}
+
+function returnToOverride() {
+    if (typeof showModule === 'function') return showModule('admin');
+    console.warn('returnToOverride: showModule not available');
+}
+
 function startSystem() {
     showModule('login'); 
     document.getElementById('login-error').classList.add('hidden');
@@ -129,9 +176,6 @@ function showRegisterScreen() {
     document.getElementById('reg-success').classList.add('hidden');
 }
 
-function backToLogin() {
-    showModule('login'); 
-}
 
 // --- REGISTRO ---
 async function submitRegistration() {
@@ -331,9 +375,10 @@ function logout() {
     }
 
     setTimeout(() => {
-        localStorage.removeItem('moleia_token');        
+        // Use centralized clearAuthToken helper (config.js) which delegates to moleApi or localStorage
+        try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
         localStorage.removeItem('moleia_current_user'); 
-        localStorage.removeItem('moleia_user_role');    
+        localStorage.removeItem('moleia_user_role');
         
         if (typeof detachChatListener === 'function') detachChatListener(); 
         if (window.monitorInterval) clearInterval(window.monitorInterval);  
@@ -472,7 +517,7 @@ function nextIotStep(step) {
                 
                 <p id="iot-status-text" class="text-center text-xs text-[#00ffaa] animate-pulse">Sincronizando claves de telemetría...</p>
             </div>
-            <button onclick="closeModalWithTV('iot-wizard-modal')" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
+            <button data-action="modal:close-iot" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
         `;
 
         // Simulamos el avance de la barra de progreso
@@ -497,18 +542,18 @@ function nextIotStep(step) {
                 </div>
                 <p class="text-[#00ffaa] font-bold text-lg mb-2">¡CONEXIÓN ESTABLECIDA!</p>
                 <p class="text-white/70 text-xs mb-6">El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.</p>
-                <button onclick="closeIotAndShowPlantBtn()" class="w-full border border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
+                <button data-action="iot:finalize" class="w-full border border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
                     > FINALIZAR PROTOCOLO
                 </button>
             </div>
-            <button onclick="closeIotAndShowPlantBtn()" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
+            <button data-action="iot:finalize" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
         `;
     }
 }
 
 // Función especial para cerrar el modal de IOT y mostrar el botón de "+ VINCULAR CULTIVO"
 function closeIotAndShowPlantBtn() {
-    closeModalWithTV('iot-wizard-modal');
+    closeModal('iot-wizard-modal');
     const btnCultivo = document.getElementById('new-user-plants');
     if(btnCultivo) {
         btnCultivo.classList.remove('hidden');
@@ -539,4 +584,291 @@ function registerNewPlant() {
     document.getElementById('main-img').classList.remove('hidden'); // Mostramos la imagen de la planta
     document.getElementById('plant-tag').innerText = finalName; // Ponemos el nombre que eligió el usuario
 
+}
+
+// ==========================================================
+// EVENT ROUTER CENTRALIZADO (PATRÓN DE DELEGACIÓN)
+// ==========================================================
+const ActionMap = {
+    'type:objetivo': () => typeContent('objetivo'),
+    'type:vision': () => typeContent('vision'),
+    'type:flora': () => loadFloraSearch(),
+    'system:start': () => startSystem(),
+    'auth:login': () => attemptLogin(),
+    'auth:forgot': () => typeof forgotPassword === 'function' && forgotPassword(),
+    'nav:register': () => showRegisterScreen(),
+    'mlops:train-rag': () => typeof trainRagModel === 'function' && trainRagModel(),
+    'mlops:train-cnn': () => typeof trainCnnModel === 'function' && trainCnnModel(),
+    'admin:create-operator': () => openUserCreationModal(),
+    'admin:add-plant': () => openAdminAddPlantModal(),
+    'nav:logout': () => logout(),
+    'nav:return-override': () => returnToOverride(),
+    'modal:close-iot': () => closeModal('iot-wizard-modal'),
+    'iot:finalize': () => closeIotAndShowPlantBtn(),
+    'report:download': (target) => handleReportDownload(target),
+    'menu:toggle-cultivos': () => toggleCultivosMenu()
+};
+
+document.body.addEventListener('click', (event) => {
+    // Buscamos si el elemento clickeado (o alguno de sus padres) tiene un data-action
+    const target = event.target.closest('[data-action]');
+    if (!target) return;
+
+    const action = target.getAttribute('data-action');
+    if (ActionMap[action]) {
+        event.preventDefault();
+        try {
+            ActionMap[action](target);
+        } catch (error) {
+            console.error(`[Router] Fallo al ejecutar acción: ${action}`, error);
+        }
+    } else {
+        console.warn(`[Router] Acción no registrada: ${action}`);
+    }
+});
+
+// ==========================================================
+// HANDLER PARA DESCARGA DE REPORTES VÍA ROUTER
+// ==========================================================
+async function handleReportDownload(btnElement) {
+    if (!btnElement) return;
+
+    const reportId = btnElement.getAttribute('data-report-id');
+    if (!reportId) {
+        console.error('[Router] Missing data-report-id attribute');
+        return;
+    }
+
+    // Reutilizamos la función existente downloadReportPDF con el elemento button
+    await downloadReportPDF(reportId, btnElement);
+}
+
+// ==========================================================
+// BUSCADOR DE FLORA MEXICANA (INTEGRACIÓN REAL CON API)
+// ==========================================================
+let searchTimeout = null;
+// AbortController for the active flora search request (ensures cancellation of previous requests)
+let floraSearchAbortController = null;
+
+function loadFloraSearch() {
+    console.debug('[Router] loadFloraSearch invoked');
+    const container = document.getElementById('typewriter-output');
+    if (!container) return;
+
+    // 1. Detener cualquier animación de tipeo zombi que esté corriendo
+    if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
+
+    // 2. Inyectar la interfaz del buscador estilo Terminal
+    container.innerHTML = `
+        <div class="flex flex-col h-full w-full min-h-[200px]">
+            <div class="flex items-center border-b border-[#00ffaa]/50 pb-2 mb-4">
+                <span class="mr-2 animate-pulse">>_</span>
+                <input type="text" id="flora-search-input" 
+                       class="bg-transparent border-none outline-none text-[#00ffaa] font-mono w-full placeholder-[#00ffaa]/30" 
+                       placeholder="Buscar espécimen (ej. Agave, Cempasúchil)..."
+                       autocomplete="off">
+            </div>
+            <div id="flora-search-results" class="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin">
+                <p class="text-[#00ffaa]/50 text-sm italic">Esperando consulta de base de datos...</p>
+            </div>
+        </div>
+    `;
+
+    // 3. Activar el campo de texto y el listener con Debounce (300ms)
+    const input = document.getElementById('flora-search-input');
+    input.focus();
+
+    // Ensure any previous pending abort controller is canceled (defensive)
+    if (floraSearchAbortController) {
+        try { floraSearchAbortController.abort(); } catch (err) { /* ignore */ }
+        floraSearchAbortController = null;
+    }
+
+    // Input listener uses debounce; responses are tied to an AbortController in searchPlant
+    const onInput = (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        const resultsContainer = document.getElementById('flora-search-results');
+
+        if (query.length < 2) {
+            resultsContainer.textContent = '';
+            const hint = document.createElement('p');
+            hint.className = 'text-[#00ffaa]/50 text-sm italic';
+            hint.textContent = 'Ingrese al menos 2 caracteres...';
+            resultsContainer.appendChild(hint);
+            return;
+        }
+
+        resultsContainer.textContent = '';
+        const loading = document.createElement('p');
+        loading.className = 'text-[#00ffaa] text-sm animate-pulse';
+        loading.textContent = 'Consultando servidor central...';
+        resultsContainer.appendChild(loading);
+
+        searchTimeout = setTimeout(() => {
+            searchPlant(query);
+        }, 300);
+    };
+
+    // Remove any previous identical listener to avoid duplicates
+    input.removeEventListener('input', input._floraListener || (() => {}));
+    input.addEventListener('input', onInput);
+    input._floraListener = onInput;
+}
+
+async function searchPlant(query) {
+    const resultsContainer = document.getElementById('flora-search-results');
+
+    // Cancel any previous inflight request for flora search
+    if (floraSearchAbortController) {
+        try { floraSearchAbortController.abort(); } catch (err) { /* ignore */ }
+        floraSearchAbortController = null;
+    }
+
+    // Defensive: ensure API base exists
+    if (!window.AppConfig || !window.AppConfig.API_BASE_URL) {
+        resultsContainer.textContent = '';
+        const err = document.createElement('p');
+        err.className = 'text-red-500 text-sm bg-red-500/10 p-2 border border-red-500/30';
+        err.textContent = 'ERROR: API base URL no configurada.';
+        resultsContainer.appendChild(err);
+        return;
+    }
+
+    floraSearchAbortController = new AbortController();
+    const signal = floraSearchAbortController.signal;
+
+    try {
+        const url = `${window.AppConfig.API_BASE_URL}/plants/search/?q=${encodeURIComponent(query)}`;
+
+        const headers = { 'Content-Type': 'application/json' };
+        const token = (typeof window.getAuthToken === 'function') ? window.getAuthToken() : null;
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers,
+            signal
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const results = Array.isArray(data) ? data : (data.results || []);
+
+        renderPlantResults(results);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            // Request was intentionally aborted; ignore silently
+            return;
+        }
+        console.error('[Flora Search] Falla de enlace:', error);
+        resultsContainer.textContent = '';
+        const alertEl = document.createElement('p');
+        alertEl.className = 'text-red-500 text-sm bg-red-500/10 p-2 border border-red-500/30';
+        alertEl.textContent = 'ERROR: Falla de enlace con la base de datos botánica.';
+        resultsContainer.appendChild(alertEl);
+    } finally {
+        // Clear controller reference so future searches can create a new one
+        floraSearchAbortController = null;
+    }
+}
+
+function renderPlantResults(results) {
+    const container = document.getElementById('flora-search-results');
+    container.textContent = '';
+
+    if (!results || results.length === 0) {
+        const none = document.createElement('p');
+        none.className = 'text-[#00ffaa]/70 text-sm border border-[#00ffaa]/20 p-2';
+        none.textContent = 'Ningún espécimen coincide con los parámetros.';
+        container.appendChild(none);
+        return;
+    }
+
+    // Helper to safely extract fields
+    const safe = (plant, ...keys) => {
+        for (const k of keys) {
+            if (plant[k]) return String(plant[k]);
+        }
+        return '';
+    };
+
+    results.forEach(plant => {
+        const name = safe(plant, 'name', 'nombre', 'common_name') || 'Desconocida';
+        const scientific = safe(plant, 'scientific_name', 'nombre_cientifico') || '';
+        const desc = safe(plant, 'description', 'descripcion') || 'Sin registro en la base de datos.';
+
+        const card = document.createElement('div');
+        card.className = 'border border-[#00ffaa]/30 p-3 bg-[#00ffaa]/5 hover:bg-[#00ffaa]/20 transition-all cursor-pointer';
+
+        const title = document.createElement('h3');
+        title.className = 'font-bold text-[#00ffaa] text-sm tracking-widest';
+        title.textContent = name.toUpperCase();
+        card.appendChild(title);
+
+        if (scientific) {
+            const sci = document.createElement('p');
+            sci.className = 'text-xs text-[#00ffaa]/70 italic mb-2';
+            sci.textContent = scientific;
+            card.appendChild(sci);
+        }
+
+        const snippet = document.createElement('p');
+        snippet.className = 'text-xs text-[#00ffaa]/90 opacity-80';
+        snippet.style.display = '-webkit-box';
+        snippet.style.webkitLineClamp = '2';
+        snippet.style.webkitBoxOrient = 'vertical';
+        snippet.style.overflow = 'hidden';
+        snippet.textContent = desc;
+        card.appendChild(snippet);
+
+        // Build expanded view on demand and restore original when closed
+        const buildExpanded = () => {
+            // Clear card
+            while (card.firstChild) card.removeChild(card.firstChild);
+
+            const eTitle = document.createElement('h3');
+            eTitle.className = 'font-bold text-[#00ffaa] text-sm tracking-widest border-b border-[#00ffaa]/30 pb-1 mb-2';
+            eTitle.textContent = name.toUpperCase();
+            card.appendChild(eTitle);
+
+            if (scientific) {
+                const eSci = document.createElement('p');
+                eSci.className = 'text-xs text-[#00ffaa]/70 italic mb-2';
+                eSci.textContent = scientific;
+                card.appendChild(eSci);
+            }
+
+            const eDesc = document.createElement('p');
+            eDesc.className = 'text-xs text-[#00ffaa] leading-relaxed';
+            eDesc.textContent = desc;
+            card.appendChild(eDesc);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'mt-3 text-xs text-black bg-[#00ffaa] px-2 py-1 hover:bg-white w-full font-bold tracking-widest';
+            closeBtn.textContent = '[ CERRAR FICHA ]';
+            closeBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                // Rebuild original summary view
+                while (card.firstChild) card.removeChild(card.firstChild);
+                card.appendChild(title);
+                if (scientific) card.appendChild(document.createElement('p'));
+                card.appendChild(snippet);
+                // Reattach the click to expand
+                card.addEventListener('click', onCardClick);
+            });
+
+            card.appendChild(closeBtn);
+        };
+
+        const onCardClick = () => {
+            // Prevent multiple attached listeners
+            card.removeEventListener('click', onCardClick);
+            buildExpanded();
+        };
+
+        card.addEventListener('click', onCardClick);
+        container.appendChild(card);
+    });
 }

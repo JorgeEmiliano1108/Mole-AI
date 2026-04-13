@@ -42,10 +42,12 @@ async function fetchAndRenderHuerto(tab) {
     const container = document.getElementById('history-list-container');
     if(!container) return;
 
-    container.innerHTML = `<div class="text-center text-[#00ffaa] animate-pulse mt-10 text-xs tracking-widest">> SINCRONIZANDO CON BASE DE DATOS CENTRAL...</div>`;
+    container.textContent = '';
+    const syncing = createNode('div', 'text-center text-[#00ffaa] animate-pulse mt-10 text-xs tracking-widest', '> SINCRONIZANDO CON BASE DE DATOS CENTRAL...');
+    container.appendChild(syncing);
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
     let dataToRender = [];
 
     try {
@@ -73,13 +75,17 @@ async function fetchAndRenderHuerto(tab) {
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Fallo al obtener base de datos:", error);
         // Mostrar error en pantalla en lugar de usar datos locales
-        container.innerHTML = `<div class="text-center text-red-500 mt-10 text-xs font-bold tracking-widest">> ERROR DE RED: NO SE PUDO CONECTAR AL SERVIDOR CENTRAL.</div>`;
+        container.textContent = '';
+        const err = createNode('div', 'text-center text-red-500 mt-10 text-xs font-bold tracking-widest', '> ERROR DE RED: NO SE PUDO CONECTAR AL SERVIDOR CENTRAL.');
+        container.appendChild(err);
         return;
     }
 
     // 2. RENDERIZADO DE LAS CARDS
     if (!dataToRender || dataToRender.length === 0) {
-        container.innerHTML = `<div class="text-center text-white/50 mt-10 text-xs tracking-widest">> NO HAY REGISTROS EN ESTA CATEGORÍA.</div>`;
+        container.textContent = '';
+        const none = createNode('div', 'text-center text-white/50 mt-10 text-xs tracking-widest', '> NO HAY REGISTROS EN ESTA CATEGORÍA.');
+        container.appendChild(none);
         return;
     }
 
@@ -88,20 +94,33 @@ async function fetchAndRenderHuerto(tab) {
         ? { border: 'border-[#00ffaa]/30', bgHover: 'hover:bg-[#00ffaa]/10', text: 'text-[#00ffaa]' }
         : { border: 'border-[#f97316]/30', bgHover: 'hover:bg-[#f97316]/10', text: 'text-[#f97316]' };
 
-    container.innerHTML = dataToRender.map(item => `
-        <div class="border ${themeClasses.border} bg-black p-4 flex flex-col md:flex-row justify-between md:items-center gap-4 ${themeClasses.bgHover} transition-colors">
-            <div>
-                <span class="text-[10px] text-white/50 border border-white/20 px-1">${item.id || 'N/A'} | ${item.date}</span>
-                <h3 class="${themeClasses.text} font-bold mt-1 text-sm md:text-base uppercase">${item.species}</h3>
-                <p class="text-xs text-white/80">Estado: <span class="${(item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00ffaa]' : 'text-red-400'}">${item.status}</span> | pH: ${item.ph}</p>
-            </div>
-            <div class="flex gap-2 shrink-0">
-                <button onclick="downloadReportPDF('${item.id}', this)" class="border border-[#00e5ff] text-[#00e5ff] px-3 py-1 text-[10px] uppercase font-bold hover:bg-[#00e5ff] hover:text-black transition-colors">
-                    [ PDF ]
-                </button>
-            </div>
-        </div>
-    `).join('');
+    container.textContent = '';
+    dataToRender.forEach(item => {
+        const card = createNode('div', `border ${themeClasses.border} bg-black p-4 flex flex-col md:flex-row justify-between md:items-center gap-4 ${themeClasses.bgHover} transition-colors`);
+
+        const left = createNode('div');
+        const idSpan = createNode('span', 'text-[10px] text-white/50 border border-white/20 px-1', `${item.id || 'N/A'} | ${item.date}`);
+        left.appendChild(idSpan);
+
+        const title = createNode('h3', `${themeClasses.text} font-bold mt-1 text-sm md:text-base uppercase`, item.species || 'Sin nombre');
+        left.appendChild(title);
+
+        const statusClass = (item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00ffaa]' : 'text-red-400';
+        const statusP = createNode('p', 'text-xs text-white/80', `Estado: `);
+        const statusSpan = createNode('span', statusClass, item.status || 'Desconocido');
+        statusP.appendChild(statusSpan);
+        statusP.appendChild(document.createTextNode(` | pH: ${item.ph || 'N/A'}`));
+        left.appendChild(statusP);
+
+        const right = createNode('div', 'flex gap-2 shrink-0');
+        const btn = createNode('button', 'border border-[#00e5ff] text-[#00e5ff] px-3 py-1 text-[10px] uppercase font-bold hover:bg-[#00e5ff] hover:text-black transition-colors', '[ PDF ]', { 'data-report-id': item.id });
+        btn.setAttribute('data-action', 'report:download');
+        right.appendChild(btn);
+
+        card.appendChild(left);
+        card.appendChild(right);
+        container.appendChild(card);
+    });
 }
 
 // ----------------------------------------------------
@@ -115,7 +134,7 @@ async function saveToFavorites(event) {
     btn.classList.add('animate-pulse');
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
 
     // Tomamos los datos de la UI del diagnóstico. El backend deberá asignar el ID real.
     const newFavorite = {

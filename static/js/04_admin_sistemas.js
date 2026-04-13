@@ -29,7 +29,7 @@ async function initAdminCharts() {
         const response = await fetch('http://localhost:3000/api/admin/estadisticas', {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('moleia_token')}`,
+                'Authorization': `Bearer ${window.getAuthToken()}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -112,7 +112,7 @@ async function initAdminCharts() {
 async function downloadAdminReport() {
     try {
         const response = await fetch('http://localhost:3000/api/admin/reporte-texto', {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('moleia_token')}` }
+            headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
         });
         
         if (!response.ok) throw new Error("No se pudo generar el reporte.");
@@ -163,7 +163,7 @@ async function renderLogList(plantName) {
     try {
         // Obtenemos los logs reales de esa planta específica
         const response = await fetch(`http://localhost:3000/api/plantas/${plantName}/logs`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('moleia_token')}` }
+            headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
         });
         const logs = response.ok ? await response.json() : [];
 
@@ -237,7 +237,7 @@ async function openModal() {
     try {
         // Pedimos los datos históricos (ej. últimas 7 horas) de ESA planta específica
         const response = await fetch(`http://localhost:3000/api/plantas/${currentPlantName}/historial`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('moleia_token')}` }
+            headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
         });
         
         // Si el servidor falla, usamos un fallback visual por defecto (para que no se rompa la UI)
