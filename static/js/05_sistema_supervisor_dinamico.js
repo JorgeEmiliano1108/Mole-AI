@@ -9,7 +9,7 @@
 async function syncUserPlants() {
     try {
         const currentUser = localStorage.getItem('moleia_current_user'); 
-        const token = localStorage.getItem('moleia_token');
+        const token = window.getAuthToken();
 
         if (!currentUser || !token) return;
 
@@ -80,7 +80,7 @@ async function triggerOverride(type, plantName = null) {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('moleia_token')}`
+                'Authorization': `Bearer ${window.getAuthToken()}`
             },
             body: JSON.stringify({ plant: targetPlant, action: type, data: db[targetPlant] })
         });

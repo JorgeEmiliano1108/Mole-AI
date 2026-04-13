@@ -48,7 +48,7 @@ async function savePlantData(plantName, plantData) {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('moleia_token')}`
+                    'Authorization': `Bearer ${window.getAuthToken()}`
                 },
                 body: JSON.stringify({ name: plantName, data: plantData, user: localStorage.getItem('moleia_current_user') })
             });
@@ -84,7 +84,7 @@ window.addEventListener('online', async () => {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('moleia_token')}`
+                        'Authorization': `Bearer ${window.getAuthToken()}`
                     },
                     body: JSON.stringify({ name: task.data.name, data: task.data.data, user: localStorage.getItem('moleia_current_user') })
                 });

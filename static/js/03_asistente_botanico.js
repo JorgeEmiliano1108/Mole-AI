@@ -20,7 +20,17 @@ function loadChatHistory() {
     if (!chatBox) return;
 
     const savedChat = localStorage.getItem('moleia_chat_history');
-    chatBox.innerHTML = savedChat ? savedChat : defaultChat;
+    // If saved HTML exists, restore it (legacy). Otherwise render default static chat safely.
+    if (savedChat) {
+        chatBox.innerHTML = savedChat;
+    } else {
+        chatBox.textContent = '';
+        // defaultChat contains markup; keep original small greeting using safe nodes
+        const first = createNode('div', 'text-[#00ffaa] opacity-80', '> NÚCLEO IA EN LÍNEA...');
+        const second = createNode('div', 'text-[#f97316]', '> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.');
+        chatBox.appendChild(first);
+        chatBox.appendChild(second);
+    }
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
@@ -63,12 +73,14 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     if (!query) return;
 
     if (!customPrompt) {
-        chatMessages.innerHTML += `<div class="text-white text-right opacity-80 mb-2">> USUARIO: ${query}</div>`;
+        const userNode = createNode('div', 'text-white text-right opacity-80 mb-2', `> USUARIO: ${query}`);
+        chatMessages.appendChild(userNode);
         input.value = '';
     }
-    
+
     const typingId = 'typing-' + Date.now();
-    chatMessages.innerHTML += `<div id="${typingId}" class="text-[#00ffaa] opacity-50 animate-pulse">> [${engine.toUpperCase()}] PROCESANDO...</div>`;
+    const typingNode = createNode('div', 'text-[#00ffaa] opacity-50 animate-pulse', `> [${engine.toUpperCase()}] PROCESANDO...`, { id: typingId });
+    chatMessages.appendChild(typingNode);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     saveChatHistory(); 
 
@@ -87,8 +99,8 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
 
         // Extraemos la respuesta mapeando las distintas formas en que tu backend puede contestar
         const serverReply = data.answer || data.reply || data.response || "Análisis completado.";
-        
-        chatMessages.innerHTML += `<div class="text-[#f97316] mb-4">> MOLE-IA: ${serverReply}</div>`;
+        const replyNode = createNode('div', 'text-[#f97316] mb-4', `> MOLE-IA: ${serverReply}`);
+        chatMessages.appendChild(replyNode);
         
         // Disparamos evento si trae disclaimer médico (COFEPRIS Fase 3)
         if (data.disclaimer) {
@@ -98,7 +110,8 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     } catch (error) {
         console.error("Error en motor IA:", error);
         document.getElementById(typingId)?.remove();
-        chatMessages.innerHTML += `<div class="text-red-500">> ERROR: Enlace neuronal con ${engine} interrumpido.</div>`;
+        const errNode = createNode('div', 'text-red-500', `> ERROR: Enlace neuronal con ${engine} interrumpido.`);
+        chatMessages.appendChild(errNode);
     }
 
     chatMessages.scrollTop = chatMessages.scrollHeight;

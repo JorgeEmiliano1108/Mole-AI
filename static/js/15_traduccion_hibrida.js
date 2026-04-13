@@ -2,7 +2,9 @@
 // 15. MÓDULO I18N: TRADUCCIÓN DINÁMICA [BACKEND ESTRICTO]
 // ==========================================================
 
-var API_BASE_URL = window.API_BASE_URL || 'https://tu-backend-real.com';
+// Use centralized AppConfig for API base URL (see static/js/config.js)
+// Avoid redeclaring API_BASE_URL in multiple modules.
+// Access via: window.AppConfig.API_BASE_URL
 
 // Memoria volátil para no descargar el mismo idioma dos veces en la misma sesión (ahorra red)
 let loadedTranslations = {};
@@ -34,7 +36,7 @@ async function applyLanguage(lang) {
     if (!loadedTranslations[lang]) {
         try {
             // Petición GET al servidor para traer el diccionario JSON de ese idioma
-            const response = await fetch(`${API_BASE_URL}/api/i18n/paquete/${lang}`);
+            const response = await fetch(`/static/lang/${lang}.json`);
             
             if (!response.ok) throw new Error(`El servidor no encontró el idioma: ${lang}`);
             
@@ -90,16 +92,16 @@ async function switchLanguage(newLang) {
 
     // 2. Sincronizamos con el servidor para que se guarde en el perfil del Operador
     const currentUser = localStorage.getItem('moleia_current_user');
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
 
     if (currentUser && token) {
         try {
             console.log("> Sincronizando preferencia de idioma con el perfil central...");
-            const response = await fetch(`${API_BASE_URL}/api/usuarios/preferencias`, {
+            const response = await fetch(`${window.AppConfig.API_BASE_URL}/api/usuarios/preferencias`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${window.getAuthToken()}`
                 },
                 body: JSON.stringify({
                     usuario: currentUser,

@@ -12,7 +12,7 @@ async function downloadReportPDF(reportId, btnElement) {
     btnElement.disabled = true;
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
 
     try {
         if (!token) throw new Error("Acceso denegado: Se requiere Token de Autenticación para descargas.");
@@ -94,7 +94,7 @@ window.addEventListener('click', function(e) {
     if (!dropdown || dropdown.classList.contains('hidden')) return;
 
     // ¿El usuario hizo clic en el botón que abre el menú?
-    const isClickInsideBtn = e.target.closest('button[onclick="toggleCultivosMenu()"]');
+    const isClickInsideBtn = e.target.closest('button[data-action="menu:toggle-cultivos"]');
     
     // MEJORA: ¿El usuario hizo clic ADENTRO del menú? (Para que no se cierre mientras lo usa)
     const isClickInsideMenu = e.target.closest('#dropdown-cultivos');

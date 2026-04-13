@@ -44,7 +44,7 @@ function sendReport() {
         };
 
         try {
-            const token = localStorage.getItem('moleia_token');
+            const token = window.getAuthToken();
             // Endpoint para reportes de usuarios
             const response = await fetch('http://localhost:3000/api/reportes/usuarios', {
                 method: 'POST',
@@ -84,7 +84,7 @@ async function logPlantIssue(plantName, issueDetails) {
     };
 
     try {
-        const token = localStorage.getItem('moleia_token');
+        const token = window.getAuthToken();
         // Endpoint para reportes de plantas/sistemas
         await fetch('http://localhost:3000/api/reportes/plantas', {
             method: 'POST',
@@ -103,10 +103,16 @@ async function renderAdminReports() {
     const userContainer = document.getElementById('user-reports-list');
     const plantContainer = document.getElementById('plant-reports-list');
     
-    if(userContainer) userContainer.innerHTML = `<div class="text-center opacity-50 text-xs py-8 animate-pulse">> DESCARGANDO DATOS DE OPERADORES...</div>`;
-    if(plantContainer) plantContainer.innerHTML = `<div class="text-center opacity-50 text-xs py-8 animate-pulse">> DESCARGANDO BITÁCORA BOTÁNICA...</div>`;
+    if(userContainer) {
+        userContainer.textContent = '';
+        userContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8 animate-pulse', '> DESCARGANDO DATOS DE OPERADORES...'));
+    }
+    if(plantContainer) {
+        plantContainer.textContent = '';
+        plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8 animate-pulse', '> DESCARGANDO BITÁCORA BOTÁNICA...'));
+    }
 
-    const token = localStorage.getItem('moleia_token');
+    const token = window.getAuthToken();
     
     // 1. CARGAR REPORTES DE USUARIOS
     let userReports = [];
@@ -130,33 +136,35 @@ async function renderAdminReports() {
 
     // 3. PINTAR BANDEJA DE USUARIOS
     if(userContainer) {
+        userContainer.textContent = '';
         if(userReports.length === 0) {
-            userContainer.innerHTML = `<div class="text-center opacity-50 text-xs py-8">> NO HAY REPORTES DE OPERADORES...</div>`;
+            userContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8', '> NO HAY REPORTES DE OPERADORES...'));
         } else {
-            userContainer.innerHTML = [...userReports].reverse().map(rep => `
-                <div class="grid grid-cols-12 gap-4 text-xs border-b border-[#00e5ff]/10 py-3 px-2 hover:bg-[#00e5ff]/10 transition-colors">
-                    <div class="col-span-2 text-[#00e5ff]/70 font-bold">${rep.time}</div>
-                    <div class="col-span-3 text-white">${rep.user}</div>
-                    <div class="col-span-3 text-[#f97316] uppercase font-bold">${rep.type.replace('_', ' ')}</div>
-                    <div class="col-span-4 opacity-80 break-words">${rep.message}</div>
-                </div>
-            `).join('');
+            [...userReports].reverse().forEach(rep => {
+                const row = createNode('div', 'grid grid-cols-12 gap-4 text-xs border-b border-[#00e5ff]/10 py-3 px-2 hover:bg-[#00e5ff]/10 transition-colors');
+                row.appendChild(createNode('div', 'col-span-2 text-[#00e5ff]/70 font-bold', rep.time));
+                row.appendChild(createNode('div', 'col-span-3 text-white', rep.user));
+                row.appendChild(createNode('div', 'col-span-3 text-[#f97316] uppercase font-bold', (rep.type || '').replace('_', ' ')));
+                row.appendChild(createNode('div', 'col-span-4 opacity-80 break-words', rep.message));
+                userContainer.appendChild(row);
+            });
         }
     }
 
     // 4. PINTAR BANDEJA DE PLANTAS
     if(plantContainer) {
+        plantContainer.textContent = '';
         if(plantReports.length === 0) {
-            plantContainer.innerHTML = `<div class="text-center opacity-50 text-xs py-8">> NO HAY ANOMALÍAS BOTÁNICAS...</div>`;
+            plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8', '> NO HAY ANOMALÍAS BOTÁNICAS...'));
         } else {
-            plantContainer.innerHTML = [...plantReports].reverse().map(rep => `
-                <div class="grid grid-cols-12 gap-4 text-xs border-b border-red-500/10 py-3 px-2 hover:bg-red-500/10 transition-colors">
-                    <div class="col-span-2 text-red-400/70 font-bold">${rep.time}</div>
-                    <div class="col-span-3 text-white">${rep.user}</div>
-                    <div class="col-span-3 text-[#00ffaa] font-bold">NÚCLEO: ${rep.plant}</div>
-                    <div class="col-span-4 opacity-80 text-red-300 break-words">${rep.issue}</div>
-                </div>
-            `).join('');
+            [...plantReports].reverse().forEach(rep => {
+                const row = createNode('div', 'grid grid-cols-12 gap-4 text-xs border-b border-red-500/10 py-3 px-2 hover:bg-red-500/10 transition-colors');
+                row.appendChild(createNode('div', 'col-span-2 text-red-400/70 font-bold', rep.time));
+                row.appendChild(createNode('div', 'col-span-3 text-white', rep.user));
+                row.appendChild(createNode('div', 'col-span-3 text-[#00ffaa] font-bold', `NÚCLEO: ${rep.plant}`));
+                row.appendChild(createNode('div', 'col-span-4 opacity-80 text-red-300 break-words', rep.issue));
+                plantContainer.appendChild(row);
+            });
         }
     }
 }

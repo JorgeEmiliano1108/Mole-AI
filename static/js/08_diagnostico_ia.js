@@ -72,10 +72,6 @@ async function handleImageUpload(event) {
 /**
  * CIERRE DE INTERFAZ DE DIAGNÓSTICO
  */
-function closeDiagnosisModal() {
-    const modal = document.getElementById('diagnosis-result-modal');
-    if (modal) modal.classList.add('hidden');
-}
 
 /**
  * LISTENER INICIALIZADOR
