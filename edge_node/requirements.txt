@@ -1,9 +1,0 @@
-# Edge Node — Mole.AI
-# Dependencies for the Store-and-Forward daemon and local MQTT subscriber
-
-httpx>=0.26           # Async HTTP client for backend sync
-paho-mqtt>=2.0        # MQTT subscriber (ESP32 local broker)
-python-dotenv>=1.0    # Load .env config
-tflite-runtime>=2.14  # TFLite inference (CNN pH regression)
-Pillow>=10.0          # Image preprocessing for CNN
-numpy>=1.24           # Array ops for TFLite input tensor
