@@ -242,4 +242,4 @@ monitoring/
 *.pem
 *.key
 *.crt
-.secrets/
+.secrets/.env

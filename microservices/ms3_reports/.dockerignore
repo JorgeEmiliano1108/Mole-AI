@@ -1,0 +1,35 @@
+# Git y Pycache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.git/
+
+# Entornos virtuales y locales
+.env
+.venv/
+venv/
+env/
+
+# IDE y Editores
+.vscode/
+.idea/
+.DS_Store
+
+# Archivos de Build y Logs
+build/
+dist/
+*.log
+
+# Archivos de la infraestructura Docker
+Dockerfile*
+docker-compose*.yml
+
+# Archivos Pesados / Media
+media/
+*.pdf
+
+# Documentación o archivos innecesarios
+*.md
+tests/
