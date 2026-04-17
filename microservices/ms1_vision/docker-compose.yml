@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  ms1_vision:
+    build:
+      context: .
+      target: development
+    container_name: ms1_vision_standalone
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app/ms1_vision
+      - ../models:/models:ro
+    env_file:
+      - ../.env
+    environment:
+      - DJANGO_BASE_URL=http://host.docker.internal:8000
+    depends_on:
+      - db
+      - redis
+      - minio
+    networks:
+      - ms1-dev-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ms1_redis_dev
+    networks:
+      - ms1-dev-net
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ms1_db_dev
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mole_ai_db
+    networks:
+      - ms1-dev-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: ms1_minio_dev
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data
+    networks:
+      - ms1-dev-net
+
+networks:
+  ms1-dev-net:
+    driver: bridge

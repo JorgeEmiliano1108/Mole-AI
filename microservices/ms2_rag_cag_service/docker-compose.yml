@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  ms2_chat:
+    build:
+      context: .
+      target: development
+    container_name: ms2_chat_standalone
+    ports:
+      - "8002:8002"
+    volumes:
+      - .:/app/ms2_rag_cag_service
+      - ms2_ai_vectors:/app/storage/vectors
+    env_file:
+      - ../.env
+    depends_on:
+      - redis
+    networks:
+      - ms2-dev-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ms2_redis_dev
+    networks:
+      - ms2-dev-net
+
+networks:
+  ms2-dev-net:
+    driver: bridge
+
+volumes:
+  ms2_ai_vectors:
