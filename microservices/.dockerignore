@@ -1,22 +1,37 @@
-.git
+# .dockerignore
+
+# Git y Entornos Virtuales
+.git/
 .gitignore
-.env
-.venv
 venv/
 env/
+.venv/
+.env
+
+# Cachés de Python y tests
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.Python
 .pytest_cache/
-htmlcov/
-.tox/
 .coverage
-*.sqlite3
-media/
-storage/
-logs/
-Dockerfile
+tests/
+htmlcov/
+
+# IDEs y OS (NUEVO)
+.vscode/
+.idea/
+.cursorrules
+*.swp
+.DS_Store
+Thumbs.db
+
+# Documentación y archivos de Docker
+docs/
 docker-compose*.yml
+Dockerfile
 README.md
+
+# Modelos y Datos (Se montan en runtime)
+models/
+data/

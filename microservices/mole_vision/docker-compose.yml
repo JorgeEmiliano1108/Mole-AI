@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  mole_vision:
+    build:
+      context: .
+      target: development
+    container_name: mole_vision_standalone
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+      - ./models:/models:ro
+    env_file:
+      - ../../.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CNN_MODEL_PATH=/models/model.tflite
+      - CNN_LABELS_PATH=/models/labels.json
+    depends_on:
+      - db
+      - redis
+      - minio
+    networks:
+      - mole-vision-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: mole_vision_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - mole-vision-net
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: mole_vision_db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mole_ai_db
+    networks:
+      - mole-vision-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: mole_vision_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data --console-address ":9001"
+    networks:
+      - mole-vision-net
+
+networks:
+  mole-vision-net:
+    driver: bridge
