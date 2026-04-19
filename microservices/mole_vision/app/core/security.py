@@ -1,40 +1,36 @@
 """
-Core Security - Zero-Trust JWT Validation with JWKS Cache
-Skill 01: Arquitectura Hexagonal - Capa Core
-Skill 02: LFPDPPP - Sin almacenamiento de PII en logs
+Core Security - JWT Validation 
+Arquitectura Hexagonal - Capa Core
+LFPDPPP - Cumplimiento normativo: Hashing de PII en logs (SHA-256)
 """
 import asyncio
-import logging
-from datetime import datetime, timedelta
+import hashlib
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-import httpx
 import jwt
-from jwt import PyJWKClient, PyJWKClientError
-
+from jwt import PyJWKClient
 from fastapi import HTTPException
 import structlog
 
+from app.core.config import settings
+
 logger = structlog.get_logger()
 
+def _hash_user_id(user_id: str) -> str:
+    """Aplica pseudo-anonimización (SHA-256) al UUID para cumplir con LFPDPPP."""
+    if not user_id:
+        return "anonymous"
+    return hashlib.sha256(user_id.encode('utf-8')).hexdigest()
 
 class SupabaseTokenValidator:
-    """
-    Validador autónomo de JWT usando JWKS de Supabase.
+    """Validador asimétrico estricto descargando llaves de Supabase."""
     
-    Anti-DoS Features:
-    - Cache JWKS con cooldown de 5 minutos
-    - Solo refresh si el kid no existe en cache
-    - Lock asíncrono para evitar tormentas de peticiones
-    """
-    
-    def __init__(
-        self,
-        supabase_url: str,
-        jwks_cache_ttl: int = 300,
-    ):
+    def __init__(self, supabase_url: str, jwks_cache_ttl: int = 300):
         self.supabase_url = supabase_url.rstrip("/")
-        self.jwks_url = f"{self.supabase_url}/.well-known/jwks.json"
+        # Endpoint oficial de Supabase para llaves asimétricas
+        self.jwks_url = f"{self.supabase_url}/auth/v1/.well-known/jwks.json"
+        
         self._cache: Optional[dict] = None
         self._cache_timestamp: Optional[datetime] = None
         self._jwks_client: Optional[PyJWKClient] = None
@@ -42,97 +38,46 @@ class SupabaseTokenValidator:
         self._cooldown = timedelta(seconds=jwks_cache_ttl)
     
     async def validate(self, token: str) -> dict:
-        """
-        Valida el token JWT y retorna los claims.
-        
-        Args:
-            token: JWT token string
-            
-        Returns:
-            dict: Claims del token (sub, email, role, etc.)
-            
-        Raises:
-            HTTPException(401): Token inválido, expirado o no autorizado
-        """
         try:
+            # 1. Obtener la llave pública de Supabase
             signing_key = await self._get_signing_key(token)
             
+            # 2. Validar matemáticamente
             claims = jwt.decode(
                 token,
                 signing_key.key,
-                algorithms=["RS256"],
+                algorithms=["ES256"], 
                 audience="authenticated",
-                issuer=self.supabase_url,
                 options={
                     "verify_aud": True,
                     "verify_exp": True,
-                    "verify_iss": True,
-                    
+                    "verify_iss": False  
                 },
+                leeway=10  
             )
-            
-            logger.info("token_validated", user_id=claims.get("sub"))
+            # ✅ CORRECCIÓN LFPDPPP: Nunca registrar UUIDs o emails crudos
+            hashed_sub = _hash_user_id(claims.get("sub", ""))
+            logger.info("token_validated", user_hash=hashed_sub)
             return claims
             
         except jwt.ExpiredSignatureError:
             logger.warning("token_expired")
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Token Expired", "status": 401},
-            )
-        except jwt.InvalidAudienceError:
-            logger.warning("token_invalid_audience")
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Invalid Audience", "status": 401},
-            )
-        except jwt.InvalidSignatureError:
-            logger.warning("token_invalid_signature")
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Invalid Signature", "status": 401},
-            )
-        except jwt.DecodeError:
-            logger.warning("token_decode_error")
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Invalid Token", "status": 401},
-            )
-        except PyJWKClientError as e:
-            logger.error("jwks_client_error", error=str(e))
-            raise HTTPException(
-                status_code=503,
-                detail={"type": "https://mole.ai/errors/service_unavailable", "title": "Auth Service Unavailable", "status": 503},
-            )
+            raise HTTPException(status_code=401, detail={"title": "Token Expired"})
         except Exception as e:
-            logger.exception("unexpected_token_validation_error")
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Token Validation Failed", "status": 401},
-            )
-    
+            logger.exception("token_validation_failed", error=str(e))
+            raise HTTPException(status_code=401, detail={"title": "Unauthorized"})
+
     async def _get_signing_key(self, token: str) -> jwt.PyJWK:
-        """
-        Obtiene la clave de firma del JWKS con estrategia Anti-DoS.
-        
-        - Si el kid del token NO está en cache: retorna error (no hace refresh)
-        - Solo hace refresh si el kid no existe Y el cooldown expiró
-        """
         try:
             unverified_header = jwt.get_unverified_header(token)
             kid = unverified_header.get("kid")
         except Exception:
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Invalid Token Header", "status": 401},
-            )
+            raise HTTPException(status_code=401, detail={"title": "Invalid Token Header"})
         
         if not kid:
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Missing Key ID", "status": 401},
-            )
+            raise HTTPException(status_code=401, detail={"title": "Missing Key ID"})
         
+        # Estrategia Anti-DoS con caché
         if self._cache and kid in self._cache:
             return self._cache[kid]
         
@@ -140,46 +85,26 @@ class SupabaseTokenValidator:
             if self._cache and kid in self._cache:
                 return self._cache[kid]
             
-            if self._cache_timestamp:
-                time_since_refresh = datetime.utcnow() - self._cache_timestamp
-                if time_since_refresh < self._cooldown:
-                    logger.warning("jwks_cooldown_active", kid=kid)
-                    raise HTTPException(
-                        status_code=401,
-                        detail={"type": "https://mole.ai/errors/unauthorized", "title": "Unknown Key ID", "status": 401},
-                    )
-            
-            logger.info("refreshing_jwks")
+            logger.info("refreshing_jwks", url=self.jwks_url)
             try:
                 self._jwks_client = PyJWKClient(self.jwks_url)
                 keys = self._jwks_client.get_signing_keys()
                 self._cache = {key.key_id: key for key in keys}
-                self._cache_timestamp = datetime.utcnow()
+                self._cache_timestamp = datetime.now(timezone.utc)
             except Exception as e:
                 logger.error("jwks_refresh_failed", error=str(e))
-                raise HTTPException(
-                    status_code=503,
-                    detail={"type": "https://mole.ai/errors/service_unavailable", "title": "Auth Service Unavailable", "status": 503},
-                )
+                raise HTTPException(status_code=503, detail={"title": "Auth Service Unavailable"})
             
             if kid in self._cache:
                 return self._cache[kid]
             
-            logger.warning("kid_not_found_after_refresh", kid=kid)
-            raise HTTPException(
-                status_code=401,
-                detail={"type": "https://mole.ai/errors/unauthorized", "title": "Unknown Key ID", "status": 401},
-            )
-
+            raise HTTPException(status_code=401, detail={"title": "Unknown Key ID"})
 
 _token_validator: Optional[SupabaseTokenValidator] = None
 
-
 def get_token_validator() -> SupabaseTokenValidator:
-    """Factory para obtener la instancia del validador."""
     global _token_validator
     if _token_validator is None:
-        from app.core.config import settings
         _token_validator = SupabaseTokenValidator(
             supabase_url=settings.SUPABASE_URL,
             jwks_cache_ttl=settings.JWKS_CACHE_TTL_SECONDS,
