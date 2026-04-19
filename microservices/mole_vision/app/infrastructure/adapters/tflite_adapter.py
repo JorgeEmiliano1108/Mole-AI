@@ -1,14 +1,16 @@
 """
 Infrastructure Layer - Adapter: TFLite Vision
- Arquitectura Hexagonal - Implementa VisionClientPort
-Async - run_in_threadpool para CPU-bound
+Arquitectura Hexagonal - Implementa VisionClientPort
+Async - run_in_threadpool para CPU-bound con Timeout Anti-DoS
 """
 import io
 import json
+import asyncio
 from typing import Dict, Optional
 import numpy as np
 from PIL import Image
 import structlog
+from fastapi import HTTPException
 
 from app.application.ports import VisionClientPort
 from app.domain.entities import DiagnosticResult, SeverityLevel, ConditionCategory
@@ -33,14 +35,15 @@ class TFLiteVisionAdapter(VisionClientPort):
         self,
         model_path: Optional[str] = None,
         labels_path: Optional[str] = None,
-        num_threads: int = 4,
+        num_threads: Optional[int] = None,
     ):
         if not TFLITE_AVAILABLE:
             raise RuntimeError("tflite_runtime not available")
         
         self.model_path = model_path or settings.CNN_MODEL_PATH
         self.labels_path = labels_path or settings.CNN_LABELS_PATH
-        self.num_threads = num_threads
+        self.num_threads = num_threads or settings.CNN_NUM_THREADS
+        self.timeout_sec = settings.INFERENCE_TIMEOUT_SECONDS
         
         self._interpreter = tflite.Interpreter(
             model_path=self.model_path,
@@ -70,14 +73,25 @@ class TFLiteVisionAdapter(VisionClientPort):
     
     async def analyze(self, image_bytes: bytes) -> DiagnosticResult:
         """
-        Ejecuta la inferencia TFLite de forma asíncrona.
-        Usa run_in_threadpool para no bloquear el Event Loop principal de FastAPI.
+        Ejecuta la inferencia de forma asíncrona.
+        Mecanismo de Timeout explícito
         """
         from starlette.concurrency import run_in_threadpool
-        return await run_in_threadpool(self._do_inference, image_bytes)
+        try:
+            # Ejecutamos la tarea pesada con un límite de tiempo
+            return await asyncio.wait_for(
+                run_in_threadpool(self._do_inference, image_bytes),
+                timeout=self.timeout_sec
+            )
+        except asyncio.TimeoutError:
+            logger.error("inference_timeout", timeout=self.timeout_sec)
+            raise HTTPException(
+                status_code=503, 
+                detail={"title": "Service Unavailable", "message": "Inference Timeout"}
+            )
     
     def _do_inference(self, image_bytes: bytes) -> DiagnosticResult:
-        """Lógica síncrona bloqueante de inferencia TFLite."""
+        """Lógica síncrona bloqueante de inferencia TFLite con Umbral de Confianza."""
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB").resize((224, 224))
         input_data = np.asarray(img, dtype=np.float32) / 255.0
         input_data = np.expand_dims(input_data, axis=0)
@@ -89,6 +103,20 @@ class TFLiteVisionAdapter(VisionClientPort):
         pred_idx = int(output.argmax())
         confidence = float(output.max())
         
+        CONFIDENCE_THRESHOLD = 0.80  
+        
+        if confidence < CONFIDENCE_THRESHOLD:
+            # Si el modelo duda, forzamos el resultado a Desconocido
+            return DiagnosticResult(
+                plant_id="",  
+                species="Planta u Objeto Desconocido",
+                condition="No se pudo analizar con certeza",
+                condition_category=ConditionCategory.UNKNOWN,
+                severity=SeverityLevel.MEDIUM,
+                confidence=confidence, 
+                ph_predicted=None,
+            )
+            
         label_info = self._labels.get(str(pred_idx), {})
         if isinstance(label_info, str):
             label_info = {
@@ -101,7 +129,6 @@ class TFLiteVisionAdapter(VisionClientPort):
         condition = label_info.get("condition", "No identificada")
         
         severity_str = label_info.get("severity", "medium").lower()
-        # Mapeo seguro contra el Enum
         try:
             severity = SeverityLevel(severity_str)
         except ValueError:
@@ -109,7 +136,6 @@ class TFLiteVisionAdapter(VisionClientPort):
             
         condition_category = self._map_condition_to_category(condition)
         
-        # EXTRACCIÓN Y CASTEO SEGURO DEL PH
         raw_ph = label_info.get("ph")
         ph_predicted: Optional[float] = None
         if raw_ph is not None:
@@ -119,7 +145,7 @@ class TFLiteVisionAdapter(VisionClientPort):
                 ph_predicted = None
         
         return DiagnosticResult(
-            plant_id="",  # Se asigna posteriormente en el Use Case
+            plant_id="",  
             species=species,
             condition=condition,
             condition_category=condition_category,

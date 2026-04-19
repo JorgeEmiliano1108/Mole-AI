@@ -36,5 +36,6 @@
   "34": { "species": "Tomate", "condition": "Mancha blanca (Target Spot)", "severity": "Moderada", "ph": 6.2 },
   "35": { "species": "Tomate", "condition": "Virus de la cuchara (TYLCV)", "severity": "Crítica", "ph": 6.2 },
   "36": { "species": "Tomate", "condition": "Virus del mosaico", "severity": "Crítica", "ph": 6.2 },
-  "37": { "species": "Tomate", "condition": "Saludable", "severity": "Ninguna", "ph": 6.2 }
+  "37": { "species": "Tomate", "condition": "Saludable", "severity": "Ninguna", "ph": 6.2 },
+  "38": {"Planta desconocida": "Desconocida", "Condición desconocida": "Desconocida", "Gravedad desconocida": "Desconocida", "pH desconocido": "Desconocido"}
 }

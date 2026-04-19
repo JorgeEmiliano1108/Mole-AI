@@ -2,6 +2,7 @@
 Core Configuration - Centralized Settings
 Skill 01: Arquitectura Hexagonal - Capa Core
 """
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,10 +20,11 @@ class Settings(BaseSettings):
     
     # Service
     SERVICE_NAME: str = "mole_vision"
-    DEBUG: bool = False
+    DEBUG: bool = True
     
-    # Supabase Auth (Zero-Trust)
-    SUPABASE_URL: str = "https://your-project.supabase.co"
+    
+    SUPABASE_URL: str = ""
+    SUPABASE_JWT_SECRET: str = ""  
     SUPABASE_JWT_AUDIENCE: str = "authenticated"
     
     # Redis
@@ -34,19 +36,22 @@ class Settings(BaseSettings):
     CNN_LABELS_PATH: str = "/app/models/labels.json"
     CNN_NUM_THREADS: int = 4
     
-    # Supabase Database (optional)
-    SUPABASE_DB_NAME: str = ""
-    SUPABASE_DB_USER: str = ""
-    SUPABASE_DB_PASSWORD: str = ""
-    SUPABASE_DB_HOST: str = ""
+    # RNF-02: Defensa Anti-DoS
+    INFERENCE_TIMEOUT_SECONDS: float = 2.0
+    
+    # Supabase Database
+    SUPABASE_DB_NAME: Optional[str] = None
+    SUPABASE_DB_USER: Optional[str] = None
+    SUPABASE_DB_PASSWORD: Optional[str] = None
+    SUPABASE_DB_HOST: Optional[str] = None
     SUPABASE_DB_PORT: int = 5432
     
     # CORS
-    ORIGEN_PERMITIDO: str = ""
+    ORIGEN_PERMITIDO: str = "*"
     CORS_ALLOW_CREDENTIALS: bool = False
     
     # Security - JWKS Cache
-    JWKS_CACHE_TTL_SECONDS: int = 300  # 5 minutes
+    JWKS_CACHE_TTL_SECONDS: int = 300
 
 
 # Singleton instance
