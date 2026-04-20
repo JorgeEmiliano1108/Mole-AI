@@ -1,8 +1,9 @@
 import pytest
 import asyncio
 
-from ms2_rag_cag_service.infrastructure.redis_sensor_cache_adapter import RedisSensorCacheAdapter
-from ms2_rag_cag_service.infrastructure import redis_sensor_cache_adapter
+
+from app.infrastructure.adapters.redis_sensor_cache_adapter import RedisSensorCacheAdapter
+from app.infrastructure.adapters import redis_sensor_cache_adapter
 
 @pytest.mark.asyncio
 async def test_redis_adapter_handles_connection_error(monkeypatch):
