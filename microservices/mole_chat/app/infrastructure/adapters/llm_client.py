@@ -9,7 +9,7 @@ from langchain_core.exceptions import OutputParserException
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 from pydantic import ValidationError
 
-from ms2_rag_cag_service.domain.models import ChatResponse
+from app.domain.schemas import ChatResponse
 
 logger = logging.getLogger("ms2.llm_client")
 

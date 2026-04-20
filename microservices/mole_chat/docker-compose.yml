@@ -9,10 +9,10 @@ services:
     ports:
       - "8002:8002"
     volumes:
-      - .:/app/ms2_rag_cag_service
+      - .:/app
       - ms2_ai_vectors:/app/storage/vectors
     env_file:
-      - ../.env
+      - ../../.env
     depends_on:
       - redis
     networks:

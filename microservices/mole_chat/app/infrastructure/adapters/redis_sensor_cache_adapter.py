@@ -1,6 +1,6 @@
 import logging
-from ms2_rag_cag_service.domain.chat import SensorCachePort
-from ms2_rag_cag_service.domain.exceptions import SensorCacheUnavailable
+from app.domain.chat import SensorCachePort
+from app.domain.exceptions import SensorCacheUnavailable
 
 # aioredis may not be installed in some test environments; provide a lightweight
 # stub so tests can monkeypatch the module at runtime. Real deployments should

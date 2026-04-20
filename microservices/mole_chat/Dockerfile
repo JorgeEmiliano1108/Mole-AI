@@ -43,7 +43,7 @@ COPY --from=builder /opt/venv /opt/venv
 EXPOSE 8002
 
 # Hot-reload habilitado
-CMD ["uvicorn", "ms2_rag_cag_service.app.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
 
 # ==========================================
 # ETAPA 3: PRODUCCIÓN (Runtime Ligero)
@@ -52,10 +52,10 @@ FROM development as production
 
 RUN groupadd -r app && useradd -r -g app -m -d /home/app app
 
-COPY . /app/ms2_rag_cag_service
+COPY . /app
 RUN chown -R app:app /app
 
 USER app
 
 # Gunicorn para robustez en prod
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8002", "ms2_rag_cag_service.app.main:app"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8002", "app.api.main:app"]
