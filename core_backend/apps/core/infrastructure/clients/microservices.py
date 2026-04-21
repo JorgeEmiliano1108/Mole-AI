@@ -11,21 +11,27 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 """
-Base HTTP clients for external microservices.
+Async HTTP clients for external microservices.
 
-These clients will be used to communicate with FastAPI microservices
-when they are implemented in the future.
+Sprint 4 — Non-blocking I/O evolution:
+  Replaced ``requests.Session`` with ``httpx.AsyncClient`` for fully
+  asynchronous communication with FastAPI microservices.
+  Retry logic uses ``tenacity`` which natively supports async functions.
 """
 import logging
-import time
 from abc import ABC
-from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
-import requests
+from typing import Any, Dict, List, Optional
+
+import httpx
 from django.conf import settings
 from django.utils import timezone
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,32 +58,39 @@ class ServiceConfig:
 
 
 class BaseMicroserviceClient(ABC):
-    """Base class for all microservice clients."""
-    
+    """Base class for all async microservice clients."""
+
     def __init__(self, config: ServiceConfig):
         self.config = config
-        self.session = requests.Session()
-        self._setup_session()
-    
-    def _setup_session(self):
-        """Setup session with default configuration."""
-        self.session.timeout = self.config.timeout_seconds
-        
-        # Set headers
+        self._client: httpx.AsyncClient | None = None
+
+    def _build_headers(self) -> Dict[str, str]:
+        """Build default headers for outgoing requests."""
         headers = {
-            'Content-Type': 'application/json',
-            'User-Agent': f'Mole-AI-Backend/1.0',
+            "Content-Type": "application/json",
+            "User-Agent": "Mole-AI-Backend/1.0",
         }
-        
         if self.config.api_key:
-            headers['Authorization'] = f'Bearer {self.config.api_key}'
-        
-        self.session.headers.update(headers)
-    
-    def _handle_response(self, response: requests.Response, start_time: float) -> ServiceResponse:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+        return headers
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Lazily initialize the async HTTP client."""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self.config.timeout_seconds),
+                headers=self._build_headers(),
+            )
+        return self._client
+
+    @staticmethod
+    def _handle_response(
+        response: httpx.Response, start_time: float
+    ) -> ServiceResponse:
         """Process HTTP response and create ServiceResponse."""
-        response_time_ms = int((timezone.now().timestamp() - start_time) * 1000)
-        
+        response_time_ms = int(
+            (timezone.now().timestamp() - start_time) * 1000
+        )
         try:
             response.raise_for_status()
             data = response.json() if response.content else None
@@ -85,148 +98,188 @@ class BaseMicroserviceClient(ABC):
                 success=True,
                 data=data,
                 status_code=response.status_code,
-                response_time_ms=response_time_ms
+                response_time_ms=response_time_ms,
             )
-        except requests.exceptions.HTTPError as e:
+        except httpx.HTTPStatusError as exc:
             return ServiceResponse(
                 success=False,
-                error=f"HTTP {response.status_code}: {str(e)}",
+                error=f"HTTP {response.status_code}: {exc}",
                 status_code=response.status_code,
-                response_time_ms=response_time_ms
+                response_time_ms=response_time_ms,
             )
-        except Exception as e:
+        except Exception as exc:
             return ServiceResponse(
                 success=False,
-                error=f"Response processing error: {str(e)}",
+                error=f"Response processing error: {exc}",
                 status_code=response.status_code,
-                response_time_ms=response_time_ms
+                response_time_ms=response_time_ms,
             )
-    
+
     @retry(
-        retry=retry_if_exception_type((requests.exceptions.Timeout, requests.exceptions.ConnectionError)),
+        retry=retry_if_exception_type(
+            (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout)
+        ),
         wait=wait_exponential(multiplier=1, min=1, max=10),
         stop=stop_after_attempt(4),
         reraise=True,
     )
-    def _make_request_with_retry(self, method: str, *args, **kwargs) -> requests.Response:
+    async def _make_request_with_retry(
+        self, method: str, url: str, **kwargs: Any
+    ) -> httpx.Response:
         """Make HTTP request with tenacity exponential-backoff retry (M5)."""
-        response = self.session.request(method, *args, **kwargs)
+        client = await self._get_client()
+        response = await client.request(method, url, **kwargs)
         # Raise on server errors to trigger retry
         if response.status_code >= 500:
             response.raise_for_status()
         return response
-    
-    def get(self, endpoint: str, params: Optional[Dict] = None) -> ServiceResponse:
-        """Make GET request to microservice."""
+
+    async def get(
+        self, endpoint: str, params: Optional[Dict] = None
+    ) -> ServiceResponse:
+        """Make async GET request to microservice."""
         url = f"{self.config.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         start_time = timezone.now().timestamp()
-        
         try:
-            response = self._make_request_with_retry('GET', url, params=params)
+            response = await self._make_request_with_retry(
+                "GET", url, params=params
+            )
             return self._handle_response(response, start_time)
-        except Exception as e:
+        except Exception as exc:
             return ServiceResponse(
                 success=False,
-                error=f"Request failed: {str(e)}",
-                response_time_ms=int((timezone.now().timestamp() - start_time) * 1000)
+                error=f"Request failed: {exc}",
+                response_time_ms=int(
+                    (timezone.now().timestamp() - start_time) * 1000
+                ),
             )
-    
-    def post(self, endpoint: str, data: Optional[Dict] = None, 
-             files: Optional[Dict] = None) -> ServiceResponse:
-        """Make POST request to microservice."""
+
+    async def post(
+        self,
+        endpoint: str,
+        data: Optional[Dict] = None,
+        files: Optional[Dict] = None,
+    ) -> ServiceResponse:
+        """Make async POST request to microservice."""
         url = f"{self.config.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         start_time = timezone.now().timestamp()
-        
         try:
             if files:
                 # For file uploads, don't set JSON content-type
-                headers = self.session.headers.copy()
-                if 'Content-Type' in headers:
-                    del headers['Content-Type']
-                response = self._make_request_with_retry(
-                    'POST', url, data=data, files=files, headers=headers
+                client = await self._get_client()
+                response = await self._make_request_with_retry(
+                    "POST",
+                    url,
+                    data=data,
+                    files=files,
+                    headers={
+                        k: v
+                        for k, v in self._build_headers().items()
+                        if k != "Content-Type"
+                    },
                 )
             else:
-                response = self._make_request_with_retry('POST', url, json=data)
-            
+                response = await self._make_request_with_retry(
+                    "POST", url, json=data
+                )
             return self._handle_response(response, start_time)
-        except Exception as e:
+        except Exception as exc:
             return ServiceResponse(
                 success=False,
-                error=f"Request failed: {str(e)}",
-                response_time_ms=int((timezone.now().timestamp() - start_time) * 1000)
+                error=f"Request failed: {exc}",
+                response_time_ms=int(
+                    (timezone.now().timestamp() - start_time) * 1000
+                ),
             )
-    
-    def health_check(self) -> ServiceResponse:
+
+    async def health_check(self) -> ServiceResponse:
         """Check if microservice is healthy."""
-        return self.get("api/v1/health")
-    
-    def __enter__(self):
+        return await self.get("api/v1/health")
+
+    async def __aenter__(self):
         return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.session.close()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if self._client and not self._client.is_closed:
+            await self._client.aclose()
 
 
 class AIMicroserviceClient(BaseMicroserviceClient):
     """Client for AI-related microservices."""
-    
-    def analyze_image(self, image_data: bytes, model_type: str = "disease_detection") -> ServiceResponse:
+
+    async def analyze_image(
+        self, image_data: bytes, model_type: str = "disease_detection"
+    ) -> ServiceResponse:
         """Send image to AI microservice for analysis."""
-        files = {'image': ('image.jpg', image_data, 'image/jpeg')}
-        data = {'model_type': model_type}
-        return self.post('api/v1/analyze/image', data=data, files=files)
-    
-    def generate_recommendations(self, context: Dict[str, Any]) -> ServiceResponse:
+        files = {"image": ("image.jpg", image_data, "image/jpeg")}
+        data = {"model_type": model_type}
+        return await self.post("api/v1/analyze/image", data=data, files=files)
+
+    async def generate_recommendations(
+        self, context: Dict[str, Any]
+    ) -> ServiceResponse:
         """Generate AI recommendations based on context."""
-        return self.post('api/v1/recommendations/generate', data=context)
-    
-    def chat_with_plant_expert(self, message: str, session_id: str) -> ServiceResponse:
+        return await self.post(
+            "api/v1/recommendations/generate", data=context
+        )
+
+    async def chat_with_plant_expert(
+        self, message: str, session_id: str
+    ) -> ServiceResponse:
         """Send chat message to plant expert AI."""
-        data = {'query': message, 'context': [], 'session_id': session_id}
-        return self.post('api/v1/mole-ai/chat', data=data)
+        data = {"query": message, "context": [], "session_id": session_id}
+        return await self.post("api/v1/mole-ai/chat", data=data)
 
 
 class DataProcessingMicroserviceClient(BaseMicroserviceClient):
     """Client for data processing microservices."""
-    
-    def process_sensor_batch(self, sensor_data: List[Dict[str, Any]]) -> ServiceResponse:
+
+    async def process_sensor_batch(
+        self, sensor_data: List[Dict[str, Any]]
+    ) -> ServiceResponse:
         """Process batch of sensor data."""
-        return self.post('process/sensors/batch', data={'sensors': sensor_data})
-    
-    def generate_analytics_report(self, plant_id: str, 
-                                 date_range: Dict[str, str]) -> ServiceResponse:
+        return await self.post(
+            "process/sensors/batch", data={"sensors": sensor_data}
+        )
+
+    async def generate_analytics_report(
+        self, plant_id: str, date_range: Dict[str, str]
+    ) -> ServiceResponse:
         """Generate analytics report for a plant."""
-        return self.post('analytics/report', data={
-            'plant_id': plant_id,
-            'date_range': date_range
-        })
+        return await self.post(
+            "analytics/report",
+            data={"plant_id": plant_id, "date_range": date_range},
+        )
 
 
 # Factory for creating clients
 class MicroserviceClientFactory:
-    """Factory for creating microservice clients."""
-    
+    """Factory for creating async microservice clients."""
+
     @staticmethod
     def create_ai_client() -> AIMicroserviceClient:
         """Create AI microservice client."""
         config = ServiceConfig(
             name="AI Service",
-            base_url=getattr(settings, 'AI_MICROSERVICE_URL', 'http://localhost:8001'),
-            api_key=getattr(settings, 'AI_MICROSERVICE_API_KEY', None),
+            base_url=getattr(
+                settings, "AI_MICROSERVICE_URL", "http://localhost:8001"
+            ),
+            api_key=getattr(settings, "AI_MICROSERVICE_API_KEY", None),
             timeout_seconds=60,  # AI operations can be slow
         )
         return AIMicroserviceClient(config)
-    
+
     @staticmethod
     def create_data_processing_client() -> DataProcessingMicroserviceClient:
         """Create data processing microservice client (Mole-AI Chat)."""
         # Sincronizamos con la variable de entorno real de tu .env
         config = ServiceConfig(
             name="Mole-AI Service",
-            base_url=getattr(settings, 'MOLE_AI_SERVICE_URL', 'http://ms2_chat:8002'),
-            api_key=getattr(settings, 'MOLE_AI_API_KEY', None),
-            timeout_seconds=getattr(settings, 'MOLE_AI_TIMEOUT', 120),
+            base_url=getattr(
+                settings, "MOLE_AI_SERVICE_URL", "http://ms2_chat:8002"
+            ),
+            api_key=getattr(settings, "MOLE_AI_API_KEY", None),
+            timeout_seconds=getattr(settings, "MOLE_AI_TIMEOUT", 120),
         )
         return DataProcessingMicroserviceClient(config)
 
@@ -234,32 +287,47 @@ class MicroserviceClientFactory:
 # Fallback service for when microservices are not available
 class FallbackAIService:
     """Fallback service when AI microservice is not available."""
-    
+
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-    
-    def analyze_image(self, image_data: bytes, model_type: str = "disease_detection") -> ServiceResponse:
+
+    async def analyze_image(
+        self, image_data: bytes, model_type: str = "disease_detection"
+    ) -> ServiceResponse:
         """Fallback image analysis."""
-        self.logger.warning("Using fallback AI service for image analysis")
+        self.logger.warning(
+            "Using fallback AI service for image analysis"
+        )
         return ServiceResponse(
             success=False,
-            error="AI microservice not available. Please configure AI_MICROSERVICE_URL."
+            error="AI microservice not available. Please configure AI_MICROSERVICE_URL.",
         )
-    
-    def generate_recommendations(self, context: Dict[str, Any]) -> ServiceResponse:
+
+    async def generate_recommendations(
+        self, context: Dict[str, Any]
+    ) -> ServiceResponse:
         """Fallback recommendation generation."""
-        self.logger.warning("Using fallback AI service for recommendations")
-        
+        self.logger.warning(
+            "Using fallback AI service for recommendations"
+        )
+
         # Basic rule-based recommendations as fallback
         recommendations = []
-        
-        if context.get('temperature', 0) > 30:
-            recommendations.append("Consider increasing ventilation or providing shade")
-        
-        if context.get('humidity', 50) < 30:
-            recommendations.append("Consider increasing humidity through misting")
-        
+
+        if context.get("temperature", 0) > 30:
+            recommendations.append(
+                "Consider increasing ventilation or providing shade"
+            )
+
+        if context.get("humidity", 50) < 30:
+            recommendations.append(
+                "Consider increasing humidity through misting"
+            )
+
         return ServiceResponse(
             success=True,
-            data={'recommendations': recommendations, 'source': 'fallback_rules'}
+            data={
+                "recommendations": recommendations,
+                "source": "fallback_rules",
+            },
         )

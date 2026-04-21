@@ -25,6 +25,8 @@ redis>=5.0.0
 django-redis~=5.4
 
 # API Communication & Environment
+# NOTE: microservice clients migrated to httpx (Sprint 4).
+# requests retained for jwks.py, ai_models, and admin_views.
 requests~=2.31
 httpx~=0.26
 django-environ~=0.11

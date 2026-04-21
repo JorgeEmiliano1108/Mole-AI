@@ -3,7 +3,7 @@
 # =============================================================================
 from django.urls import path
 from . import views
-from apps.core.api_views import mock_sensor_data, telemetry_latest_view
+from apps.core.api_views import mock_sensor_data, telemetry_latest_view, sensors_ingest_view
 
 app_name = 'core'
 
@@ -14,6 +14,7 @@ urlpatterns = [
     path('sensor-data/<int:pk>/', views.sensor_data_patch_view, name='sensor_data_patch'),
     path('sensor-data/latest/', mock_sensor_data, name='mock_sensor'),
     path('telemetry/latest/', telemetry_latest_view, name='telemetry_latest'),
+    path('sensors/ingest', sensors_ingest_view, name='sensors_ingest'),
     path('sensor-logs/', views.sensor_log_view, name='sensor_log'),
 
     # IA y Diagnósticos

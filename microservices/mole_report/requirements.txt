@@ -13,6 +13,9 @@ supabase
 tenacity>=8.2
 # Pydantic v2 (M1)
 pydantic>=2.7
+# JWT validation (ES256 JWKS — Zero-Trust)
+PyJWT>=2.8
+cryptography>=42.0
 # faiss-cpu removed for lightweight dev container; use FAISS via external index or provide MS3_FAISS_DOCS_JSON fallback
 # Pin pydyf to a version compatible with WeasyPrint 57.x
 pydyf<0.12
