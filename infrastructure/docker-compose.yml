@@ -1,22 +1,33 @@
-version: '3.8'
-
 networks:
-  mole-ai-net:
+  mole_public:
+    driver: bridge
+  mole_internal:
     driver: bridge
 
 services:
-  # --- BACKEND (Django "Pip-Boy") ---
+  # --- API GATEWAY (Nginx) — Single Ingress Point ---
+  nginx:
+    build:
+      context: ./nginx
+    container_name: mole_ai_nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - django-backend
+    networks:
+      - mole_public
+
+  # --- DJANGO BACKEND (Orchestrator) ---
   django-backend:
     build:
-      context: .
-      target: development
+      context: ../core_backend  
     container_name: django-backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
-      - .:/app
+      - ../core_backend:/app  
     env_file:
-      - .env
+      - ../.env
     environment:
       - DEBUG=${DEBUG:-True}
       - SUPABASE_DB_NAME=${SUPABASE_DB_NAME}
@@ -36,24 +47,22 @@ services:
         condition: service_started
       redis:
         condition: service_started
-      ms2_chat:
-        condition: service_healthy
       mqtt_broker:
         condition: service_started
     networks:
-      - mole-ai-net
+      - mole_public
+      - mole_internal
 
   # --- BACKEND CELERY WORKER ---
   django_celery_worker:
     build:
-      context: .
-      target: development
+      context: ../core_backend  
     container_name: django_celery_worker
     entrypoint: ["celery", "-A", "mole_ai_backend", "worker", "-l", "info"]
     volumes:
-      - .:/app
+      - ../core_backend:/app  
     env_file:
-      - .env
+      - ../.env
     environment:
       - DEBUG=${DEBUG:-True}
       - SUPABASE_DB_NAME=${SUPABASE_DB_NAME}
@@ -71,34 +80,25 @@ services:
       redis:
         condition: service_started
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- BACKEND CELERY BEAT (El Reloj / Garbage Collector) ---
   django_celery_beat:
     build:
-      context: .
-      target: development
+      context: ../core_backend  
     container_name: django_celery_beat
-    entrypoint: ["celery", "-A", "mole_ai_backend", "worker", "-l", "info", "-Q", "celery"]
+    entrypoint: ["celery", "-A", "mole_ai_backend", "beat", "-l", "info"] 
     volumes:
-      - .:/app
+      - ../core_backend:/app  
     env_file:
-      - .env
-    environment:
-      - DEBUG=${DEBUG:-True}
-      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME}
-      - SUPABASE_DB_USER=${SUPABASE_DB_USER}
-      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
-      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
-      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT}
-      - REDIS_URL=${REDIS_URL}
+      - ../.env
     depends_on:
       db:
         condition: service_started
       redis:
         condition: service_started
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- DATABASE (Postgres + pgvector) ---
   db:
@@ -109,34 +109,34 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     expose:
-      - "5432"  # M4: internal only
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- CACHE (Redis) ---
   redis:
     image: redis:7-alpine
     container_name: mole_ai_redis
     expose:
-      - "6379"  # M4: internal only
+      - "6379"
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- MQTT BROKER (Eclipse Mosquitto) ---
   mqtt_broker:
     image: eclipse-mosquitto:2
     container_name: mqtt_broker
     expose:
-      - "1883"  # M4: internal only
+      - "1883"
       - "9001"
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/data:/mosquitto/data
       - ./mosquitto/log:/mosquitto/log
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- MINIO (S3-compatible) ---
   minio:
@@ -147,24 +147,23 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data
     expose:
-      - "9000"  # M4: internal only
+      - "9000"
     volumes:
       - minio_data:/data
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- MS1: Vision ---
   ms1_vision:
     build: 
-      context: ./ms1_vision
-      target: production
+      context: ../microservices/mole_vision  
     container_name: ms1_vision
     volumes:
-      - ./models:/models:ro
+      - ../microservices/mole_vision/models:/app/models:ro  
     expose:
-      - "8001"  # M4: internal only, no host exposure
+      - "8001"
     env_file:
-      - .env
+      - ../.env
     environment:
       - REDIS_URL=${REDIS_URL}
       - DATABASE_URL=${DATABASE_URL}
@@ -176,22 +175,19 @@ services:
       - redis
       - minio
     networks:
-      - mole-ai-net
+      - mole_internal
 
-  # --- MS2: Chat / RAG (ms2_rag_cag_service) ---
-  # Replaces the duplicated fastapi_rag service. Django points here.
+  # --- MS2: Chat / RAG ---
   ms2_chat:
     build: 
-      context: ./ms2_rag_cag_service
-      target: production
+      context: ../microservices/mole_chat  
     container_name: ms2_chat
     expose:
-      - "8002"  # M4: internal only
+      - "8002"
     volumes:
       - ai_rag_vectors:/app/storage/vectors
-      - ./models:/models:ro
     env_file:
-      - .env
+      - ../.env
     environment:
       - PORT=${PORT}
       - HOST=${HOST}
@@ -201,33 +197,21 @@ services:
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
       - LLM_MODEL_ID=${LLM_MODEL_ID}
       - EMBEDDING_MODEL_ID=${EMBEDDING_MODEL_ID}
-      - VISION_MODEL_NAME=${VISION_MODEL_NAME}
-      - CNN_MODEL_PATH=${CNN_MODEL_PATH}
     depends_on:
       - db
       - redis
-      - minio
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/api/v1/health')"]
-      interval: 15s
-      timeout: 10s
-      start_period: 120s
-      retries: 5
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- MS3: Reports (FastAPI) ---
   ms3_reports:
     build:
-      context: ./ms3_reports
-      target: production
+      context: ../microservices/mole_report  
     container_name: ms3_reports
-    volumes:
-      - ./media:/srv/ms3_reports/media
     expose:
-      - "8003"  # M4: internal only
+      - "8003"
     env_file:
-      - .env
+      - ../.env
     environment:
       - PORT=8003
       - REDIS_URL=redis://redis:6379/2
@@ -241,19 +225,16 @@ services:
       - minio
       - db
     networks:
-      - mole-ai-net
+      - mole_internal
 
   # --- MS3: Celery worker ---
   ms3_celery_worker:
     build:
-      context: ./ms3_reports
-      target: production
+      context: ../microservices/mole_report  
     container_name: ms3_celery_worker
-    volumes:
-      - ./media:/srv/ms3_reports/media
     command: ["celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "reports_queue"]
     env_file:
-      - .env
+      - ../.env
     environment:
       - REDIS_URL=redis://redis:6379/2
       - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
@@ -266,7 +247,7 @@ services:
       - redis
       - db
     networks:
-      - mole-ai-net
+      - mole_internal
 
 volumes:
   postgres_data:

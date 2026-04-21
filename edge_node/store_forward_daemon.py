@@ -18,12 +18,17 @@ Runs as a background process on the farmer's laptop/smartphone.
 Responsibilities:
   1. Expose enqueue_reading() — called by MQTT subscriber and TFLite runner
   2. Persist readings to local SQLite (works 100% offline)
-  3. Push pending records to Django backend in batches when internet is available
+  3. Authenticate against Supabase Auth (M2M) to obtain a JWT
+  4. Push pending records to Django backend in batches when internet is available
+  5. Auto-refresh JWT upon 401 Unauthorized (Zero-Trust compliance)
 
 Configuration via .env:
-  HARDWARE_API_KEY   — same key as Django HARDWARE_API_KEY setting
-  BACKEND_BATCH_URL  — full URL of POST /api/v1/sensor-data/batch/
-  SYNC_INTERVAL      — seconds between sync attempts (default: 30)
+  SUPABASE_URL         — Supabase project URL (e.g. https://xxx.supabase.co)
+  EDGE_NODE_EMAIL      — Dedicated service account email for this edge node
+  EDGE_NODE_PASSWORD   — Dedicated service account password
+  BACKEND_BATCH_URL    — full URL of POST /api/v1/sensor-data/batch/
+  SYNC_INTERVAL        — seconds between sync attempts (default: 30)
+  HARDWARE_API_KEY     — legacy fallback key (backward compatibility)
 """
 from __future__ import annotations
 
@@ -47,14 +52,101 @@ BACKEND_BATCH_URL = os.getenv(
     "http://localhost:8000/api/v1/sensor-data/batch/",
 )
 SYNC_INTERVAL_SECONDS = int(os.getenv("SYNC_INTERVAL", "30"))
-HARDWARE_API_KEY = os.getenv("HARDWARE_API_KEY", "")
 MAX_BATCH_SIZE = 200  # Keep Supabase free tier safe
+
+# ── Supabase M2M Auth (Zero-Trust) ───────────────────────────────────────────
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+EDGE_NODE_EMAIL = os.getenv("EDGE_NODE_EMAIL", "")
+EDGE_NODE_PASSWORD = os.getenv("EDGE_NODE_PASSWORD", "")
+
+# ── Legacy fallback (backward compatibility during transition) ───────────────
+HARDWARE_API_KEY = os.getenv("HARDWARE_API_KEY", "")
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [EDGE-DAEMON] %(levelname)s — %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+# ── JWT Token Store ───────────────────────────────────────────────────────────
+
+class _TokenStore:
+    """In-memory JWT token store with Supabase Auth refresh capability."""
+
+    def __init__(self) -> None:
+        self.access_token: str = ""
+        self.refresh_token: str = ""
+
+    async def authenticate(self) -> None:
+        """Obtain a fresh JWT from Supabase Auth using email/password grant."""
+        if not SUPABASE_URL or not EDGE_NODE_EMAIL or not EDGE_NODE_PASSWORD:
+            logger.warning(
+                "Supabase M2M credentials not configured. "
+                "Falling back to legacy X-Hardware-Api-Key."
+            )
+            return
+
+        auth_url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/token?grant_type=password"
+        payload = {
+            "email": EDGE_NODE_EMAIL,
+            "password": EDGE_NODE_PASSWORD,
+        }
+        headers = {
+            "apikey": os.getenv("SUPABASE_KEY", ""),
+            "Content-Type": "application/json",
+        }
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(auth_url, json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+
+        self.access_token = data["access_token"]
+        self.refresh_token = data.get("refresh_token", "")
+        logger.info("Supabase M2M authentication successful.")
+
+    async def refresh(self) -> None:
+        """Refresh the JWT using the stored refresh_token."""
+        if not self.refresh_token:
+            await self.authenticate()
+            return
+
+        refresh_url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/token?grant_type=refresh_token"
+        payload = {"refresh_token": self.refresh_token}
+        headers = {
+            "apikey": os.getenv("SUPABASE_KEY", ""),
+            "Content-Type": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(refresh_url, json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+
+            self.access_token = data["access_token"]
+            self.refresh_token = data.get("refresh_token", self.refresh_token)
+            logger.info("JWT refreshed successfully.")
+        except httpx.HTTPError:
+            logger.warning("Refresh token expired or invalid. Re-authenticating.")
+            await self.authenticate()
+
+    def build_headers(self) -> dict[str, str]:
+        """Build HTTP headers for requests to Django backend."""
+        headers: dict[str, str] = {}
+
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+
+        # Include legacy key as fallback during transition
+        if HARDWARE_API_KEY:
+            headers["X-Hardware-Api-Key"] = HARDWARE_API_KEY
+
+        return headers
+
+
+_token_store = _TokenStore()
 
 
 # ── SQLite setup ──────────────────────────────────────────────────────────────
@@ -143,8 +235,19 @@ async def sync_to_backend(con: sqlite3.Connection) -> None:
             resp = await client.post(
                 BACKEND_BATCH_URL,
                 json={"batch": batch},
-                headers={"X-Hardware-Api-Key": HARDWARE_API_KEY},
+                headers=_token_store.build_headers(),
             )
+
+            # Auto-refresh on 401 and retry once
+            if resp.status_code == 401:
+                logger.warning("Received 401. Refreshing JWT and retrying...")
+                await _token_store.refresh()
+                resp = await client.post(
+                    BACKEND_BATCH_URL,
+                    json={"batch": batch},
+                    headers=_token_store.build_headers(),
+                )
+
             resp.raise_for_status()
             result = resp.json()
 
@@ -171,6 +274,16 @@ async def sync_to_backend(con: sqlite3.Connection) -> None:
 
 async def main() -> None:
     con = init_db()
+
+    # Attempt initial M2M authentication against Supabase
+    try:
+        await _token_store.authenticate()
+    except Exception as exc:
+        logger.warning(
+            "Initial Supabase auth failed (%s). Will use legacy key and retry later.",
+            exc,
+        )
+
     logger.info(
         "Daemon started. Syncing every %ds → %s",
         SYNC_INTERVAL_SECONDS,

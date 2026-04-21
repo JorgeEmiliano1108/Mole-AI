@@ -243,3 +243,4 @@ monitoring/
 *.key
 *.crt
 .secrets/.env
+skills/
