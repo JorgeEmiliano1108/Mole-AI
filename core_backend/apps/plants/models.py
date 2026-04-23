@@ -30,6 +30,21 @@ class SpeciesCatalog(models.Model):
     ideal_ph_optimal = models.FloatField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
 
+    # NOM-059: Protección de flora silvestre mexicana
+    is_protected_nom059 = models.BooleanField(
+        default=False,
+        help_text="Indica si la especie está protegida por NOM-059-SEMARNAT.",
+    )
+    protection_category = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[
+            ("P", "En peligro de extinción"),
+            ("T", "Amenazada"),
+            ("Pr", "Sujeta a protección especial"),
+        ],
+    )
+
     class Meta:
         db_table = "species_catalog"
         managed = True
@@ -74,25 +89,24 @@ class UserPlant(models.Model):
         return f"{self.nickname} ({self.id})"
 
 
-# ------ IMPORTANTE: DESCOMENTAR ESTO DESPUÉS DEL PRIMER FAKE-INITIAL ------
-# class FavoritePlant(models.Model):
-#     id = models.BigAutoField(primary_key=True)
-#     user = models.ForeignKey(
-#         settings.AUTH_USER_MODEL,
-#         on_delete=models.CASCADE,
-#         related_name="favorite_plants",
-#     )
-#     plant = models.ForeignKey(
-#         UserPlant,
-#         on_delete=models.CASCADE,
-#         related_name="favorited_by",
-#     )
-#     created_at = models.DateTimeField(auto_now_add=True)
-# 
-#     class Meta:
-#         db_table = "favorite_plants"
-#         unique_together = ("user", "plant")
-#         managed = True
-# 
-#     def __str__(self):
-#         return f"Fav: {self.user} -> {self.plant.id}"
+class FavoritePlant(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="favorite_plants",
+    )
+    plant = models.ForeignKey(
+        UserPlant,
+        on_delete=models.CASCADE,
+        related_name="favorited_by",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "favorite_plants"
+        unique_together = ("user", "plant")
+        managed = True
+
+    def __str__(self):
+        return f"Fav: {self.user} -> {self.plant.id}"

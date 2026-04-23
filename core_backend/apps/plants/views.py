@@ -18,7 +18,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework import permissions
 
-from apps.plants.models import UserPlant, SpeciesCatalog
+from apps.plants.models import UserPlant, SpeciesCatalog, FavoritePlant
 from .serializers import (
     PlantCreateSerializer,
     PlantUpdateSerializer,
@@ -45,6 +45,8 @@ def species_search_view(request):
     """
     GET /api/v1/plants/search/?q=nombre
     Busca especies en el SpeciesCatalog de forma pública (para el Buscador Sigiloso).
+    
+    CUMPLIMIENTO NOM-059: Incluye advertencia legal si la especie está protegida.
     """
     query = request.GET.get("q", "").strip()
     if not query:
@@ -58,15 +60,37 @@ def species_search_view(request):
     if not species:
         return Response({"error": "Especie no encontrada."}, status=status.HTTP_404_NOT_FOUND)
 
-    return Response({
+    response_data = {
+        "id": str(species.id),
         "nombre": species.common_name or species.scientific_name,
+        "nombre_cientifico": species.scientific_name,
         "descripcion": species.description,
-        "humedad": f"{species.ideal_humidity_min}-{species.ideal_humidity_max}%",
-        "temperatura": f"{species.ideal_temp_min}-{species.ideal_temp_max}°C",
-        "ph": f"{species.ideal_ph_min}-{species.ideal_ph_max} (Opt: {species.ideal_ph_optimal})",
+        "humedad": f"{species.ideal_humidity_min}-{species.ideal_humidity_max}%" if species.ideal_humidity_min else None,
+        "temperatura": f"{species.ideal_temp_min}-{species.ideal_temp_max}°C" if species.ideal_temp_min else None,
+        "ph": f"{species.ideal_ph_min}-{species.ideal_ph_max} (Opt: {species.ideal_ph_optimal})" if species.ideal_ph_min else None,
         "uv": "Moderado a Alto (Ver Ficha Téc.)",
-        "recomendacion": "Mantener telemetría en observación. Posible riesgo según fenología."
-    })
+        "recomendacion": "Mantener telemetría en observación. Posible riesgo según fenología.",
+    }
+
+    # CUMPLIMIENTO NOM-059: Advertencia legal si especie protegida
+    if species.is_protected_nom059:
+        category_labels = {
+            "P": "en peligro de extinción",
+            "T": "amenazada",
+            "Pr": "sujeta a protección especial",
+        }
+        category = species.protection_category or "Pr"
+        response_data.update({
+            "is_protected_nom059": True,
+            "protection_warning": (
+                f"ATENCIÓN: Esta specie está protegida por NOM-059-SEMARNAT "
+                f"({category_labels.get(category, 'protegida')}). "
+                f"Su recolección, transporte o comercialización sin autorización es ilegal y sancionado penalmente."
+            ),
+            "protection_category": category,
+        })
+
+    return Response(response_data)
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])

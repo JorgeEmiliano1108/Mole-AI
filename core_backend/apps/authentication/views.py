@@ -149,14 +149,22 @@ def logout_view(request):
 def register_view(request):
     """
     POST /api/v1/auth/register/
-    Registra a un nuevo agricultor u operador de manera local con la contraseña hasheada.
+    Registra a un nuevo agricultor u operador de manera local con contraseña segura.
+    Envía correo de verificación tras registro exitoso.
     """
+    from apps.authentication.validators import validate_password_strength
+
     username = request.data.get("username")
     password = request.data.get("password")
     email = request.data.get("email")
 
     if not username or not password:
         return Response({"error": "Faltan credenciales."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validar_strength de contraseña segura
+    is_valid, error_msg = validate_password_strength(password)
+    if not is_valid:
+        return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
 
     if "@" in username and not email:
         email = username
@@ -165,16 +173,29 @@ def register_view(request):
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
-    if User.objects.filter(username=username).exists():
+    if User.objects.filter(username__iexact=username).exists():
         return Response({"error": "El usuario ya existe."}, status=status.HTTP_400_BAD_REQUEST)
 
+    if email and User.objects.filter(email__iexact=email).exists():
+        return Response({"error": "El correo electrónico ya está registrado."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Crear usuario con email no verificado inicialmente
     user = User.objects.create_user(username=username, email=email, password=password)
     user.is_active = True
-    user.save()
+    user.is_email_verified = False
+    user.save(update_fields=["is_active", "is_email_verified"])
+
+    # Enqueue tarea de verificación de correo (Celery)
+    try:
+        from apps.authentication.tasks import send_verification_email_task
+        send_verification_email_task.delay(user.id, email, username)
+    except Exception:
+        pass  # No bloquear registro si falla Celery
 
     return Response({
         "status": "created",
-        "username": user.username
+        "username": user.username,
+        "email_verification_required": True
     }, status=status.HTTP_201_CREATED)
 
 @api_view(["POST"])
@@ -273,6 +294,72 @@ def validate_token_view(request):
             "supabase_uid": getattr(user, "supabase_uid", None),
             "is_premium": getattr(user, "is_premium", False),
         },
+    })
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def verify_email_view(request, token):
+    """
+    GET /api/v1/auth/verify-email/<token>/
+    Verifica el correo electrónico del usuario.
+    """
+    from .models import User
+
+    try:
+        user = User.objects.get(email_verification_token=token)
+    except User.DoesNotExist:
+        return Response(
+            {"error": "Token de verificación inválido o expirado."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Verificar que el token no ha expirado (24 horas)
+    if user.email_verification_sent_at:
+        from django.utils import timezone
+        delta = timezone.now() - user.email_verification_sent_at
+        if delta.total_seconds() > 86400:
+            return Response(
+                {"error": "Token de verificación expirado. Solicita uno nuevo."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    user.is_email_verified = True
+    user.email_verification_token = None
+    user.save(update_fields=["is_email_verified", "email_verification_token"])
+
+    return Response({
+        "status": "verified",
+        "message": "Correo electrónico verificado exitosamente."
+    })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def resend_verification_view(request):
+    """
+    POST /api/v1/auth/resend-verification/
+    Reenvía el correo de verificación.
+    """
+    user = request.user
+    email = user.email
+
+    if user.is_email_verified:
+        return Response(
+            {"error": "El correo ya está verificado."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Reenviar correo
+    try:
+        from apps.authentication.tasks import send_verification_email_task
+        send_verification_email_task.delay(user.id, email, user.username)
+    except Exception:
+        pass
+
+    return Response({
+        "status": "sent",
+        "message": "Correo de verificación enviado."
     })
 
 
