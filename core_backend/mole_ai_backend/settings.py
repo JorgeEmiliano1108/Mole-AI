@@ -139,7 +139,7 @@ PASSWORD_HASHERS = [
 
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'apps.authentication.backends.DualLoginBackend',
 ]
 AXES_FAILURE_LIMIT = int(os.getenv('AXES_FAILURE_LIMIT', '5'))
 AXES_COOLOFF_TIME = 1

@@ -22,6 +22,10 @@ urlpatterns = [
     # Local Registration endpoint for new Farmers
     path('register/', views.register_view, name='register'),
 
+    # Email verification
+    path('verify-email/<str:token>/', views.verify_email_view, name='verify_email'),
+    path('resend-verification/', views.resend_verification_view, name='resend_verification'),
+
     # User Profile endpoints
     path('profile/', views.user_profile_view, name='user_profile'),
     

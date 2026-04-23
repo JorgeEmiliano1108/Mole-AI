@@ -42,7 +42,24 @@ class User(AbstractUser):
         blank=True,
         help_text="Fecha y hora en que se otorgó el consentimiento.",
     )
-    
+
+    # Verificación de correo electrónico (NOM-024 / LFPDPPP Art. 7)
+    is_email_verified = models.BooleanField(
+        default=False,
+        help_text="Indica si el usuario ha verificado su correo electrónico.",
+    )
+    email_verification_token = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text="Token temporal para verificación de correo.",
+    )
+    email_verification_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Marca de tiempo del último envío de verificación.",
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
