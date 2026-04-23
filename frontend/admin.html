@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | Admin Dashboard</title>
+    <!-- Tailwind compiled via PostCSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        /* Efecto de TV del Frontend */
+        @keyframes tvOn { 0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); } }
+        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+    </style>
+</head>
+<body class="bg-[#000511] text-[#00e5ff] font-mono overflow-x-hidden relative min-h-screen">
+    <div class="scanline"></div>
+    <div id="toast-container" aria-live="polite" aria-label="Notificaciones del sistema"></div>
+
+    <main id="admin-dashboard" class="h-screen overflow-y-auto p-4 md:p-6 flex-col relative text-[#00e5ff] font-mono bg-[#000511] tv-on">
+        <header class="flex flex-col md:flex-row justify-between items-start border-b-2 border-[#00e5ff] pb-4 mb-6 shrink-0 gap-4">
+            <div class="flex gap-6">
+                <div class="flex flex-col border-b md:border-b-0 md:border-r border-[#00e5ff]/30 pb-4 md:pb-0 md:pr-6">
+                    <h1 class="text-2xl md:text-3xl font-bold tracking-tighter leading-none text-[#00e5ff] drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]">OVERRIDE DE ADMIN</h1>
+                    <span class="text-[12px] mt-1 animate-pulse uppercase font-bold text-white">> BIENVENIDO SUPERVISOR</span>
+                </div>
+            </div>
+            <div class="flex flex-wrap gap-2 md:gap-4 w-full md:w-auto">
+                <button data-action="admin:create-operator" class="flex-1 md:flex-none border-2 border-[#00e5ff] px-2 md:px-4 py-2 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-colors shadow-[0_0_10px_rgba(0,229,255,0.3)] text-xs md:text-sm text-center">
+                    [ CREAR OPERADOR ]
+                </button>
+                <button data-action="admin:add-plant" class="flex-1 md:flex-none border-2 border-[#00e5ff] px-2 md:px-4 py-2 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-colors shadow-[0_0_10px_rgba(0,229,255,0.3)] text-xs md:text-sm text-center">
+                    [ REGISTRAR FLORA ]
+                </button>
+                <button data-action="nav:logout" class="flex-1 md:flex-none border-2 border-[#ff4444] text-[#ff4444] px-2 md:px-4 py-2 hover:bg-[#ff4444] hover:text-black font-bold tracking-widest transition-colors text-xs md:text-sm text-center">
+                    [ SALIR ]
+                </button>
+            </div>
+        </header>
+
+        <div class="border border-[#00e5ff]/40 p-4 md:p-6 flex flex-col bg-black/50 shadow-[inset_0_0_20px_rgba(0,229,255,0.05)] relative shrink-0 mb-10 overflow-hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#00e5ff]/30 pb-2 mb-4 gap-4">
+                <span class="text-xs md:text-sm font-bold tracking-widest text-[#00e5ff]">> PANEL DE ENTRENAMIENTO MLOps (FINE-TUNING)</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="border border-[#00e5ff]/20 p-4 bg-[#001105]">
+                    <h3 class="text-xs md:text-sm font-bold text-[#00e5ff] mb-2">> LLM: KNOWLEDGE BASE (MS2)</h3>
+                    <p class="text-[10px] opacity-70 mb-4 text-[#00e5ff]">Sube PDFs o TXTs para alimentar el RAG del AI.</p>
+                    <input type="file" id="mlops-rag-file" accept=".pdf,.txt" class="w-full text-xs text-[#00e5ff] border border-[#00e5ff]/30 p-2 bg-black mb-4">
+                    <button data-action="mlops:train-rag" id="btn-train-rag" class="w-full border border-[#00e5ff] py-2 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-all text-xs text-[#00e5ff]">
+                        [ ALIMENTAR RAG ]
+                    </button>
+                </div>
+                <div class="border border-[#00e5ff]/20 p-4 bg-[#001105]">
+                    <h3 class="text-xs md:text-sm font-bold text-[#00e5ff] mb-2">> VISION: RETRAIN CNN (MS1)</h3>
+                    <p class="text-[10px] opacity-70 mb-4 text-[#00e5ff]">Sube ZIP con imágenes clasificadas para entrenamiento de visión.</p>
+                    <input type="file" id="mlops-cnn-file" accept=".zip,image/*" multiple class="w-full text-xs text-[#00e5ff] border border-[#00e5ff]/30 p-2 bg-black mb-4">
+                    <button data-action="mlops:train-cnn" id="btn-train-cnn" class="w-full border border-[#00e5ff] py-2 hover:bg-[#00e5ff] hover:text-black font-bold tracking-widest transition-all text-xs text-[#00e5ff] mb-4">
+                        [ INICIAR FINE-TUNING ]
+                    </button>
+                    <div class="bg-yellow-500/20 border-l-4 border-yellow-500 text-yellow-500 p-2 text-[10px] leading-tight">
+                        <strong>Aviso Legal:</strong> Los diagnósticos e identificaciones generados por Mole.AI son de carácter informativo y probabilístico. No sustituyen el criterio de un ingeniero agrónomo certificado ni constituyen una recomendación oficial de uso de pesticidas regulados. Mole.AI prohíbe el uso de esta herramienta para la recolección ilegal o tráfico de especies endémicas protegidas por la NOM-059-SEMARNAT.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <button id="return-override-btn" data-action="nav:return-override" class="hidden fixed bottom-4 left-4 z-[9999] border-2 border-red-500 bg-red-500/10 text-red-500 px-4 py-2 hover:bg-red-500 hover:text-black font-bold tracking-widest transition-colors shadow-[0_0_15px_rgba(255,0,0,0.5)]">
+        [ VOLVER A OVERRIDE ]
+    </button>
+
+    <!-- Main Entry script -->
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+</html>

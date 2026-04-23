@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
+/* Tailwind base - required for Tailwind utilities */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
     font-family: 'Share Tech Mono', monospace;
     background-color: #000;

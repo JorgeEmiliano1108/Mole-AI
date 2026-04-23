@@ -8,14 +8,19 @@ services:
   # --- API GATEWAY (Nginx) — Single Ingress Point ---
   nginx:
     build:
-      context: ./nginx
+      context: ..
+      dockerfile: frontend/Dockerfile
     container_name: mole_ai_nginx
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - django-backend
+      - ms1_vision
+      - ms2_chat
+      - ms3_reports
     networks:
       - mole_public
+      - mole_internal
 
   # --- DJANGO BACKEND (Orchestrator) ---
   django-backend:
@@ -28,20 +33,6 @@ services:
       - ../core_backend:/app  
     env_file:
       - ../.env
-    environment:
-      - DEBUG=${DEBUG:-True}
-      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME}
-      - SUPABASE_DB_USER=${SUPABASE_DB_USER}
-      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
-      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
-      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT}
-      - REDIS_URL=${REDIS_URL}
-      - FASTAPI_URL=http://ms2_chat:8002
-      - MOLE_AI_API_KEY=${MOLE_AI_API_KEY}
-      - MOLE_AI_TIMEOUT=${MOLE_AI_TIMEOUT}
-      - HARDWARE_API_KEY=${HARDWARE_API_KEY}
-      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST}
-      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
     depends_on:
       db:
         condition: service_started
@@ -63,17 +54,6 @@ services:
       - ../core_backend:/app  
     env_file:
       - ../.env
-    environment:
-      - DEBUG=${DEBUG:-True}
-      - SUPABASE_DB_NAME=${SUPABASE_DB_NAME}
-      - SUPABASE_DB_USER=${SUPABASE_DB_USER}
-      - SUPABASE_DB_PASSWORD=${SUPABASE_DB_PASSWORD}
-      - SUPABASE_DB_HOST=${SUPABASE_DB_HOST}
-      - SUPABASE_DB_PORT=${SUPABASE_DB_PORT}
-      - REDIS_URL=${REDIS_URL}
-      - FASTAPI_URL=http://ms2_chat:8002
-      - MOLE_AI_API_KEY=${MOLE_AI_API_KEY}
-      - MOLE_AI_TIMEOUT=${MOLE_AI_TIMEOUT}
     depends_on:
       db:
         condition: service_started
@@ -104,14 +84,12 @@ services:
   db:
     image: pgvector/pgvector:pg16
     container_name: mole_ai_db
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
     expose:
       - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - ../.env
     networks:
       - mole_internal
 
@@ -142,14 +120,13 @@ services:
   minio:
     image: minio/minio:latest
     container_name: mole_ai_minio
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server /data
     expose:
       - "9000"
     volumes:
       - minio_data:/data
+    env_file:
+      - ../.env
     networks:
       - mole_internal
 
@@ -164,12 +141,6 @@ services:
       - "8001"
     env_file:
       - ../.env
-    environment:
-      - REDIS_URL=${REDIS_URL}
-      - DATABASE_URL=${DATABASE_URL}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - DJANGO_BASE_URL=${DJANGO_BASE_URL}
-      - DJANGO_VALIDATE_TOKEN_PATH=${DJANGO_VALIDATE_TOKEN_PATH}
     depends_on:
       - db
       - redis
@@ -188,15 +159,6 @@ services:
       - ai_rag_vectors:/app/storage/vectors
     env_file:
       - ../.env
-    environment:
-      - PORT=${PORT}
-      - HOST=${HOST}
-      - VECTOR_DB_PATH=${VECTOR_DB_PATH}
-      - REDIS_URL=${REDIS_URL}
-      - DATABASE_URL=${DATABASE_URL}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-      - LLM_MODEL_ID=${LLM_MODEL_ID}
-      - EMBEDDING_MODEL_ID=${EMBEDDING_MODEL_ID}
     depends_on:
       - db
       - redis
@@ -215,11 +177,6 @@ services:
     environment:
       - PORT=8003
       - REDIS_URL=redis://redis:6379/2
-      - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
-      - MS3_S3_ACCESS_KEY=${MS3_S3_ACCESS_KEY}
-      - MS3_S3_SECRET_KEY=${MS3_S3_SECRET_KEY}
-      - MS3_S3_BUCKET=${MS3_S3_BUCKET}
-      - DATABASE_URL=${DATABASE_URL}
     depends_on:
       - redis
       - minio
@@ -237,11 +194,6 @@ services:
       - ../.env
     environment:
       - REDIS_URL=redis://redis:6379/2
-      - MS3_S3_ENDPOINT=${MS3_S3_ENDPOINT}
-      - MS3_S3_ACCESS_KEY=${MS3_S3_ACCESS_KEY}
-      - MS3_S3_SECRET_KEY=${MS3_S3_SECRET_KEY}
-      - MS3_S3_BUCKET=${MS3_S3_BUCKET}
-      - DATABASE_URL=${DATABASE_URL}
     depends_on:
       - ms3_reports
       - redis
