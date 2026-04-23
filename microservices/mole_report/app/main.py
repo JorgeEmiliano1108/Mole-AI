@@ -34,7 +34,7 @@ async def shutdown_event():
     pass
 
 
-app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
+app.include_router(reports.router, tags=["reports"])
 
 
 if __name__ == "__main__":

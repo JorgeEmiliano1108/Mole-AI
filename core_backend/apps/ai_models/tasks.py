@@ -52,8 +52,14 @@ def train_rag_async(self, file_path, original_filename, content_type):
         raise
 
 @shared_task(bind=True, max_retries=3, name="analyze_vision_async")
-def analyze_vision_async(self, file_path, auth_token=''):
-    """Inferencia de visión vía MS1 con manejo robusto de archivos."""
+def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=None):
+    """
+    Inferencia de visión vía MS1 con manejo robusto de archivos.
+    Guarda resultado en AIDiagnostic para trazabilidad.
+    """
+    import uuid
+    from django.utils import timezone
+    
     try:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Missing file: {file_path}")
@@ -69,9 +75,39 @@ def analyze_vision_async(self, file_path, auth_token=''):
                 timeout=30
             )
             response.raise_for_status()
+        
+        result = response.json()
+        
+        # Guardar resultado en base de datos (trazabilidad LFPDPPP)
+        if user_id:
+            try:
+                from apps.core.models import AIDiagnostic
+                from apps.authentication.models import User
+                
+                user = User.objects.get(id=user_id)
+                
+                diagnostic = AIDiagnostic.objects.create(
+                    user=user,
+                    plant_id=plant_id or uuid.uuid4(),
+                    image_path=file_path,
+                    diagnosis_label=result.get("condition"),
+                    confidence_score=result.get("confidence"),
+                    metadata={
+                        "species": result.get("species"),
+                        "severity": result.get("severity"),
+                        "ph_predicted": result.get("ph_predicted"),
+                        "task_id": self.request.id,
+                    }
+                )
+                logger.info(f"AIDiagnostic saved: {diagnostic.id} for user {user_id}")
+                
+                # Agregar task_id al resultado para polling
+                result["diagnostic_id"] = str(diagnostic.id)
+            except Exception as e:
+                logger.error(f"Failed to save AIDiagnostic: {e}")
 
         if os.path.exists(file_path): os.remove(file_path)
-        return response.json()
+        return result
         
     except requests.exceptions.ConnectionError as exc:
         raise self.retry(exc=exc, countdown=2)
