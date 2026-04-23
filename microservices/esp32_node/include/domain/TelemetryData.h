@@ -7,7 +7,7 @@ namespace Domain {
     // Estructura que almacena todas las lecturas de un ciclo
     struct TelemetryData {
         String device_id;
-        unsigned long timestamp;
+        String timestamp; // ISO8601 UTC: "2026-04-23T12:00:00Z"
         float bat_lvl;
         String conn_type; // "wifi" o "ble"
         
@@ -24,7 +24,7 @@ namespace Domain {
 
         // Constructor para inicializar valores por defecto (evitar basura en memoria)
         TelemetryData() : 
-            device_id(""), timestamp(0), bat_lvl(0.0), conn_type("none"),
+            device_id(""), timestamp(""), bat_lvl(0.0), conn_type("none"),
             temp_c(0.0), hum_pct(0.0), soil_moist_pct(0.0), light_lux(0.0), uv_index(0.0) {}
     };
 

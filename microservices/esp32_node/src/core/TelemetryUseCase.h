@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <ctime>
 #include "../domain/TelemetryData.h"
 #include "../ports/ISensor.h"
 #include "../ports/IComm.h"
@@ -15,6 +16,7 @@ namespace Core {
 
     public:
         TelemetryUseCase(String deviceId) : _deviceId(deviceId) {}
+        void setDeviceId(String deviceId) { _deviceId = deviceId; }
 
         // Inyectamos los adaptadores a través de los puertos
         void addSensor(Ports::ISensor* sensor) { _sensors.push_back(sensor); }
@@ -28,7 +30,19 @@ namespace Core {
         void executeCycle() {
             Domain::TelemetryData data;
             data.device_id = _deviceId;
-            data.timestamp = millis(); // O usar un RTC si está disponible
+            
+            // === ETSI EN 303 645 Anti-Replay: Generar timestamp UTC desde NTP ===
+            struct tm timeinfo;
+            if (getLocalTime(&timeinfo)) {
+                char iso8601[32];
+                strftime(iso8601, sizeof(iso8601), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+                data.timestamp = String(iso8601);
+            } else {
+                // Fallback: si NTP no responde, usamos epoch como último recurso
+                // ADVERTENCIA: El backend rejectará esto por Anti-Replay (delta > 300s)
+                data.timestamp = "1970-01-01T00:00:00Z";
+                Serial.println("⚠️ NTP sync failed - timestamp may be rejected by backend");
+            }
 
             // 1. Recolección de datos (RAG-Ready)
             for (auto s : _sensors) {

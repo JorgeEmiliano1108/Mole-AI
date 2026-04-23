@@ -12,6 +12,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <esp_sleep.h>
+#include <time.h>
 #include "core/TelemetryUseCase.h"
 #include "../lib/sensors/Dht20Adapter.h"
 #include "../lib/sensors/Ltr390Adapter.h"
@@ -37,12 +38,23 @@ Adapters::AnalogMoisture soilSensor(SOIL_PIN);
 Adapters::WifiMqttAdapter wifiComm(WIFI_SSID, WIFI_PASS, MQTT_BROKER, 1883);
 Adapters::BleAdapter bleComm("Mole_Node_Emiliano");
 
-// 3. El Cerebro
-Core::TelemetryUseCase moleCore("NODE-EMILIANO-001");
+// 3. El Cerebro (device_id se configura dinámicamente en setup())
+Core::TelemetryUseCase moleCore("");
 
 void setup() {
     Serial.begin(115200);
     Wire.begin(); // Iniciamos I2C para DHT20 y LTR390
+
+    // === Generar device_id dinámico desde MAC WiFi ===
+    // Formato: ESP-A1B2C3 (los últimos 6 hex dígitos de la MAC)
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    char devId[16];
+    snprintf(devId, sizeof(devId), "ESP-%02X%02X%02X", mac[3], mac[4], mac[5]);
+    Serial.printf("📡 Device ID: %s\n", devId);
+    
+    // Configurar device_id en el UseCase
+    moleCore.setDeviceId(String(devId));
 
     // Inyección de Dependencias: Conectamos los adaptadores al núcleo
     moleCore.addSensor(&dht20);
@@ -53,6 +65,28 @@ void setup() {
     moleCore.addComm(&bleComm);  // Prioridad 2: Bluetooth
 
     moleCore.initAll();
+    
+    // === NTP SYNC (ETSI EN 303 645 Anti-Replay Compliance) ===
+    // Configuramos timezone UTC+0 y servidores NTP públicos
+    configTime(0, 0, "pool.ntp.org", "time.google.com", "time.cloudflare.com");
+    
+    // Validamos sincronización NTP antes de proceder
+    struct tm timeinfo;
+    int retry = 0;
+    while (retry < 10 && !getLocalTime(&timeinfo)) {
+        Serial.printf("⏳ Esperando NTP... intento %d\n", retry + 1);
+        delay(500);
+        retry++;
+    }
+    
+    if (getLocalTime(&timeinfo)) {
+        char timeStr[64];
+        strftime(timeStr, sizeof(timeStr), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+        Serial.printf("✅ NTP sincronizado: %s\n", timeStr);
+    } else {
+        Serial.println("⚠️ NTP no disponible - continuando sin sincronización");
+    }
+    
     Serial.println("🌿 Mole.AI Sensor Node Inicializado");
 }
 
