@@ -143,14 +143,43 @@ def sensor_data_patch_view(request, pk):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def diagnostic_view(request):
+    """
+    POST /api/v1/diagnostics/
+    Envía imagen a MS1 de forma asíncrona via Celery.
+    No bloquea el request - el frontend hace polling del task_id.
+    """
+    import tempfile
+    import os
+    from apps.ai_models.tasks import analyze_vision_async
+    
     serializer = DiagnosticRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    v_data = cast(Dict[str, Any], serializer.validated_data)
-    try:
-        resultado = consultar_phi_vision(v_data['image'], "Analiza la salud de esta planta.")
-        return Response({"status": "success", "analysis": str(resultado)})
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
+    v_data = serializer.validated_data
+    
+    image_file = v_data.get('image')
+    if not image_file:
+        return Response({"error": "Imagen requerida"}, status=400)
+    
+    temp_dir = tempfile.gettempdir()
+    temp_path = os.path.join(temp_dir, f"diagnostic_{request.user.id}_{image_file.name}")
+    
+    with open(temp_path, 'wb+') as f:
+        for chunk in image_file.chunks():
+            f.write(chunk)
+    
+    auth_header = request.headers.get('Authorization', '')
+    task = analyze_vision_async.delay(
+        temp_path,
+        auth_header,
+        user_id=request.user.id,
+        plant_id=v_data.get('plant_id')
+    )
+    
+    return Response({
+        "status": "processing",
+        "task_id": task.id,
+        "message": "Diagnóstico en cola. Consulta /api/v1/ai/vision/status/{task_id} para ver el resultado."
+    }, status=202)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
