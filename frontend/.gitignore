@@ -157,10 +157,8 @@ cache/
 *.djcache
 
 # ── MQTT Mosquitto (runtime data) ──────────────────────────────────────────
-infrastructure/mosquitto/data/
-infrastructure/mosquitto/log/
-infrastructure/mosquitto/conf/mosquitto.conf
-infrastructure/mosquitto/data/mosquitto.db
+mosquitto/data/
+mosquitto/log/
 
 # ── Vector Store / AI Models (runtime data) ────────────────────────────────
 storage/vectors/*.faiss

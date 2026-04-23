@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | Login</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        @keyframes tvOn { 0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); } }
+        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+    </style>
+</head>
+<body class="bg-black text-[#00ffaa] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen flex items-center justify-center p-4 md:p-10">
+    <div class="scanline"></div>
+    <div id="toast-container" aria-live="polite" aria-label="Notificaciones del sistema"></div>
+    
+    <div class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-yellow-500/10 border border-yellow-500/50 p-2 text-[10px] text-yellow-500 z-30 font-mono">
+        <strong>Aviso Legal:</strong> Los diagnósticos generados por Mole.AI son informativos y probabilísticos. No sustituyen criterio de ingeniero agrónomo. Prohibido usar para tráfico de especies protegidas.
+    </div>
+
+    <div id="login-screen" class="border border-[#00ffaa] p-6 md:p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6 tv-on">
+        
+        <a href="/index.html" class="self-start text-[#00ffaa]/70 hover:text-[#00ffaa] text-xs font-bold tracking-widest flex items-center gap-2 transition-colors mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            [ VOLVER ]
+        </a>
+
+        <h2 class="text-2xl md:text-3xl text-center font-bold tracking-widest">ACCESO SEGURO</h2>
+        <div class="flex flex-col gap-3">
+            <label class="tracking-widest text-sm">USUARIO:</label>
+            <input type="text" id="user-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="email@example.com/user_example" autocomplete="off">
+        </div>
+        <div class="flex flex-col gap-3">
+            <label class="tracking-widest text-sm">CLAVE:</label>
+            <input type="password" id="pass-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="••••••••">
+        </div>
+        <div class="flex flex-col gap-2 mt-4">
+            <button data-action="auth:login" class="border border-[#00ffaa]/50 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold">ENTRAR >></button>
+            <button data-action="auth:forgot" class="text-[#00ffaa]/50 text-xs hover:text-[#00ffaa] mt-2 underline tracking-widest text-center">¿OLVIDÓ SU LLAVE?</button>
+            <button data-action="nav:register" class="text-[#00ffaa]/50 text-xs hover:text-[#00ffaa] mt-2 underline tracking-widest text-center">REGISTRARSE</button>
+        </div>
+        <p id="login-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
+    </div>
+    
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+</html>

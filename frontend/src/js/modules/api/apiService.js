@@ -13,7 +13,7 @@
 class ApiService {
 
     constructor() {
-        this.baseUrl = 'http://localhost:8000/api/v1/';
+        this.baseUrl = window.AppConfig ? window.AppConfig.API_BASE_URL : window.location.origin + '/api/v1/';
         this.defaultTimeout = 30000;   // 30s for standard requests
         this.aiTimeout = 120000;       // 120s for AI/LLM endpoints
         this.maxRetries = 3;
@@ -328,6 +328,14 @@ class ApiService {
         }
 
         return attemptRequest(0).catch(function (error) {
+            if (error.status === 401) {
+                self.clearToken();
+                if (typeof showModule === 'function') {
+                    showModule('login');
+                } else {
+                    window.location.href = '/login/';
+                }
+            }
             if (!silent) {
                 var friendlyMsg = self._friendlyMessage(error);
                 ApiService.showToast(friendlyMsg, 'error');
@@ -378,7 +386,12 @@ class ApiService {
         var toast = document.createElement('div');
         toast.className = 'terminal-toast terminal-toast--' + type;
         toast.setAttribute('role', 'alert');
-        toast.innerHTML = '<span class="toast-prefix">' + prefix + '</span> ' + message;
+        var span = document.createElement('span');
+        span.className = 'toast-prefix';
+        span.textContent = prefix;
+        toast.textContent = '';
+        toast.appendChild(span);
+        toast.appendChild(document.createTextNode(' ' + message));
 
         container.appendChild(toast);
 
@@ -392,4 +405,4 @@ class ApiService {
 
 // Global instance
 window.ApiService = ApiService;
-window.moleApi = new ApiService();
+export const moleApi = new ApiService();

@@ -170,15 +170,13 @@ SUPABASE_JWT_AUD = 'authenticated'
 SUPABASE_JWT_LEEWAY = 30
 
 # 8. CORS & CSRF
-# CORS: use a single strict environment variable `ORIGEN_PERMITIDO` with comma-separated origins.
-CORS_ALLOW_CREDENTIALS = os.getenv('CORS_ALLOW_CREDENTIALS', 'False').lower() in ('true', '1')
-# Read origins from ORIGEN_PERMITIDO; do NOT allow wildcard origins by default
-CORS_ALLOWED_ORIGINS = _split_env_list('ORIGEN_PERMITIDO', '')
-if not CORS_ALLOWED_ORIGINS:
-    CORS_ALLOWED_ORIGINS = []
-CORS_ALLOW_HEADERS = ['accept', 'authorization', 'content-type', 'x-csrftoken', 'x-requested-with']
-# Allow only explicit methods rather than a permissive wildcard
-CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
+# NOTE: Nginx handles CORS completely. This section is kept for reference only.
+# All CORS headers are added in nginx.conf for /api/* endpoints.
+# Keep CORS_ALLOWED_ORIGINS empty to avoid duplication.
+CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOWED_ORIGINS = []  # Nginx handles CORS completely
+CORS_ALLOW_HEADERS = []  # No custom headers needed
+CORS_ALLOW_METHODS = []  # No custom methods needed
 
 csrf_env = _split_env_list('CSRF_TRUSTED_ORIGINS')
 if csrf_env:

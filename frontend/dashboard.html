@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | Dashboard</title>
+    <!-- Tailwind compiled via PostCSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+        @keyframes tvOn { 0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); } }
+    </style>
+</head>
+<body class="bg-[#000511] text-[#00ffaa] font-mono overflow-x-hidden relative min-h-screen">
+    <div class="scanline"></div>
+    <div id="toast-container" aria-live="polite"></div>
+
+    <main id="main-dashboard" class="h-screen p-4 flex-col relative tv-on">
+        <header class="flex justify-between items-center border-b border-[#00ffaa] pb-4 mb-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-widest text-[#00ffaa]">DASHBOARD OPERATIVO</h1>
+                <div id="clock" class="text-xs">00:00:00</div>
+            </div>
+            <div>
+                <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" class="border border-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black">
+                    [ PERFIL ]
+                </button>
+                <div id="profile-dropdown" class="hidden absolute right-4 mt-2 bg-black border border-[#00ffaa] p-4 z-50">
+                    <p id="dropdown-user-name" class="font-bold mb-2">AGENTE</p>
+                    <button data-action="nav:logout" class="text-red-500 hover:text-red-400 text-sm">[ SALIR ]</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Planta -->
+            <div class="border border-[#00ffaa]/50 p-4 relative min-h-[200px] md:h-64 flex flex-col items-center justify-center">
+                <span id="plant-tag" class="absolute top-2 left-2 text-xs font-bold bg-[#00ffaa] text-black px-1">SIN ASIGNAR</span>
+                <div id="video-placeholder" class="text-center animate-pulse opacity-50">[ VISTA CÁMARA DESCONECTADA ]</div>
+                <img id="main-img" class="hidden max-h-full object-contain" src="" alt="Planta">
+            </div>
+
+            <!-- Sensores -->
+            <div class="border border-[#00ffaa]/50 p-4">
+                <h3 class="border-b border-[#00ffaa]/30 mb-2">> TELEMETRÍA</h3>
+                <p>HUM: <span id="txt-hum">--%</span></p>
+                <p>TEMP: <span id="txt-temp">--°C</span></p>
+                <p>pH: <span id="txt-ph">--</span></p>
+                <p>UV: <span id="txt-uv">ESPERANDO...</span></p>
+            </div>
+
+            <!-- Terminal -->
+            <div class="border border-[#00ffaa]/50 p-4 bg-black overflow-y-auto">
+                <h3 class="border-b border-[#00ffaa]/30 mb-2">> DIAGNÓSTICO</h3>
+                <div id="diagnostic-term" class="text-xs"></div>
+            </div>
+        </div>
+
+        <!-- Chat flotante -->
+        <div id="chat-window" class="fixed bottom-4 right-4 w-80 h-96 border border-[#00ffaa] bg-black hidden flex-col z-50">
+            <div class="border-b border-[#00ffaa] p-2 bg-[#00ffaa] text-black font-bold text-sm flex justify-between">
+                <span>MOLE-IA LINK</span>
+                <button onclick="document.getElementById('chat-window').classList.add('hidden')">X</button>
+            </div>
+            <div class="bg-yellow-500/20 border-l-4 border-yellow-500 text-yellow-500 p-2 text-[10px] leading-tight">
+                <strong>Aviso Legal:</strong> Los diagnósticos e identificaciones generados por Mole.AI son de carácter informativo y probabilístico. No sustituyen el criterio de un ingeniero agrónomo certificado ni constituyen una recomendación oficial de uso de pesticidas regulados. Mole.AI prohíbe el uso de esta herramienta para la recolección ilegal o tráfico de especies endémicas protegidas por la NOM-059-SEMARNAT.
+            </div>
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-2 text-xs space-y-2"></div>
+            <input type="text" id="chat-input" class="border-t border-[#00ffaa] bg-transparent text-[#00ffaa] p-2 outline-none" placeholder="Ingresar comando...">
+        </div>
+
+        <button onclick="document.getElementById('chat-window').classList.toggle('hidden')" class="fixed bottom-4 right-4 bg-[#00ffaa] text-black px-4 py-2 font-bold z-40 shadow-[0_0_15px_#00ffaa]">
+            ABRIR IA
+        </button>
+    </main>
+
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | Terminal</title>
+<!-- Use standard link and script tags for Vite (no Django templates) -->
+    <!-- Tailwind compiled via PostCSS - see src/css/main.css -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        @keyframes biometric-scan { 0% { top: -5%; opacity: 0; } 5% { opacity: 0.8; } 95% { opacity: 0.8; } 100% { top: 105%; opacity: 0; } }
+        .animate-biometric-scan { animation: biometric-scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+    </style>
+</head>
+<body class="bg-black text-[#00ffaa] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
+    <div class="scanline"></div>
+    
+    <div class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-yellow-500/10 border border-yellow-500/50 p-2 text-[10px] text-yellow-500 z-30 font-mono">
+        <strong>Aviso Legal:</strong> Los diagnósticos generados por Mole.AI son informativos y probabilísticos. No sustituyen criterio de ingeniero agrónomo. Prohibido usar para tráfico de especies protegidas (NOM-059-SEMARNAT).
+    </div>
+
+    <div id="intro-screen" class="fixed inset-0 bg-black z-40 flex items-center justify-center p-4 md:p-10 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 w-full max-w-6xl h-auto md:h-full md:max-h-[650px] my-auto">
+            <div class="border-2 border-[#00ffaa] p-6 md:p-10 flex flex-col justify-between relative bg-black shadow-[0_0_20px_rgba(0,255,170,0.1)]">
+                <div>
+                    <h1 class="text-5xl md:text-7xl font-bold mb-2 tracking-wider text-[#00ffaa] drop-shadow-[0_0_15px_rgba(0,255,170,0.5)]">MoleAI</h1>
+                    <h2 class="text-sm md:text-xl tracking-[0.3em] md:tracking-[0.5em] mb-6 md:mb-8 opacity-70">MONITORING-TOOL</h2>
+                    <hr class="border-[#00ffaa]/40 mb-6 md:mb-10">
+                    <div class="flex flex-col gap-4 md:gap-6 text-lg md:text-xl tracking-widest">
+                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">OBJETIVO</button>
+                        <button id="btn-vision" data-action="type:vision" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
+                        <button id="btn-flora" data-action="type:flora" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
+                    </div>
+                </div>
+                <button data-action="system:start" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
+            </div>
+            <div class="border border-[#00ffaa]/30 p-6 md:p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)] min-h-[250px] md:min-h-0">
+                <div id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap text-left w-full min-h-[150px] font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Entry script -->
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+</html>

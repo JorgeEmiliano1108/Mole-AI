@@ -1,6 +1,42 @@
+import * as userDashboard from './modules/auth/userDashboard.js';
+import * as adminDashboard from './modules/auth/adminDashboard.js';
+import * as i18n from './modules/ui/i18n.js';
+import * as dom from './modules/ui/dom.js';
+import * as history from './modules/ui/history.js';
+import * as menus from './modules/ui/menus.js';
+import * as security from './modules/ui/security.js';
+import * as memory from './modules/ui/memory.js';
+import * as iot from './modules/ui/iot.js';
+import * as config from './modules/api/config.js';
+import * as apiService from './modules/api/apiService.js';
+import * as mlops from './modules/services/mlops.js';
+import * as vision from './modules/services/vision.js';
+import * as privacy from './modules/ui/privacy.js';
+import * as reports from './modules/services/reports.js';
+import * as chat from './modules/services/chat.js';
+import * as supervisor from './modules/services/supervisor.js';
+import * as crops from './modules/services/crops.js';
+import * as map from './modules/services/map.js';
+
+import { moleApi } from './modules/api/apiService.js';
+
+// ==========================================================
+// 0. EXPOSE GLOBAL FUNCTIONS TO WINDOW (for inline HTML handlers)
+// ==========================================================
+// Import JWT helpers from config and expose to window
+import { getAuthToken, setAuthToken, clearAuthToken } from './modules/api/config.js';
+window.getAuthToken = getAuthToken;
+window.setAuthToken = setAuthToken;
+window.clearAuthToken = clearAuthToken;
+
+// Import updatePlant from crops and expose to window
+import { updatePlant as doUpdatePlant } from './modules/services/crops.js';
+window.updatePlant = doUpdatePlant;
+
 // ==========================================================
 // 0. CONFIGURACIÓN ESTRUCTURAL (MÓDULOS E IDIOMAS)
 // ==========================================================
+// MODULES: Solo para modales (pantallas completas ahora navegan físicamente)
 const MODULES = {
     intro: 'intro-screen',
     login: 'login-screen',
@@ -47,34 +83,31 @@ function createNode(tag = 'div', className = '', text = '', attrs = {}) {
     return el;
 }
 
-// Función Maestra de Navegación (CORREGIDA)
+// Función para mostrar modales (no pantallas completas - esas navegan físicamente)
 function showModule(moduleKey) {
-    const mainScreens = ['intro', 'login', 'register', 'dashboard', 'admin'];
-    if (mainScreens.includes(moduleKey)) {
-        mainScreens.forEach(key => {
+    // Solo modales - pantallas completas navegan con window.location.href
+    const modalScreens = ['analysis', 'contact', 'addPlant', 'loading', 'diagnosis', 'history', 'map', 'iot', 'profile', 'delete'];
+    
+    if (modalScreens.includes(moduleKey)) {
+        // Ocultar otros modales primero
+        modalScreens.forEach(key => {
             const el = document.getElementById(MODULES[key]);
             if (el) el.classList.add('hidden');
         });
-    }
-    const target = document.getElementById(MODULES[moduleKey]);
-    if (target) {
-        target.classList.remove('hidden');
-        if (moduleKey === 'dashboard') target.classList.add('flex'); // Mantiene el flex
-    }
-
-    // EL SWITCH AHORA ESTÁ DENTRO DE LA FUNCIÓN, DONDE PERTENECE
-    switch(moduleKey) {
-        case 'dashboard':
-            if (typeof syncUserPlants === 'function') syncUserPlants();
-            if (typeof loadChatHistory === 'function') loadChatHistory();
-            break;
-        case 'admin':
-            if (typeof initAdminCharts === 'function') initAdminCharts();
-            break;
-        case 'map':
-            if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
-            if (typeof fetchMapData === 'function') fetchMapData();
-            break;
+        
+        const target = document.getElementById(MODULES[moduleKey]);
+        if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('flex');
+        }
+        
+        // Inicializaciones específicas por modal
+        switch(moduleKey) {
+            case 'map':
+                if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
+                if (typeof fetchMapData === 'function') fetchMapData();
+                break;
+        }
     }
 }
 
@@ -116,129 +149,136 @@ initUsers();
 function typeContent(section) {
     const output = document.getElementById('typewriter-output');
     const text = introData[section];
-    output.innerHTML = ''; 
+    output.textContent = ''; 
     clearInterval(typeInterval); 
     let currentText = "", i = 0;
     
     typeInterval = setInterval(() => {
         currentText += text.charAt(i);
-        output.innerHTML = currentText + '<span class="animate-pulse">_</span>';
+        output.textContent = currentText;
+        const cursor = document.createElement('span');
+        cursor.className = 'animate-pulse';
+        cursor.textContent = '_';
+        output.appendChild(cursor);
         i++;
         if (i === text.length) clearInterval(typeInterval);
     }, 20);
 }
 
-// Ensure typeContent is accessible from inline handlers and attach resilient listeners
+// Ensure typeContent is accessible from inline handlers
 window.typeContent = typeContent;
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Ensure router-driven actions exist on these elements; if template lacks `data-action`, set a safe default.
-    const map = { 'btn-objetivo': 'type:objetivo', 'btn-vision': 'type:vision', 'btn-flora': 'type:flora' };
-    Object.keys(map).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            if (!el.hasAttribute('data-action')) {
-                el.setAttribute('data-action', map[id]);
-            }
-        }
-    });
-});
-
-// Small compatibility shims for UI buttons referenced in templates but not defined
+// Small compatibility shims for UI buttons - now using physical navigation
 function openUserCreationModal() {
-    if (typeof showRegisterScreen === 'function') return showRegisterScreen();
-    if (typeof showModule === 'function') return showModule('register');
-    console.warn('openUserCreationModal: no register UI available');
+    window.location.href = '/login.html?view=register';
 }
 
 function openAdminAddPlantModal() {
-    if (typeof openAddPlantModal === 'function') return openAddPlantModal();
-    if (typeof showModule === 'function') return showModule('admin');
-    console.warn('openAdminAddPlantModal: no add-plant UI available');
+    window.location.href = '/admin.html';
 }
 
 function returnToOverride() {
-    if (typeof showModule === 'function') return showModule('admin');
-    console.warn('returnToOverride: showModule not available');
+    window.location.href = '/admin.html';
 }
 
 function startSystem() {
-    showModule('login'); 
-    document.getElementById('login-error').classList.add('hidden');
-    clearInterval(typeInterval);
+    window.location.href = '/login.html';
 }
 
 function showRegisterScreen() {
-    showModule('register'); 
-    document.getElementById('reg-user-input').value = '';
-    document.getElementById('reg-pass-input').value = '';
-    document.getElementById('reg-error').classList.add('hidden');
-    document.getElementById('reg-success').classList.add('hidden');
+    window.location.href = '/login.html?view=register';
 }
 
 
 // --- REGISTRO ---
 async function submitRegistration() {
-    const user = document.getElementById('reg-user-input').value.trim();
-    const pass = document.getElementById('reg-pass-input').value.trim();
-    const passConfirm = document.getElementById('reg-pass-confirm-input').value.trim(); 
+    const userInput = document.getElementById('reg-user-input');
+    const passInput = document.getElementById('reg-pass-input');
+    const passConfirmInput = document.getElementById('reg-pass-confirm-input');
+    
+    const user = userInput?.value.trim() || '';
+    const pass = passInput?.value.trim() || '';
+    const passConfirm = passConfirmInput?.value.trim() || '';
+    
     const errorMsg = document.getElementById('reg-error');
     const successMsg = document.getElementById('reg-success');
 
-    errorMsg.classList.add('hidden');
-    successMsg.classList.add('hidden');
+    if (errorMsg) errorMsg.classList.add('hidden');
+    if (successMsg) successMsg.classList.add('hidden');
 
     if (user.length < 3 || pass.length < 3) {
-        errorMsg.innerText = "ERROR: MÍNIMO 3 CARACTERES.";
-        errorMsg.classList.remove('hidden');
+        if (errorMsg) {
+            errorMsg.innerText = "ERROR: MÍNIMO 3 CARACTERES.";
+            errorMsg.classList.remove('hidden');
+        }
         return;
     }
     if (pass !== passConfirm) {
-        errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
-        errorMsg.classList.remove('hidden');
+        if (errorMsg) {
+            errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
+            errorMsg.classList.remove('hidden');
+        }
         return;
     }
     if (user.toLowerCase() === 'admin') {
-        errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
-        errorMsg.classList.remove('hidden');
+        if (errorMsg) {
+            errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
+            errorMsg.classList.remove('hidden');
+        }
         return;
     }
 
     try {
         // USO DE API SERVICE: Endpoint real 'auth/register/'
-        const response = await window.moleApi.post('auth/register/', { 
+        const response = await moleApi.post('auth/register/', { 
             username: user, 
             password: pass 
         });
 
-        successMsg.innerText = `USUARIO "${user.toUpperCase()}" CREADO EN SERVIDOR.`;
-        successMsg.classList.remove('hidden');
-        setTimeout(() => showModule('login'), 2000); 
+        if (successMsg) {
+            successMsg.innerText = `USUARIO "${user.toUpperCase()}" CREADO EN SERVIDOR.`;
+            successMsg.classList.remove('hidden');
+        }
+        setTimeout(() => window.location.href = '/login.html', 2000); 
 
     } catch (error) {
-        errorMsg.innerText = error.message || "ERROR: NO SE PUDO CONECTAR AL SERVIDOR.";
-        errorMsg.classList.remove('hidden');
+        if (errorMsg) {
+            errorMsg.innerText = error.message || "ERROR: NO SE PUDO CONECTAR AL SERVIDOR.";
+            errorMsg.classList.remove('hidden');
+        }
     }
 }
 
 // --- LOGIN REAL CON BYPASS TEMPORAL ---
 async function attemptLogin() {
-    const user = document.getElementById('user-input').value.trim();
-    const pass = document.getElementById('pass-input').value.trim();
+    const userInput = document.getElementById('user-input');
+    const passInput = document.getElementById('pass-input');
+    const user = userInput?.value.trim() || '';
+    const pass = passInput?.value.trim() || '';
     const errorMsg = document.getElementById('login-error');
     
-    errorMsg.classList.add('hidden');
+    if (errorMsg) errorMsg.classList.add('hidden');
 
     // Bypass rápido para pruebas UI
     if (user === 'dev' && pass === 'dev') {
         console.warn("> MODO DEV ACTIVADO: Entrando sin backend.");
-        executeLoginSequence('admin');
+        localStorage.setItem('moleia_current_user', user);
+        localStorage.setItem('moleia_user_role', 'admin');
+        window.location.href = '/admin.html';
+        return;
+    }
+
+    if (!user || !pass) {
+        if (errorMsg) {
+            errorMsg.innerText = "ERROR: DEBE INGRESAR USUARIO Y CONTRASEÑA.";
+            errorMsg.classList.remove('hidden');
+        }
         return;
     }
 
     try {
         // USO DE API SERVICE: Endpoint real 'auth/login/'
-        const userData = await window.moleApi.post('auth/login/', { 
+        const userData = await moleApi.post('auth/login/', { 
             username: user, 
             password: pass 
         });
@@ -246,162 +286,42 @@ async function attemptLogin() {
         // El ApiService guarda el JWT automáticamente. Si la API devuelve el token en otra llave, ajustamos:
         const token = userData.token || userData.access || userData.access_token;
         if (token) {
-            await window.moleApi.setToken(token);
-            executeLoginSequence(user); 
+            await moleApi.setToken(token);
+            localStorage.setItem('moleia_current_user', user);
+            localStorage.setItem('moleia_user_role', user.toLowerCase() === 'admin' ? 'admin' : 'user');
+            const role = user.toLowerCase() === 'admin' ? 'admin' : 'user';
+            window.location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
         } else {
             throw new Error("Token no recibido desde el servidor.");
         }
 
     } catch (error) {
         console.warn("> Servidor rechazó credenciales o está offline.", error);
-        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
-        errorMsg.classList.remove('hidden');
-    }
-}
-
-// --- SECUENCIA VISUAL DE INICIO DE SESIÓN ---
-function executeLoginSequence(user) {
-    localStorage.setItem('moleia_current_user', user);
-    localStorage.setItem('moleia_user_role', user.toLowerCase() === 'admin' ? 'admin' : 'user');
-    
-    const loginScreen = document.getElementById('login-screen');
-
-    if (user.toLowerCase() === 'admin') {
-         if (!document.getElementById('admin-glitch-style')) {
-            const style = document.createElement('style');
-            style.id = 'admin-glitch-style';
-            style.innerHTML = `
-                @keyframes pure-static {
-                    0% { background-position: 0% 0%; filter: invert(0%) sepia(100%) hue-rotate(180deg) saturate(500%); }
-                    25% { background-position: 50% 50%; filter: invert(100%); }
-                    50% { background-position: -20% 30%; filter: invert(0%); }
-                    75% { background-position: 80% -10%; filter: invert(100%); }
-                    100% { background-position: 100% 100%; filter: invert(0%); }
-                }
-            `;
-            document.head.appendChild(style);
+        if (errorMsg) {
+            errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+            errorMsg.classList.remove('hidden');
         }
-
-        const overlay = document.createElement('div');
-        overlay.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black';
-        document.body.appendChild(overlay);
-
-        const noise = document.createElement('div');
-        noise.className = 'absolute inset-0';
-        noise.style.backgroundImage = 'repeating-radial-gradient(circle at 17% 32%, #ffffff, #000000 0.001px)';
-        noise.style.animation = 'pure-static 0.1s infinite';
-        noise.style.opacity = '0.85';
-        overlay.appendChild(noise);
-
-        loginScreen.classList.add('hidden');
-
-        setTimeout(() => {
-            noise.remove(); 
-            const msg = document.createElement('h1');
-            msg.innerText = "> BIENVENIDO SUPERVISOR";
-            msg.className = "text-[#00e5ff] font-bold text-3xl md:text-5xl tracking-[0.3em] uppercase drop-shadow-[0_0_15px_#00e5ff] animate-pulse text-center px-4";
-            msg.style.fontFamily = "'Share Tech Mono', monospace";
-            overlay.appendChild(msg);
-
-            setTimeout(() => {
-                overlay.style.transition = 'opacity 0.8s ease';
-                overlay.style.opacity = '0';
-                
-                showModule('admin');
-                
-                setTimeout(() => overlay.remove(), 800); 
-            }, 1000); 
-        }, 800); 
-    } else {
-        loginScreen.style.transformOrigin = 'center';
-        loginScreen.style.transition = 'transform 0.2s ease-in, filter 0.2s ease-in';
-        loginScreen.style.filter = 'brightness(8) contrast(2)';
-        loginScreen.style.transform = 'scale(1, 0.005)'; 
-        
-        setTimeout(() => {
-            loginScreen.style.transform = 'scale(0, 0.005)'; 
-            
-            setTimeout(() => {
-                loginScreen.classList.add('hidden');
-                loginScreen.style.transform = '';
-                loginScreen.style.filter = '';
-                loginScreen.style.transition = '';
-
-                // Inicializamos el dashboard sin plantas
-                resetDashboard();
-                showModule('dashboard');
-
-            }, 200);
-        }, 200);
     }
-    
-    document.getElementById('user-input').value = '';
-    document.getElementById('pass-input').value = '';
-}
-
-// --- ESTADO VACÍO DEL DASHBOARD ---
-function resetDashboard() {
-    const imgEl = document.getElementById('main-img');
-    const plantTag = document.getElementById('plant-tag');
-    
-    if(imgEl) {
-        imgEl.classList.add('hidden'); 
-        const placeholder = document.getElementById('video-placeholder');
-        if(placeholder) placeholder.classList.remove('hidden');
-    }
-    
-    if(plantTag) plantTag.innerText = "SIN ASIGNAR";
-
-    document.getElementById('txt-hum').innerText = "--%";
-    document.getElementById('txt-temp').innerText = "--°C";
-    document.getElementById('txt-ph').innerText = "--";
-    document.getElementById('txt-uv').innerText = "ESPERANDO...";
 }
 
 // --- CIERRE DE SESIÓN ---
 function logout() {
-    const mainDash = document.getElementById('main-dashboard');
-    const adminDash = document.getElementById('admin-dashboard');
-    const activeDash = !mainDash.classList.contains('hidden') ? mainDash : adminDash;
+    // Purga de memoria y sesión
+    try { window.clearAuthToken(); } catch (e) { if (moleApi && typeof moleApi.clearToken === 'function') moleApi.clearToken(); }
+    localStorage.removeItem('moleia_current_user'); 
+    localStorage.removeItem('moleia_user_role');
+    
+    if (typeof detachChatListener === 'function') detachChatListener(); 
+    if (window.monitorInterval) clearInterval(window.monitorInterval);  
 
-    // Efecto TV al cerrar sesión
-    activeDash.classList.add('tv-off');
-
-    // Cerrar también el dropdown de perfil si estaba abierto
-    const dropdown = document.getElementById('profile-dropdown');
-    if(dropdown && !dropdown.classList.contains('hidden')){
-        dropdown.classList.add('hidden');
-        dropdown.classList.remove('flex');
-    }
-
-    setTimeout(() => {
-        // Use centralized clearAuthToken helper (config.js) which delegates to moleApi or localStorage
-        try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
-        localStorage.removeItem('moleia_current_user'); 
-        localStorage.removeItem('moleia_user_role');
-        
-        if (typeof detachChatListener === 'function') detachChatListener(); 
-        if (window.monitorInterval) clearInterval(window.monitorInterval);  
-
-        mainDash.classList.add('hidden');
-        mainDash.classList.remove('flex');
-        adminDash.classList.add('hidden');
-        adminDash.classList.remove('flex');
-        
-        document.querySelectorAll('.modal, [id$="-modal"]').forEach(m => m.classList.add('hidden'));
-        
-        document.getElementById('user-input').value = '';
-        document.getElementById('pass-input').value = '';
-
-        document.getElementById('intro-screen').classList.remove('hidden');
-        activeDash.classList.remove('tv-off');
-        
-        console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
-    }, 400); 
+    console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
+    
+    // Navegación física al inicio
+    window.location.href = '/index.html';
 }
 
 function backToDashboard() {
-    showModule('dashboard');
+    window.location.href = '/dashboard.html';
 }
 
 // ==========================================================
@@ -447,9 +367,11 @@ function closeModalWithTV(modalId) {
 // ==========================================================
 function toggleProfileDropdown() {
     const dropdown = document.getElementById('profile-dropdown');
+    if (!dropdown) return;
     
     const currentUser = localStorage.getItem('moleia_current_user') || 'AGENTE MOLE';
-    document.getElementById('dropdown-user-name').innerText = currentUser.toUpperCase();
+    const dropdownUserName = document.getElementById('dropdown-user-name');
+    if (dropdownUserName) dropdownUserName.innerText = currentUser.toUpperCase();
 
     if (dropdown.classList.contains('hidden')) {
         dropdown.classList.remove('hidden');
@@ -499,55 +421,107 @@ setInterval(updateClock, 1000);
 // SISTEMA DE VINCULACIÓN ESP32 (IOT WIZARD)
 // ==========================================================
 function nextIotStep(step) {
-    // Buscamos el contenedor interior del modal para cambiar su contenido
-    const wizardContainer = document.getElementById('iot-wizard-modal').querySelector('.border-2');
+    const wizardContainer = document.getElementById('iot-wizard-modal');
+    const wizardContent = wizardContainer?.querySelector('.border-2');
+    if (!wizardContainer || !wizardContent) return;
     
-    if (step === 2) {
-        // PASO 2: SIMULACIÓN DE CONEXIÓN Y BARRA DE PROGRESO
-        wizardContainer.innerHTML = `
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
-                > ENLACE DE HARDWARE: ESP32_NODE
-            </h2>
-            <div id="iot-step-2" class="iot-step block">
-                <p class="text-white/80 text-sm mb-4">> Estableciendo protocolo de enlace Handshake con ESP32...</p>
-                
-                <div class="w-full bg-black border border-[#00ffaa]/30 h-4 mb-4 mt-8 relative overflow-hidden">
-                    <div id="iot-progress" class="bg-[#00ffaa] h-full w-0 transition-all duration-1000 ease-out"></div>
-                </div>
-                
-                <p id="iot-status-text" class="text-center text-xs text-[#00ffaa] animate-pulse">Sincronizando claves de telemetría...</p>
-            </div>
-            <button data-action="modal:close-iot" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
-        `;
+    wizardContent.textContent = '';
+    
+    const h2 = document.createElement('h2');
+    h2.className = 'text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4';
+    h2.textContent = '> ENLACE DE HARDWARE: ESP32_NODE';
+    wizardContent.appendChild(h2);
 
-        // Simulamos el avance de la barra de progreso
-        setTimeout(() => document.getElementById('iot-progress').style.width = '35%', 500);
+    if (step === 2) {
+        const stepDiv = document.createElement('div');
+        stepDiv.id = 'iot-step-2';
+        stepDiv.className = 'iot-step block';
+
+        const p1 = document.createElement('p');
+        p1.className = 'text-white/80 text-sm mb-4';
+        p1.textContent = '> Estableciendo protocolo de enlace Handshake con ESP32...';
+        stepDiv.appendChild(p1);
+
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'w-full bg-black border border-[#00ffaa]/30 h-4 mb-4 mt-8 relative overflow-hidden';
+        const progressFill = document.createElement('div');
+        progressFill.id = 'iot-progress';
+        progressFill.className = 'bg-[#00ffaa] h-full w-0 transition-all duration-1000 ease-out';
+        progressContainer.appendChild(progressFill);
+        stepDiv.appendChild(progressContainer);
+
+        const pStatus = document.createElement('p');
+        pStatus.id = 'iot-status-text';
+        pStatus.className = 'text-center text-xs text-[#00ffaa] animate-pulse';
+        pStatus.textContent = 'Sincronizando claves de telemetría...';
+        stepDiv.appendChild(pStatus);
+
+        wizardContent.appendChild(stepDiv);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.setAttribute('data-action', 'modal:close-iot');
+        closeBtn.className = 'absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold';
+        closeBtn.textContent = '[X]';
+        wizardContent.appendChild(closeBtn);
+
         setTimeout(() => {
-            document.getElementById('iot-progress').style.width = '75%';
-            document.getElementById('iot-status-text').innerText = "Calibrando sensores analógicos...";
+            const iotProgress = document.getElementById('iot-progress');
+            if (iotProgress) iotProgress.style.width = '35%';
+        }, 500);
+        setTimeout(() => {
+            const iotProgress = document.getElementById('iot-progress');
+            const iotStatusText = document.getElementById('iot-status-text');
+            if (iotProgress) iotProgress.style.width = '75%';
+            if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores analógicos...';
         }, 2000);
         
-        // Saltamos automáticamente al paso 3 después de 4 segundos
         setTimeout(() => nextIotStep(3), 4000);
         
     } else if (step === 3) {
-        // PASO 3: CONEXIÓN EXITOSA
-        wizardContainer.innerHTML = `
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
-                > ENLACE DE HARDWARE: ESP32_NODE
-            </h2>
-            <div id="iot-step-3" class="iot-step block text-center">
-                <div class="w-16 h-16 rounded-full border-4 border-[#00ffaa] flex items-center justify-center mx-auto mb-4 bg-[#00ffaa]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]">
-                    <svg class="w-8 h-8 text-[#00ffaa]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                </div>
-                <p class="text-[#00ffaa] font-bold text-lg mb-2">¡CONEXIÓN ESTABLECIDA!</p>
-                <p class="text-white/70 text-xs mb-6">El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.</p>
-                <button data-action="iot:finalize" class="w-full border border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
-                    > FINALIZAR PROTOCOLO
-                </button>
-            </div>
-            <button data-action="iot:finalize" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
-        `;
+        const stepDiv = document.createElement('div');
+        stepDiv.id = 'iot-step-3';
+        stepDiv.className = 'iot-step block text-center';
+
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'w-16 h-16 rounded-full border-4 border-[#00ffaa] flex items-center justify-center mx-auto mb-4 bg-[#00ffaa]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]';
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('class', 'w-8 h-8 text-[#00ffaa]');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('d', 'M5 13l4 4L19 7');
+        svg.appendChild(path);
+        iconContainer.appendChild(svg);
+        stepDiv.appendChild(iconContainer);
+
+        const pTitle = document.createElement('p');
+        pTitle.className = 'text-[#00ffaa] font-bold text-lg mb-2';
+        pTitle.textContent = '¡CONEXIÓN ESTABLECIDA!';
+        stepDiv.appendChild(pTitle);
+
+        const pDesc = document.createElement('p');
+        pDesc.className = 'text-white/70 text-xs mb-6';
+        pDesc.textContent = 'El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.';
+        stepDiv.appendChild(pDesc);
+
+        const finalBtn = document.createElement('button');
+        finalBtn.setAttribute('data-action', 'iot:finalize');
+        finalBtn.className = 'w-full border border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm';
+        finalBtn.textContent = '> FINALIZAR PROTOCOLO';
+        stepDiv.appendChild(finalBtn);
+
+        wizardContainer.appendChild(stepDiv);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.setAttribute('data-action', 'iot:finalize');
+        closeBtn.className = 'absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold';
+        closeBtn.textContent = '[X]';
+        wizardContainer.appendChild(closeBtn);
     }
 }
 
@@ -576,13 +550,20 @@ function registerNewPlant() {
     closeModalWithTV('add-plant-modal');
     
     // 2. Ocultamos el botón de agregar planta (porque ya agregamos una)
-    document.getElementById('new-user-plants').classList.add('hidden');
-    document.getElementById('new-user-plants').classList.remove('flex');
+    const newUserPlants = document.getElementById('new-user-plants');
+    if (newUserPlants) {
+        newUserPlants.classList.add('hidden');
+        newUserPlants.classList.remove('flex');
+    }
 
     // 3. Transformamos el Dashboard Central
-    document.getElementById('video-placeholder').classList.add('hidden'); // Quitamos el texto de espera
-    document.getElementById('main-img').classList.remove('hidden'); // Mostramos la imagen de la planta
-    document.getElementById('plant-tag').innerText = finalName; // Ponemos el nombre que eligió el usuario
+    const videoPlaceholder = document.getElementById('video-placeholder');
+    const mainImg = document.getElementById('main-img');
+    const plantTag = document.getElementById('plant-tag');
+    
+    if (videoPlaceholder) videoPlaceholder.classList.add('hidden'); // Quitamos el texto de espera
+    if (mainImg) mainImg.classList.remove('hidden'); // Mostramos la imagen de la planta
+    if (plantTag) plantTag.innerText = finalName; // Ponemos el nombre que eligió el usuario
 
 }
 
@@ -659,20 +640,40 @@ function loadFloraSearch() {
     if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
 
     // 2. Inyectar la interfaz del buscador estilo Terminal
-    container.innerHTML = `
-        <div class="flex flex-col h-full w-full min-h-[200px]">
-            <div class="flex items-center border-b border-[#00ffaa]/50 pb-2 mb-4">
-                <span class="mr-2 animate-pulse">>_</span>
-                <input type="text" id="flora-search-input" 
-                       class="bg-transparent border-none outline-none text-[#00ffaa] font-mono w-full placeholder-[#00ffaa]/30" 
-                       placeholder="Buscar espécimen (ej. Agave, Cempasúchil)..."
-                       autocomplete="off">
-            </div>
-            <div id="flora-search-results" class="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin">
-                <p class="text-[#00ffaa]/50 text-sm italic">Esperando consulta de base de datos...</p>
-            </div>
-        </div>
-    `;
+    container.textContent = '';
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex flex-col h-full w-full min-h-[200px]';
+    
+    const topBar = document.createElement('div');
+    topBar.className = 'flex items-center border-b border-[#00ffaa]/50 pb-2 mb-4';
+    
+    const promptSpan = document.createElement('span');
+    promptSpan.className = 'mr-2 animate-pulse';
+    promptSpan.textContent = '>_';
+    topBar.appendChild(promptSpan);
+    
+    const inputField = document.createElement('input');
+    inputField.type = 'text';
+    inputField.id = 'flora-search-input';
+    inputField.className = 'bg-transparent border-none outline-none text-[#00ffaa] font-mono w-full placeholder-[#00ffaa]/30';
+    inputField.placeholder = 'Buscar espécimen (ej. Agave, Cempasúchil)...';
+    inputField.autocomplete = 'off';
+    topBar.appendChild(inputField);
+    
+    wrapper.appendChild(topBar);
+    
+    const resultsDiv = document.createElement('div');
+    resultsDiv.id = 'flora-search-results';
+    resultsDiv.className = 'flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin';
+    
+    const waitingText = document.createElement('p');
+    waitingText.className = 'text-[#00ffaa]/50 text-sm italic';
+    waitingText.textContent = 'Esperando consulta de base de datos...';
+    resultsDiv.appendChild(waitingText);
+    
+    wrapper.appendChild(resultsDiv);
+    container.appendChild(wrapper);
 
     // 3. Activar el campo de texto y el listener con Debounce (300ms)
     const input = document.getElementById('flora-search-input');
@@ -872,3 +873,23 @@ function renderPlantResults(results) {
         container.appendChild(card);
     });
 }
+
+// Make modules globally available temporarily for smooth transition
+Object.assign(window, userDashboard);
+Object.assign(window, adminDashboard);
+Object.assign(window, i18n);
+Object.assign(window, dom);
+Object.assign(window, history);
+Object.assign(window, menus);
+Object.assign(window, security);
+Object.assign(window, memory);
+Object.assign(window, iot);
+Object.assign(window, config);
+Object.assign(window, apiService);
+Object.assign(window, mlops);
+Object.assign(window, vision);
+Object.assign(window, reports);
+Object.assign(window, chat);
+Object.assign(window, supervisor);
+Object.assign(window, crops);
+Object.assign(window, map);
