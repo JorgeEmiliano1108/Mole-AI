@@ -25,12 +25,12 @@ services:
   # --- DJANGO BACKEND (Orchestrator) ---
   django-backend:
     build:
-      context: ../core_backend  
+      context: ../core_backend
     container_name: django-backend
     expose:
       - "8000"
     volumes:
-      - ../core_backend:/app  
+      - ../core_backend:/app
     env_file:
       - ../.env
     depends_on:
@@ -47,11 +47,11 @@ services:
   # --- BACKEND CELERY WORKER ---
   django_celery_worker:
     build:
-      context: ../core_backend  
+      context: ../core_backend
     container_name: django_celery_worker
-    entrypoint: ["celery", "-A", "mole_ai_backend", "worker", "-l", "info"]
+    entrypoint: [ "celery", "-A", "mole_ai_backend", "worker", "-l", "info" ]
     volumes:
-      - ../core_backend:/app  
+      - ../core_backend:/app
     env_file:
       - ../.env
     depends_on:
@@ -65,11 +65,11 @@ services:
   # --- BACKEND CELERY BEAT (El Reloj / Garbage Collector) ---
   django_celery_beat:
     build:
-      context: ../core_backend  
+      context: ../core_backend
     container_name: django_celery_beat
-    entrypoint: ["celery", "-A", "mole_ai_backend", "beat", "-l", "info"] 
+    entrypoint: [ "celery", "-A", "mole_ai_backend", "beat", "-l", "info" ]
     volumes:
-      - ../core_backend:/app  
+      - ../core_backend:/app
     env_file:
       - ../.env
     depends_on:
@@ -132,11 +132,11 @@ services:
 
   # --- MS1: Vision ---
   ms1_vision:
-    build: 
-      context: ../microservices/mole_vision  
+    build:
+      context: ../microservices/mole_vision
     container_name: ms1_vision
     volumes:
-      - ../microservices/mole_vision/models:/app/models:ro  
+      - ../microservices/mole_vision/models:/app/models:ro
     expose:
       - "8001"
     env_file:
@@ -150,8 +150,8 @@ services:
 
   # --- MS2: Chat / RAG ---
   ms2_chat:
-    build: 
-      context: ../microservices/mole_chat  
+    build:
+      context: ../microservices/mole_chat
     container_name: ms2_chat
     expose:
       - "8002"
@@ -168,7 +168,7 @@ services:
   # --- MS3: Reports (FastAPI) ---
   ms3_reports:
     build:
-      context: ../microservices/mole_report  
+      context: ../microservices/mole_report
     container_name: ms3_reports
     expose:
       - "8003"
@@ -187,9 +187,9 @@ services:
   # --- MS3: Celery worker ---
   ms3_celery_worker:
     build:
-      context: ../microservices/mole_report  
+      context: ../microservices/mole_report
     container_name: ms3_celery_worker
-    command: ["celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "reports_queue"]
+    command: [ "celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "reports_queue" ]
     env_file:
       - ../.env
     environment:
@@ -201,7 +201,30 @@ services:
     networks:
       - mole_internal
 
+  # --- EDGE NODE (Gateway OpenClaw & Store-Forward) ---
+  edge_node:
+    build:
+      context: ../edge_node
+      dockerfile: Dockerfile
+    container_name: mole_ai_edge_node
+    ports:
+      - "18789:18789" # Expone el WebSocket hacia el mundo físico (ESP32)
+    volumes:
+      - edge_data:/app/data
+    env_file:
+      - ../.env
+    environment:
+      # Sobrescribimos variables para el entorno Docker
+      - EDGE_DB_PATH=/app/data/edge_mole.sqlite3
+      - BACKEND_BATCH_URL=http://django-backend:8000/api/v1/sensor-data/batch/
+    depends_on:
+      - django-backend
+    networks:
+      - mole_internal
+      - mole_public
+
 volumes:
   postgres_data:
   ai_rag_vectors:
   minio_data:
+  edge_data:

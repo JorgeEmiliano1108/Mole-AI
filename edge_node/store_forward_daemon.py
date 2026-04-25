@@ -180,13 +180,13 @@ def enqueue_reading(
     con: sqlite3.Connection,
     device_id: str,
     plant_id: str,
-    sensors: list[dict],
+    sensors: dict,
     ph_cnn: float | None = None,
     timestamp: str | None = None,
 ) -> None:
     """
     Thread-safe. Called by:
-      • mqtt_local_subscriber.py  — when ESP32 telemetry arrives
+      • openclaw_gateway.py       — when ESP32 telemetry arrives
       • inference.py              — after TFLite CNN produces ph_cnn
     """
     ts = timestamp or datetime.now(tz=timezone.utc).isoformat()
@@ -218,14 +218,18 @@ async def sync_to_backend(con: sqlite3.Connection) -> None:
 
     batch = []
     for r in rows:
+        sensors_dict = json.loads(r[4])
         entry: dict = {
-            "device_id": r[1],
             "plant_id":  r[2],
-            "timestamp": r[3],
-            "sensors":   json.loads(r[4]),
+            "recorded_at": r[3],
         }
+        # Aplanar los sensores (air_temperature, soil_humidity, etc.)
+        entry.update(sensors_dict)
+        
+        # Agregar ph inferido si existe
         if r[5] is not None:
-            entry["ph_cnn"] = r[5]
+            entry["ph_level"] = r[5]
+            
         batch.append(entry)
 
     ids = [r[0] for r in rows]

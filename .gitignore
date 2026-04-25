@@ -1,18 +1,114 @@
 # ===========================================================================
-#  Mole AI — .gitignore
-#  Archivos y directorios que NO deben subirse al repositorio
+#  Mole AI v2.1 — .gitignore MAESTRO
+#  Arquitectura: Edge (ESP-IDF) / Backend (Django) / Frontend (Vanilla JS) / Infra (Docker)
 # ===========================================================================
+# Este archivo sigue la estructura del monorepo y está organizado por secciones.
+# Última actualización: 2026-04-24
 
-# ── Python ─────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 1. SECRETOS Y CREDENCIALES (CRÍTICO - NUNCA COMMITEAR)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Archivos de entorno con valores reales
+.env
+.env.*
+!.env.example                     # Mantener solo el ejemplo, no el real
+
+# Certificados y claves privadas
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*. keystore
+ssh_rsa*
+id_rsa*
+id_ed25519*
+*.secret
+
+# Configuración de cloud providers (no subir credenciales)
+aws_credentials.json
+gcp-credentials.json
+*.firebaseio.com
+google-services.json
+firebase-config.json
+
+# Archivos de Supabase/DB externos
+.supabase/
+supabase-service-key.json
+
+# Baseline de detección de secretos (trufflehog)
+.secrets.baseline
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2. HARDWARE EDGE — ESP-IDF / ESP32
+# ═══════════════════════════════════════════════════════════════════════════════
+# Compilación
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+cmake_*.txt
+compile_commands.json
+
+# Binarios compilados (MUY PESADOS - no subir)
+*.bin
+*.elf
+*.map
+*.out
+firmware/*.bin
+
+# Configuración local del desarrollador (contiene credenciales WiFi)
+sdkconfig
+sdkconfig.old
+sdkconfig.defaults
+
+# Particiones compiladas
+partitions.bin
+bootloader.bin
+ota_data_initial.bin
+
+# NVS (Non-Volatile Storage) — datos de usuario
+nvs.bin
+nvs_keys.bin
+
+# Flash
+flash.bin
+flash_args
+flash_projconf
+
+# Herramientas ESP
+esptool.py
+espsecure.py
+parttool.py
+
+# Managed components (descargados por idf.py)
+managed_components/
+components/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 3. BACKEND — PYTHON / DJANGO / CELERY
+# ═══════════════════════════════════════════════════════════════════════════════
+# Python bytecode
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 *.pyo
 *.pyd
-*.staticfiles/
-# ── Distribution / Packaging ───────────────────────────────────────────────
 .Python
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+.venv_linux/
+.venv_windows/
+env.bak/
+venv.bak/
+
+# Distribución / Packaging
 build/
 develop-eggs/
 dist/
@@ -32,222 +128,306 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# ── PyInstaller ────────────────────────────────────────────────────────────
+# PyInstaller
 *.manifest
 *.spec
 
-# ── Installer logs ─────────────────────────────────────────────────────────
-pip-log.txt
-pip-delete-this-directory.txt
-
-# ── Unit test / Coverage ───────────────────────────────────────────────────
-htmlcov/
-.tox/
-.nox/
+# Pytest / Coverage
+.pytest_cache/
 .coverage
 .coverage.*
-.cache
-nosetests.xml
+htmlcov/
+.tox/
+.nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
-.pytest_cache/
+nosetests.xml
 
-# ── Translations ───────────────────────────────────────────────────────────
-*.mo
-*.pot
-
-# ── Django ─────────────────────────────────────────────────────────────────
+# Django
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 staticfiles/
-media/
+media/                          # Archivos subidos por usuarios (PROD)
 
-# ── Flask ──────────────────────────────────────────────────────────────────
-instance/
-.webassets-cache
-
-# ── Scrapy ─────────────────────────────────────────────────────────────────
-.scrapy
-
-# ── Sphinx documentation ───────────────────────────────────────────────────
-docs/_build/
-
-# ── PyBuilder ──────────────────────────────────────────────────────────────
-target/
-
-# ── Jupyter Notebook ───────────────────────────────────────────────────────
-.ipynb_checkpoints
-
-# ── IPython ────────────────────────────────────────────────────────────────
-profile_default/
-ipython_config.py
-
-# ── pyenv ──────────────────────────────────────────────────────────────────
-.python-version
-
-# ── PEP 582 ────────────────────────────────────────────────────────────────
-__pypackages__/
-
-# ── Celery ─────────────────────────────────────────────────────────────────
+# Celery
 celerybeat-schedule
 celerybeat.pid
 
-# ── SageMath ───────────────────────────────────────────────────────────────
-*.sage.py
+# Sphinx
+docs/_build/
 
-# ── Virtual Environments ───────────────────────────────────────────────────
-.env
-.venv/
-.venv_linux/
-.venv_windows/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-.env.local
-.env.*.local
+# Jupyter
+.ipynb_checkpoints
 
-# ── Spyder ─────────────────────────────────────────────────────────────────
-.spyderproject
-.spyproject
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
 
-# ── Rope ───────────────────────────────────────────────────────────────────
-.ropeproject
-
-# ── mkdocs ─────────────────────────────────────────────────────────────────
-/site
-
-# ── Type Checkers ──────────────────────────────────────────────────────────
+# Type checkers
 .mypy_cache/
 .dmypy.json
 dmypy.json
 .pyre/
 .pytype/
 
-# ── IDEs ───────────────────────────────────────────────────────────────────
+# PEP 582
+__pypackages__/
+
+# SageMath
+*.sage.py
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 4. FRONTEND — VANILLA JS / TAILWIND / VITE
+# ═════════════════════════════════════════════════���═════════════════════════════
+# Dependencias npm (MUY PESADO - siempre en .npmignore o ignored)
+node_modules/
+
+# Build output
+dist/
+build/
+*.bundle.js
+
+# Vite / Tailwind cache
+.vite/
+.tailwind-cache/
+postcss.config.js                 # Mantener si es estándar
+
+# npm / yarn
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn/
+.yarnrc
+.npm/
+
+# Cache
+.cache/
+.eslintcache
+
+# Frontend compilado CSS (generado por Tailwind)
+static/css/styles.css            # Puede regenerarse con npm run build
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 5. INFRAESTRUCTURA — DOCKER COMPOSE
+# ═══════════════════════════════════════════════════════════════════════════════
+# Datos de contenedores (volúmenes montados localmente)
+# Estos directorios se crean al ejecutar docker-compose
+/data/
+/data/postgres/
+/data/postgres/*.sql
+/data/postgres/*.dump
+/data/minio/
+/data/minio/*.json
+/data/redis/
+/data/redis/*.rdb
+/data/mosquitto/
+/data/mosquitto/*.db
+
+# Logs de contenedores
+*.log
+docker-compose.log
+
+# Docker daemon
+.docker/
+
+# Certificados generados por Let's Encrypt (renewal)
+data/letsencrypt/
+*.pem
+
+# ═══════════════════════════════════════════════════════════════════════════════════════
+# 6. IA / ML — MODELOS Y VECTORES
+# ═══════════════════════════════════════════════════════════════════════════════
+# Modelos entrenados (demasiado grandes para Git)
+*.pkl
+*.pickle
+*.h5
+*.h5df
+*.pb
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.ptl
+
+# Embeddings / Vector store
+storage/vectors/*.faiss
+storage/vectors/*.json
+embeddings/
+vectors/
+*.faiss
+*.index
+
+# Modelos de Hugging Face cache
+.cache/huggingface/
+.huggingface/
+
+# Weights descargados
+*.weights
+weights/
+checkpoints/
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 7. IDEs Y EDITORES
+# ═══════════════════════════════════════════════════════════════════════════════
+# VS Code
 .vscode/
+!.vscode/extensions.json         # Mantener si hay recommended extensions
+!.vscode/settings.json        # Mantener configuración de workspace
+
+# IntelliJ / WebStorm
 .idea/
+*.iml
+
+# Vim
 *.swp
 *.swo
 *~
+.netrws
+
+# Emacs
+*~
+\#*\#
+/auto/
+.dir-locals.el
+
+# Sublime Text
 *.sublime-project
 *.sublime-workspace
 
-# ── OS Generated ───────────────────────────────────────────────────────────
+# Eclipse
+.settings/
+.project
+.classpath
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 8. SISTEMA OPERATIVO
+# ═══════════════════════════════════════════════════════════════════════════════
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+
+# Windows
 Thumbs.db
+ehthumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
-# ── Logs ───────────────────────────────────────────────────────────────────
-logs/
-*.log
+# Linux
+*~
 
-# ── Django Cache ───────────────────────────────────────────────────────────
-cache/
-*.djcache
+# Thumbnail caches
+.icon?
+c票*
 
-# ── MQTT Mosquitto (runtime data) ──────────────────────────────────────────
-infrastructure/mosquitto/data/
-infrastructure/mosquitto/log/
-infrastructure/mosquitto/conf/mosquitto.conf
-infrastructure/mosquitto/data/mosquitto.db
-
-# ── Vector Store / AI Models (runtime data) ────────────────────────────────
-storage/vectors/*.faiss
-storage/vectors/*.json
-ai_rag_service/storage/vectors/*.faiss
-ai_rag_service/storage/vectors/*.json
-*.pkl
-*.h5
-*.pb
-*.pt
-*.onnx
-*.tflite
-
-# ── Security / Secrets ─────────────────────────────────────────────────────
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-.secrets/
-secrets/
-*.secret
-
-# ── Docker (runtime) ───────────────────────────────────────────────────────
-.docker/
-
-# Host data mounts used by docker-compose; ensure local data directories aren't committed
-/data/minio
-/data/postgres
-/data/redis
-
-# ── Misc ───────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# 9. BACKUP Y TEMPORALES
+# ═══════════════════════════════════════════════════════════════════════════════
+# Respaldos
 *.bak
+*.backup
+*.old
+
+# Temporales
 *.tmp
 *.temp
 *.orig
-node_modules/
-.env.development
-.env.production
-media/
-uploads/
+*~
 
-# Frontend build artifacts
-# ===========================
-# Already covered by node_modules/ below, but explicitly listed for clarity
-frontend/node_modules/
-frontend/dist/
-frontend/build/
-frontend/.vite/
-frontend/.tailwind-cache/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.env.development
-.env.production
-
-# Temporary files
-*.tmp
-*.temp
+# Cache general
 .cache/
+cache/
+*.cache
 
-# Database backups
+# Logs
+logs/
+*.log
+
+# Django cache
+cache/
+*.djcache
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 10. ARCHIVOS EXTRAS DEL PROYECTO
+# ═══════════════════════════════════════════════════════════════════════════════
+# Documentación local (si no se quiere versionar)
+site/
+site/*
+
+# mkdocs
+/site/
+
+# API docs generadas
+api-docs/
+
+# Tests E2E screenshots
+tests/e2e/screenshots/
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+
+# Scenario outlines
+.feature.save
+
+# SQL dumps locales
 *.sql
 *.dump
+*.psql
 
-# AI/ML model files (usually too large for repo)
-*.pkl
-*.pickle
-*.h5
-*.hdf5
-*.pb
-*.onnx
-*.pt
-*.pth
+# SQLite
+*.db
 
-# Vector embeddings files
-embeddings/
-vectors/
+# ═══════════════════════════════════════════════════════════════════════════════
+# 11. GITHUB ESPECÍFICO
+# ═══════════════════════════════════════════════════════════════════════════════
+# Git LFS (si se usa, estos archivos deberían estar en .gitattributes)
+# *.psd
+# *.ai
+# *.pdf
 
-# Monitoring and metrics
-.metrics/
-monitoring/
+# GitHub Actions
+.github/actions/*/node_modules/
 
-# secrets and certificates
-*.pem
-*.key
-*.crt
-.secrets/.env
-skills/
+# Git hooks (personalizados)
+.git/hooks/
+.git/info/exclude
+
+# Git status
+.gitstatus
+.gitstatus.txt
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 12. EXCLUSIONES EXPLÍCITAS DE PROYECTO
+# ═══════════════════════════════════════════════════════════════════════════════
+# Frontend: mantener estos archivos
+# !frontend/src/
+# !frontend/index.html
+
+# Backend: mantener estos
+# !core_backend/
+# !microservices/
+
+# Docs: mantener
+# !docs/
+
+# GitHub (no ignore)
+!.github/
+!.github/workflows/*.yml
+!.github/ISSUE_TEMPLATE/
+!.github/pull_request_template.md
+
+# Archivos de configuración (raíz)
+!.gitignore
+!.env.example
+!.dockerignore
+!.pre-commit-config.yaml
+!pyrightconfig.json
+!README.md
+!LICENSE
