@@ -3,75 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOLE-IA | Dashboard</title>
-    <!-- Tailwind compiled via PostCSS -->
+    <title>MOLE-IA | Dashboard Operativo</title>
     <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
-        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
-        @keyframes tvOn { 0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); } }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-[#000511] text-[#00ffaa] font-mono overflow-x-hidden relative min-h-screen">
-    <div class="scanline"></div>
-    <div id="toast-container" aria-live="polite"></div>
+<body class="bg-mole-base text-mole-cyan font-mono min-h-screen overflow-x-hidden relative">
 
-    <main id="main-dashboard" class="h-screen p-4 flex-col relative tv-on">
-        <header class="flex justify-between items-center border-b border-[#00ffaa] pb-4 mb-4">
-            <div>
-                <h1 class="text-2xl font-bold tracking-widest text-[#00ffaa]">DASHBOARD OPERATIVO</h1>
-                <div id="clock" class="text-xs">00:00:00</div>
-            </div>
-            <div>
-                <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" class="border border-[#00ffaa] px-4 py-2 hover:bg-[#00ffaa] hover:text-black">
-                    [ PERFIL ]
-                </button>
-                <div id="profile-dropdown" class="hidden absolute right-4 mt-2 bg-black border border-[#00ffaa] p-4 z-50">
-                    <p id="dropdown-user-name" class="font-bold mb-2">AGENTE</p>
-                    <button data-action="nav:logout" class="text-red-500 hover:text-red-400 text-sm">[ SALIR ]</button>
+    <!-- Scanline Overlay -->
+    <div class="pointer-events-none fixed inset-0 z-50 opacity-[0.03]" style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,255,0.08) 2px, rgba(0,229,255,0.08) 4px);"></div>
+
+    <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
+
+    <main id="main-dashboard" class="flex flex-col h-screen md:flex-row">
+
+        <!-- Left / Main Content -->
+        <div class="flex-1 flex flex-col min-h-0 overflow-y-auto w-full p-4 md:p-6">
+
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-6 bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-8 bg-mole-cyan/60 rounded-full"></div>
+                    <div>
+                        <h1 class="text-lg font-bold text-mole-cyan tracking-tight">DASHBOARD OPERATIVO</h1>
+                        <div class="flex items-center gap-3">
+                            <span id="clock" class="text-xs text-mole-dim font-mono">00:00:00</span>
+                            <span class="text-mole-border">│</span>
+                            <div class="flex items-center gap-1.5">
+                                <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-mole-red shrink-0"></span>
+                                <span id="ws-status-label" class="text-[10px] font-bold text-mole-red tracking-wider font-mono">LINK DOWN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative">
+                    <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" class="flex items-center gap-2 bg-mole-base border border-mole-border px-3 py-2 rounded hover:border-mole-cyan/30 transition-colors">
+                        <span class="text-xs font-bold text-mole-dim">OPERADOR</span>
+                        <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
+                        <div class="p-3 border-b border-mole-border">
+                            <p id="dropdown-user-name" class="font-bold text-mole-cyan text-xs">AGENTE</p>
+                        </div>
+                        <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider">[CERRAR SESIÓN]</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Telemetry KPI Cards (Responsive Grid) -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                <!-- Humidity -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-sky-500/30"></div>
+                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Humedad Suelo</span>
+                    <div class="text-2xl sm:text-3xl font-bold text-sky-400" id="txt-hum">--%</div>
+                </div>
+
+                <!-- Temperature -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-orange-500/30"></div>
+                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Temperatura</span>
+                    <div class="text-2xl sm:text-3xl font-bold text-orange-400" id="txt-temp">--°C</div>
+                </div>
+
+                <!-- pH -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
+                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Nivel pH</span>
+                    <div class="text-2xl sm:text-3xl font-bold text-mole-green" id="txt-ph">--</div>
+                </div>
+
+                <!-- UV -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-violet-500/30"></div>
+                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Índice UV</span>
+                    <div class="text-2xl sm:text-3xl font-bold text-violet-400" id="txt-uv">--</div>
                 </div>
             </div>
-        </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Planta -->
-            <div class="border border-[#00ffaa]/50 p-4 relative min-h-[200px] md:h-64 flex flex-col items-center justify-center">
-                <span id="plant-tag" class="absolute top-2 left-2 text-xs font-bold bg-[#00ffaa] text-black px-1">SIN ASIGNAR</span>
-                <div id="video-placeholder" class="text-center animate-pulse opacity-50">[ VISTA CÁMARA DESCONECTADA ]</div>
-                <img id="main-img" class="hidden max-h-full object-contain" src="" alt="Planta">
+            <!-- Content Area: Camera & AI Diagnostics -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
+
+                <!-- Camera / Image Monitor -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col h-72 lg:h-auto relative shadow-cyber">
+                    <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
+                        <h3 class="font-bold text-mole-cyan text-xs tracking-wider flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-mole-red animate-pulse"></span>
+                            MONITOR VISUAL
+                        </h3>
+                        <span id="plant-tag" class="text-[10px] font-bold bg-mole-base text-mole-dim px-2 py-1 rounded border border-mole-border">SIN ASIGNAR</span>
+                    </div>
+                    <div class="flex-1 bg-mole-base flex items-center justify-center relative">
+                        <div id="video-placeholder" class="text-mole-dim/50 text-xs font-mono animate-pulse flex flex-col items-center gap-2">
+                            <svg class="w-8 h-8 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            ESPERANDO FEED...
+                        </div>
+                        <img id="main-img" class="hidden absolute inset-0 w-full h-full object-cover" src="" alt="Planta">
+                    </div>
+                </div>
+
+                <!-- AI Diagnostics Panel -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col h-72 lg:h-auto shadow-cyber">
+                    <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center bg-mole-green/5">
+                        <h3 class="font-bold text-mole-green text-xs tracking-wider flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            DIAGNÓSTICO AI (VISIÓN MS1)
+                        </h3>
+                    </div>
+                    <div class="p-4 flex-1 overflow-y-auto">
+                        <div id="diagnostic-term" class="space-y-3">
+                            <p class="text-xs text-mole-dim font-mono">
+                                <span class="text-mole-cyan/50">[AWAIT]</span> Esperando datos de inferencia MS1...
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Sensores -->
-            <div class="border border-[#00ffaa]/50 p-4">
-                <h3 class="border-b border-[#00ffaa]/30 mb-2">> TELEMETRÍA</h3>
-                <p>HUM: <span id="txt-hum">--%</span></p>
-                <p>TEMP: <span id="txt-temp">--°C</span></p>
-                <p>pH: <span id="txt-ph">--</span></p>
-                <p>UV: <span id="txt-uv">ESPERANDO...</span></p>
+        </div>
+
+        <!-- Right / Chat Drawer -->
+        <div id="chat-window" class="fixed inset-y-0 right-0 w-full md:w-96 bg-mole-surface border-l border-mole-border shadow-2xl transform translate-x-full md:translate-x-0 md:relative md:flex flex-col z-40 transition-transform duration-300">
+            <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
+                <h3 class="font-bold text-mole-cyan text-xs tracking-wider flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-mole-green animate-pulse"></span>
+                    COPILOTO AGRÍCOLA AI
+                </h3>
+                <button onclick="document.getElementById('chat-window').classList.add('translate-x-full')" class="md:hidden text-mole-dim hover:text-mole-cyan transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
 
-            <!-- Terminal -->
-            <div class="border border-[#00ffaa]/50 p-4 bg-black overflow-y-auto">
-                <h3 class="border-b border-[#00ffaa]/30 mb-2">> DIAGNÓSTICO</h3>
-                <div id="diagnostic-term" class="text-xs"></div>
+            <!-- Legal Banner -->
+            <div class="bg-mole-amber/5 border-b border-mole-amber/20 px-4 py-2.5 flex gap-2 shrink-0">
+                <span class="text-mole-amber text-[10px] font-bold shrink-0">[LEGAL]</span>
+                <p class="text-[10px] text-mole-amber/70 leading-tight font-mono">
+                    Diagnósticos probabilísticos. No sustituyen criterio agrónomo certificado. NOM-059-SEMARNAT.
+                </p>
+            </div>
+
+            <!-- Chat Messages -->
+            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div class="flex flex-col gap-1 items-start">
+                    <div class="bg-mole-base border border-mole-border rounded rounded-tl-none px-3 py-2 text-xs text-mole-cyan/80 font-mono max-w-[85%]">
+                        <span class="text-mole-green font-bold">MOLE.AI &gt;</span> Hola. Soy tu copiloto agrícola. Estoy analizando la telemetría actual de tu granja. ¿En qué te puedo ayudar hoy?
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="p-3 border-t border-mole-border">
+                <div class="relative">
+                    <input type="text" id="chat-input" class="w-full pl-4 pr-10 py-2.5 bg-mole-base border border-mole-border focus:border-mole-cyan/50 rounded text-xs outline-none text-mole-cyan placeholder-mole-dim/40 font-mono transition-colors" placeholder="> Escribe tu consulta...">
+                    <button class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-mole-cyan/50 hover:text-mole-cyan transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Chat flotante -->
-        <div id="chat-window" class="fixed bottom-4 right-4 w-80 h-96 border border-[#00ffaa] bg-black hidden flex-col z-50">
-            <div class="border-b border-[#00ffaa] p-2 bg-[#00ffaa] text-black font-bold text-sm flex justify-between">
-                <span>MOLE-IA LINK</span>
-                <button onclick="document.getElementById('chat-window').classList.add('hidden')">X</button>
-            </div>
-            <div class="bg-yellow-500/20 border-l-4 border-yellow-500 text-yellow-500 p-2 text-[10px] leading-tight">
-                <strong>Aviso Legal:</strong> Los diagnósticos e identificaciones generados por Mole.AI son de carácter informativo y probabilístico. No sustituyen el criterio de un ingeniero agrónomo certificado ni constituyen una recomendación oficial de uso de pesticidas regulados. Mole.AI prohíbe el uso de esta herramienta para la recolección ilegal o tráfico de especies endémicas protegidas por la NOM-059-SEMARNAT.
-            </div>
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-2 text-xs space-y-2"></div>
-            <input type="text" id="chat-input" class="border-t border-[#00ffaa] bg-transparent text-[#00ffaa] p-2 outline-none" placeholder="Ingresar comando...">
-        </div>
-
-        <button onclick="document.getElementById('chat-window').classList.toggle('hidden')" class="fixed bottom-4 right-4 bg-[#00ffaa] text-black px-4 py-2 font-bold z-40 shadow-[0_0_15px_#00ffaa]">
-            ABRIR IA
+        <!-- Mobile FAB to open Chat -->
+        <button onclick="document.getElementById('chat-window').classList.remove('translate-x-full')" class="md:hidden fixed bottom-6 right-6 w-12 h-12 bg-mole-cyan text-mole-base rounded-lg shadow-cyber-hover flex items-center justify-center hover:bg-mole-cyan/90 transition-colors z-30 focus:outline-none">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
         </button>
+
     </main>
 
     <script type="module" src="/src/js/main.js"></script>

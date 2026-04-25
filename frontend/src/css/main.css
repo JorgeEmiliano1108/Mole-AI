@@ -40,3 +40,12 @@
   0% { top: -10%; }
   100% { top: 110%; }
 }
+
+/* ── Toast Container ──────────────────────────────────── */
+#toast-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 380px;
+  z-index: 9999;
+}

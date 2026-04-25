@@ -3,44 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOLE-IA | Terminal</title>
-<!-- Use standard link and script tags for Vite (no Django templates) -->
-    <!-- Tailwind compiled via PostCSS - see src/css/main.css -->
+    <title>MOLE-IA | Terminal de Acceso</title>
     <link rel="stylesheet" href="/static/css/styles.css">
-    <style>
-        @keyframes biometric-scan { 0% { top: -5%; opacity: 0; } 5% { opacity: 0.8; } 95% { opacity: 0.8; } 100% { top: 105%; opacity: 0; } }
-        .animate-biometric-scan { animation: biometric-scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-black text-[#00ffaa] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
-    <div class="scanline"></div>
-    
-    <div class="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-yellow-500/10 border border-yellow-500/50 p-2 text-[10px] text-yellow-500 z-30 font-mono">
-        <strong>Aviso Legal:</strong> Los diagnósticos generados por Mole.AI son informativos y probabilísticos. No sustituyen criterio de ingeniero agrónomo. Prohibido usar para tráfico de especies protegidas (NOM-059-SEMARNAT).
-    </div>
+<body class="bg-mole-base text-mole-cyan font-mono min-h-screen relative overflow-x-hidden">
 
-    <div id="intro-screen" class="fixed inset-0 bg-black z-40 flex items-center justify-center p-4 md:p-10 overflow-y-auto">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 w-full max-w-6xl h-auto md:h-full md:max-h-[650px] my-auto">
-            <div class="border-2 border-[#00ffaa] p-6 md:p-10 flex flex-col justify-between relative bg-black shadow-[0_0_20px_rgba(0,255,170,0.1)]">
+    <!-- Scanline Overlay -->
+    <div class="pointer-events-none fixed inset-0 z-50 opacity-[0.03]" style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,255,0.08) 2px, rgba(0,229,255,0.08) 4px);"></div>
+
+    <div id="intro-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-8">
+        <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
+
+            <!-- Left Panel: Identity & Navigation -->
+            <div class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col justify-between shadow-cyber relative overflow-hidden">
+                <!-- Decorative corner brackets -->
+                <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-mole-cyan/30"></div>
+                <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-mole-cyan/30"></div>
+                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-mole-cyan/30"></div>
+                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-mole-cyan/30"></div>
+
                 <div>
-                    <h1 class="text-5xl md:text-7xl font-bold mb-2 tracking-wider text-[#00ffaa] drop-shadow-[0_0_15px_rgba(0,255,170,0.5)]">MoleAI</h1>
-                    <h2 class="text-sm md:text-xl tracking-[0.3em] md:tracking-[0.5em] mb-6 md:mb-8 opacity-70">MONITORING-TOOL</h2>
-                    <hr class="border-[#00ffaa]/40 mb-6 md:mb-10">
-                    <div class="flex flex-col gap-4 md:gap-6 text-lg md:text-xl tracking-widest">
-                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">OBJETIVO</button>
-                        <button id="btn-vision" data-action="type:vision" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
-                        <button id="btn-flora" data-action="type:flora" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
+                    <div class="flex items-baseline gap-3 mb-1">
+                        <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-mole-cyan">MOLE.AI</h1>
+                        <span class="text-xs text-mole-dim font-mono">v2.1</span>
+                    </div>
+                    <h2 class="text-sm tracking-[0.25em] uppercase text-mole-dim mb-8">Sistema de Monitoreo Agrícola</h2>
+
+                    <div class="w-full h-px bg-gradient-to-r from-mole-cyan/40 via-mole-border to-transparent mb-8"></div>
+
+                    <nav class="flex flex-col gap-3">
+                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group">
+                            <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Objetivo del Sistema</span>
+                            <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
+                        </button>
+                        <button id="btn-vision" data-action="type:vision" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group">
+                            <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Visión y Diagnóstico IA</span>
+                            <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
+                        </button>
+                        <button id="btn-flora" data-action="type:flora" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group">
+                            <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Protección de Flora Mexicana</span>
+                            <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
+                        </button>
+                    </nav>
+                </div>
+
+                <button data-action="system:start" class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group">
+                    Iniciar Sistema
+                    <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </div>
+
+            <!-- Right Panel: Typewriter Output -->
+            <div class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col min-h-[350px] lg:min-h-0 shadow-cyber relative overflow-hidden">
+                <div class="flex items-center gap-2 mb-6 text-xs text-mole-dim">
+                    <div class="flex gap-1.5">
+                        <span class="w-2.5 h-2.5 rounded-full bg-mole-red/60"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-mole-amber/60"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-mole-green/60"></span>
+                    </div>
+                    <span class="ml-2 font-mono">mole@edge-node:~$</span>
+                </div>
+                <div class="flex-1 flex items-start">
+                    <div id="typewriter-output" class="text-base sm:text-lg leading-relaxed text-mole-cyan/80 font-mono whitespace-pre-wrap w-full">
+                        Seleccione una opción en el menú para conocer más sobre Mole.AI...<span class="animate-cursor-blink text-mole-cyan">█</span>
                     </div>
                 </div>
-                <button data-action="system:start" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
             </div>
-            <div class="border border-[#00ffaa]/30 p-6 md:p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)] min-h-[250px] md:min-h-0">
-                <div id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap text-left w-full min-h-[150px] font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></div>
-            </div>
+
         </div>
     </div>
 
-    <!-- Main Entry script -->
+    <!-- Legal Disclaimer -->
+    <div class="fixed bottom-0 w-full bg-mole-surface/90 backdrop-blur-sm border-t border-mole-border p-2.5 text-center z-30">
+        <p class="text-[10px] text-mole-dim/70 font-mono">
+            <span class="text-mole-amber/70 font-bold">[LEGAL]</span> Los diagnósticos generados por Mole.AI son informativos y probabilísticos. No sustituyen criterio de ingeniero agrónomo. Prohibido usar para tráfico de especies protegidas (NOM-059-SEMARNAT).
+        </p>
+    </div>
+
     <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>

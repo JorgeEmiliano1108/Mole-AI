@@ -17,6 +17,7 @@ import * as chat from './modules/services/chat.js';
 import * as supervisor from './modules/services/supervisor.js';
 import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
+import * as tactical from './modules/ui/tactical.js';
 
 import { moleApi } from './modules/api/apiService.js';
 
@@ -893,3 +894,13 @@ Object.assign(window, chat);
 Object.assign(window, supervisor);
 Object.assign(window, crops);
 Object.assign(window, map);
+Object.assign(window, tactical);
+
+// ── Wire ApiService.showToast to Tactical Toast ──────────────────────────
+// This replaces the legacy CSS-dependent toast with our design-system-native one.
+if (window.ApiService) {
+    window.ApiService.showToast = function(message, type) {
+        const typeMap = { error: 'error', warn: 'warn', info: 'info', success: 'success' };
+        window.showTacticalToast(message, typeMap[type] || 'info');
+    };
+}
