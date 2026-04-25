@@ -1,0 +1,251 @@
+# ===========================================================================
+#  Mole AI — .gitignore
+#  Archivos y directorios que NO deben subirse al repositorio
+# ===========================================================================
+
+# ── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyo
+*.pyd
+*.staticfiles/
+# ── Distribution / Packaging ───────────────────────────────────────────────
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ── PyInstaller ────────────────────────────────────────────────────────────
+*.manifest
+*.spec
+
+# ── Installer logs ─────────────────────────────────────────────────────────
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ── Unit test / Coverage ───────────────────────────────────────────────────
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# ── Translations ───────────────────────────────────────────────────────────
+*.mo
+*.pot
+
+# ── Django ─────────────────────────────────────────────────────────────────
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# ── Flask ──────────────────────────────────────────────────────────────────
+instance/
+.webassets-cache
+
+# ── Scrapy ─────────────────────────────────────────────────────────────────
+.scrapy
+
+# ── Sphinx documentation ───────────────────────────────────────────────────
+docs/_build/
+
+# ── PyBuilder ──────────────────────────────────────────────────────────────
+target/
+
+# ── Jupyter Notebook ───────────────────────────────────────────────────────
+.ipynb_checkpoints
+
+# ── IPython ────────────────────────────────────────────────────────────────
+profile_default/
+ipython_config.py
+
+# ── pyenv ──────────────────────────────────────────────────────────────────
+.python-version
+
+# ── PEP 582 ────────────────────────────────────────────────────────────────
+__pypackages__/
+
+# ── Celery ─────────────────────────────────────────────────────────────────
+celerybeat-schedule
+celerybeat.pid
+
+# ── SageMath ───────────────────────────────────────────────────────────────
+*.sage.py
+
+# ── Virtual Environments ───────────────────────────────────────────────────
+.env
+.venv/
+.venv_linux/
+.venv_windows/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env.local
+.env.*.local
+
+# ── Spyder ─────────────────────────────────────────────────────────────────
+.spyderproject
+.spyproject
+
+# ── Rope ───────────────────────────────────────────────────────────────────
+.ropeproject
+
+# ── mkdocs ─────────────────────────────────────────────────────────────────
+/site
+
+# ── Type Checkers ──────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ── IDEs ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ── OS Generated ───────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ── Logs ───────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Django Cache ───────────────────────────────────────────────────────────
+cache/
+*.djcache
+
+# ── MQTT Mosquitto (runtime data) ──────────────────────────────────────────
+mosquitto/data/
+mosquitto/log/
+
+# ── Vector Store / AI Models (runtime data) ────────────────────────────────
+storage/vectors/*.faiss
+storage/vectors/*.json
+ai_rag_service/storage/vectors/*.faiss
+ai_rag_service/storage/vectors/*.json
+*.pkl
+*.h5
+*.pb
+*.pt
+*.onnx
+*.tflite
+
+# ── Security / Secrets ─────────────────────────────────────────────────────
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+.secrets/
+secrets/
+*.secret
+
+# ── Docker (runtime) ───────────────────────────────────────────────────────
+.docker/
+
+# Host data mounts used by docker-compose; ensure local data directories aren't committed
+/data/minio
+/data/postgres
+/data/redis
+
+# ── Misc ───────────────────────────────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+*.orig
+node_modules/
+.env.development
+.env.production
+media/
+uploads/
+
+# Frontend build artifacts
+# ===========================
+# Already covered by node_modules/ below, but explicitly listed for clarity
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.tailwind-cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env.development
+.env.production
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Database backups
+*.sql
+*.dump
+
+# AI/ML model files (usually too large for repo)
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.pb
+*.onnx
+*.pt
+*.pth
+
+# Vector embeddings files
+embeddings/
+vectors/
+
+# Monitoring and metrics
+.metrics/
+monitoring/
+
+# secrets and certificates
+*.pem
+*.key
+*.crt
+.secrets/.env
+skills/
