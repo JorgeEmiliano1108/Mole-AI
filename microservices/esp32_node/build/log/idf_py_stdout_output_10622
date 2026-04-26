@@ -1,0 +1,95 @@
+[1/5] cd /home/deepmole/Escritorio/Mole-AI/microservices/esp32_node/build/esp-idf/esptool_py && /home/deepmole/.espressif/python_env/idf5.2_py3.12_env/bin/python /home/deepmole/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/deepmole/Escritorio/Mole-AI/microservices/esp32_node/build/partition_table/partition-table.bin /home/deepmole/Escritorio/Mole-AI/microservices/esp32_node/build/mole_openclaw_node.bin
+mole_openclaw_node.bin binary size 0x16dc90 bytes. Smallest app partition is 0x1e0000 bytes. 0x72370 bytes (24%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] cd /home/deepmole/Escritorio/Mole-AI/microservices/esp32_node/build/bootloader/esp-idf/esptool_py && /home/deepmole/.espressif/python_env/idf5.2_py3.12_env/bin/python /home/deepmole/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/deepmole/Escritorio/Mole-AI/microservices/esp32_node/build/bootloader/bootloader.bin
+Bootloader binary size 0x6860 bytes. 0x7a0 bytes (7%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] cd /home/deepmole/esp/esp-idf/components/esptool_py && /usr/bin/cmake -D IDF_PATH=/home/deepmole/esp/esp-idf -D "SERIAL_TOOL=/home/deepmole/.espressif/python_env/idf5.2_py3.12_env/bin/python;;/home/deepmole/esp/esp-idf/components/esptool_py/esptool/esptool.py;--chip;esp32" -D "SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args" -D WORKING_DIRECTORY=/home/deepmole/Escritorio/Mole-AI/microservices/esp32_node/build -P /home/deepmole/esp/esp-idf/components/esptool_py/run_serial_tool.cmake
+esptool.py --chip esp32 -p /dev/ttyUSB0 -b 115200 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 40m --flash_size 2MB 0x1000 bootloader/bootloader.bin 0x10000 mole_openclaw_node.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.11.0
+Serial port /dev/ttyUSB0
+Connecting.......
+Chip is ESP32-D0WD-V3 (revision v3.1)
+Features: WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: b0:cb:d8:c9:d5:74
+Uploading stub...
+Running stub...
+Stub running...
+Configuring flash size...
+Flash will be erased from 0x00001000 to 0x00007fff...
+Flash will be erased from 0x00010000 to 0x0017dfff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+SHA digest in image updated
+Compressed 26720 bytes to 16358...
+Writing at 0x00001000... (100 %)
+Wrote 26720 bytes (16358 compressed) at 0x00001000 in 1.6 seconds (effective 134.5 kbit/s)...
+Hash of data verified.
+Compressed 1498256 bytes to 933178...
+Writing at 0x00010000... (1 %)
+Writing at 0x0001ebdd... (3 %)
+Writing at 0x0002c661... (5 %)
+Writing at 0x00032357... (7 %)
+Writing at 0x00036c7f... (8 %)
+Writing at 0x0003b8a5... (10 %)
+Writing at 0x0004096e... (12 %)
+Writing at 0x00046001... (14 %)
+Writing at 0x0004c4fd... (15 %)
+Writing at 0x0005179a... (17 %)
+Writing at 0x0005b9e5... (19 %)
+Writing at 0x0006436e... (21 %)
+Writing at 0x00069d46... (22 %)
+Writing at 0x0006fded... (24 %)
+Writing at 0x00076434... (26 %)
+Writing at 0x0007c2d7... (28 %)
+Writing at 0x0008214f... (29 %)
+Writing at 0x00087f05... (31 %)
+Writing at 0x0008ddca... (33 %)
+Writing at 0x00093fd7... (35 %)
+Writing at 0x0009b5bc... (36 %)
+Writing at 0x000a610b... (38 %)
+Writing at 0x000ac72e... (40 %)
+Writing at 0x000b21ce... (42 %)
+Writing at 0x000b7f71... (43 %)
+Writing at 0x000bdc35... (45 %)
+Writing at 0x000c399e... (47 %)
+Writing at 0x000c9825... (49 %)
+Writing at 0x000cf68a... (50 %)
+Writing at 0x000d55cb... (52 %)
+Writing at 0x000dbc9d... (54 %)
+Writing at 0x000e1956... (56 %)
+Writing at 0x000e73c7... (57 %)
+Writing at 0x000ecc56... (59 %)
+Writing at 0x000f1e88... (61 %)
+Writing at 0x000f7471... (63 %)
+Writing at 0x000fc69f... (64 %)
+Writing at 0x00101e06... (66 %)
+Writing at 0x001074b9... (68 %)
+Writing at 0x0010d056... (70 %)
+Writing at 0x00112a1f... (71 %)
+Writing at 0x001186e9... (73 %)
+Writing at 0x0011e245... (75 %)
+Writing at 0x00123ccd... (77 %)
+Writing at 0x00129d95... (78 %)
+Writing at 0x0012f86e... (80 %)
+Writing at 0x00135c8c... (82 %)
+Writing at 0x0013b8af... (84 %)
+Writing at 0x00141cc6... (85 %)
+Writing at 0x0014c95e... (87 %)
+Writing at 0x00153a70... (89 %)
+Writing at 0x00159574... (91 %)
+Writing at 0x001615f9... (92 %)
+Writing at 0x0016706d... (94 %)
+Writing at 0x0016c5c4... (96 %)
+Writing at 0x001729e6... (98 %)
+Writing at 0x00178704... (100 %)
+Wrote 1498256 bytes (933178 compressed) at 0x00010000 in 82.5 seconds (effective 145.4 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 123...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (123 compressed) at 0x00008000 in 0.0 seconds (effective 950.4 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...

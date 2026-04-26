@@ -1,0 +1,38 @@
+# =============================================================================
+# Mole.AI — sdkconfig.defaults
+# =============================================================================
+# These values are applied on first `idf.py build` and can be overridden
+# via `idf.py menuconfig`.  They establish the security and networking
+# ── WiFi Provisioning ────────────────────────────────────────────────────────
+# Hardcoded credentials removed. Using BLE Provisioning via web app.
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# ── NVS Encryption (Zero-Trust: protect Ed25519 private key) ─────────────────
+CONFIG_NVS_ENCRYPTION=y
+
+# ── SNTP (ETSI EN 303 645 Anti-Replay) ───────────────────────────────────────
+CONFIG_LWIP_SNTP_MAX_SERVERS=3
+
+# ── mbedTLS (Ed25519 support) ────────────────────────────────────────────────
+CONFIG_MBEDTLS_ECDSA_C=y
+CONFIG_MBEDTLS_ECP_C=y
+CONFIG_MBEDTLS_PK_C=y
+CONFIG_MBEDTLS_PK_PARSE_C=y
+CONFIG_MBEDTLS_PK_WRITE_C=y
+CONFIG_MBEDTLS_ENTROPY_C=y
+CONFIG_MBEDTLS_CTR_DRBG_C=y
+
+# ── FreeRTOS ─────────────────────────────────────────────────────────────────
+CONFIG_FREERTOS_HZ=1000
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# ── IFT-016: Do NOT override default TX power ───────────────────────────────
+# No CONFIG_ESP_PHY_MAX_TX_POWER override — SDK default (~20 dBm) complies
+# with IFT-016 EIRP limits for 2.4 GHz ISM in Mexico.
+
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"

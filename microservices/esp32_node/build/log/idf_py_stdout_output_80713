@@ -1,0 +1,1446 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:ets Jul 29 2019 12:21:46
+
+rst:0x1 (POWERON_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (77) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (92) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (235) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (597) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (941) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (942) wifi:enable tsf[0m
+[0;32mI (944) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (945) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (953) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (955) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (962) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (970) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3362) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7777) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10974) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10974) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10975) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10983) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11093) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11194) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11194) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11199) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (940) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (941) wifi:enable tsf[0m
+[0;32mI (943) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (944) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (953) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (954) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (961) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (969) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3361) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7776) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10974) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10974) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10975) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10983) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11093) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11194) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11194) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11199) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (820) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (941) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (942) wifi:enable tsf[0m
+[0;32mI (944) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (945) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (953) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (955) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (962) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (969) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3361) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7777) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10974) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10974) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10975) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10983) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11093) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11194) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11194) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11199) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (946) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (947) wifi:enable tsf[0m
+[0;32mI (950) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (951) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (959) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (961) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (968) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (975) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3367) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7783) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10980) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10980) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10981) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10989) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11099) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11200) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11200) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11205) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (940) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (942) wifi:enable tsf[0m
+[0;32mI (944) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (945) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (952) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (955) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (962) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (970) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3361) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7777) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10974) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10974) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10975) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10983) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11093) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11194) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11194) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11199) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (940) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (941) wifi:enable tsf[0m
+[0;32mI (943) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (944) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (952) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (954) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (961) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (969) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3361) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7776) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10973) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10973) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10974) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10982) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11092) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11193) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11193) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11198) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (941) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (942) wifi:enable tsf[0m
+[0;32mI (944) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (945) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (954) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (955) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (962) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (970) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3361) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7777) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10975) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10975) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10976) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10984) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11094) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11195) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11195) i2c.master: i2c_master_transmit_receive(995): I2C transaction failed[0m
+[0;31mE (11200) LTR390: Part ID mismatch: 0x00 (expected 0xBx)[0m
+ESP_ERROR_CHECK failed: esp_err_t 0x105 (ESP_ERR_NOT_FOUND) at 0x400d7916
+file: "./main/main.c" line 156
+func: app_main
+expression: sensor_ltr390_init(i2c_bus, &ltr390)
+
+abort() was called at PC 0x400893bb on core 0
+
+
+Backtrace: 0x400817da:0x3ffbac80 0x400893c5:0x3ffbaca0 0x40090c1d:0x3ffbacc0 0x400893bb:0x3ffbad30 0x400d7916:0x3ffbad60 0x401940f3:0x3ffbae00 0x40089f59:0x3ffbae30
+
+
+
+
+ELF file SHA256: c168d3b36
+
+Rebooting...
+ets Jul 29 2019 12:21:46
+
+rst:0xc (SW_CPU_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15540
+load:0x40080400,len:4
+ho 8 tail 4 room 4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.1 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Apr 24 2026 10:50:16[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 2MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (76) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 001e0000[0m
+[0;32mI (91) boot:  3 nvs_keys         NVS keys         01 04 001f0000 00001000[0m
+[0;32mI (99) boot: End of partition table[0m
+[0;32mI (103) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=42540h (271680) map[0m
+[0;32mI (205) esp_image: segment 1: paddr=00052568 vaddr=3ff80000 size=00004h (     4) load[0m
+[0;32mI (205) esp_image: segment 2: paddr=00052574 vaddr=3ffb0000 size=0411ch ( 16668) load[0m
+[0;32mI (217) esp_image: segment 3: paddr=00056698 vaddr=40080000 size=09980h ( 39296) load[0m
+[0;32mI (234) esp_image: segment 4: paddr=00060020 vaddr=400d0020 size=c60f8h (811256) map[0m
+[0;32mI (513) esp_image: segment 5: paddr=00126120 vaddr=40089980 size=0d088h ( 53384) load[0m
+[0;32mI (545) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (545) boot: Disabling RNG early entropy source...[0m
+[0;32mI (557) cpu_start: Multicore app[0m
+[0;32mI (566) cpu_start: Pro cpu start user code[0m
+[0;32mI (566) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (566) cpu_start: Application information:[0m
+[0;32mI (569) cpu_start: Project name:     mole_openclaw_node[0m
+[0;32mI (575) cpu_start: App version:      3dffa22-dirty[0m
+[0;32mI (580) cpu_start: Compile time:     Apr 24 2026 10:50:00[0m
+[0;32mI (586) cpu_start: ELF file SHA256:  c168d3b36...[0m
+[0;32mI (592) cpu_start: ESP-IDF:          v5.2.1[0m
+[0;32mI (596) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (601) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (606) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (611) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (618) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (624) heap_init: At 3FFB8B00 len 00027500 (157 KiB): DRAM[0m
+[0;32mI (630) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (637) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (643) heap_init: At 40096A08 len 000095F8 (37 KiB): IRAM[0m
+[0;32mI (651) spi_flash: detected chip: generic[0m
+[0;32mI (654) spi_flash: flash io: dio[0m
+[0;33mW (658) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (672) main_task: Started on CPU0[0m
+[0;32mI (676) main_task: Calling app_main()[0m
+[0;32mI (679) MOLE_MAIN: ╔═══════════════════════════════════════════╗[0m
+[0;32mI (694) MOLE_MAIN: ║  Mole.AI OpenClaw Node v2.1.0           ║[0m
+[0;32mI (700) MOLE_MAIN: ╚═══════════════════════════════════════════╝[0m
+[0;32mI (751) MOLE_MAIN: [1/6] NVS initialized (encrypted)[0m
+[0;32mI (756) wifi:wifi driver task: 3ffc0ad0, prio:23, stack:6656, core=0[0m
+[0;32mI (775) wifi:wifi firmware version: a9f5b59[0m
+[0;32mI (776) wifi:wifi certification version: v7.0[0m
+[0;32mI (776) wifi:config NVS flash: enabled[0m
+[0;32mI (776) wifi:config nano formating: disabled[0m
+[0;32mI (780) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (785) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (789) wifi:Init management short buffer num: 32[0m
+[0;32mI (793) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (797) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (801) wifi:Init static rx buffer num: 10[0m
+[0;32mI (805) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (810) wifi_init: rx ba win: 6[0m
+[0;32mI (813) wifi_init: tcpip mbox: 32[0m
+[0;32mI (817) wifi_init: udp mbox: 6[0m
+[0;32mI (821) wifi_init: tcp mbox: 6[0m
+[0;32mI (824) wifi_init: tcp tx win: 5760[0m
+[0;32mI (828) wifi_init: tcp rx win: 5760[0m
+[0;32mI (833) wifi_init: tcp mss: 1440[0m
+[0;32mI (836) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (841) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (849) phy_init: phy_version 4791,2c4672b,Dec 20 2023,16:06:06[0m
+[0;32mI (940) wifi:mode : sta (b0:cb:d8:c9:d5:74)[0m
+[0;32mI (941) wifi:enable tsf[0m
+[0;32mI (944) MOLE_MAIN: WiFi STA initialized — connecting to MoleAI_Farm[0m
+[0;32mI (944) MOLE_MAIN: [2/6] Network stack initialized[0m
+[0;32mI (952) MOLE_ID: Loaded existing identity from NVS[0m
+[0;32mI (955) MOLE_MAIN: [3/6] Identity loaded — PubKey: a17461a09186e9f2...[0m
+[0;32mI (961) MOLE_NTP: Initializing SNTP (triple-redundant)...[0m
+[0;32mI (969) MOLE_NTP: Waiting for NTP sync (timeout=10000ms)...[0m
+[0;33mW (3361) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (7776) MOLE_MAIN: WiFi disconnected — reconnecting...[0m
+[0;33mW (10974) MOLE_NTP: NTP sync timed out after 10000ms[0m
+[0;32mI (10974) MOLE_MAIN: [4/6] NTP synchronized[0m
+[0;32mI (10975) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (10983) gpio: GPIO[22]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 1| Pulldown: 0| Intr:0 [0m
+[0;32mI (11093) DHT20: DHT20 initialized at 0x38[0m
+[0;31mE (11194) i2c.master: s_i2c_synchronous_transaction(780): I2C transaction failed[0m
+[0;31mE (11194) i2c.master: i2c_master_transmit_receive(9

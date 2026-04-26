@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  ms3_reports:
+    build:
+      context: .
+      target: development
+    container_name: ms3_reports_standalone
+    ports:
+      - "8003:8003"
+    volumes:
+      - .:/srv/ms3_reports
+      - ../media:/srv/ms3_reports/media
+    env_file:
+      - ../.env
+    depends_on:
+      - redis
+      - db
+      - minio
+    networks:
+      - ms3-dev-net
+
+  ms3_celery_worker:
+    build:
+      context: .
+      target: development
+    container_name: ms3_worker_standalone
+    volumes:
+      - .:/srv/ms3_reports
+      - ../media:/srv/ms3_reports/media
+    command: ["celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "reports_queue"]
+    env_file:
+      - ../.env
+    depends_on:
+      - ms3_reports
+      - redis
+      - db
+    networks:
+      - ms3-dev-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ms3_redis_dev
+    networks:
+      - ms3-dev-net
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ms3_db_dev
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mole_ai_db
+    networks:
+      - ms3-dev-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: ms3_minio_dev
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password123
+    command: server /data
+    networks:
+      - ms3-dev-net
+
+networks:
+  ms3-dev-net:
+    driver: bridge
