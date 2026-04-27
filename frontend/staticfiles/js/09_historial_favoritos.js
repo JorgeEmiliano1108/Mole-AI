@@ -25,11 +25,11 @@ function switchHistoryTab(tab) {
     const btnFav = document.getElementById('tab-favorites');
     
     if (tab === 'history') {
-        if(btnHist) btnHist.className = "text-[#00ffaa] border-b-2 border-[#00ffaa] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
-        if(btnFav) btnFav.className = "text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnHist) btnHist.className = "text-[#00e5ff] border-b-2 border-[#00e5ff] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnFav) btnFav.className = "text-[#00e5ff]/40 hover:text-[#00e5ff] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
     } else {
-        if(btnFav) btnFav.className = "text-[#f97316] border-b-2 border-[#f97316] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
-        if(btnHist) btnHist.className = "text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnFav) btnFav.className = "text-[#FBBF24] border-b-2 border-[#FBBF24] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnHist) btnHist.className = "text-[#00e5ff]/40 hover:text-[#00e5ff] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
     }
     
     fetchAndRenderHuerto(tab);
@@ -42,7 +42,7 @@ async function fetchAndRenderHuerto(tab) {
     const container = document.getElementById('history-list-container');
     if(!container) return;
 
-    container.innerHTML = `<div class="text-center text-[#00ffaa] animate-pulse mt-10 text-xs tracking-widest">> SINCRONIZANDO CON BASE DE DATOS CENTRAL...</div>`;
+    container.innerHTML = `<div class="text-center text-[#00e5ff] animate-pulse mt-10 text-xs tracking-widest">> SINCRONIZANDO CON BASE DE DATOS CENTRAL...</div>`;
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
     const token = window.getAuthToken();
@@ -85,15 +85,15 @@ async function fetchAndRenderHuerto(tab) {
 
     // Arreglo de clases de Tailwind
     const themeClasses = tab === 'history' 
-        ? { border: 'border-[#00ffaa]/30', bgHover: 'hover:bg-[#00ffaa]/10', text: 'text-[#00ffaa]' }
-        : { border: 'border-[#f97316]/30', bgHover: 'hover:bg-[#f97316]/10', text: 'text-[#f97316]' };
+        ? { border: 'border-[#00e5ff]/30', bgHover: 'hover:bg-[#00e5ff]/10', text: 'text-[#00e5ff]' }
+        : { border: 'border-[#FBBF24]/30', bgHover: 'hover:bg-[#FBBF24]/10', text: 'text-[#FBBF24]' };
 
     container.innerHTML = dataToRender.map(item => `
         <div class="border ${themeClasses.border} bg-black p-4 flex flex-col md:flex-row justify-between md:items-center gap-4 ${themeClasses.bgHover} transition-colors">
             <div>
                 <span class="text-[10px] text-white/50 border border-white/20 px-1">${item.id || 'N/A'} | ${item.date}</span>
                 <h3 class="${themeClasses.text} font-bold mt-1 text-sm md:text-base uppercase">${item.species}</h3>
-                <p class="text-xs text-white/80">Estado: <span class="${(item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00ffaa]' : 'text-red-400'}">${item.status}</span> | pH: ${item.ph}</p>
+                <p class="text-xs text-white/80">Estado: <span class="${(item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00e5ff]' : 'text-red-400'}">${item.status}</span> | pH: ${item.ph}</p>
             </div>
             <div class="flex gap-2 shrink-0">
                 <button data-action="report:download" data-report-id="${item.id}" class="border border-[#00e5ff] text-[#00e5ff] px-3 py-1 text-[10px] uppercase font-bold hover:bg-[#00e5ff] hover:text-black transition-colors">
@@ -144,7 +144,7 @@ async function saveToFavorites(event) {
         if (!response.ok) throw new Error("Rechazado por el servidor");
 
         btn.innerText = "[ GUARDADO EN FAVORITOS ]";
-        btn.classList.remove('animate-pulse', 'border-[#f97316]', 'text-[#f97316]', 'hover:bg-[#f97316]');
+        btn.classList.remove('animate-pulse', 'border-[#FBBF24]', 'text-[#FBBF24]', 'hover:bg-[#FBBF24]');
         btn.classList.add('border-green-500', 'text-green-500', 'hover:bg-green-500', 'cursor-not-allowed');
         btn.disabled = true; // Evitar multiples clicks
         

@@ -17,7 +17,7 @@ function appendChatMessage(containerId, role, text, opts = {}) {
     // Si trae imagen adjunta (ej. cuando el usuario sube la foto al chat)
     if (opts.withImage && opts.imageSrc) {
         const imgContainer = document.createElement('div');
-        imgContainer.className = 'p-1 border border-[#00ffaa]/30 inline-block self-start bg-black/50';
+        imgContainer.className = 'p-1 border border-[#00e5ff]/30 inline-block self-start bg-black/50';
         
         const img = document.createElement('img');
         img.className = 'w-32 h-32 object-cover opacity-80 hover:opacity-100 transition-opacity';
@@ -31,7 +31,7 @@ function appendChatMessage(containerId, role, text, opts = {}) {
     // Estructura visual dependiendo si es usuario (operador) o sistema (IA)
     const wrapper = document.createElement('div');
     wrapper.className = role === 'user' 
-        ? 'bg-[#00ffaa]/10 border border-[#00ffaa]/30 p-2 self-end max-w-[85%]' 
+        ? 'bg-[#00e5ff]/10 border border-[#00e5ff]/30 p-2 self-end max-w-[85%]' 
         : 'p-2 max-w-[95%] self-start';
 
     // Inyectamos el texto de forma segura (NUNCA innerHTML aquí)
@@ -57,7 +57,7 @@ function appendMultilineBotMessage(containerId, answer, tacticalCount = 0) {
     if (!container) return null;
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'ai-message bot border-l-2 border-[#00ffaa] pl-3 mb-6 flex flex-col gap-1 max-w-[95%]';
+    wrapper.className = 'ai-message bot border-l-2 border-[#00e5ff] pl-3 mb-6 flex flex-col gap-1 max-w-[95%]';
 
     // Alerta táctica (si el backend detectó anomalías críticas)
     if (tacticalCount > 0) {
@@ -81,7 +81,7 @@ function appendMultilineBotMessage(containerId, answer, tacticalCount = 0) {
 
         const p = document.createElement('p');
         p.textContent = line;
-        p.className = "text-[#00ffaa] font-mono text-xs md:text-sm leading-relaxed";
+        p.className = "text-[#00e5ff] font-mono text-xs md:text-sm leading-relaxed";
         wrapper.appendChild(p);
     });
 

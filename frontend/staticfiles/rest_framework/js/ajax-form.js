@@ -50,7 +50,7 @@ function doAjaxSubmit(e) {
       // regex is from RFC 2046 appendix A
       var boundaryCharNoSpace = "0-9A-Z'()+_,-./:=?";
       var boundaryChar = boundaryCharNoSpace + ' ';
-      var re = new RegExp('^--([' + boundaryChar + ']{0,69}[' + boundaryCharNoSpace + '])[\\s]*?$', 'im');
+      var re = new RegExp('^--([' + boundaryChar + ']{0,69}[' + boundaryCharNoSpace + '])[mole-cyans]*?$', 'im');
       var boundary = data.match(re);
       if (boundary !== null) {
         contentType += '; boundary="' + boundary[1] + '"';

@@ -17,7 +17,7 @@ export function setEmptyDashboardState() {
     if (plantTag) {
         plantTag.innerText = 'SIN SEÑAL';
         plantTag.classList.add('text-red-500', 'animate-pulse');
-        plantTag.classList.remove('text-[#00ffaa]');
+        plantTag.classList.remove('text-[#00e5ff]');
     }
     
     // Deshabilitar botón de análisis
@@ -38,7 +38,7 @@ export function setEmptyDashboardState() {
         if (!noSignal) {
             noSignal = document.createElement('div');
             noSignal.id = 'no-signal-container';
-            noSignal.className = "text-[#00ffaa] opacity-50 flex flex-col items-center justify-center w-full h-full min-h-[250px] border border-dashed border-[#00ffaa]/30";
+            noSignal.className = "text-[#00e5ff] opacity-50 flex flex-col items-center justify-center w-full h-full min-h-[250px] border border-dashed border-[#00e5ff]/30";
             const svgNS = "http://www.w3.org/2000/svg";
             const svg = document.createElementNS(svgNS, "svg");
             svg.setAttribute("class", "w-16 h-16 mx-auto mb-4");
@@ -108,7 +108,7 @@ async function registerNewPlant() {
 
     try {
         const token = window.getAuthToken();
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/register`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/register/`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -167,7 +167,7 @@ export function updatePlant(name) {
     const plantTag = document.getElementById('plant-tag');
     if (plantTag) {
         plantTag.classList.remove('text-red-500', 'animate-pulse');
-        plantTag.classList.add('text-[#00ffaa]');
+        plantTag.classList.add('text-[#00e5ff]');
     }
 
     // Ejecutamos la lógica original

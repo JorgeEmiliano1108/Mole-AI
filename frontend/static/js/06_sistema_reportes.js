@@ -32,7 +32,7 @@ function sendReport() {
     }
 
     btnStatus.innerText = "> ENCRIPTANDO Y ENVIANDO DATOS...";
-    btnStatus.className = "text-center mt-4 text-xs font-bold text-[#f97316] animate-pulse tracking-widest";
+    btnStatus.className = "text-center mt-4 text-xs font-bold text-[#FBBF24] animate-pulse tracking-widest";
     btnStatus.classList.remove('hidden');
 
     setTimeout(async () => {
@@ -54,7 +54,7 @@ function sendReport() {
 
             if (response.ok) {
                 btnStatus.innerText = "TRANSMISIÓN EXITOSA. CENTRAL NOTIFICADA.";
-                btnStatus.className = "text-center mt-4 text-xs font-bold text-[#00ffaa] tracking-widest";
+                btnStatus.className = "text-center mt-4 text-xs font-bold text-[#00e5ff] tracking-widest";
                 msgInput.value = '';
                 setTimeout(() => { closeContactModal(); }, 2000);
             } else throw new Error("Central rechazó la transmisión.");
@@ -144,7 +144,7 @@ async function renderAdminReports() {
                 const row = createNode('div', 'grid grid-cols-12 gap-4 text-xs border-b border-[#00e5ff]/10 py-3 px-2 hover:bg-[#00e5ff]/10 transition-colors');
                 row.appendChild(createNode('div', 'col-span-2 text-[#00e5ff]/70 font-bold', rep.time));
                 row.appendChild(createNode('div', 'col-span-3 text-white', rep.user));
-                row.appendChild(createNode('div', 'col-span-3 text-[#f97316] uppercase font-bold', (rep.type || '').replace('_', ' ')));
+                row.appendChild(createNode('div', 'col-span-3 text-[#FBBF24] uppercase font-bold', (rep.type || '').replace('_', ' ')));
                 row.appendChild(createNode('div', 'col-span-4 opacity-80 break-words', rep.message));
                 userContainer.appendChild(row);
             });
@@ -161,7 +161,7 @@ async function renderAdminReports() {
                 const row = createNode('div', 'grid grid-cols-12 gap-4 text-xs border-b border-red-500/10 py-3 px-2 hover:bg-red-500/10 transition-colors');
                 row.appendChild(createNode('div', 'col-span-2 text-red-400/70 font-bold', rep.time));
                 row.appendChild(createNode('div', 'col-span-3 text-white', rep.user));
-                row.appendChild(createNode('div', 'col-span-3 text-[#00ffaa] font-bold', `NÚCLEO: ${rep.plant}`));
+                row.appendChild(createNode('div', 'col-span-3 text-[#00e5ff] font-bold', `NÚCLEO: ${rep.plant}`));
                 row.appendChild(createNode('div', 'col-span-4 opacity-80 text-red-300 break-words', rep.issue));
                 plantContainer.appendChild(row);
             });

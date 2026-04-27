@@ -122,9 +122,9 @@ async function loadMapPins() {
             let pinColor = point.color;
             if (!pinColor) {
                 const statusStr = (point.status || '').toLowerCase();
-                if (statusStr.includes('óptimo') || statusStr.includes('sano')) pinColor = '#00ffaa'; // Verde
+                if (statusStr.includes('óptimo') || statusStr.includes('sano')) pinColor = '#00e5ff'; // Verde
                 else if (statusStr.includes('crítico') || statusStr.includes('infección')) pinColor = '#ef4444'; // Rojo
-                else pinColor = '#f97316'; // Naranja/Atención por defecto
+                else pinColor = '#FBBF24'; // Naranja/Atención por defecto
             }
 
             const customPin = L.divIcon({
@@ -138,7 +138,7 @@ async function loadMapPins() {
             const marker = L.marker([point.lat, point.lng], { icon: customPin })
                 .addTo(mapInstance)
                 .bindPopup(`
-                    <div style="background:#001105; color:#00ffaa; border:1px solid #00ffaa; padding:8px; font-family:monospace; min-width: 150px; text-align: left;">
+                    <div style="background:#001105; color:#00e5ff; border:1px solid #00e5ff; padding:8px; font-family:monospace; min-width: 150px; text-align: left;">
                         <strong style="color:white; display:block; border-bottom:1px solid rgba(0,255,170,0.3); padding-bottom:4px; margin-bottom:4px; text-transform:uppercase; font-size: 11px;">
                             ${point.species || 'ESPECIE DESCONOCIDA'}
                         </strong>

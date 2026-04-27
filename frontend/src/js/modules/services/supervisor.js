@@ -104,7 +104,7 @@ async function runDiagnostic() {
     
     term.textContent = '';
     const loadingSpan = document.createElement('span');
-    loadingSpan.className = 'text-[#00ffaa] animate-pulse';
+    loadingSpan.className = 'text-[#00e5ff] animate-pulse';
     loadingSpan.textContent = 'Iniciando enlace con satélite...';
     term.appendChild(loadingSpan);
     
@@ -117,7 +117,7 @@ async function runDiagnostic() {
     let lines = [
         { text: "> INICIANDO PROTOCOLO DE DIAGNÓSTICO...", className: 'text-white font-bold' },
         { text: `> DETECTADOS ${plantKeys.length} ESPECÍMENES EN EL SECTOR...`, className: '' },
-        { text: "----------------------------------------", className: 'text-[#00ffaa]/50' }
+        { text: "----------------------------------------", className: 'text-[#00e5ff]/50' }
     ];
 
     if (plantKeys.length === 0) {
@@ -133,7 +133,7 @@ async function runDiagnostic() {
             const statusLine = document.createElement('div');
             statusLine.appendChild(document.createTextNode("  ESTADO: "));
             const statusSpan = document.createElement('span');
-            statusSpan.className = hVal < 20 ? 'text-red-500 font-bold animate-pulse' : 'text-[#00ffaa]';
+            statusSpan.className = hVal < 20 ? 'text-red-500 font-bold animate-pulse' : 'text-[#00e5ff]';
             statusSpan.textContent = hVal < 20 ? '[ CRÍTICO ]' : '[ ÓPTIMO ]';
             statusLine.appendChild(statusSpan);
             statusLine.appendChild(document.createTextNode(` | HUMEDAD: ${p.h} | TEMP: ${p.t}`));
@@ -155,7 +155,7 @@ async function runDiagnostic() {
         });
     }
 
-    lines.push({ text: "----------------------------------------", className: 'text-[#00ffaa]/50' });
+    lines.push({ text: "----------------------------------------", className: 'text-[#00e5ff]/50' });
     lines.push({ text: "> ESCANEO FINALIZADO.", className: 'text-white font-bold' });
 
     let i = 0;
@@ -178,7 +178,7 @@ async function runDiagnostic() {
         } else {
             clearInterval(printInterval);
             const cursorDiv = document.createElement('div');
-            cursorDiv.className = 'animate-pulse text-[#00ffaa] mt-2';
+            cursorDiv.className = 'animate-pulse text-[#00e5ff] mt-2';
             cursorDiv.textContent = '_';
             term.appendChild(cursorDiv);
         }

@@ -9,8 +9,8 @@ const IA_ENGINES = {
     STATS: 'statistical-expert'      // IA para análisis de gráficas y sensores (Módulo 4)
 };
 
-const defaultChat = `<div class="text-[#00ffaa] opacity-80">> NÚCLEO IA EN LÍNEA...</div>
-<div class="text-[#f97316]">> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.</div>`;
+const defaultChat = `<div class="text-[#00e5ff] opacity-80">> NÚCLEO IA EN LÍNEA...</div>
+<div class="text-[#FBBF24]">> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.</div>`;
 
 /**
  * CARGA DE HISTORIAL: Recupera la conversación del almacenamiento local.
@@ -68,7 +68,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     }
     
     const typingId = 'typing-' + Date.now();
-    chatMessages.innerHTML += `<div id="${typingId}" class="text-[#00ffaa] opacity-50 animate-pulse">> [${engine.toUpperCase()}] PROCESANDO...</div>`;
+    chatMessages.innerHTML += `<div id="${typingId}" class="text-[#00e5ff] opacity-50 animate-pulse">> [${engine.toUpperCase()}] PROCESANDO...</div>`;
     chatMessages.scrollTop = chatMessages.scrollHeight;
     saveChatHistory(); 
 
@@ -88,7 +88,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
         // Extraemos la respuesta mapeando las distintas formas en que tu backend puede contestar
         const serverReply = data.answer || data.reply || data.response || "Análisis completado.";
         
-        chatMessages.innerHTML += `<div class="text-[#f97316] mb-4">> MOLE-IA: ${serverReply}</div>`;
+        chatMessages.innerHTML += `<div class="text-[#FBBF24] mb-4">> MOLE-IA: ${serverReply}</div>`;
         
         // Disparamos evento si trae disclaimer médico (COFEPRIS Fase 3)
         if (data.disclaimer) {

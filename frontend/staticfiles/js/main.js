@@ -492,17 +492,17 @@ function nextIotStep(step) {
     if (step === 2) {
         // PASO 2: SIMULACIÓN DE CONEXIÓN Y BARRA DE PROGRESO
         wizardContainer.innerHTML = `
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
+            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00e5ff] border-b border-[#00e5ff]/30 pb-2 mb-4">
                 > ENLACE DE HARDWARE: ESP32_NODE
             </h2>
             <div id="iot-step-2" class="iot-step block">
                 <p class="text-white/80 text-sm mb-4">> Estableciendo protocolo de enlace Handshake con ESP32...</p>
                 
-                <div class="w-full bg-black border border-[#00ffaa]/30 h-4 mb-4 mt-8 relative overflow-hidden">
-                    <div id="iot-progress" class="bg-[#00ffaa] h-full w-0 transition-all duration-1000 ease-out"></div>
+                <div class="w-full bg-black border border-[#00e5ff]/30 h-4 mb-4 mt-8 relative overflow-hidden">
+                    <div id="iot-progress" class="bg-[#00e5ff] h-full w-0 transition-all duration-1000 ease-out"></div>
                 </div>
                 
-                <p id="iot-status-text" class="text-center text-xs text-[#00ffaa] animate-pulse">Sincronizando claves de telemetría...</p>
+                <p id="iot-status-text" class="text-center text-xs text-[#00e5ff] animate-pulse">Sincronizando claves de telemetría...</p>
             </div>
             <button data-action="modal:close-iot" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
         `;
@@ -520,16 +520,16 @@ function nextIotStep(step) {
     } else if (step === 3) {
         // PASO 3: CONEXIÓN EXITOSA
         wizardContainer.innerHTML = `
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
+            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00e5ff] border-b border-[#00e5ff]/30 pb-2 mb-4">
                 > ENLACE DE HARDWARE: ESP32_NODE
             </h2>
             <div id="iot-step-3" class="iot-step block text-center">
-                <div class="w-16 h-16 rounded-full border-4 border-[#00ffaa] flex items-center justify-center mx-auto mb-4 bg-[#00ffaa]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]">
-                    <svg class="w-8 h-8 text-[#00ffaa]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                <div class="w-16 h-16 rounded-full border-4 border-[#00e5ff] flex items-center justify-center mx-auto mb-4 bg-[#00e5ff]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]">
+                    <svg class="w-8 h-8 text-[#00e5ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                 </div>
-                <p class="text-[#00ffaa] font-bold text-lg mb-2">¡CONEXIÓN ESTABLECIDA!</p>
+                <p class="text-[#00e5ff] font-bold text-lg mb-2">¡CONEXIÓN ESTABLECIDA!</p>
                 <p class="text-white/70 text-xs mb-6">El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.</p>
-                <button data-action="iot:finalize" class="w-full border border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
+                <button data-action="iot:finalize" class="w-full border border-[#00e5ff] bg-[#00e5ff]/10 text-[#00e5ff] py-2 hover:bg-[#00e5ff] hover:text-black transition-colors font-bold text-sm">
                     > FINALIZAR PROTOCOLO
                 </button>
             </div>
@@ -646,15 +646,15 @@ function loadFloraSearch() {
     // 2. Inyectar la interfaz del buscador estilo Terminal
     container.innerHTML = `
         <div class="flex flex-col h-full w-full min-h-[200px]">
-            <div class="flex items-center border-b border-[#00ffaa]/50 pb-2 mb-4">
+            <div class="flex items-center border-b border-[#00e5ff]/50 pb-2 mb-4">
                 <span class="mr-2 animate-pulse">>_</span>
                 <input type="text" id="flora-search-input" 
-                       class="bg-transparent border-none outline-none text-[#00ffaa] font-mono w-full placeholder-[#00ffaa]/30" 
+                       class="bg-transparent border-none outline-none text-[#00e5ff] font-mono w-full placeholder-[#00e5ff]/30" 
                        placeholder="Buscar espécimen (ej. Agave, Cempasúchil)..."
                        autocomplete="off">
             </div>
             <div id="flora-search-results" class="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin">
-                <p class="text-[#00ffaa]/50 text-sm italic">Esperando consulta de base de datos...</p>
+                <p class="text-[#00e5ff]/50 text-sm italic">Esperando consulta de base de datos...</p>
             </div>
         </div>
     `;
@@ -668,11 +668,11 @@ function loadFloraSearch() {
         const resultsContainer = document.getElementById('flora-search-results');
         
         if (query.length < 2) {
-            resultsContainer.innerHTML = '<p class="text-[#00ffaa]/50 text-sm italic">Ingrese al menos 2 caracteres...</p>';
+            resultsContainer.innerHTML = '<p class="text-[#00e5ff]/50 text-sm italic">Ingrese al menos 2 caracteres...</p>';
             return;
         }
 
-        resultsContainer.innerHTML = '<p class="text-[#00ffaa] text-sm animate-pulse">Consultando servidor central...</p>';
+        resultsContainer.innerHTML = '<p class="text-[#00e5ff] text-sm animate-pulse">Consultando servidor central...</p>';
         
         searchTimeout = setTimeout(() => {
             searchPlant(query);
@@ -712,7 +712,7 @@ function renderPlantResults(results) {
     container.innerHTML = '';
 
     if (results.length === 0) {
-        container.innerHTML = '<p class="text-[#00ffaa]/70 text-sm border border-[#00ffaa]/20 p-2">Ningún espécimen coincide con los parámetros.</p>';
+        container.innerHTML = '<p class="text-[#00e5ff]/70 text-sm border border-[#00e5ff]/20 p-2">Ningún espécimen coincide con los parámetros.</p>';
         return;
     }
 
@@ -723,20 +723,20 @@ function renderPlantResults(results) {
         const desc = plant.description || plant.descripcion || 'Sin registro en la base de datos.';
         
         const card = document.createElement('div');
-        card.className = 'border border-[#00ffaa]/30 p-3 bg-[#00ffaa]/5 hover:bg-[#00ffaa]/20 transition-all cursor-pointer';
+        card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
         card.innerHTML = `
-            <h3 class="font-bold text-[#00ffaa] text-sm tracking-widest">${name.toUpperCase()}</h3>
-            ${scientific ? `<p class="text-xs text-[#00ffaa]/70 italic mb-2">${scientific}</p>` : ''}
-            <p class="text-xs text-[#00ffaa]/90 opacity-80" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
+            <h3 class="font-bold text-[#00e5ff] text-sm tracking-widest">${name.toUpperCase()}</h3>
+            ${scientific ? `<p class="text-xs text-[#00e5ff]/70 italic mb-2">${scientific}</p>` : ''}
+            <p class="text-xs text-[#00e5ff]/90 opacity-80" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${desc}</p>
         `;
         
         card.addEventListener('click', () => {
             // Expansión rápida de la ficha técnica al hacer clic
             card.innerHTML = `
-                <h3 class="font-bold text-[#00ffaa] text-sm tracking-widest border-b border-[#00ffaa]/30 pb-1 mb-2">${name.toUpperCase()}</h3>
-                ${scientific ? `<p class="text-xs text-[#00ffaa]/70 italic mb-2">${scientific}</p>` : ''}
-                <p class="text-xs text-[#00ffaa] leading-relaxed">${desc}</p>
-                <button class="mt-3 text-xs text-black bg-[#00ffaa] px-2 py-1 hover:bg-white w-full font-bold tracking-widest">
+                <h3 class="font-bold text-[#00e5ff] text-sm tracking-widest border-b border-[#00e5ff]/30 pb-1 mb-2">${name.toUpperCase()}</h3>
+                ${scientific ? `<p class="text-xs text-[#00e5ff]/70 italic mb-2">${scientific}</p>` : ''}
+                <p class="text-xs text-[#00e5ff] leading-relaxed">${desc}</p>
+                <button class="mt-3 text-xs text-black bg-[#00e5ff] px-2 py-1 hover:bg-white w-full font-bold tracking-widest">
                     [ CERRAR FICHA ]
                 </button>
             `;

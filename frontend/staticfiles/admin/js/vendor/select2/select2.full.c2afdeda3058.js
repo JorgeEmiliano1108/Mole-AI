@@ -736,7 +736,7 @@ S2.define('select2/utils',[
 
   Utils.escapeMarkup = function (markup) {
     var replaceMap = {
-      '\\': '&#92;',
+      'mole-cyan': '&#92;',
       '&': '&amp;',
       '<': '&lt;',
       '>': '&gt;',
@@ -750,7 +750,7 @@ S2.define('select2/utils',[
       return markup;
     }
 
-    return String(markup).replace(/[&<>"'\/\\]/g, function (match) {
+    return String(markup).replace(/[&<>"'\/mole-cyan]/g, function (match) {
       return replaceMap[match];
     });
   };

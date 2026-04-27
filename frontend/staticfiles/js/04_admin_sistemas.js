@@ -158,7 +158,7 @@ async function renderLogList(plantName) {
     const logContainer = document.getElementById('log-list');
     if(!logContainer) return;
     
-    logContainer.innerHTML = '<div class="text-[#00ffaa] animate-pulse">> Extrayendo bitácora de la red...</div>';
+    logContainer.innerHTML = '<div class="text-[#00e5ff] animate-pulse">> Extrayendo bitácora de la red...</div>';
 
     try {
         // Obtenemos los logs reales de esa planta específica
@@ -173,7 +173,7 @@ async function renderLogList(plantName) {
         }
 
         let logHTML = `
-            <div class="grid grid-cols-12 gap-4 text-[#00ffaa]/50 border-b border-[#00ffaa]/30 pb-2 mb-3 tracking-widest text-xs">
+            <div class="grid grid-cols-12 gap-4 text-[#00e5ff]/50 border-b border-[#00e5ff]/30 pb-2 mb-3 tracking-widest text-xs">
                 <div class="col-span-2 font-bold">HORA</div>
                 <div class="col-span-2 font-bold">EVENTO</div>
                 <div class="col-span-6 font-bold">DETALLE</div>
@@ -183,13 +183,13 @@ async function renderLogList(plantName) {
 
         logHTML += logs.map(log => {
             let statusClass = log.status === '[WARN]' ? 'text-red-500 animate-pulse font-bold' : 
-                              log.status === '[ACTIVE]' ? 'text-[#f97316]' : 'text-[#00ffaa]';
+                              log.status === '[ACTIVE]' ? 'text-[#FBBF24]' : 'text-[#00e5ff]';
 
             return `
-                <div class="grid grid-cols-12 gap-4 border-b border-[#00ffaa]/10 py-3 hover:bg-[#00ffaa]/5 transition-colors">
+                <div class="grid grid-cols-12 gap-4 border-b border-[#00e5ff]/10 py-3 hover:bg-[#00e5ff]/5 transition-colors">
                     <div class="col-span-2 text-white font-bold opacity-80">${log.time}</div>
                     <div class="col-span-2 text-white font-bold opacity-80">${log.event}</div>
-                    <div class="col-span-6 text-[#00ffaa] opacity-90">${log.detail}</div>
+                    <div class="col-span-6 text-[#00e5ff] opacity-90">${log.detail}</div>
                     <div class="col-span-2 text-center ${statusClass}">${log.status}</div>
                 </div>
             `;
@@ -251,18 +251,18 @@ async function openModal() {
             type: 'line', 
             data: { 
                 labels: histData.labels,
-                datasets: [{ data: histData.hum, borderColor: '#00ffaa', backgroundColor: 'rgba(0, 255, 170, 0.1)', fill: true, tension: 0.4 }] 
+                datasets: [{ data: histData.hum, borderColor: '#00e5ff', backgroundColor: 'rgba(0, 255, 170, 0.1)', fill: true, tension: 0.4 }] 
             }, 
-            options: getChartOptions('#00ffaa', 'Humedad') 
+            options: getChartOptions('#00e5ff', 'Humedad') 
         });
         
         tChart = new Chart(ctxT, { 
             type: 'line', 
             data: { 
                 labels: histData.labels,
-                datasets: [{ data: histData.temp, borderColor: '#f97316', stepped: true }] 
+                datasets: [{ data: histData.temp, borderColor: '#FBBF24', stepped: true }] 
             }, 
-            options: getChartOptions('#f97316', 'Temperatura') 
+            options: getChartOptions('#FBBF24', 'Temperatura') 
         });
 
     } catch (e) {

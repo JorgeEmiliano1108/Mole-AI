@@ -29,7 +29,7 @@ async function handleImageUpload(event) {
     formData.append('image', file); // Mismo nombre que espera tu DiagnosticRequestSerializer
     
     const currentOp = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    formData.append('operator_id', currentOp);
+    formData.append('operator', currentOp);
 
     try {
         // Zero-Trust: Validamos token antes de disparar a la red

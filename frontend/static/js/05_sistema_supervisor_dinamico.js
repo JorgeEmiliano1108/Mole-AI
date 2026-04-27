@@ -103,7 +103,7 @@ async function runDiagnostic() {
     if (!term) return;
     
     // Preparamos la terminal
-    term.innerHTML = '<span class="text-[#00ffaa] animate-pulse">Iniciando enlace con satélite...</span>';
+    term.innerHTML = '<span class="text-[#00e5ff] animate-pulse">Iniciando enlace con satélite...</span>';
     
     // 1. Refrescamos datos antes del scan
     await syncUserPlants();
@@ -115,7 +115,7 @@ async function runDiagnostic() {
     let lines = [
         "<span class='text-white font-bold'>> INICIANDO PROTOCOLO DE DIAGNÓSTICO...</span>",
         `> DETECTADOS ${plantKeys.length} ESPECÍMENES EN EL SECTOR...`,
-        "<span class='text-[#00ffaa]/50'>----------------------------------------</span>"
+        "<span class='text-[#00e5ff]/50'>----------------------------------------</span>"
     ];
 
     if (plantKeys.length === 0) {
@@ -127,7 +127,7 @@ async function runDiagnostic() {
             const p = db[name];
             // Extraemos solo el número de '65%'
             const hVal = parseInt(p.h.replace('%', '')) || 0; 
-            const statusLabel = hVal < 20 ? "<span class='text-red-500 font-bold animate-pulse'>[ CRÍTICO ]</span>" : "<span class='text-[#00ffaa]'>[ ÓPTIMO ]</span>";
+            const statusLabel = hVal < 20 ? "<span class='text-red-500 font-bold animate-pulse'>[ CRÍTICO ]</span>" : "<span class='text-[#00e5ff]'>[ ÓPTIMO ]</span>";
             
             lines.push(`<span class='text-white'>> NÚCLEO: ${name.toUpperCase()}</span>`);
             lines.push(`  ESTADO: ${statusLabel} | HUMEDAD: ${p.h} | TEMP: ${p.t}`);
@@ -136,7 +136,7 @@ async function runDiagnostic() {
         });
     }
 
-    lines.push("<span class='text-[#00ffaa]/50'>----------------------------------------</span>");
+    lines.push("<span class='text-[#00e5ff]/50'>----------------------------------------</span>");
     lines.push("<span class='text-white font-bold'>> ESCANEO FINALIZADO.</span>");
 
     // 3. Efecto de máquina de escribir en la terminal
@@ -149,7 +149,7 @@ async function runDiagnostic() {
         } else {
             clearInterval(printInterval);
             // Agregamos el cursor parpadeante al final
-            term.innerHTML += `<div class="animate-pulse text-[#00ffaa] mt-2">_</div>`;
+            term.innerHTML += `<div class="animate-pulse text-[#00e5ff] mt-2">_</div>`;
         }
     }, 250); // Velocidad ajustada para mayor dramatismo
 }

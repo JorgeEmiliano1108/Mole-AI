@@ -9,8 +9,8 @@ const IA_ENGINES = {
     STATS: 'statistical-expert'      // IA para análisis de gráficas y sensores (Módulo 4)
 };
 
-const defaultChat = `<div class="text-[#00ffaa] opacity-80">> NÚCLEO IA EN LÍNEA...</div>
-<div class="text-[#f97316]">> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.</div>`;
+const defaultChat = `<div class="text-[#00e5ff] opacity-80">> NÚCLEO IA EN LÍNEA...</div>
+<div class="text-[#FBBF24]">> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.</div>`;
 
 /**
  * CARGA DE HISTORIAL: Recupera la conversación del almacenamiento local.
@@ -26,8 +26,8 @@ function loadChatHistory() {
     } else {
         chatBox.textContent = '';
         // defaultChat contains markup; keep original small greeting using safe nodes
-        const first = createNode('div', 'text-[#00ffaa] opacity-80', '> NÚCLEO IA EN LÍNEA...');
-        const second = createNode('div', 'text-[#f97316]', '> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.');
+        const first = createNode('div', 'text-[#00e5ff] opacity-80', '> NÚCLEO IA EN LÍNEA...');
+        const second = createNode('div', 'text-[#FBBF24]', '> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.');
         chatBox.appendChild(first);
         chatBox.appendChild(second);
     }
@@ -79,19 +79,17 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     }
 
     const typingId = 'typing-' + Date.now();
-    const typingNode = createNode('div', 'text-[#00ffaa] opacity-50 animate-pulse', `> [${engine.toUpperCase()}] PROCESANDO...`, { id: typingId });
+    const typingNode = createNode('div', 'text-[#00e5ff] opacity-50 animate-pulse', `> [${engine.toUpperCase()}] PROCESANDO...`, { id: typingId });
     chatMessages.appendChild(typingNode);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     saveChatHistory(); 
 
     try {
         // 🚀 USO DE API SERVICE: Interceptamos 'chat_fallback/' o 'chat/' según tus URLs de backend
-        // Enviamos 'question' porque así lo espera tu backend en Django
         const data = await window.moleApi.post('chat/', {
-            question: query,
-            prompt: query,     // Mantenemos prompt por compatibilidad futura
+            prompt: query,
             engine: engine,
-            session_id: localStorage.getItem('moleia_current_user') || 'anon'
+            sessionId: localStorage.getItem('moleia_current_user') || 'anon'
         });
         
         const typingElement = document.getElementById(typingId);
@@ -99,7 +97,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
 
         // Extraemos la respuesta mapeando las distintas formas en que tu backend puede contestar
         const serverReply = data.answer || data.reply || data.response || "Análisis completado.";
-        const replyNode = createNode('div', 'text-[#f97316] mb-4', `> MOLE-IA: ${serverReply}`);
+        const replyNode = createNode('div', 'text-[#FBBF24] mb-4', `> MOLE-IA: ${serverReply}`);
         chatMessages.appendChild(replyNode);
         
         // Disparamos evento si trae disclaimer médico (COFEPRIS Fase 3)

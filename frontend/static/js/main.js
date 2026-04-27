@@ -229,12 +229,7 @@ async function attemptLogin() {
     
     errorMsg.classList.add('hidden');
 
-    // Bypass rápido para pruebas UI
-    if (user === 'dev' && pass === 'dev') {
-        console.warn("> MODO DEV ACTIVADO: Entrando sin backend.");
-        executeLoginSequence('admin');
-        return;
-    }
+
 
     try {
         // USO DE API SERVICE: Endpoint real 'auth/login/'
@@ -382,6 +377,8 @@ function logout() {
         
         if (typeof detachChatListener === 'function') detachChatListener(); 
         if (window.monitorInterval) clearInterval(window.monitorInterval);  
+        if (window.clockInterval) clearInterval(window.clockInterval);
+        if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
 
         mainDash.classList.add('hidden');
         mainDash.classList.remove('flex');
@@ -490,7 +487,7 @@ function updateClock() {
 // Inicia el reloj de inmediato para no esperar el primer segundo
 updateClock();
 // Configura el intervalo para que se actualice cada 1000 milisegundos (1 segundo)
-setInterval(updateClock, 1000);
+window.clockInterval = setInterval(updateClock, 1000);
 
 
 //Simulacion para ver pruebas//
@@ -499,55 +496,107 @@ setInterval(updateClock, 1000);
 // SISTEMA DE VINCULACIÓN ESP32 (IOT WIZARD)
 // ==========================================================
 function nextIotStep(step) {
-    // Buscamos el contenedor interior del modal para cambiar su contenido
-    const wizardContainer = document.getElementById('iot-wizard-modal').querySelector('.border-2');
+    const wizardContainer = document.getElementById('iot-wizard-modal');
+    const wizardContent = wizardContainer?.querySelector('.border-2');
+    if (!wizardContainer || !wizardContent) return;
     
-    if (step === 2) {
-        // PASO 2: SIMULACIÓN DE CONEXIÓN Y BARRA DE PROGRESO
-        wizardContainer.innerHTML = `
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
-                > ENLACE DE HARDWARE: ESP32_NODE
-            </h2>
-            <div id="iot-step-2" class="iot-step block">
-                <p class="text-white/80 text-sm mb-4">> Estableciendo protocolo de enlace Handshake con ESP32...</p>
-                
-                <div class="w-full bg-black border border-[#00ffaa]/30 h-4 mb-4 mt-8 relative overflow-hidden">
-                    <div id="iot-progress" class="bg-[#00ffaa] h-full w-0 transition-all duration-1000 ease-out"></div>
-                </div>
-                
-                <p id="iot-status-text" class="text-center text-xs text-[#00ffaa] animate-pulse">Sincronizando claves de telemetría...</p>
-            </div>
-            <button data-action="modal:close-iot" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
-        `;
+    wizardContent.textContent = '';
+    
+    const h2 = document.createElement('h2');
+    h2.className = 'text-xl font-bold tracking-widest uppercase text-[#00e5ff] border-b border-[#00e5ff]/30 pb-2 mb-4';
+    h2.textContent = '> ENLACE DE HARDWARE: ESP32_NODE';
+    wizardContent.appendChild(h2);
 
-        // Simulamos el avance de la barra de progreso
-        setTimeout(() => document.getElementById('iot-progress').style.width = '35%', 500);
+    if (step === 2) {
+        const stepDiv = document.createElement('div');
+        stepDiv.id = 'iot-step-2';
+        stepDiv.className = 'iot-step block';
+
+        const p1 = document.createElement('p');
+        p1.className = 'text-white/80 text-sm mb-4';
+        p1.textContent = '> Estableciendo protocolo de enlace Handshake con ESP32...';
+        stepDiv.appendChild(p1);
+
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'w-full bg-black border border-[#00e5ff]/30 h-4 mb-4 mt-8 relative overflow-hidden';
+        const progressFill = document.createElement('div');
+        progressFill.id = 'iot-progress';
+        progressFill.className = 'bg-[#00e5ff] h-full w-0 transition-all duration-1000 ease-out';
+        progressContainer.appendChild(progressFill);
+        stepDiv.appendChild(progressContainer);
+
+        const pStatus = document.createElement('p');
+        pStatus.id = 'iot-status-text';
+        pStatus.className = 'text-center text-xs text-[#00e5ff] animate-pulse';
+        pStatus.textContent = 'Sincronizando claves de telemetría...';
+        stepDiv.appendChild(pStatus);
+
+        wizardContent.appendChild(stepDiv);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.setAttribute('data-action', 'modal:close-iot');
+        closeBtn.className = 'absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold';
+        closeBtn.textContent = '[X]';
+        wizardContent.appendChild(closeBtn);
+
         setTimeout(() => {
-            document.getElementById('iot-progress').style.width = '75%';
-            document.getElementById('iot-status-text').innerText = "Calibrando sensores analógicos...";
+            const iotProgress = document.getElementById('iot-progress');
+            if (iotProgress) iotProgress.style.width = '35%';
+        }, 500);
+        setTimeout(() => {
+            const iotProgress = document.getElementById('iot-progress');
+            const iotStatusText = document.getElementById('iot-status-text');
+            if (iotProgress) iotProgress.style.width = '75%';
+            if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores analógicos...';
         }, 2000);
         
-        // Saltamos automáticamente al paso 3 después de 4 segundos
         setTimeout(() => nextIotStep(3), 4000);
         
     } else if (step === 3) {
-        // PASO 3: CONEXIÓN EXITOSA
-        wizardContainer.innerHTML = `
-            <h2 class="text-xl font-bold tracking-widest uppercase text-[#00ffaa] border-b border-[#00ffaa]/30 pb-2 mb-4">
-                > ENLACE DE HARDWARE: ESP32_NODE
-            </h2>
-            <div id="iot-step-3" class="iot-step block text-center">
-                <div class="w-16 h-16 rounded-full border-4 border-[#00ffaa] flex items-center justify-center mx-auto mb-4 bg-[#00ffaa]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]">
-                    <svg class="w-8 h-8 text-[#00ffaa]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                </div>
-                <p class="text-[#00ffaa] font-bold text-lg mb-2">¡CONEXIÓN ESTABLECIDA!</p>
-                <p class="text-white/70 text-xs mb-6">El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.</p>
-                <button data-action="iot:finalize" class="w-full border border-[#00ffaa] bg-[#00ffaa]/10 text-[#00ffaa] py-2 hover:bg-[#00ffaa] hover:text-black transition-colors font-bold text-sm">
-                    > FINALIZAR PROTOCOLO
-                </button>
-            </div>
-            <button data-action="iot:finalize" class="absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold">[X]</button>
-        `;
+        const stepDiv = document.createElement('div');
+        stepDiv.id = 'iot-step-3';
+        stepDiv.className = 'iot-step block text-center';
+
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'w-16 h-16 rounded-full border-4 border-[#00e5ff] flex items-center justify-center mx-auto mb-4 bg-[#00e5ff]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]';
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('class', 'w-8 h-8 text-[#00e5ff]');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('d', 'M5 13l4 4L19 7');
+        svg.appendChild(path);
+        iconContainer.appendChild(svg);
+        stepDiv.appendChild(iconContainer);
+
+        const pTitle = document.createElement('p');
+        pTitle.className = 'text-[#00e5ff] font-bold text-lg mb-2';
+        pTitle.textContent = '¡CONEXIÓN ESTABLECIDA!';
+        stepDiv.appendChild(pTitle);
+
+        const pDesc = document.createElement('p');
+        pDesc.className = 'text-white/70 text-xs mb-6';
+        pDesc.textContent = 'El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.';
+        stepDiv.appendChild(pDesc);
+
+        const finalBtn = document.createElement('button');
+        finalBtn.setAttribute('data-action', 'iot:finalize');
+        finalBtn.className = 'w-full border border-[#00e5ff] bg-[#00e5ff]/10 text-[#00e5ff] py-2 hover:bg-[#00e5ff] hover:text-black transition-colors font-bold text-sm';
+        finalBtn.textContent = '> FINALIZAR PROTOCOLO';
+        stepDiv.appendChild(finalBtn);
+
+        wizardContainer.appendChild(stepDiv);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.setAttribute('data-action', 'iot:finalize');
+        closeBtn.className = 'absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold';
+        closeBtn.textContent = '[X]';
+        wizardContainer.appendChild(closeBtn);
     }
 }
 
@@ -661,15 +710,15 @@ function loadFloraSearch() {
     // 2. Inyectar la interfaz del buscador estilo Terminal
     container.innerHTML = `
         <div class="flex flex-col h-full w-full min-h-[200px]">
-            <div class="flex items-center border-b border-[#00ffaa]/50 pb-2 mb-4">
+            <div class="flex items-center border-b border-[#00e5ff]/50 pb-2 mb-4">
                 <span class="mr-2 animate-pulse">>_</span>
                 <input type="text" id="flora-search-input" 
-                       class="bg-transparent border-none outline-none text-[#00ffaa] font-mono w-full placeholder-[#00ffaa]/30" 
+                       class="bg-transparent border-none outline-none text-[#00e5ff] font-mono w-full placeholder-[#00e5ff]/30" 
                        placeholder="Buscar espécimen (ej. Agave, Cempasúchil)..."
                        autocomplete="off">
             </div>
             <div id="flora-search-results" class="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin">
-                <p class="text-[#00ffaa]/50 text-sm italic">Esperando consulta de base de datos...</p>
+                <p class="text-[#00e5ff]/50 text-sm italic">Esperando consulta de base de datos...</p>
             </div>
         </div>
     `;
@@ -693,7 +742,7 @@ function loadFloraSearch() {
         if (query.length < 2) {
             resultsContainer.textContent = '';
             const hint = document.createElement('p');
-            hint.className = 'text-[#00ffaa]/50 text-sm italic';
+            hint.className = 'text-[#00e5ff]/50 text-sm italic';
             hint.textContent = 'Ingrese al menos 2 caracteres...';
             resultsContainer.appendChild(hint);
             return;
@@ -701,7 +750,7 @@ function loadFloraSearch() {
 
         resultsContainer.textContent = '';
         const loading = document.createElement('p');
-        loading.className = 'text-[#00ffaa] text-sm animate-pulse';
+        loading.className = 'text-[#00e5ff] text-sm animate-pulse';
         loading.textContent = 'Consultando servidor central...';
         resultsContainer.appendChild(loading);
 
@@ -780,7 +829,7 @@ function renderPlantResults(results) {
 
     if (!results || results.length === 0) {
         const none = document.createElement('p');
-        none.className = 'text-[#00ffaa]/70 text-sm border border-[#00ffaa]/20 p-2';
+        none.className = 'text-[#00e5ff]/70 text-sm border border-[#00e5ff]/20 p-2';
         none.textContent = 'Ningún espécimen coincide con los parámetros.';
         container.appendChild(none);
         return;
@@ -800,22 +849,22 @@ function renderPlantResults(results) {
         const desc = safe(plant, 'description', 'descripcion') || 'Sin registro en la base de datos.';
 
         const card = document.createElement('div');
-        card.className = 'border border-[#00ffaa]/30 p-3 bg-[#00ffaa]/5 hover:bg-[#00ffaa]/20 transition-all cursor-pointer';
+        card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
 
         const title = document.createElement('h3');
-        title.className = 'font-bold text-[#00ffaa] text-sm tracking-widest';
+        title.className = 'font-bold text-[#00e5ff] text-sm tracking-widest';
         title.textContent = name.toUpperCase();
         card.appendChild(title);
 
         if (scientific) {
             const sci = document.createElement('p');
-            sci.className = 'text-xs text-[#00ffaa]/70 italic mb-2';
+            sci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
             sci.textContent = scientific;
             card.appendChild(sci);
         }
 
         const snippet = document.createElement('p');
-        snippet.className = 'text-xs text-[#00ffaa]/90 opacity-80';
+        snippet.className = 'text-xs text-[#00e5ff]/90 opacity-80';
         snippet.style.display = '-webkit-box';
         snippet.style.webkitLineClamp = '2';
         snippet.style.webkitBoxOrient = 'vertical';
@@ -829,24 +878,24 @@ function renderPlantResults(results) {
             while (card.firstChild) card.removeChild(card.firstChild);
 
             const eTitle = document.createElement('h3');
-            eTitle.className = 'font-bold text-[#00ffaa] text-sm tracking-widest border-b border-[#00ffaa]/30 pb-1 mb-2';
+            eTitle.className = 'font-bold text-[#00e5ff] text-sm tracking-widest border-b border-[#00e5ff]/30 pb-1 mb-2';
             eTitle.textContent = name.toUpperCase();
             card.appendChild(eTitle);
 
             if (scientific) {
                 const eSci = document.createElement('p');
-                eSci.className = 'text-xs text-[#00ffaa]/70 italic mb-2';
+                eSci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
                 eSci.textContent = scientific;
                 card.appendChild(eSci);
             }
 
             const eDesc = document.createElement('p');
-            eDesc.className = 'text-xs text-[#00ffaa] leading-relaxed';
+            eDesc.className = 'text-xs text-[#00e5ff] leading-relaxed';
             eDesc.textContent = desc;
             card.appendChild(eDesc);
 
             const closeBtn = document.createElement('button');
-            closeBtn.className = 'mt-3 text-xs text-black bg-[#00ffaa] px-2 py-1 hover:bg-white w-full font-bold tracking-widest';
+            closeBtn.className = 'mt-3 text-xs text-black bg-[#00e5ff] px-2 py-1 hover:bg-white w-full font-bold tracking-widest';
             closeBtn.textContent = '[ CERRAR FICHA ]';
             closeBtn.addEventListener('click', (ev) => {
                 ev.stopPropagation();
