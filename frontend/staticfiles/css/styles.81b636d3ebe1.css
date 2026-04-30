@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+body {
+    font-family: 'Share Tech Mono', monospace;
+    background-color: #000;
+    overflow-x: hidden;
+}
+
+/* =========================================
+   1. COLOR DE SELECCIÓN DE TEXTO
+   ========================================= */
+::selection {
+    background: #00ffaa;
+    color: #000;
+}
+
+#admin-dashboard ::selection {
+    background: #00e5ff;
+    color: #000;
+}
+
+/* =========================================
+   2. EFECTO DE MONITOR VIEJO (SCANLINE)
+   ========================================= */
+.scanline {
+    width: 100%;
+    height: 100px;
+    z-index: 9999;
+    position: absolute;
+    pointer-events: none;
+    background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,255,170,0.15) 50%, rgba(0,0,0,0) 100%);
+    opacity: 0.1;
+    animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+    0% { top: -100px; }
+    100% { top: 100%; }
+}
+
+/* =========================================
+   3. BARRAS DE SCROLL PERSONALIZADAS
+   ========================================= */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #001105;
+    border-left: 1px solid rgba(0, 255, 170, 0.2);
+}
+::-webkit-scrollbar-thumb {
+    background: #00ffaa;
+}
+
+#admin-dashboard ::-webkit-scrollbar-track {
+    background: #000511;
+    border-left: 1px solid rgba(0, 229, 255, 0.2);
+}
+#admin-dashboard ::-webkit-scrollbar-thumb {
+    background: #00e5ff;
+}
+
+/* =========================================
+   4. BOTONES Y TARJETAS (MODO USUARIO)
+   ========================================= */
+.nav-btn {
+    padding: 4px 12px;
+    border: 1px solid rgba(0, 255, 170, 0.3);
+    color: #00ffaa;
+    transition: all 0.3s ease;
+}
+.nav-btn:hover, .nav-btn.active {
+    background: #00ffaa;
+    color: #000;
+    box-shadow: 0 0 10px rgba(0,255,170,0.5);
+}
+
+.exit-btn {
+    padding: 4px 12px;
+    color: #ff4444;
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    transition: all 0.3s ease;
+}
+.exit-btn:hover {
+    background: #ff4444;
+    color: #000;
+    box-shadow: 0 0 10px rgba(255,68,68,0.5);
+}
+
+.stat-card {
+    border: 1px solid rgba(0, 255, 170, 0.3);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 255, 170, 0.02);
+}
+.stat-card .label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+}
+.stat-card .value {
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0,255,170,0.3);
+}
+
+.analysis-trigger {
+    width: 100%;
+    border: 1px dashed #00ffaa;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+.analysis-trigger:hover {
+    background: rgba(0, 255, 170, 0.1);
+    text-shadow: 0 0 5px #00ffaa;
+}
+
+.close-modal-btn:hover {
+    color: white;
+    text-shadow: 0 0 5px white;
+}
+
+/* =========================================
+   5. FILTRO DE CÁMARA PARA LAS PLANTAS
+   ========================================= */
+.plant-filter {
+    filter: sepia(1) saturate(1.2) contrast(1.1) brightness(0.9);
+    transition: filter 0.5s ease; 
+}
+.group:hover .plant-filter {
+    filter: none;
+}
+
+/* =========================================
+   6. ANIMACIÓN DE APAGADO (EFECTO TV VIEJA)
+   ========================================= */
+.tv-off {
+    animation: tv-shutdown 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    pointer-events: none;
+}
+
+@keyframes tv-shutdown {
+    0% { 
+        transform: scale(1, 1); 
+        filter: brightness(1) contrast(1);
+    }
+    40% { 
+        transform: scale(1, 0.005); 
+        filter: brightness(5) contrast(2);
+        background: #fff;
+    }
+    100% { 
+        transform: scale(0, 0); 
+        filter: brightness(10);
+        opacity: 0;
+    }
+}

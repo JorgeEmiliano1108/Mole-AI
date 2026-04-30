@@ -161,7 +161,7 @@ async function renderLogList(plantName) {
     
     logContainer.textContent = '';
     const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'text-[#00ffaa] animate-pulse';
+    loadingDiv.className = 'text-[#00e5ff] animate-pulse';
     loadingDiv.textContent = '> Extrayendo bitácora de la red...';
     logContainer.appendChild(loadingDiv);
 
@@ -181,7 +181,7 @@ async function renderLogList(plantName) {
         }
 
         const headerDiv = document.createElement('div');
-        headerDiv.className = 'grid grid-cols-12 gap-4 text-[#00ffaa]/50 border-b border-[#00ffaa]/30 pb-2 mb-3 tracking-widest text-xs';
+        headerDiv.className = 'grid grid-cols-12 gap-4 text-[#00e5ff]/50 border-b border-[#00e5ff]/30 pb-2 mb-3 tracking-widest text-xs';
         
         ['HORA', 'EVENTO', 'DETALLE', 'ESTADO'].forEach((text, i) => {
             const col = document.createElement('div');
@@ -193,10 +193,10 @@ async function renderLogList(plantName) {
 
         logs.forEach(log => {
             const row = document.createElement('div');
-            row.className = 'grid grid-cols-12 gap-4 border-b border-[#00ffaa]/10 py-3 hover:bg-[#00ffaa]/5 transition-colors';
+            row.className = 'grid grid-cols-12 gap-4 border-b border-[#00e5ff]/10 py-3 hover:bg-[#00e5ff]/5 transition-colors';
 
             const statusClass = log.status === '[WARN]' ? 'text-red-500 animate-pulse font-bold' : 
-                              log.status === '[ACTIVE]' ? 'text-[#f97316]' : 'text-[#00ffaa]';
+                              log.status === '[ACTIVE]' ? 'text-[#FBBF24]' : 'text-[#00e5ff]';
 
             const timeCol = document.createElement('div');
             timeCol.className = 'col-span-2 text-white font-bold opacity-80';
@@ -207,7 +207,7 @@ async function renderLogList(plantName) {
             eventCol.textContent = log.event;
 
             const detailCol = document.createElement('div');
-            detailCol.className = 'col-span-6 text-[#00ffaa] opacity-90';
+            detailCol.className = 'col-span-6 text-[#00e5ff] opacity-90';
             detailCol.textContent = log.detail;
 
             const statusCol = document.createElement('div');
@@ -279,18 +279,18 @@ async function openModal() {
             type: 'line', 
             data: { 
                 labels: histData.labels,
-                datasets: [{ data: histData.hum, borderColor: '#00ffaa', backgroundColor: 'rgba(0, 255, 170, 0.1)', fill: true, tension: 0.4 }] 
+                datasets: [{ data: histData.hum, borderColor: '#00e5ff', backgroundColor: 'rgba(0, 255, 170, 0.1)', fill: true, tension: 0.4 }] 
             }, 
-            options: getChartOptions('#00ffaa', 'Humedad') 
+            options: getChartOptions('#00e5ff', 'Humedad') 
         });
         
         tChart = new Chart(ctxT, { 
             type: 'line', 
             data: { 
                 labels: histData.labels,
-                datasets: [{ data: histData.temp, borderColor: '#f97316', stepped: true }] 
+                datasets: [{ data: histData.temp, borderColor: '#FBBF24', stepped: true }] 
             }, 
-            options: getChartOptions('#f97316', 'Temperatura') 
+            options: getChartOptions('#FBBF24', 'Temperatura') 
         });
 
     } catch (e) {
