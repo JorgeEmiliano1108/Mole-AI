@@ -224,10 +224,15 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
 
         # Map Supabase `role` claim into Django `is_staff` / `is_superuser` flags
         try:
+            from apps.authentication.infrastructure.logging_filters import get_anonymized_email, get_hashed_user_id
+            
             logger = logging.getLogger(__name__)
             resolved_role = (role or 'authenticated').lower()
-            # Log minimal auth info for audit (do not log token)
-            logger.info("auth: sub=%s email=%s role=%s", user_id, email, resolved_role)
+            
+            # Log minimal auth info with PII sanitizado (el filtro lo hace automáticamente, pero usamos helpers por claridad)
+            safe_email = get_anonymized_email(email)
+            safe_user_id = get_hashed_user_id(user_id)
+            logger.info("auth: sub=%s email=%s role=%s", safe_user_id, safe_email, resolved_role)
 
             # Promote to staff/superuser ONLY for explicitly privileged roles
             if resolved_role in ('superuser', 'superadmin', 'admin'):

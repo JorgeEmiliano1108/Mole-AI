@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/v1/', include([
         path('auth/', include('apps.authentication.urls')),
         path('ai/', include('apps.ai_models.urls')),
+        path('training/', include('apps.training_data.urls')),
         path('', include('apps.core.urls')),
         path('plants/', include('apps.plants.urls')),
     ])),

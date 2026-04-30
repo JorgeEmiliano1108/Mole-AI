@@ -3,10 +3,6 @@
  * Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
  * =============================================================================
  * mole_config.h — Compile-time constants for the Mole.AI OpenClaw node.
- *
- * IFT-016:       Default TX power only. No EIRP overrides in this firmware.
- * ETSI EN 303645: NTP required before any telemetry emission.
- * LFPDPPP:       Zero PII in flash. Device identity = Ed25519 pubkey.
  * =============================================================================
  */
 #pragma once

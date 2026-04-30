@@ -1,5 +1,5 @@
 # Edge Node — Mole.AI
-# Dependencies for the Store-and-Forward daemon and local MQTT subscriber
+# Dependencies for the Store-and-Forward daemon, Gateway, and local inference
 
 httpx>=0.26           # Async HTTP client for backend sync
 paho-mqtt>=2.0        # MQTT subscriber (legacy ESP32 nodes — backward compat)
@@ -8,3 +8,5 @@ python-dotenv>=1.0    # Load .env config
 tflite-runtime>=2.14  # TFLite inference (CNN pH regression)
 Pillow>=10.0          # Image preprocessing for CNN
 numpy>=1.24           # Array ops for TFLite input tensor
+asyncpg>=0.29         # Async PostgreSQL driver — Gateway pubkey DB lookup (Hallazgo #2)
+PyNaCl>=1.5           # Ed25519 signature verification

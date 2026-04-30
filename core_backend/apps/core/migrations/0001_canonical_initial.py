@@ -5,6 +5,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
 import pgvector.django.vector
+from pgvector.django import VectorExtension
 import uuid
 
 
@@ -17,6 +18,11 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # ── Paso 0: Activar la extensión pgvector en PostgreSQL ──────────────
+        # VectorExtension() es idempotente (equivale a CREATE EXTENSION IF NOT EXISTS vector).
+        # Debe ser la PRIMERA operación para que los VectorField() de las
+        # operaciones siguientes puedan referenciarse al tipo 'vector' de PG.
+        VectorExtension(),
         migrations.CreateModel(
             name='AIDiagnostic',
             fields=[

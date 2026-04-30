@@ -40,7 +40,8 @@ def train_rag_async(self, file_path, original_filename, content_type):
     try:
         with open(file_path, 'rb') as f:
             files = {'file': (original_filename, f, content_type)}
-            response = requests.post("http://fastapi_rag:8002/api/v1/train/", files=files, timeout=60)
+            # B2 FIX: hostname corregido de 'fastapi_rag' → 'ms2_chat'
+            response = requests.post("http://ms2_chat:8002/api/v1/knowledge/ingest-pdf", files=files, timeout=60)
             response.raise_for_status()
         
         if os.path.exists(file_path): os.remove(file_path)
@@ -116,46 +117,47 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
         logger.error(f"Vision Analysis Task Failed: {exc}")
         raise
 
-# CORRECCIÓN: Indentación alineada al nivel del módulo
+# B1 FIX: MS1 no tiene endpoint /train/. Usamos Redis Pub/Sub para
+# notificar al microservicio de visión que hay nuevos datasets disponibles.
+# MS1 ya escucha el canal 'mole:training:new_asset' de forma pasiva.
 @shared_task(bind=True, max_retries=3, name="train_vision_async")
 def train_vision_async(self, datasets_info):
     """
+    Emite un evento Redis Pub/Sub para que MS1 procese los datasets
+    de forma asíncrona (arquitectura event-driven — Fase 3 MLOps).
+
     datasets_info: list of dicts with 'path', 'name', 'type'
     """
-    file_objs = []
+    import json as _json
+    import redis as _redis
+    from django.conf import settings as _settings
+
     try:
-        files = []
+        r = _redis.from_url(_settings.CELERY_BROKER_URL)
+
         for info in datasets_info:
-            f = open(info['path'], 'rb')
-            file_objs.append(f)
-            files.append(('dataset', (info['name'], f, info['type'])))
-            
-        response = requests.post("http://ms1_vision:8001/api/v1/train/", files=files, timeout=60)
-        
-        for f in file_objs:
-            f.close()
-            
-        response.raise_for_status()
-        
-        # Éxito: limpiar
+            event_payload = _json.dumps({
+                "asset_type": "image",
+                "object_key": info['name'],
+                "bucket": getattr(_settings, 'TRAINING_BUCKET_NAME', 'mole-training-data'),
+                "content_type": info.get('type', 'application/zip'),
+                "source": "train_vision_async",
+            })
+            r.publish("mole:training:new_asset", event_payload)
+            logger.info("train_vision_async | Evento publicado para: %s", info['name'])
+
+        # Limpiar archivos locales tras la publicación exitosa
         for info in datasets_info:
             if os.path.exists(info['path']):
                 os.remove(info['path'])
-                
-        return "Vision Training started successfully"
-    except requests.exceptions.ConnectionError as exc:
-        for f in file_objs:
-            f.close()
-        try:
-            raise self.retry(exc=exc, countdown=2)
-        except MaxRetriesExceededError:
-            for info in datasets_info:
-                if os.path.exists(info['path']):
-                    os.remove(info['path'])
-            raise
+
+        return f"Vision training events published for {len(datasets_info)} dataset(s)"
+
+    except _redis.RedisError as exc:
+        logger.error("train_vision_async | Redis Pub/Sub falló: %s", exc)
+        raise self.retry(exc=exc, countdown=5)
     except Exception:
-        for f in file_objs:
-            f.close()
+        # Limpiar archivos en caso de error no recuperable
         for info in datasets_info:
             if os.path.exists(info['path']):
                 os.remove(info['path'])

@@ -1,7 +1,7 @@
 from app.domain.schemas import ChatRequest, ChatResponse
 from app.infrastructure.adapters.redis_sensor_cache_adapter import RedisSensorCacheAdapter
 from app.infrastructure.adapters.citation_manager import CitationManager
-from app.infrastructure.adapters.faiss_vector_store import FAISSVectorStore
+from app.infrastructure.adapters.pgvector_store import PgVectorStore
 from app.infrastructure.adapters.prompt_loader import load_prompt
 from app.infrastructure.adapters.llm_client import LLMClient
 from app.core.pii_sanitizer import PIISanitizer 
@@ -16,7 +16,7 @@ logger = logging.getLogger("ms2.chat_usecase")
 class MoleAIChatUseCase:
     def __init__(self):
         self.redis_adapter = RedisSensorCacheAdapter(os.getenv("REDIS_URL", "redis://redis:6379/0"))
-        self.vector_store = FAISSVectorStore()
+        self.vector_store = PgVectorStore()
         self.citation_manager = CitationManager()
         self.trefle_token = os.getenv("TREFLE_API_TOKEN", "")
         

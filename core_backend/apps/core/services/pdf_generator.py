@@ -52,7 +52,8 @@ logger = logging.getLogger(__name__)
 # ── LLM Summary (reuses FastAPI's loaded model — no local LLM in Django) ────
 _FASTAPI_LLM_URL = os.getenv(
     "FASTAPI_SUMMARY_URL",
-    "http://fastapi_rag:8002/api/v1/mole-ai/chat",
+    # B2 FIX: hostname corregido de 'fastapi_rag' → 'ms2_chat'
+    "http://ms2_chat:8002/api/v1/mole-ai/chat",
 )
 _MOLE_AI_API_KEY = os.getenv("MOLE_AI_API_KEY", "")
 
