@@ -29,6 +29,8 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "esp_timer.h"
+#include "esp_sleep.h"
 #include "nvs_flash.h"
 #include "driver/i2c_master.h"
 
@@ -50,6 +52,24 @@ static const char *TAG = "MOLE_MAIN";
 static EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED_EVENT = BIT0;
 const int WIFI_PROV_DONE_EVENT = BIT1;
+
+/* ── WiFi Asynchronous Reconnection Timer ────────────────────────────────── */
+static esp_timer_handle_t wifi_reconnect_timer;
+
+static void wifi_reconnect_cb(void* arg)
+{
+    ESP_LOGI(TAG, "Reconectando WiFi...");
+    esp_wifi_connect();
+}
+
+static void init_wifi_reconnect_timer(void)
+{
+    esp_timer_create_args_t reconnect_timer_args = {
+        .callback = &wifi_reconnect_cb,
+        .name = "wifi_reconnect"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&reconnect_timer_args, &wifi_reconnect_timer));
+}
 
 /* ── WiFi STA Event Handler ──────────────────────────────────────────────── */
 
@@ -83,9 +103,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT &&
                event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGW(TAG, "WiFi disconnected — reconnecting...");
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        esp_wifi_connect();
+        ESP_LOGW(TAG, "WiFi desconectado — programando reconexión en 5s...");
+        esp_timer_start_once(wifi_reconnect_timer, 5000000);
         xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_EVENT);
     } else if (event_base == IP_EVENT &&
                event_id == IP_EVENT_STA_GOT_IP) {
@@ -97,6 +116,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
 
 static void wifi_init_sta(void)
 {
+    init_wifi_reconnect_timer();
     wifi_event_group = xEventGroupCreate();
 
     esp_netif_create_default_wifi_sta();
@@ -145,10 +165,27 @@ static void wifi_init_sta(void)
 
 /* ── app_main — Firmware Entrypoint ──────────────────────────────────────── */
 
+/* ── Deep Sleep Survival Function ────────────────────────────────────────── */
+static void enter_deep_sleep(void) {
+    ESP_LOGI(TAG, "Preparando transición a Deep Sleep...");
+    esp_err_t err = esp_wifi_stop();
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Radio WiFi apagada correctamente.");
+    } else {
+        ESP_LOGW(TAG, "Fallo al apagar WiFi: %s", esp_err_to_name(err));
+    }
+    
+    // MOLE_DEEP_SLEEP_US comes from mole_config.h
+    esp_sleep_enable_timer_wakeup(MOLE_DEEP_SLEEP_US);
+    
+    ESP_LOGI(TAG, "Entrando en Deep Sleep. ¡Hasta luego!");
+    esp_deep_sleep_start();
+}
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "╔═══════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  Mole.AI OpenClaw Node v%s           ║", MOLE_FW_VERSION);
+    ESP_LOGI(TAG, "║  Mole.AI Node v%s           ║", MOLE_FW_VERSION);
     ESP_LOGI(TAG, "╚═══════════════════════════════════════════╝");
 
     /* ── 1. NVS (encrypted partition for Ed25519 keys) ───────────────── */
@@ -179,21 +216,21 @@ void app_main(void)
 
     /* ── 4. NTP Sync (ETSI EN 303 645 — Anti-Replay) ────────────────── */
     ESP_ERROR_CHECK(mole_ntp_init());
-    mole_ntp_wait_sync(10000);  /* Block up to 10s for valid clock */
-    ESP_LOGI(TAG, "[4/6] NTP synchronized");
-
-    /* ── 5. I2C Bus + Sensor Initialization ──────────────────────────── */
-    i2c_master_bus_handle_t i2c_bus = NULL;
-    i2c_master_bus_config_t bus_cfg = {
-        .i2c_port   = I2C_NUM_0,
-        .sda_io_num = CONFIG_MOLE_I2C_SDA,
-        .scl_io_num = CONFIG_MOLE_I2C_SCL,
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_cfg, &i2c_bus));
-
+    mole_ntp_wait_sync(10000);  /* Intento inicial de 10s */
+    
+    // Bloqueo estricto: No avanzar si el año es menor a 2026 (1900 + 126)
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    
+    while (timeinfo.tm_year < 126) {
+        ESP_LOGW(TAG, "NTP no sincronizado (Año: %d). Bloqueando inicio de OpenClaw...", 1900 + timeinfo.tm_year);
+        vTaskDelay(pdMS_TO_TICKS(5000)); // Espera asíncrona de 5s
+        time(&now);
+        localtime_r(&now, &timeinfo);
+    }
+    ESP_LOGI(TAG, "[4/6] NTP synchronized (Año verificado: %d)", 1900 + timeinfo.tm_year);
     /* [Fase 1] Escáner I2C Diagnóstico */
     ESP_LOGW(TAG, "=== INICIANDO ESCÁNER I2C ===");
     for (uint8_t addr = 1; addr < 128; addr++) {
@@ -227,6 +264,6 @@ void app_main(void)
     ESP_ERROR_CHECK(mole_openclaw_start(identity, dht20, ltr390, soil));
     ESP_LOGI(TAG, "[6/6] OpenClaw agent started");
 
-    ESP_LOGI(TAG, "All tasks launched. FreeRTOS scheduler active.");
-    /* app_main returns — FreeRTOS keeps tasks alive */
+    ESP_LOGI(TAG, "All tasks launched. Executing Deep Sleep transition.");
+    enter_deep_sleep();
 }

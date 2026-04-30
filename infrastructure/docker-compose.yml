@@ -40,6 +40,8 @@ services:
         condition: service_started
       mqtt_broker:
         condition: service_started
+      minio:
+        condition: service_started
     networks:
       - mole_public
       - mole_internal
@@ -49,7 +51,7 @@ services:
     build:
       context: ../core_backend
     container_name: django_celery_worker
-    entrypoint: [ "celery", "-A", "mole_ai_backend", "worker", "-l", "info" ]
+    entrypoint: [ "celery", "-A", "mole_ai_backend", "worker", "-l", "info", "-Q", "celery,training_queue" ]
     volumes:
       - ../core_backend:/app
     env_file:
@@ -58,6 +60,8 @@ services:
       db:
         condition: service_started
       redis:
+        condition: service_started
+      minio:
         condition: service_started
     networks:
       - mole_internal
@@ -76,6 +80,24 @@ services:
       db:
         condition: service_started
       redis:
+        condition: service_started
+    networks:
+      - mole_internal
+
+  # --- DJANGO MQTT LISTENER (Daemon) ---
+  django_mqtt_listener:
+    build:
+      context: ../core_backend
+    container_name: django_mqtt_listener
+    command: ["python", "manage.py", "mqtt_listener"]
+    volumes:
+      - ../core_backend:/app
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_started
+      mqtt_broker:
         condition: service_started
     networks:
       - mole_internal
@@ -120,9 +142,11 @@ services:
   minio:
     image: minio/minio:latest
     container_name: mole_ai_minio
-    command: server /data
+    command: server /data --console-address ":9001"
     expose:
       - "9000"
+    ports:
+      - "9001:9001"  # MinIO Console (dev only)
     volumes:
       - minio_data:/data
     env_file:
@@ -136,7 +160,7 @@ services:
       context: ../microservices/mole_vision
     container_name: ms1_vision
     volumes:
-      - ../microservices/mole_vision/models:/app/models:ro
+      - ../microservices/mole_vision/models:/app/models:rw
     expose:
       - "8001"
     env_file:
@@ -162,6 +186,7 @@ services:
     depends_on:
       - db
       - redis
+      - minio
     networks:
       - mole_internal
 

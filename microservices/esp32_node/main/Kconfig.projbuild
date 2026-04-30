@@ -1,11 +1,18 @@
 menu "Mole.AI Node Configuration"
 
-    config MOLE_GATEWAY_URI
-        string "OpenClaw Gateway WebSocket URI"
-        default "ws://192.168.1.100:18789/ws"
+    config MQTT_BROKER_URI
+        string "Mole.AI MQTT Broker URI"
+        default "mqtt://192.168.1.100:1883"
         help
-            WebSocket endpoint of the Edge Node OpenClaw gateway.
-            Format: ws://<edge_node_ip>:<port>/ws
+            MQTT endpoint of the Edge Node broker.
+            Format: mqtt://<edge_node_ip>:<port>
+
+    config HARDWARE_API_KEY
+        string "Mole.AI Hardware API Key"
+        default ""
+        help
+            API Key required for M2M authentication with Django backend.
+            This field is mandatory.
 
     config MOLE_I2C_SDA
         int "I2C SDA GPIO"

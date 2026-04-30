@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 from django.core.exceptions import ImproperlyConfigured
+import dj_database_url
 
 # 1. Configuración de Base y Entorno
 load_dotenv()
@@ -28,7 +29,8 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Fail-fast checks for production environment: ensure critical secrets present
 if not DEBUG:
-    required_in_prod = ['SECRET_KEY', 'HUGGINGFACE_API_KEY', 'SUPABASE_JWT_SECRET']
+    # C3 FIX: HARDWARE_API_KEY añadido — vacío = todos los nodos IoT rechazados (401)
+    required_in_prod = ['SECRET_KEY', 'HUGGINGFACE_API_KEY', 'SUPABASE_JWT_SECRET', 'HARDWARE_API_KEY']
     missing = [v for v in required_in_prod if not os.getenv(v)]
     # database requirement: accept either DATABASE_URL or classic SUPABASE_* set
     db_ok = bool(os.getenv('DATABASE_URL')) or (
@@ -53,7 +55,7 @@ def _split_env_list(var_name, default=None):
         return [x.strip() for x in (default or '').split(',') if x.strip()]
     return [x.strip() for x in raw.split(',') if x.strip()]
 
-ALLOWED_HOSTS = _split_env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django-backend']
 
 # 3. Definición de Aplicaciones
 INSTALLED_APPS = [
@@ -74,6 +76,7 @@ INSTALLED_APPS = [
     'apps.ai_models',
     'apps.authentication',
     'apps.plants',
+    'apps.training_data',
 ]
 
 MIDDLEWARE = [
@@ -88,6 +91,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
+    'mole_ai_backend.middleware.error_handling.GracefulDegradationMiddleware',
 ]
 
 ROOT_URLCONF = 'mole_ai_backend.urls'
@@ -111,23 +115,22 @@ ASGI_APPLICATION = 'mole_ai_backend.asgi.application'
 
 # 4. Bases de Datos
 if DEBUG:
+    # En desarrollo local: usamos SQLite o DATABASE_URL si está disponible
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+        'default': dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
 else:
+    # En producción (Docker/Supabase): exigimos DATABASE_URL con fallback local seguro
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('SUPABASE_DB_NAME'),
-            'USER': os.getenv('SUPABASE_DB_USER'),
-            'PASSWORD': os.getenv('SUPABASE_DB_PASSWORD'),
-            'HOST': os.getenv('SUPABASE_DB_HOST'),
-            'PORT': os.getenv('SUPABASE_DB_PORT', '5432'),
-            'OPTIONS': {'sslmode': os.getenv('PG_SSL_MODE', 'require')},
-        }
+        'default': dj_database_url.config(
+            default=os.getenv('DATABASE_URL', f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
 
 # 5. Autenticación y Modelos de Usuario
@@ -198,19 +201,39 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = 'media/'
 
-if os.getenv('SUPABASE_S3_BUCKET'):
+# ── Object Storage (MinIO local / AWS S3 producción) ──────────────────────
+# USE_S3=True  → django-storages S3Boto3 backend (MinIO o AWS)
+# USE_S3=False → local filesystem (MEDIA_ROOT)
+USE_S3 = os.getenv('USE_S3', 'True').lower() == 'true'
+
+if USE_S3:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    AWS_ACCESS_KEY_ID = os.getenv('SUPABASE_S3_ACCESS_KEY')
-    AWS_SECRET_ACCESS_KEY = os.getenv('SUPABASE_S3_SECRET_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.getenv('SUPABASE_S3_BUCKET')
-    AWS_S3_ENDPOINT_URL = os.getenv('SUPABASE_S3_ENDPOINT')
-    AWS_S3_REGION_NAME = os.getenv('SUPABASE_S3_REGION', 'us-east-1')
+    # En dev/Docker: fallback a MINIO_ROOT_USER/PASSWORD
+    # En producción AWS: usar AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY directas
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', os.getenv('MINIO_ROOT_USER'))
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', os.getenv('MINIO_ROOT_PASSWORD'))
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'mole-training-data')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL', 'http://mole_ai_minio:9000')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_DEFAULT_ACL = 'private'
+    AWS_QUERYSTRING_AUTH = True  # Presigned URLs siempre autenticadas
+    AWS_S3_ADDRESSING_STYLE = 'path'  # Requerido para MinIO
+
+# Training data bucket (compartido por documents/ e images/)
+TRAINING_BUCKET_NAME = os.getenv('TRAINING_BUCKET_NAME', 'mole-training-data')
+TRAINING_MAX_PDF_SIZE = 50 * 1024 * 1024   # 50 MB
+TRAINING_MAX_IMAGE_SIZE = 200 * 1024 * 1024  # 200 MB
+TRAINING_PRESIGNED_TTL = 900  # 15 minutos
 
 # 10. IA & Inter-Service (Mole-AI)
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
-MOLE_AI_SERVICE_URL = os.getenv('FASTAPI_URL') # Recomendado: http://ms2_chat:8002
+# B2/C1 FIX: Default explícito al container_name real; variable legacy 'FASTAPI_URL' como override
+MOLE_AI_SERVICE_URL = os.getenv('FASTAPI_URL', 'http://ms2_chat:8002')
 MOLE_AI_TIMEOUT = int(os.getenv('MOLE_AI_TIMEOUT', '120'))
 MOLE_AI_API_KEY = os.getenv('MOLE_AI_API_KEY')
+# C3 FIX: Sin default vacío — si no está definida, la autenticación IoT falla silenciosamente
 HARDWARE_API_KEY = os.getenv('HARDWARE_API_KEY', '')
 
 VISION_MODEL_NAME = os.getenv('VISION_MODEL_NAME', 'deepseek-ai/deepseek-vl2-tiny')
@@ -247,12 +270,63 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# 12. Logging y Mimetypes
+# 12. Logging con PII Filter (LFPDPPP / NOM-059 Compliance)
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'root': {'handlers': ['console'], 'level': 'INFO'},
+    'filters': {
+        'pii_filter': {
+            '()': 'apps.authentication.infrastructure.logging_filters.PIIFilter',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} [{levelname}] {name} — {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} — {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'filters': ['pii_filter'],
+        },
+        'file': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'mole_ai.log',
+            'when': 'midnight',
+            'interval': 1,
+            'backupCount': 15,  # Retención de 15 días
+            'encoding': 'utf-8',
+            'formatter': 'verbose',
+            'filters': ['pii_filter'],
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'apps.authentication': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.plants': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
 }
 
 import mimetypes
@@ -279,6 +353,14 @@ CELERY_TASK_ROUTES = {
     
     # Tareas de Reportes y MLOps (MS3) - Asignamos a una cola dedicada
     'apps.core.tasks.generate_master_report_task': {'queue': 'reports_queue'},
+    'apps.core.tasks.generate_pdf_async': {'queue': 'reports_queue'},
+    
+    # Tareas de Training Data Pipeline (Fase 3 - MLOps)
+    'apps.training_data.tasks.notify_training_asset': {'queue': 'training_queue'},
+    'apps.training_data.tasks.update_training_status': {'queue': 'training_queue'},
+
+    # Chat RAG async (Fase 2 - cola dedicada para aislar latencia LLM)
+    'apps.core.tasks.chat_async': {'queue': 'chat_queue'},
 }
 
 WHITENOISE_MANIFEST_STRICT = False

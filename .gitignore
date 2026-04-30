@@ -431,3 +431,7 @@ cypress/screenshots/
 !pyrightconfig.json
 !README.md
 !LICENSE
+audit.md
+skills-docs.md
+correr-esp32.md
+skills-main/

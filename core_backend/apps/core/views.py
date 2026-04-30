@@ -185,7 +185,7 @@ def diagnostic_view(request):
 @permission_classes([IsAuthenticated])
 def diagnostic_history_view(request):
     limit = int(request.GET.get('limit', 20))
-    diagnostics = AIDiagnostic.objects.filter(user=request.user).order_by('-analyzed_at')[:limit]
+    diagnostics = AIDiagnostic.objects.select_related('user').filter(user=request.user).order_by('-analyzed_at')[:limit]
     data = [{
         'id': str(d.id), 
         'plant_id': d.plant_id, 
@@ -197,27 +197,38 @@ def diagnostic_history_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def download_diagnostic_pdf(request, id):
-    try:
-        from apps.core.services.pdf_generator import generate_diagnostic_pdf
-        pdf_bytes = generate_diagnostic_pdf(id)
-        response = HttpResponse(pdf_bytes, content_type="application/pdf")
-        response["Content-Disposition"] = f'attachment; filename="diagnostico_{id}.pdf"'
-        return response
-    except Exception as e:
-        return Response({"error": str(e)}, status=500)
+    """
+    GET /api/v1/diagnostics/{id}/download/
+    Dispatches PDF generation to Celery (reports_queue).
+    Returns 202 with task_id — frontend polls /api/v1/tasks/status/{task_id}/
+    for the presigned download URL.
+    """
+    from apps.core.tasks import generate_pdf_async
+
+    task = generate_pdf_async.delay(
+        diagnostic_id=str(id),
+        user_id=request.user.id,
+    )
+
+    return Response({
+        "status": "processing",
+        "task_id": task.id,
+        "message": "PDF en generación. Consulta el estado en poll_url.",
+        "poll_url": f"/api/v1/tasks/status/{task.id}/",
+    }, status=202)
 
 # --- MAPAS Y HOTSPOTS ---
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def map_hotspots_view(request):
-    qs = DiagnosticoGeolocalizado.objects.all()[:100]
+    qs = DiagnosticoGeolocalizado.objects.select_related('user', 'diagnostic').all()[:100]
     results = [{'lat': r.latitude, 'lng': r.longitude, 'severity': r.severity} for r in qs]
     return Response({'hotspots': results})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def diagnosticos_geolocalizados_list(request):
-    qs = DiagnosticoGeolocalizado.objects.filter(user=request.user)[:50]
+    qs = DiagnosticoGeolocalizado.objects.select_related('user', 'diagnostic').filter(user=request.user)[:50]
     return Response({'results': [{'id': r.id, 'condition': r.condition_name} for r in qs]})
 
 @api_view(['POST'])
@@ -230,19 +241,33 @@ def diagnosticos_geolocalizados_create(request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([LLMChatThrottle])
 def chat_fallback_view(request):
+    """
+    POST /api/v1/chat/fallback/
+    Dispatches RAG chat to Celery (chat_queue).
+    Returns 202 with task_id — frontend polls /api/v1/tasks/status/{task_id}/
+    for the chat answer.
+    """
     if MoleAIClient is None:
         return Response({'error': 'AI client not available'}, status=500)
-    try:
-        question = cast(str, request.data.get('question', '')).strip()
-        client = MoleAIClient()
-        result = async_to_sync(client.generate_chat_response)(
-            query=question,
-            user_id=request.user.id,
-            session_id=request.session.session_key or "anon"
-        )
-        return Response({"answer": result.get('answer'), "disclaimer": result.get('disclaimer')})
-    except Exception as e:
-        return Response({'error': str(e)}, status=500)
+
+    question = cast(str, request.data.get('question', '')).strip()
+    if not question:
+        return Response({'error': 'La pregunta no puede estar vacía.'}, status=400)
+
+    from apps.core.tasks import chat_async
+
+    task = chat_async.delay(
+        question=question,
+        user_id=request.user.id,
+        session_id=request.session.session_key or "anon",
+    )
+
+    return Response({
+        "status": "processing",
+        "task_id": task.id,
+        "message": "Consulta en proceso. Consulta el estado en poll_url.",
+        "poll_url": f"/api/v1/tasks/status/{task.id}/",
+    }, status=202)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -254,6 +279,50 @@ def chat_history_view(request):
 @permission_classes([IsAuthenticated])
 def llm_chat_view(request):
     return Response({"response": "Chat básico activo"})
+
+# --- POLLING GENÉRICO DE TAREAS ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def task_status_view(request, task_id):
+    """
+    GET /api/v1/tasks/status/{task_id}/
+
+    Unified polling endpoint for all async Celery operations.
+    Returns the task state and result on completion.
+
+    States:
+      - PENDING:  Task received but not yet started
+      - STARTED:  Worker picked up the task
+      - SUCCESS:  Completed — result is in the response
+      - FAILURE:  Failed — error info is in the response
+      - RETRY:    Retrying after a transient failure
+    """
+    from celery.result import AsyncResult
+
+    try:
+        task = AsyncResult(task_id)
+        state = task.state
+
+        response_data = {
+            "task_id": task_id,
+            "state": state,
+        }
+
+        if state == "SUCCESS":
+            response_data["result"] = task.result
+        elif state == "FAILURE":
+            response_data["error"] = str(task.result) if task.result else "Unknown error"
+        elif state == "RETRY":
+            response_data["info"] = str(task.info) if task.info else "Retrying..."
+
+        return Response(response_data)
+
+    except Exception as exc:
+        return Response(
+            {"error": "Task status fetch failed", "details": str(exc)},
+            status=500,
+        )
+
 
 # --- SISTEMA E HISTORIAL ---
 @api_view(['GET'])

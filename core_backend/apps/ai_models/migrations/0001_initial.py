@@ -3,6 +3,8 @@
 import django.db.models.deletion
 from django.conf import settings
 from django.db import migrations, models
+from pgvector.django import VectorExtension
+import pgvector.django.vector
 
 
 class Migration(migrations.Migration):
@@ -14,6 +16,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # ── Paso 0: Activar la extensión pgvector en PostgreSQL ──────────────
+        # Idempotente: CREATE EXTENSION IF NOT EXISTS vector
+        # Debe preceder a cualquier VectorField en el schema.
+        VectorExtension(),
         migrations.CreateModel(
             name="AIModelConfiguration",
             fields=[
@@ -146,8 +152,8 @@ class Migration(migrations.Migration):
                 ("predictions", models.JSONField(default=list)),
                 ("confidence_scores", models.JSONField(default=list)),
                 ("top_prediction", models.JSONField(default=dict)),
-                ("features_vector", models.TextField(blank=True, null=True)),
-                ("embedding_vector", models.TextField(blank=True, null=True)),
+                ("features_vector", pgvector.django.vector.VectorField(blank=True, dimensions=512, null=True)),
+                ("embedding_vector", pgvector.django.vector.VectorField(blank=True, dimensions=1536, null=True)),
                 ("inference_time_ms", models.IntegerField()),
                 ("memory_usage_mb", models.FloatField(blank=True, null=True)),
                 (

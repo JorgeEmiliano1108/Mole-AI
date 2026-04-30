@@ -38,4 +38,7 @@ urlpatterns = [
     path('fichas/', views.fichas_public_view, name='fichas_public'),
     path('history/', views.consolidated_history_view, name='consolidated_history'),
     path('feedback/', views.feedback_create_view, name='feedback_create'),
+
+    # Polling genérico de tareas asíncronas (Fase 2)
+    path('tasks/status/<str:task_id>/', views.task_status_view, name='task_status'),
 ]

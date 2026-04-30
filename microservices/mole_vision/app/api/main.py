@@ -1,10 +1,13 @@
 """
 API Layer - Main Entry Point
 Skill 01: Arquitectura Hexagonal - FastAPI App
+Fase 3: MLOps Pipeline Integration (Vision Listener)
 """
+import asyncio
 import os
 import logging
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
@@ -28,12 +31,67 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
+slogger = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI lifespan: manages startup and shutdown of the vision service.
+
+    Startup:
+      1. Pre-load the TFLite vision model (inference)
+      2. Start the Vision Training Listener (Redis Pub/Sub → fine-tuning)
+
+    Shutdown:
+      1. Cancel the listener task
+      2. Shutdown the ProcessPoolExecutor
+    """
+    slogger.info("service_starting", service=settings.SERVICE_NAME)
+
+    # ── Startup: Pre-load vision model ───────────────────────────────
+    try:
+        from app.infrastructure.adapters.tflite_adapter import TFLiteVisionAdapter
+        adapter = TFLiteVisionAdapter()
+        slogger.info("vision_model_loaded", ready=adapter.is_ready())
+    except Exception as e:
+        slogger.error("vision_model_load_failed", error=str(e))
+
+    # ── Startup: Launch Vision Training Listener ─────────────────────
+    listener_task = None
+    try:
+        from app.infrastructure.adapters.vision_listener import start_vision_listener
+        listener_task = await start_vision_listener()
+        slogger.info("vision_training_listener_started")
+    except Exception as e:
+        slogger.error("vision_listener_start_failed", error=str(e))
+
+    yield
+
+    # ── Shutdown: Cancel listener ────────────────────────────────────
+    if listener_task and not listener_task.done():
+        listener_task.cancel()
+        try:
+            await listener_task
+        except asyncio.CancelledError:
+            pass
+        slogger.info("vision_training_listener_stopped")
+
+    # ── Shutdown: Cleanup ProcessPoolExecutor ─────────────────────────
+    try:
+        from app.infrastructure.adapters.vision_listener import _training_executor
+        _training_executor.shutdown(wait=False)
+        slogger.info("training_executor_shutdown")
+    except Exception:
+        pass
+
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Mole-Vision API",
-        description="Vision CNN Service with Zero-Trust Security",
-        version="2.0.0",
+        description="Vision CNN Service with Zero-Trust Security & MLOps Pipeline",
+        version="2.1.0",
+        lifespan=lifespan,
     )
     
     app.include_router(router)
@@ -50,20 +108,6 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["accept", "authorization", "content-type", "x-csrftoken", "x-requested-with"],
     )
-    
-    @app.on_event("startup")
-    async def startup_event():
-        """Inicializar recursos al startup."""
-        logger = structlog.get_logger()
-        logger.info("service_starting", service=settings.SERVICE_NAME)
-        
-        # Pre-cargar el modelo de visión
-        try:
-            from app.infrastructure.adapters.tflite_adapter import TFLiteVisionAdapter
-            adapter = TFLiteVisionAdapter()
-            logger.info("vision_model_loaded", ready=adapter.is_ready())
-        except Exception as e:
-            logger.error("vision_model_load_failed", error=str(e))
     
     @app.get("/config")
     def config() -> dict:

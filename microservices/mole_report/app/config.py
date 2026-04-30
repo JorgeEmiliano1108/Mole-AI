@@ -4,7 +4,8 @@ import os
 class Settings:
     HOST: str = os.getenv("MS3_HOST", "0.0.0.0")
     PORT: int = int(os.getenv("MS3_PORT", "8003"))
-    REDIS_URL: str = os.getenv("MS3_REDIS_URL", "redis://redis:6379")
+    # B3 FIX: hostname corregido al container_name real de Docker
+    REDIS_URL: str = os.getenv("MS3_REDIS_URL", "redis://mole_ai_redis:6379")
     S3_ENDPOINT: str = os.getenv("MS3_S3_ENDPOINT")
     S3_ACCESS_KEY: str = os.getenv("MS3_S3_ACCESS_KEY")
     S3_SECRET_KEY: str = os.getenv("MS3_S3_SECRET_KEY")

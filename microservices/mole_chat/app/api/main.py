@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.api.routers import router
+import asyncio
 import logging
 import os
 
@@ -9,8 +10,33 @@ import os
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO)
     logging.info("MS-2 RAG+CAG Service (mole_chat) iniciado.")
+
+    # ── Startup: Launch RAG training listener (non-blocking) ─────────
+    rag_listener_task = None
+    try:
+        from app.infrastructure.adapters.rag_listener import start_rag_listener
+        rag_listener_task = await start_rag_listener()
+        logging.info("RAG Training Listener iniciado como asyncio.Task")
+    except Exception as e:
+        logging.error(f"Error iniciando RAG Listener: {e}")
+
     yield
-    # Lógica de apagado iría aquí si fuera necesaria
+
+    # ── Shutdown: Cancel listener + close pgvector pool ──────────────
+    if rag_listener_task and not rag_listener_task.done():
+        rag_listener_task.cancel()
+        try:
+            await rag_listener_task
+        except asyncio.CancelledError:
+            pass
+        logging.info("RAG Training Listener detenido.")
+
+    try:
+        from app.infrastructure.adapters.pgvector_store import PgVectorStore
+        store = PgVectorStore()
+        await store.close()
+    except Exception:
+        pass
 
 app = FastAPI(title="MS-2 RAG+CAG Service", version="1.0", lifespan=lifespan)
 
