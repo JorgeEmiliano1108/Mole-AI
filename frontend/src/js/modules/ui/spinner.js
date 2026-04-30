@@ -40,7 +40,7 @@ export class SpinnerService {
         btn.appendChild(spanLoading);
 
         const spinnerEl = document.createElement('span');
-        spinnerEl.className = 'inline-block w-4 h-4 ml-2 border-2 border-t-transparent border-[#00ffaa] rounded-full animate-spin';
+        spinnerEl.className = 'inline-block w-4 h-4 ml-2 border-2 border-t-transparent border-[#00e5ff] rounded-full animate-spin';
         btn.appendChild(spinnerEl);
     }
 
@@ -82,12 +82,12 @@ export class SpinnerService {
 
             // Spinner circle
             const spinnerDiv = document.createElement('div');
-            spinnerDiv.className = 'w-16 h-16 border-4 border-[#00ffaa]/20 border-t-[#00ffaa] rounded-full animate-spin';
+            spinnerDiv.className = 'w-16 h-16 border-4 border-[#00e5ff]/20 border-t-[#00e5ff] rounded-full animate-spin';
             overlay.appendChild(spinnerDiv);
 
             // Loading text
             const textDiv = document.createElement('div');
-            textDiv.className = 'mt-4 text-[#00ffaa] font-mono tracking-widest animate-pulse';
+            textDiv.className = 'mt-4 text-[#00e5ff] font-mono tracking-widest animate-pulse';
             textDiv.textContent = '> SINCRONIZANDO...';
             overlay.appendChild(textDiv);
 

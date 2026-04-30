@@ -25,11 +25,11 @@ export function switchHistoryTab(tab) {
     const btnFav = document.getElementById('tab-favorites');
     
     if (tab === 'history') {
-        if(btnHist) btnHist.className = "text-[#00ffaa] border-b-2 border-[#00ffaa] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
-        if(btnFav) btnFav.className = "text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnHist) btnHist.className = "text-[#00e5ff] border-b-2 border-[#00e5ff] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnFav) btnFav.className = "text-[#00e5ff]/40 hover:text-[#00e5ff] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
     } else {
-        if(btnFav) btnFav.className = "text-[#f97316] border-b-2 border-[#f97316] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
-        if(btnHist) btnHist.className = "text-[#00ffaa]/40 hover:text-[#00ffaa] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnFav) btnFav.className = "text-[#FBBF24] border-b-2 border-[#FBBF24] px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
+        if(btnHist) btnHist.className = "text-[#00e5ff]/40 hover:text-[#00e5ff] border-b-2 border-transparent px-2 py-1 text-xs md:text-sm font-bold tracking-widest transition-all";
     }
     
     fetchAndRenderHuerto(tab);
@@ -43,7 +43,7 @@ async function fetchAndRenderHuerto(tab) {
     if(!container) return;
 
     container.textContent = '';
-    const syncing = createNode('div', 'text-center text-[#00ffaa] animate-pulse mt-10 text-xs tracking-widest', '> SINCRONIZANDO CON BASE DE DATOS CENTRAL...');
+    const syncing = createNode('div', 'text-center text-[#00e5ff] animate-pulse mt-10 text-xs tracking-widest', '> SINCRONIZANDO CON BASE DE DATOS CENTRAL...');
     container.appendChild(syncing);
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
@@ -57,8 +57,8 @@ async function fetchAndRenderHuerto(tab) {
         // 🚀 PETICIÓN AL SERVIDOR (HISTORIAL O FAVORITOS)
         // ========================================================
         const endpoint = tab === 'history' 
-            ? `${window.AppConfig.API_BASE_URL}/users/${currentUser}/history`
-            : `${window.AppConfig.API_BASE_URL}/users/${currentUser}/favorites`;
+            ? `${window.AppConfig.API_BASE_URL}/users/${currentUser}/history/`
+            : `${window.AppConfig.API_BASE_URL}/users/${currentUser}/favorites/`;
 
         const response = await fetch(endpoint, {
             method: 'GET',
@@ -91,8 +91,8 @@ async function fetchAndRenderHuerto(tab) {
 
     // Arreglo de clases de Tailwind
     const themeClasses = tab === 'history' 
-        ? { border: 'border-[#00ffaa]/30', bgHover: 'hover:bg-[#00ffaa]/10', text: 'text-[#00ffaa]' }
-        : { border: 'border-[#f97316]/30', bgHover: 'hover:bg-[#f97316]/10', text: 'text-[#f97316]' };
+        ? { border: 'border-[#00e5ff]/30', bgHover: 'hover:bg-[#00e5ff]/10', text: 'text-[#00e5ff]' }
+        : { border: 'border-[#FBBF24]/30', bgHover: 'hover:bg-[#FBBF24]/10', text: 'text-[#FBBF24]' };
 
     container.textContent = '';
     dataToRender.forEach(item => {
@@ -105,7 +105,7 @@ async function fetchAndRenderHuerto(tab) {
         const title = createNode('h3', `${themeClasses.text} font-bold mt-1 text-sm md:text-base uppercase`, item.species || 'Sin nombre');
         left.appendChild(title);
 
-        const statusClass = (item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00ffaa]' : 'text-red-400';
+        const statusClass = (item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00e5ff]' : 'text-red-400';
         const statusP = createNode('p', 'text-xs text-white/80', `Estado: `);
         const statusSpan = createNode('span', statusClass, item.status || 'Desconocido');
         statusP.appendChild(statusSpan);
@@ -151,7 +151,7 @@ async function saveToFavorites(event) {
         // ========================================================
         // 🚀 ENVIAR FAVORITO AL SERVIDOR
         // ========================================================
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/favorites/save`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/favorites/save/`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ async function saveToFavorites(event) {
         if (!response.ok) throw new Error("Rechazado por el servidor");
 
         btn.innerText = "[ GUARDADO EN FAVORITOS ]";
-        btn.classList.remove('animate-pulse', 'border-[#f97316]', 'text-[#f97316]', 'hover:bg-[#f97316]');
+        btn.classList.remove('animate-pulse', 'border-[#FBBF24]', 'text-[#FBBF24]', 'hover:bg-[#FBBF24]');
         btn.classList.add('border-green-500', 'text-green-500', 'hover:bg-green-500', 'cursor-not-allowed');
         btn.disabled = true; // Evitar multiples clicks
         

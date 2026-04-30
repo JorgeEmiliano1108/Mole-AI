@@ -9,8 +9,7 @@
 </head>
 <body class="bg-mole-base text-mole-cyan font-mono min-h-screen overflow-x-hidden relative">
 
-    <!-- Scanline Overlay -->
-    <div class="pointer-events-none fixed inset-0 z-50 opacity-[0.03]" style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,255,0.08) 2px, rgba(0,229,255,0.08) 4px);"></div>
+
 
     <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
 
@@ -28,15 +27,15 @@
                 </div>
             </div>
             <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                <button data-action="admin:create-operator" class="flex-1 md:flex-none border border-mole-border bg-mole-base text-mole-dim px-3 py-2 rounded hover:border-mole-cyan/40 hover:text-mole-cyan font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5">
+                <button data-action="admin:create-operator" class="flex-1 md:flex-none border border-mole-border bg-mole-base text-mole-dim px-3 py-2 rounded hover:border-mole-cyan/40 hover:text-mole-cyan font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-mole-cyan">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
                     CREAR OPERADOR
                 </button>
-                <button data-action="admin:add-plant" class="flex-1 md:flex-none border border-mole-border bg-mole-base text-mole-dim px-3 py-2 rounded hover:border-mole-green/40 hover:text-mole-green font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5">
+                <button data-action="admin:add-plant" class="flex-1 md:flex-none border border-mole-border bg-mole-base text-mole-dim px-3 py-2 rounded hover:border-mole-green/40 hover:text-mole-green font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-mole-green">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
                     REGISTRAR FLORA
                 </button>
-                <button data-action="nav:logout" class="flex-1 md:flex-none border border-mole-red/30 bg-mole-red/5 text-mole-red px-3 py-2 rounded hover:bg-mole-red/10 font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5">
+                <button data-action="nav:logout" class="flex-1 md:flex-none border border-mole-red/30 bg-mole-red/5 text-mole-red px-3 py-2 rounded hover:bg-mole-red/10 font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-mole-red">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                     DESCONECTAR
                 </button>
@@ -61,10 +60,10 @@
 
                     <div class="mb-5">
                         <label class="block text-[10px] font-bold text-mole-dim uppercase tracking-widest mb-2">Seleccionar Documentos</label>
-                        <input type="file" id="mlops-rag-file" accept=".pdf,.txt" class="block w-full text-[11px] text-mole-dim file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-mole-border file:text-[10px] file:font-bold file:bg-mole-surface file:text-mole-cyan hover:file:bg-mole-cyan/10 hover:file:border-mole-cyan/30 transition-colors bg-mole-base border border-mole-border rounded cursor-pointer font-mono">
+                        <input type="file" id="mlops-rag-file" accept=".pdf,.txt" class="block w-full text-[11px] text-mole-dim file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-mole-border file:text-[10px] file:font-bold file:bg-mole-surface file:text-mole-cyan hover:file:bg-mole-cyan/10 hover:file:border-mole-cyan/30 transition-colors bg-mole-base border border-mole-border rounded cursor-pointer font-mono focus:outline-none focus:ring-2 focus:ring-mole-cyan">
                     </div>
 
-                    <button data-action="mlops:train-rag" id="btn-train-rag" class="w-full border border-mole-cyan text-mole-cyan py-2.5 rounded font-bold tracking-widest text-[11px] hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber flex justify-center items-center gap-2">
+                    <button data-action="mlops:train-rag" id="btn-train-rag" class="w-full border border-mole-cyan text-mole-cyan py-2.5 rounded font-bold tracking-widest text-[11px] hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber flex justify-center items-center gap-2 focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                         INGESTAR EN VECTOR DB
                     </button>
@@ -77,10 +76,10 @@
 
                     <div class="mb-5 flex-1">
                         <label class="block text-[10px] font-bold text-mole-dim uppercase tracking-widest mb-2">Dataset de Entrenamiento (ZIP)</label>
-                        <input type="file" id="mlops-cnn-file" accept=".zip,image/*" multiple class="block w-full text-[11px] text-mole-dim file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-mole-border file:text-[10px] file:font-bold file:bg-mole-surface file:text-mole-cyan hover:file:bg-mole-cyan/10 hover:file:border-mole-cyan/30 transition-colors bg-mole-base border border-mole-border rounded cursor-pointer font-mono">
+                        <input type="file" id="mlops-cnn-file" accept=".zip" class="block w-full text-[11px] text-mole-dim file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-mole-border file:text-[10px] file:font-bold file:bg-mole-surface file:text-mole-cyan hover:file:bg-mole-cyan/10 hover:file:border-mole-cyan/30 transition-colors bg-mole-base border border-mole-border rounded cursor-pointer font-mono focus:outline-none focus:ring-2 focus:ring-mole-green">
                     </div>
 
-                    <button data-action="mlops:train-cnn" id="btn-train-cnn" class="w-full border border-mole-green text-mole-green py-2.5 rounded font-bold tracking-widest text-[11px] hover:bg-mole-green hover:text-mole-base transition-all mb-5 flex justify-center items-center gap-2">
+                    <button data-action="mlops:train-cnn" id="btn-train-cnn" class="w-full border border-mole-green text-mole-green py-2.5 rounded font-bold tracking-widest text-[11px] hover:bg-mole-green hover:text-mole-base transition-all mb-5 flex justify-center items-center gap-2 focus:outline-none focus:ring-2 focus:ring-mole-green focus:ring-offset-2 focus:ring-offset-mole-base">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                         INICIAR FINE-TUNING
                     </button>
@@ -97,7 +96,7 @@
         </div>
     </main>
 
-    <button id="return-override-btn" data-action="nav:return-override" class="hidden fixed bottom-5 left-5 z-50 border border-mole-red/50 bg-mole-red/10 text-mole-red px-4 py-2.5 rounded hover:bg-mole-red/20 font-bold tracking-widest transition-all text-[11px] flex items-center gap-2 shadow-cyber">
+    <button id="return-override-btn" data-action="nav:return-override" class="hidden fixed bottom-5 left-5 z-50 border border-mole-red/50 bg-mole-red/10 text-mole-red px-4 py-2.5 rounded hover:bg-mole-red/20 font-bold tracking-widest transition-all text-[11px] flex items-center gap-2 shadow-cyber focus:outline-none focus:ring-2 focus:ring-mole-red focus:ring-offset-2 focus:ring-offset-mole-base">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
         SALIR OVERRIDE
     </button>

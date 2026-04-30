@@ -48,8 +48,8 @@ async function downloadReportPDF(reportId, btnElement) {
 
         // Feedback visual de éxito (Se pone verde)
         btnElement.innerText = "[ ÉXITO ]";
-        btnElement.classList.replace('text-[#00e5ff]', 'text-[#00ffaa]');
-        btnElement.classList.replace('border-[#00e5ff]', 'border-[#00ffaa]');
+        btnElement.classList.replace('text-[#00e5ff]', 'text-[#00e5ff]');
+        btnElement.classList.replace('border-[#00e5ff]', 'border-[#00e5ff]');
 
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Fallo en descarga de reporte:", error);
@@ -66,8 +66,8 @@ async function downloadReportPDF(reportId, btnElement) {
             btnElement.classList.remove('animate-pulse', 'bg-[#00e5ff]/20', 'cursor-not-allowed');
             
             // Restauramos los colores originales por si cambiaron a verde o rojo
-            btnElement.classList.replace('text-[#00ffaa]', 'text-[#00e5ff]');
-            btnElement.classList.replace('border-[#00ffaa]', 'border-[#00e5ff]');
+            btnElement.classList.replace('text-[#00e5ff]', 'text-[#00e5ff]');
+            btnElement.classList.replace('border-[#00e5ff]', 'border-[#00e5ff]');
             btnElement.classList.replace('text-red-500', 'text-[#00e5ff]');
             btnElement.classList.replace('border-red-500', 'border-[#00e5ff]');
             

@@ -9,8 +9,7 @@
 </head>
 <body class="bg-mole-base text-mole-cyan font-mono min-h-screen relative overflow-x-hidden">
 
-    <!-- Scanline Overlay -->
-    <div class="pointer-events-none fixed inset-0 z-50 opacity-[0.03]" style="background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,229,255,0.08) 2px, rgba(0,229,255,0.08) 4px);"></div>
+
 
     <div id="intro-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-8">
         <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
@@ -33,22 +32,22 @@
                     <div class="w-full h-px bg-gradient-to-r from-mole-cyan/40 via-mole-border to-transparent mb-8"></div>
 
                     <nav class="flex flex-col gap-3">
-                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group">
+                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
                             <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Objetivo del Sistema</span>
                             <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
                         </button>
-                        <button id="btn-vision" data-action="type:vision" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group">
+                        <button id="btn-vision" data-action="type:vision" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
                             <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Visión y Diagnóstico IA</span>
                             <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
                         </button>
-                        <button id="btn-flora" data-action="type:flora" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group">
+                        <button id="btn-flora" data-action="type:flora" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
                             <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Protección de Flora Mexicana</span>
                             <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
                         </button>
                     </nav>
                 </div>
 
-                <button data-action="system:start" class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group">
+                <button data-action="system:start" class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
                     Iniciar Sistema
                     <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                 </button>

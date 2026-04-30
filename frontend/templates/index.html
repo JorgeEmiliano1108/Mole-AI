@@ -21,7 +21,7 @@
         .tv-off { animation: tvOff 0.25s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
     </style>
 </head>
-<body class="bg-black text-[#00ffaa] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
+<body class="bg-black text-[#00e5ff] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
     <div class="scanline"></div>
 
     <div id="toast-container" aria-live="polite" aria-label="Notificaciones del sistema"></div>
@@ -29,40 +29,40 @@
 
     <div id="intro-screen" class="fixed inset-0 bg-black z-40 flex items-center justify-center p-4 md:p-10 overflow-y-auto">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 w-full max-w-6xl h-auto md:h-full md:max-h-[650px] my-auto">
-            <div class="border-2 border-[#00ffaa] p-6 md:p-10 flex flex-col justify-between relative bg-black shadow-[0_0_20px_rgba(0,255,170,0.1)]">
+            <div class="border-2 border-[#00e5ff] p-6 md:p-10 flex flex-col justify-between relative bg-black shadow-[0_0_20px_rgba(0,255,170,0.1)]">
                 <div>
-                    <h1 class="text-5xl md:text-7xl font-bold mb-2 tracking-wider text-[#00ffaa] drop-shadow-[0_0_15px_rgba(0,255,170,0.5)]">MoleAI</h1>
+                    <h1 class="text-5xl md:text-7xl font-bold mb-2 tracking-wider text-[#00e5ff] drop-shadow-[0_0_15px_rgba(0,255,170,0.5)]">MoleAI</h1>
                     <h2 class="text-sm md:text-xl tracking-[0.3em] md:tracking-[0.5em] mb-6 md:mb-8 opacity-70">MONITORING-TOOL</h2>
-                    <hr class="border-[#00ffaa]/40 mb-6 md:mb-10">
+                    <hr class="border-[#00e5ff]/40 mb-6 md:mb-10">
                     <div class="flex flex-col gap-4 md:gap-6 text-lg md:text-xl tracking-widest">
-                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">OBJETIVO</button>
-                        <button id="btn-vision" data-action="type:vision" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">VISIÓN</button>
-                        <button id="btn-flora" data-action="type:flora" class="text-left hover:text-black hover:bg-[#00ffaa] p-2 transition-colors border border-transparent hover:border-[#00ffaa]">FLORA MEXICANA</button>
+                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left hover:text-black hover:bg-[#00e5ff] p-2 transition-colors border border-transparent hover:border-[#00e5ff]">OBJETIVO</button>
+                        <button id="btn-vision" data-action="type:vision" class="text-left hover:text-black hover:bg-[#00e5ff] p-2 transition-colors border border-transparent hover:border-[#00e5ff]">VISIÓN</button>
+                        <button id="btn-flora" data-action="type:flora" class="text-left hover:text-black hover:bg-[#00e5ff] p-2 transition-colors border border-transparent hover:border-[#00e5ff]">FLORA MEXICANA</button>
                     </div>
                 </div>
-                <button data-action="system:start" class="w-full border-2 border-[#00ffaa] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00ffaa] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
+                <button data-action="system:start" class="w-full border-2 border-[#00e5ff] py-4 mt-6 md:mt-0 text-lg md:text-xl hover:bg-[#00e5ff] hover:text-black transition-all font-bold tracking-widest shadow-[inset_0_0_10px_rgba(0,255,170,0.3)]">[ INICIAR SISTEMA ]</button>
             </div>
-            <div class="border border-[#00ffaa]/30 p-6 md:p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)] min-h-[250px] md:min-h-0">
-                <div id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap text-left w-full min-h-[150px] font-mono text-[#00ffaa]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></div>
+            <div class="border border-[#00e5ff]/30 p-6 md:p-10 flex flex-col bg-black shadow-[inset_0_0_30px_rgba(0,255,170,0.05)] min-h-[250px] md:min-h-0">
+                <div id="typewriter-output" class="text-lg md:text-2xl leading-relaxed whitespace-pre-wrap text-left w-full min-h-[150px] font-mono text-[#00e5ff]">> SELECCIONE UNA OPCIÓN...<span class="animate-pulse">_</span></div>
             </div>
         </div>
     </div>
 
     <div id="login-screen" class="hidden fixed inset-0 bg-black z-50 flex items-center justify-center p-4 md:p-10">
-        <div class="border border-[#00ffaa] p-6 md:p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6">
+        <div class="border border-[#00e5ff] p-6 md:p-12 w-full max-w-lg relative bg-[#001105] shadow-[0_0_20px_rgba(0,255,170,0.15)] flex flex-col gap-6">
             <h2 class="text-2xl md:text-3xl text-center font-bold tracking-widest mt-2">ACCESO SEGURO</h2>
             <div class="flex flex-col gap-3">
                 <label class="tracking-widest text-sm">USUARIO:</label>
-                <input type="text" id="user-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="admin / usuario" autocomplete="off">
+                <input type="text" id="user-input" class="bg-[#000502] border border-[#00e5ff]/20 focus:border-[#00e5ff] transition-colors outline-none text-[#00e5ff] p-3 font-mono tracking-widest w-full" placeholder="admin / usuario" autocomplete="off">
             </div>
             <div class="flex flex-col gap-3">
                 <label class="tracking-widest text-sm">CLAVE:</label>
-                <input type="password" id="pass-input" class="bg-[#000502] border border-[#00ffaa]/20 focus:border-[#00ffaa] transition-colors outline-none text-[#00ffaa] p-3 font-mono tracking-widest w-full" placeholder="••••••••">
+                <input type="password" id="pass-input" class="bg-[#000502] border border-[#00e5ff]/20 focus:border-[#00e5ff] transition-colors outline-none text-[#00e5ff] p-3 font-mono tracking-widest w-full" placeholder="••••••••">
             </div>
             <div class="flex flex-col gap-2 mt-4">
-                <button data-action="auth:login" class="border border-[#00ffaa]/50 py-3 hover:bg-[#00ffaa] hover:text-black transition-all tracking-widest font-bold">ENTRAR >></button>
-                <button data-action="auth:forgot" class="text-[#00ffaa]/50 text-xs hover:text-[#00ffaa] mt-2 underline tracking-widest text-center">¿OLVIDÓ SU LLAVE?</button>
-                <button data-action="nav:register" class="text-[#00ffaa]/50 text-xs hover:text-[#00ffaa] mt-2 underline tracking-widest text-center">REGISTRARSE</button>
+                <button data-action="auth:login" class="border border-[#00e5ff]/50 py-3 hover:bg-[#00e5ff] hover:text-black transition-all tracking-widest font-bold">ENTRAR >></button>
+                <button data-action="auth:forgot" class="text-[#00e5ff]/50 text-xs hover:text-[#00e5ff] mt-2 underline tracking-widest text-center">¿OLVIDÓ SU LLAVE?</button>
+                <button data-action="nav:register" class="text-[#00e5ff]/50 text-xs hover:text-[#00e5ff] mt-2 underline tracking-widest text-center">REGISTRARSE</button>
             </div>
             <p id="login-error" class="text-red-500 text-center text-xs hidden animate-pulse font-bold tracking-widest">ERROR.</p>
         </div>
