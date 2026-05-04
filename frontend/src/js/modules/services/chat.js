@@ -44,11 +44,25 @@ export function appendMessage(msg, isTyping = false) {
     msgDiv.className = 'flex w-full mb-3 ' + (msg.type === 'user' ? 'justify-end' : 'justify-start');
 
     if (msg.type === 'bot') {
+        // Contenedor flex para avatar y texto
+        const botContainer = document.createElement('div');
+        botContainer.className = 'flex items-start gap-2 w-full max-w-[95%]';
+        
+        // Avatar de La Mole (Imagen proporcionada por el usuario)
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'flex-shrink-0 w-8 h-8 rounded border border-[#14fdce] flex items-center justify-center overflow-hidden shadow-cyber mt-1 bg-[#14fdce]/10';
+        avatarDiv.innerHTML = `
+            <img src="/static/img/mole.png" alt="Mole" class="w-full h-full object-cover">
+        `;
+        
         const textDiv = document.createElement('div');
-        textDiv.className = 'bg-transparent px-2 py-1 text-xs text-[#14fdce] crt-text-glow font-mono max-w-[95%] uppercase';
+        textDiv.className = 'bg-transparent px-2 py-1 text-xs text-[#14fdce] crt-text-glow font-mono uppercase flex-1';
+        
+        botContainer.appendChild(avatarDiv);
+        botContainer.appendChild(textDiv);
         
         if (isTyping) {
-            msgDiv.appendChild(textDiv);
+            msgDiv.appendChild(botContainer);
             if (msg.id) msgDiv.id = msg.id;
             chatBox.appendChild(msgDiv);
             
@@ -70,7 +84,7 @@ export function appendMessage(msg, isTyping = false) {
             return;
         } else {
             textDiv.innerHTML = '> ' + msg.text.replace('> MOLE-IA: ', '') + '<span class="animate-pulse">█</span>';
-            msgDiv.appendChild(textDiv);
+            msgDiv.appendChild(botContainer);
         }
     } else if (msg.type === 'user') {
         const textDiv = document.createElement('div');

@@ -13,6 +13,7 @@ async function initAdminCharts() {
     // Verificación de seguridad en el Frontend
     if (localStorage.getItem('moleia_user_role') !== 'admin') {
         console.error("> ACCESO DENEGADO: Nivel de autorización insuficiente.");
+        window.location.href = '/403.html';
         return;
     }
 

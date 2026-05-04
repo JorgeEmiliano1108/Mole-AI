@@ -335,7 +335,12 @@ class ApiService {
                 } else {
                     window.location.href = '/login/';
                 }
+            } else if (error.status === 403) {
+                window.location.href = '/403.html';
+            } else if (error.status >= 500) {
+                window.location.href = `/500.html?status=${error.status}`;
             }
+            
             if (!silent) {
                 var friendlyMsg = self._friendlyMessage(error);
                 ApiService.showToast(friendlyMsg, 'error');

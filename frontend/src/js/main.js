@@ -192,7 +192,7 @@ function showRegisterScreen() {
 
 
 // --- REGISTRO ---
-async function submitRegistration() {
+async function submitRegistration(btn) {
     const userInput = document.getElementById('reg-user-input');
     const passInput = document.getElementById('reg-pass-input');
     const passConfirmInput = document.getElementById('reg-pass-confirm-input');
@@ -204,29 +204,32 @@ async function submitRegistration() {
     const errorMsg = document.getElementById('reg-error');
     const successMsg = document.getElementById('reg-success');
 
-    if (errorMsg) errorMsg.classList.add('hidden');
-    if (successMsg) successMsg.classList.add('hidden');
+    if (errorMsg) { errorMsg.classList.add('hidden'); errorMsg.innerText = ''; }
+    if (successMsg) { successMsg.classList.add('hidden'); successMsg.innerText = ''; }
 
-    if (user.length < 3 || pass.length < 3) {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: MÍNIMO 3 CARACTERES.";
-            errorMsg.classList.remove('hidden');
-        }
+    // Validaciones UX básicas
+    if (user.length < 3) {
+        if (errorMsg) { errorMsg.innerText = "ERROR: USUARIO MÍNIMO 3 CARACTERES."; errorMsg.classList.remove('hidden'); }
+        return;
+    }
+    if (pass.length < 6) {
+        if (errorMsg) { errorMsg.innerText = "ERROR: CONTRASEÑA MÍNIMO 6 CARACTERES."; errorMsg.classList.remove('hidden'); }
         return;
     }
     if (pass !== passConfirm) {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
-            errorMsg.classList.remove('hidden');
-        }
+        if (errorMsg) { errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN."; errorMsg.classList.remove('hidden'); }
         return;
     }
     if (user.toLowerCase() === 'admin') {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
-            errorMsg.classList.remove('hidden');
-        }
+        if (errorMsg) { errorMsg.innerText = "ERROR: NOMBRE RESERVADO."; errorMsg.classList.remove('hidden'); }
         return;
+    }
+
+    // Feedback visual (Inference state)
+    const originalText = btn ? btn.innerText : 'Crear Cuenta';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = '[ PROCESANDO ALTA... ]';
     }
 
     try {
@@ -234,18 +237,45 @@ async function submitRegistration() {
         const response = await moleApi.post('auth/register/', { 
             username: user, 
             password: pass 
-        });
+        }, { allowAnonymous: true }); // Permitir registro sin token
 
         if (successMsg) {
-            successMsg.innerText = `USUARIO "${user.toUpperCase()}" CREADO EN SERVIDOR.`;
+            successMsg.innerText = `OK: USUARIO "${user.toUpperCase()}" REGISTRADO.`;
             successMsg.classList.remove('hidden');
         }
-        setTimeout(() => window.location.href = '/login.html', 2000); 
+        
+        if (typeof showTacticalToast === 'function') {
+            showTacticalToast('Registro exitoso. Redirigiendo a login...', 'success');
+        }
+
+        setTimeout(() => {
+            const regView = document.getElementById('register-view');
+            const logView = document.getElementById('login-view');
+            if (regView && logView) {
+                regView.classList.add('hidden');
+                logView.classList.remove('hidden');
+                // Limpiar campos
+                if (userInput) userInput.value = '';
+                if (passInput) passInput.value = '';
+                if (passConfirmInput) passConfirmInput.value = '';
+            } else {
+                window.location.href = '/login.html';
+            }
+        }, 2000); 
 
     } catch (error) {
+        console.error("> Error en registro:", error);
         if (errorMsg) {
-            errorMsg.innerText = error.message || "ERROR: NO SE PUDO CONECTAR AL SERVIDOR.";
+            errorMsg.innerText = error.message || "ERROR: SERVIDOR NO DISPONIBLE.";
             errorMsg.classList.remove('hidden');
+        }
+        if (typeof showTacticalToast === 'function') {
+            showTacticalToast('Error al registrar usuario.', 'error');
+        }
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = originalText;
         }
     }
 }
@@ -595,7 +625,17 @@ const ActionMap = {
     'system:start': () => startSystem(),
     'auth:login': () => attemptLogin(),
     'auth:forgot': () => typeof forgotPassword === 'function' && forgotPassword(),
-    'nav:register': () => showRegisterScreen(),
+    'nav:register': () => {
+        const regView = document.getElementById('register-view');
+        const logView = document.getElementById('login-view');
+        if (regView && logView) {
+            logView.classList.add('hidden');
+            regView.classList.remove('hidden');
+        } else {
+            showRegisterScreen();
+        }
+    },
+    'auth:submit-register': (target) => submitRegistration(target),
     'mlops:train-rag': () => typeof trainRagModel === 'function' && trainRagModel(),
     'mlops:train-cnn': () => typeof trainCnnModel === 'function' && trainCnnModel(),
     'admin:create-operator': () => openUserCreationModal(),

@@ -14,7 +14,10 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         login: resolve(__dirname, 'login.html'),
         dashboard: resolve(__dirname, 'dashboard.html'),
-        admin: resolve(__dirname, 'admin.html')
+        admin: resolve(__dirname, 'admin.html'),
+        error404: resolve(__dirname, '404.html'),
+        error403: resolve(__dirname, '403.html'),
+        error500: resolve(__dirname, '500.html')
       }
     }
   }
