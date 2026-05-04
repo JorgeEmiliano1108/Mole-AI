@@ -214,18 +214,32 @@ class ApiService {
 
     request(endpoint, method, body, customHeaders, options = {}) {
         var self = this;
-        var cleanEndpoint = endpoint.charAt(0) === '/' ? endpoint.slice(1) : endpoint;
-        var url = self.baseUrl + cleanEndpoint;
-        var timeout = self._getTimeout(cleanEndpoint);
-        method = method || 'GET';
-        var silent = options.silent || false;
+// --- STEP 1: NORMALIZE ENDPOINT (Remove leading slash, query params, trailing slash) ---
+var normalizedEndpoint = endpoint.trim();
+// Remove leading '/' if present
+if (normalizedEndpoint.charAt(0) === '/') {
+    normalizedEndpoint = normalizedEndpoint.slice(1);
+}
+// Remove query parameters (everything after '?')
+normalizedEndpoint = normalizedEndpoint.split('?')[0];
+// Remove trailing '/' if present
+if (normalizedEndpoint.charAt(normalizedEndpoint.length - 1) === '/') {
+    normalizedEndpoint = normalizedEndpoint.slice(0, -1);
+}
 
-        // --- WHITELIST CHECK: Public auth endpoints ---
-        var publicPaths = ['auth/login', 'auth/register', 'auth/register/', 'auth/forgot'];
-        var isPublic = publicPaths.some(function(p) { return cleanEndpoint.includes(p); });
-        if (isPublic) {
-            options.allowAnonymous = true;
-        }
+var url = self.baseUrl + normalizedEndpoint;
+var timeout = self._getTimeout(normalizedEndpoint);
+method = method || 'GET';
+var silent = options.silent || false;
+
+// --- STEP 2: WHITELIST CHECK (Regex-based, match any path starting with 'auth/') ---
+// Allow any endpoint that starts with 'auth/' (public auth paths)
+var publicRegex = /^auth\//;
+var isPublic = publicRegex.test(normalizedEndpoint);
+
+if (isPublic) {
+    options.allowAnonymous = true;
+}
 
         // Enforce strict JWT presence and validity (Zero-Trust)
         var token = self.getToken();
