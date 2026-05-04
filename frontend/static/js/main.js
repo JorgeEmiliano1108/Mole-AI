@@ -148,18 +148,15 @@ document.addEventListener('DOMContentLoaded', () => {
 function openUserCreationModal() {
     if (typeof showRegisterScreen === 'function') return showRegisterScreen();
     if (typeof showModule === 'function') return showModule('register');
-    console.warn('openUserCreationModal: no register UI available');
 }
 
 function openAdminAddPlantModal() {
     if (typeof openAddPlantModal === 'function') return openAddPlantModal();
     if (typeof showModule === 'function') return showModule('admin');
-    console.warn('openAdminAddPlantModal: no add-plant UI available');
 }
 
 function returnToOverride() {
     if (typeof showModule === 'function') return showModule('admin');
-    console.warn('returnToOverride: showModule not available');
 }
 
 function startSystem() {
@@ -248,7 +245,6 @@ async function attemptLogin() {
         }
 
     } catch (error) {
-        console.warn("> Servidor rechazó credenciales o está offline.", error);
         errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
         errorMsg.classList.remove('hidden');
     }
@@ -392,8 +388,6 @@ function logout() {
 
         document.getElementById('intro-screen').classList.remove('hidden');
         activeDash.classList.remove('tv-off');
-        
-        console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
     }, 400); 
 }
 
@@ -669,10 +663,10 @@ document.body.addEventListener('click', (event) => {
         try {
             ActionMap[action](target);
         } catch (error) {
-            console.error(`[Router] Fallo al ejecutar acción: ${action}`, error);
+            // Error ejecutando acción: silenciar en producción
         }
     } else {
-        console.warn(`[Router] Acción no registrada: ${action}`);
+        // Acción no registrada: silenciosamente ignorar
     }
 });
 
@@ -684,7 +678,6 @@ async function handleReportDownload(btnElement) {
 
     const reportId = btnElement.getAttribute('data-report-id');
     if (!reportId) {
-        console.error('[Router] Missing data-report-id attribute');
         return;
     }
 
@@ -700,7 +693,6 @@ let searchTimeout = null;
 let floraSearchAbortController = null;
 
 function loadFloraSearch() {
-    console.debug('[Router] loadFloraSearch invoked');
     const container = document.getElementById('typewriter-output');
     if (!container) return;
 
@@ -811,7 +803,6 @@ async function searchPlant(query) {
             // Request was intentionally aborted; ignore silently
             return;
         }
-        console.error('[Flora Search] Falla de enlace:', error);
         resultsContainer.textContent = '';
         const alertEl = document.createElement('p');
         alertEl.className = 'text-red-500 text-sm bg-red-500/10 p-2 border border-red-500/30';

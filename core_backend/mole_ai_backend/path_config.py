@@ -21,6 +21,7 @@ refactorizar todas las importaciones en el código.
 
 import os
 import sys
+import logging
 from pathlib import Path
 
 # Ruta base del proyecto
@@ -36,8 +37,9 @@ if str(BASE_DIR) not in sys.path:
 # Variables adicionales para desarrollo
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-# Información para debugging
-print(" Django Apps Path configurado: NOT ADDED (use 'apps.' imports)")
-print(f" Proyecto base: {BASE_DIR}")
-print(f" Modo DEBUG: {DEBUG}")
-print("=" * 50)
+# Información para debugging (solo en desarrollo)
+if DEBUG:
+    logger = logging.getLogger(__name__)
+    logger.info("Django Apps Path configurado: NOT ADDED (use 'apps.' imports)")
+    logger.info(f"Proyecto base: {BASE_DIR}")
+    logger.info(f"Modo DEBUG: {DEBUG}")

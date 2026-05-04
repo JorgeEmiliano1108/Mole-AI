@@ -2,7 +2,7 @@ import logging
 import traceback
 from datetime import datetime
 from infrastructure.redis.job_metadata_store import JobMetadataStore
-from infrastructure.db.supabase_client import SupabaseClient
+from infrastructure.db.minio_client import MinioClient
 from infrastructure.faiss.faiss_reader_adapter import FAISSReaderAdapter
 from infrastructure.llm.huggingface_client import HuggingFaceClient
 from infrastructure.storage.s3_adapter import S3Adapter

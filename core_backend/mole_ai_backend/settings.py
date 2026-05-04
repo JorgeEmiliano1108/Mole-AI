@@ -30,11 +30,11 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 # Fail-fast checks for production environment: ensure critical secrets present
 if not DEBUG:
     # C3 FIX: HARDWARE_API_KEY añadido — vacío = todos los nodos IoT rechazados (401)
-    required_in_prod = ['SECRET_KEY', 'HUGGINGFACE_API_KEY', 'SUPABASE_JWT_SECRET', 'HARDWARE_API_KEY']
+    required_in_prod = ['SECRET_KEY', 'HUGGINGFACE_API_KEY', 'JWT_SECRET_KEY', 'HARDWARE_API_KEY']
     missing = [v for v in required_in_prod if not os.getenv(v)]
-    # database requirement: accept either DATABASE_URL or classic SUPABASE_* set
+    # database requirement: accept either DATABASE_URL or classic POSTGRES_* set
     db_ok = bool(os.getenv('DATABASE_URL')) or (
-        os.getenv('SUPABASE_DB_NAME') and os.getenv('SUPABASE_DB_PASSWORD') and os.getenv('SUPABASE_DB_HOST')
+        os.getenv('POSTGRES_DB') and os.getenv('POSTGRES_PASSWORD') and os.getenv('POSTGRES_HOST')
     )
     if not db_ok:
         missing.append('DATABASE_URL or SUPABASE_DB_*')
@@ -151,7 +151,7 @@ AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
 # 6. Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'apps.authentication.infrastructure.authentication.SupabaseAuthentication',
+        # 'apps.authentication.infrastructure.authentication.SupabaseAuthentication',  # Disabled for login, use in specific views
         'apps.authentication.infrastructure.authentication.HardwareAPIKeyAuthentication',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
@@ -165,12 +165,11 @@ REST_FRAMEWORK = {
     }
 }
 
-# 7. Configuración de Supabase (CRÍTICO PARA EVITAR 401)
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_JWT_SECRET = os.getenv('SUPABASE_JWT_SECRET')
-SUPABASE_JWT_ALGORITHM = os.getenv('SUPABASE_JWT_ALGORITHM', 'HS256')
-SUPABASE_JWT_AUD = 'authenticated'
-SUPABASE_JWT_LEEWAY = 30
+# 7. Configuración de JWT Local (CRÍTICO PARA EVITAR 401)
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY') or os.getenv('SUPABASE_JWT_SECRET')  # Fallback for migration
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
+JWT_AUDIENCE = 'authenticated'
+JWT_LEEWAY = 30
 
 # 8. CORS & CSRF
 # NOTE: Nginx handles CORS completely. This section is kept for reference only.

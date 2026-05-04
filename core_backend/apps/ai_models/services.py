@@ -30,7 +30,7 @@ try:
     from apps.ai_models.models import LLMRequest, CNNInference, ModelPerformance
     from apps.core.models import SensorLog
 except ImportError as e:
-    print(f"⚠️ Error importando modelos: {e}")
+    logger.warning(f"Error importando modelos: {e}")
     LLMRequest = None
     CNNInference = None
     ModelPerformance = None

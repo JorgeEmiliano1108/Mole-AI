@@ -13,7 +13,7 @@
 class ApiService {
 
     constructor() {
-        this.baseUrl = 'http://localhost:8000/api/v1/';
+        this.baseUrl = window.AppConfig ? window.AppConfig.API_BASE_URL : window.location.origin + '/api/v1/';
         this.defaultTimeout = 30000;   // 30s for standard requests
         this.aiTimeout = 120000;       // 120s for AI/LLM endpoints
         this.maxRetries = 3;
@@ -22,7 +22,7 @@ class ApiService {
 
         // Session token (set after login)
         this.authToken = null;
-        // Authorization prefix (use Bearer to match backend SupabaseAuthentication)
+        // Authorization prefix (use Bearer to match backend LocalAuthentication)
         this.authPrefix = 'Bearer ';
     }
 
@@ -220,6 +220,13 @@ class ApiService {
         method = method || 'GET';
         var silent = options.silent || false;
 
+        // --- WHITELIST CHECK: Public auth endpoints ---
+        var publicPaths = ['auth/login', 'auth/register', 'auth/forgot'];
+        var isPublic = publicPaths.some(function(p) { return cleanEndpoint.includes(p); });
+        if (isPublic) {
+            options.allowAnonymous = true;
+        }
+
         // Enforce strict JWT presence and validity (Zero-Trust)
         var token = self.getToken();
 
@@ -310,7 +317,7 @@ class ApiService {
                         clearTimeout(timer);
 
                         // Only retry on network/timeout errors
-                        var isRetryable = (error instanceof TypeError) || (error.name === 'AbortError');
+                        var isRetryable = (error instanceof TypeError) || (error.name === 'AbortError') || (error.status >= 500 && error.status < 600);
 
                         if (!isRetryable || attempt >= self.maxRetries) {
                             reject(error);
@@ -320,6 +327,7 @@ class ApiService {
                         // Exponential backoff: 1s, 2s, 4s
                         var delay = self.retryBaseDelay * Math.pow(2, attempt);
                         console.warn('[ApiService] Retry ' + (attempt + 1) + '/' + self.maxRetries + ' en ' + delay + 'ms...');
+                        if (!silent) { ApiService.showToast('Reintentando conexión (intento ' + (attempt + 1) + '/' + self.maxRetries + ')...', 'warn'); }
                         setTimeout(function () {
                             attemptRequest(attempt + 1).then(resolve).catch(reject);
                         }, delay);

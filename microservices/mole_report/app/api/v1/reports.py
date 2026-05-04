@@ -4,7 +4,7 @@
 """
 Reports API v1 — JWT-protected endpoints.
 
-All endpoints require a valid Supabase JWT (ES256 or HS256).
+All endpoints require a valid local JWT (HS256).
 User identity is derived from the token and used for ownership checks.
 """
 import hashlib

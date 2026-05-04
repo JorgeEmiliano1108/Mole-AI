@@ -89,7 +89,7 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         try:
             from apps.authentication.jwks import get_verification_key
 
-            verification_key, algorithms = get_verification_key(settings.SUPABASE_URL, token)
+            verification_key, algorithms = get_verification_key(token)
 
             # Debug: log resolved verification metadata without leaking token
             try:
@@ -108,7 +108,7 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
                 token,
                 verification_key,
                 algorithms=algorithms,
-                audience=getattr(settings, 'SUPABASE_JWT_AUD', 'authenticated'),
+                audience=getattr(settings, 'JWT_AUDIENCE', 'authenticated'),
                 options={'verify_aud': True, 'verify_exp': True},
                 leeway=leeway,
             )
@@ -128,7 +128,7 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
             logger.error("Invalid token signature (masked=%s): %s", _mask_token(token), str(e))
             # Debug: dump JWKS kids to help triage
             try:
-                jwks = fetch_jwks(settings.SUPABASE_URL)
+                jwks = fetch_jwks()
                 kids = [k.get('kid') for k in jwks.get('keys', [])]
                 logger.debug("Available JWKS kids: %s", json.dumps(kids))
             except Exception:
@@ -145,23 +145,34 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         # If primary verification failed (payload is None), attempt HS256 local fallback
         if not payload:
             try:
-                leeway = getattr(settings, 'SUPABASE_JWT_LEEWAY', 30)
+                leeway = getattr(settings, 'JWT_LEEWAY', 30)
+                # Use JWT_SECRET_KEY (local auth) or fallback to SECRET_KEY
+                local_key = getattr(settings, 'JWT_SECRET_KEY', None) or settings.SECRET_KEY
                 payload = jwt.decode(
                     token,
-                    settings.SECRET_KEY,
+                    local_key,
                     algorithms=['HS256'],
                     options={'verify_exp': True},
                     leeway=leeway,
                 )
-                # Only allow emergency local superuser via this path
-                if payload.get('username') != 'EmiMole':
+                # Allow any user with valid local JWT
+                # Check if user exists and is active
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                try:
+                    user = User.objects.get(username=payload.get('username'))
+                except User.DoesNotExist:
                     logger.error(
-                        'HS256 fallback decoded token but username mismatch (masked=%s) payload_username=%s',
+                        'HS256 fallback: user not found (masked=%s) username=%s',
                         _mask_token(token),
                         payload.get('username'),
                     )
-                    raise exceptions.AuthenticationFailed('Emergency local access strictly limited to EmiMole account.')
-                is_local_superuser = True
+                    raise exceptions.AuthenticationFailed('User not found.')
+                
+                if not user.is_active:
+                    raise exceptions.AuthenticationFailed('User is inactive.')
+                
+                is_local_superuser = user.is_superuser
             except ExpiredSignatureError as e:
                 logger.warning('Expired token on HS256 fallback (masked=%s): %s', _mask_token(token), str(e))
                 raise exceptions.AuthenticationFailed('Token has expired.')

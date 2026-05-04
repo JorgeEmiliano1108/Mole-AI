@@ -8,7 +8,6 @@ import * as security from './modules/ui/security.js';
 import * as memory from './modules/ui/memory.js';
 import * as iot from './modules/ui/iot.js';
 import * as config from './modules/api/config.js';
-import * as apiService from './modules/api/apiService.js';
 import * as mlops from './modules/services/mlops.js';
 import * as vision from './modules/services/vision.js';
 import * as privacy from './modules/ui/privacy.js';
@@ -19,7 +18,54 @@ import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
 
-import { moleApi } from './modules/api/apiService.js';
+// Safety check: Wait for global apiService to be loaded
+if (!window.moleApi) {
+    console.warn("[Main] Waiting for apiService.js to load...");
+}
+
+// --- ROUTE GUARD: Protect against BFCache and unauthorized access ---
+function checkAuthGuard() {
+    // 1. Check if we are in a protected page
+    const protectedPages = ['/dashboard.html', '/admin.html'];
+    const currentPath = window.location.pathname;
+    
+    if (!protectedPages.some(p => currentPath.includes(p))) {
+        return; // Not a protected page, allow
+    }
+    
+    // 2. Check for token and role
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    const role = localStorage.getItem('moleia_user_role');
+    
+    if (!token && !role) {
+        // No credentials - force redirect to index
+        console.warn('[Route Guard] No credentials found, redirecting to index...');
+        window.location.replace('/index.html'); // replace() prevents history entry
+        return;
+    }
+    
+    // 3. Role-based validation for admin pages
+    if (currentPath.includes('/admin.html') && role !== 'superuser' && role !== 'admin') {
+        console.warn('[Route Guard] Insufficient privileges, redirecting...');
+        window.location.replace('/dashboard.html');
+        return;
+    }
+}
+
+// Add event listeners for BFCache scenarios
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        console.warn('[Route Guard] Page restored from BFCache, re-validating...');
+        checkAuthGuard();
+    }
+});
+
+// Run guard on initial load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAuthGuard);
+} else {
+    checkAuthGuard();
+}
 
 // ==========================================================
 // 0. EXPOSE GLOBAL FUNCTIONS TO WINDOW (for inline HTML handlers)
@@ -186,144 +232,127 @@ function startSystem() {
     window.location.href = '/login.html';
 }
 
-function showRegisterScreen() {
-    window.location.href = '/login.html?view=register';
+// ==========================================================
+// NUEVO: TOGGLE LOGIN/REGISTER EN LA VISTA DE AUTENTICACIÓN
+// ==========================================================
+function toggleAuthForm(targetForm) {
+    const formLogin = document.getElementById('login-form');
+    const formRegister = document.getElementById('register-form');
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+
+    if (targetForm === 'register') {
+        formLogin.classList.add('hidden');
+        formRegister.classList.remove('hidden');
+        title.innerText = "NUEVO INGRESO";
+        subtitle.innerText = "Generación de Expediente";
+    } else {
+        formRegister.classList.add('hidden');
+        formLogin.classList.remove('hidden');
+        title.innerText = "AUTENTICACIÓN";
+        subtitle.innerText = "Ingrese credenciales de operador";
+    }
 }
 
 
 // --- REGISTRO ---
 async function submitRegistration() {
-    const userInput = document.getElementById('reg-user-input');
-    const passInput = document.getElementById('reg-pass-input');
-    const passConfirmInput = document.getElementById('reg-pass-confirm-input');
-    
-    const user = userInput?.value.trim() || '';
-    const pass = passInput?.value.trim() || '';
-    const passConfirm = passConfirmInput?.value.trim() || '';
-    
+    const user = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-password').value.trim();
+    const passConfirm = document.getElementById('reg-pass-confirm').value.trim(); 
     const errorMsg = document.getElementById('reg-error');
     const successMsg = document.getElementById('reg-success');
 
-    if (errorMsg) errorMsg.classList.add('hidden');
-    if (successMsg) successMsg.classList.add('hidden');
+    errorMsg.classList.add('hidden');
+    successMsg.classList.add('hidden');
 
-    if (user.length < 3 || pass.length < 3) {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: MÍNIMO 3 CARACTERES.";
-            errorMsg.classList.remove('hidden');
-        }
+    // Validaciones Locales
+    if (user.length < 3 || pass.length < 6 || email.length < 5) {
+        errorMsg.innerText = "ERROR: CAMPOS INCOMPLETOS O MUY CORTOS.";
+        errorMsg.classList.remove('hidden');
         return;
     }
     if (pass !== passConfirm) {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
-            errorMsg.classList.remove('hidden');
-        }
+        errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
+        errorMsg.classList.remove('hidden');
         return;
     }
     if (user.toLowerCase() === 'admin') {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
-            errorMsg.classList.remove('hidden');
-        }
+        errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
+        errorMsg.classList.remove('hidden');
         return;
     }
 
     try {
-        // USO DE API SERVICE: Endpoint real 'auth/register/'
-        const response = await moleApi.post('auth/register/', { 
+        const response = await window.moleApi.post('auth/register/', { 
             username: user, 
+            email: email,
             password: pass 
         });
 
-        if (successMsg) {
-            successMsg.innerText = `USUARIO "${user.toUpperCase()}" CREADO EN SERVIDOR.`;
-            successMsg.classList.remove('hidden');
-        }
-        setTimeout(() => window.location.href = '/login.html', 2000); 
+        successMsg.innerText = `[OK] OPERADOR "${user.toUpperCase()}" REGISTRADO.`;
+        successMsg.classList.remove('hidden');
+        
+        setTimeout(() => {
+            document.getElementById('register-form').reset();
+            toggleAuthForm('login');
+        }, 2000); 
 
     } catch (error) {
-        if (errorMsg) {
-            errorMsg.innerText = error.message || "ERROR: NO SE PUDO CONECTAR AL SERVIDOR.";
-            errorMsg.classList.remove('hidden');
-        }
+        errorMsg.innerText = `ERROR: ${error.message || "NO SE PUDO CREAR EL REGISTRO."}`;
+        errorMsg.classList.remove('hidden');
     }
 }
 
-// --- LOGIN REAL CON BYPASS TEMPORAL ---
+// --- LOGIN REAL ---
 async function attemptLogin() {
-    const userInput = document.getElementById('user-input');
-    const passInput = document.getElementById('pass-input');
-    const user = userInput?.value.trim() || '';
-    const pass = passInput?.value.trim() || '';
+    const user = document.getElementById('user-input').value.trim();
+    const pass = document.getElementById('pass-input').value.trim();
     const errorMsg = document.getElementById('login-error');
     
-    if (errorMsg) errorMsg.classList.add('hidden');
-
-
-
-    if (!user || !pass) {
-        if (errorMsg) {
-            errorMsg.innerText = "ERROR: DEBE INGRESAR USUARIO Y CONTRASEÑA.";
-            errorMsg.classList.remove('hidden');
-        }
-        return;
-    }
-
-    // ==========================================
-    // MODO OFFLINE / SIN BACKEND (Bypass de Dev)
-    // ==========================================
-    if (user === 'master' && pass === '123456') {
-        console.warn("⚠️ [MODO OFFLINE] Login bypass activado. Entrando como MASTER.");
-        localStorage.setItem('moleia_current_user', 'master');
-        localStorage.setItem('moleia_user_role', 'admin');
-        window.location.href = '/admin.html';
-        return;
-    } else if (user === 'dev' && pass === 'dev') {
-        console.warn("⚠️ [MODO OFFLINE] Login bypass activado. Entrando como USER.");
-        localStorage.setItem('moleia_current_user', 'dev');
-        localStorage.setItem('moleia_user_role', 'user');
-        window.location.href = '/dashboard.html';
-        return;
-    }
-    // ==========================================
+    errorMsg.classList.add('hidden');
 
     try {
-        // USO DE API SERVICE: Endpoint real 'auth/login/'
-        const userData = await moleApi.post('auth/login/', { 
+        const userData = await window.moleApi.post('auth/login/', { 
             username: user, 
             password: pass 
         });
 
-        // El ApiService guarda el JWT automáticamente. Si la API devuelve el token en otra llave, ajustamos:
         const token = userData.token || userData.access || userData.access_token;
+        const role = userData.role; // 1. Extract role from response
+        const username = userData.username || user; // 2. Get username
+        
         if (token) {
-            await moleApi.setToken(token);
-            localStorage.setItem('moleia_current_user', user);
+            await window.moleApi.setToken(token);
             
-            // Evaluación real de privilegios desde la API en lugar de hardcodear 'admin'
-            const role = (userData.is_staff || userData.is_superuser) ? 'admin' : 'user';
-            localStorage.setItem('moleia_user_role', role);
+            // 3. Save data to localStorage for UI consistency
+            if (role) {
+                localStorage.setItem('moleia_user_role', role);
+            }
+            localStorage.setItem('moleia_current_user', username);
             
-            // Redirección basada en el rol de backend
-            window.location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
+            // 4. Role-based redirect
+            if (role === 'superuser' || role === 'admin') {
+                window.location.href = '/admin.html'; // Admin panel
+            } else {
+                window.location.href = '/dashboard.html'; // Regular user dashboard
+            }
         } else {
             throw new Error("Token no recibido desde el servidor.");
         }
 
     } catch (error) {
         console.warn("> Servidor rechazó credenciales o está offline.", error);
-        if (errorMsg) {
-            errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
-            errorMsg.classList.remove('hidden');
-        }
+        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        errorMsg.classList.remove('hidden');
     }
 }
 
 // --- CIERRE DE SESIÓN ---
 function logout() {
     // Purga de memoria y sesión
-    try { window.clearAuthToken(); } catch (e) { if (moleApi && typeof moleApi.clearToken === 'function') moleApi.clearToken(); }
+    try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
     localStorage.removeItem('moleia_current_user'); 
     localStorage.removeItem('moleia_user_role');
     
@@ -331,11 +360,11 @@ function logout() {
     if (window.monitorInterval) clearInterval(window.monitorInterval);  
     if (window.clockInterval) clearInterval(window.clockInterval);
     if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
-
+    
     console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
     
-    // Navegación física al inicio
-    window.location.href = '/index.html';
+    // Force redirect with history replacement to prevent back-button access
+    window.location.replace('/index.html'); // replace() instead of href prevents "back" to protected pages
 }
 
 function backToDashboard() {
@@ -593,11 +622,15 @@ const ActionMap = {
     'type:vision': () => typeContent('vision'),
     'type:flora': () => loadFloraSearch(),
     'system:start': () => startSystem(),
+    
+    // Auth Router Updates
     'auth:login': () => attemptLogin(),
+    'auth:register': () => submitRegistration(),
+    'nav:toggle-register': () => toggleAuthForm('register'),
+    'nav:toggle-login': () => toggleAuthForm('login'),
     'auth:forgot': () => typeof forgotPassword === 'function' && forgotPassword(),
-    'nav:register': () => showRegisterScreen(),
+    
     'mlops:train-rag': () => typeof trainRagModel === 'function' && trainRagModel(),
-    'mlops:train-cnn': () => typeof trainCnnModel === 'function' && trainCnnModel(),
     'admin:create-operator': () => openUserCreationModal(),
     'admin:add-plant': () => openAdminAddPlantModal(),
     'nav:logout': () => logout(),
@@ -911,7 +944,6 @@ Object.assign(window, security);
 Object.assign(window, memory);
 Object.assign(window, iot);
 Object.assign(window, config);
-Object.assign(window, apiService);
 Object.assign(window, mlops);
 Object.assign(window, vision);
 Object.assign(window, reports);

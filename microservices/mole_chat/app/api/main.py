@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from prometheus_fastapi_instrumentator import Instrumentator
 from app.api.routers import router
 import asyncio
 import logging
@@ -9,9 +10,34 @@ import os
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO)
-    logging.info("MS-2 RAG+CAG Service (mole_chat) iniciado.")
+    logging.info("MS-2 RAG+CAG Service iniciando...")
 
-    # ── Startup: Launch RAG training listener (non-blocking) ─────────
+    # ── Startup: Initialize singletons (cold start ONCE) ─────────
+    
+    # 1. LLM Client (load model ONCE)
+    from app.infrastructure.adapters.llm_client import LLMClient
+    from app.core.config import settings
+    model_name = settings.LLM_MODEL_ID or "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+    llm_client = LLMClient(model_name=model_name)
+    app.state.llm_client = llm_client
+    logging.info(f"LLM Client initialized: {model_name}")
+
+    # 2. PgVectorStore (connection + indexes ONCE)
+    from app.infrastructure.adapters.pgvector_store import PgVectorStore
+    pgvector_store = PgVectorStore()
+    await pgvector_store.initialize()
+    app.state.pgvector_store = pgvector_store
+    logging.info("PgVectorStore initialized")
+
+    # 3. Redis + Citation Manager
+    from app.infrastructure.adapters.redis_sensor_cache_adapter import RedisSensorCacheAdapter
+    from app.infrastructure.adapters.citation_manager import CitationManager
+    redis_adapter = RedisSensorCacheAdapter(os.getenv("REDIS_URL", "redis://redis:6379/0"))
+    app.state.redis_adapter = redis_adapter
+    app.state.citation_manager = CitationManager()
+    logging.info("Redis + CitationManager initialized")
+
+    # 4. RAG Listener (non-blocking)
     rag_listener_task = None
     try:
         from app.infrastructure.adapters.rag_listener import start_rag_listener
@@ -22,7 +48,7 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # ── Shutdown: Cancel listener + close pgvector pool ──────────────
+    # ── Shutdown: Cancel listener + close pools ──────────────
     if rag_listener_task and not rag_listener_task.done():
         rag_listener_task.cancel()
         try:
@@ -31,14 +57,15 @@ async def lifespan(app: FastAPI):
             pass
         logging.info("RAG Training Listener detenido.")
 
-    try:
-        from app.infrastructure.adapters.pgvector_store import PgVectorStore
-        store = PgVectorStore()
-        await store.close()
-    except Exception:
-        pass
+    await pgvector_store.close()
+    await redis_adapter.close()
+    logging.info("Pools closed.")
 
 app = FastAPI(title="MS-2 RAG+CAG Service", version="1.0", lifespan=lifespan)
+
+# Prometheus metrics instrumentation
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 app.include_router(router)
 

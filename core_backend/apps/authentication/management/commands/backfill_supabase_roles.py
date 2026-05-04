@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Backfill Django user is_staff/is_superuser flags from supabase_role column'
+    help = 'Backfill Django user is_staff/is_superuser flags from role column'
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', action='store_true', help='Do not persist changes')

@@ -53,9 +53,10 @@ FROM development as production
 RUN groupadd -r app && useradd -r -g app -m -d /home/app app
 
 COPY . /app
+
 RUN chown -R app:app /app
 
 USER app
 
-# Gunicorn para robustez en prod
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8002", "app.api.main:app"]
+# Uvicorn para mejor compatibilidad con lifespan events
+CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "2"]

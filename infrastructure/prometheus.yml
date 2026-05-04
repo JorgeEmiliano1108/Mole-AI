@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'ms1_vision'
+    static_configs:
+      - targets: ['ms1_vision:8001']
+        labels:
+          service: 'vision'
+          microservice: 'ms1'
+
+  - job_name: 'ms2_chat'
+    static_configs:
+      - targets: ['ms2_chat:8002']
+        labels:
+          service: 'chat'
+          microservice: 'ms2'
+
+  - job_name: 'ms3_reports'
+    static_configs:
+      - targets: ['ms3_reports:8003']
+        labels:
+          service: 'reports'
+          microservice: 'ms3'

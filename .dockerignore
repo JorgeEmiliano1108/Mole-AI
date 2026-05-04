@@ -1,93 +1,18 @@
-# =============================================================================
-# Mole.AI - Docker Ignore File
-# Prevents unnecessary files from being sent to the Docker daemon
-# =============================================================================
+# Ignorar archivos de base de datos de MQTT (permisos restrictivos)
+**/infrastructure/mosquitto/data/mosquitto.db
 
-# --- Git ---
-.git/
-.gitignore
-.gitattributes
-
-# --- Python ---
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-.venv/
-env/
+# Ignorar archivos de entorno y caches
 .env
-*.egg-info/
-.eggs/
-dist/
-build/
-*.egg
+.env.example
+**/__pycache__/
+**/.pytest_cache/
+**/node_modules/
+**/.git/
 
-# --- IDE / Editors ---
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Ignorar archivos de build previos
+**/dist/
+**/build/
+
+# Ignorar archivos de sistema
 .DS_Store
-
-# --- Docker (avoid nested context issues) ---
-Dockerfile*
-docker-compose*.yml
-.docker/
-
-# --- Mosquitto (CRITICAL: fixes permission error) ---
-mosquitto/
-
-# --- Database files ---
-*.sqlite3
-*.db
-db.sqlite3
-
-# --- Logs & Cache ---
-logs/
-*.log
-cache/
-.cache/
-
-# --- Testing ---
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# --- Static/Media (if collected separately) ---
-staticfiles/
-mediafiles/
-
-# --- Node (if frontend exists) ---
-node_modules/
-npm-debug.log
-
-# --- Secrets (never include in image) ---
-*.pem
-*.key
-secrets/
-.env.*
-
-# --- AI/ML artifacts (heavy files) ---
-*.pt
-*.pth
-*.onnx
-*.bin
-storage/vectors/
-
-# --- Documentation ---
-*.md
-docs/
-REportesSys/
-
-# --- AISLAMIENTO DE MICROSERVICIOS (CRÍTICO PARA EL PESO) ---
-ms1_vision/
-ms2_rag_cag_service/
-ms3_reports/
-
-# --- ARCHIVOS PESADOS ---
-models/
-media/
+Thumbs.db
