@@ -14,19 +14,23 @@ from langchain_core.prompts import ChatPromptTemplate
 logger = logging.getLogger("ms2.chat_usecase")
 
 class MoleAIChatUseCase:
-    def __init__(self):
-        self.redis_adapter = RedisSensorCacheAdapter(os.getenv("REDIS_URL", "redis://redis:6379/0"))
-        self.vector_store = PgVectorStore()
-        self.citation_manager = CitationManager()
+    def __init__(
+        self, 
+        llm_client: LLMClient,
+        vector_store: PgVectorStore,
+        redis_adapter: RedisSensorCacheAdapter,
+        citation_manager: CitationManager,
+        system_prompt: str
+    ):
+        self.llm_client = llm_client
+        self.vector_store = vector_store
+        self.redis_adapter = redis_adapter
+        self.citation_manager = citation_manager
         self.trefle_token = os.getenv("TREFLE_API_TOKEN", "")
+        self.system_prompt = system_prompt
         
-        model_name = os.getenv("LLM_MODEL_ID", "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B")
-        self.llm_client = LLMClient(model_name=model_name)
-        
-        try:
-            self.system_prompt = load_prompt("agronomist")
-        except Exception:
-            logger.warning("[MoleAIChatUseCase] Could not load agronomist prompt; using strict default.")
+        if not system_prompt:
+            logger.warning("[MoleAIChatUseCase] Using strict default prompt.")
             self.system_prompt = (
                 "Eres Mole.AI, un asistente agrónomo experto especializado en flora. "
                 "REGLA DE ORO: Si la información proporcionada en el CONTEXTO DISPONIBLE "

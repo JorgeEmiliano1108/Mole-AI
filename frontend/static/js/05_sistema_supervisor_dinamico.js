@@ -25,12 +25,11 @@ async function syncUserPlants() {
             const userPlants = await response.json();
             // Guardamos el inventario real en la memoria local (Única fuente de verdad)
             localStorage.setItem('moleia_plants', JSON.stringify(userPlants));
-            console.log("> [ RED ] Banco de datos botánico sincronizado.");
         } else {
             throw new Error("Token expirado o acceso denegado.");
         }
     } catch (error) {
-        console.warn("> [ MODO OFFLINE ] Usando matriz de datos local para el inventario.");
+        // Usando datos locales por fallo de conexión
     }
 }
 
@@ -49,18 +48,15 @@ async function triggerOverride(type, plantName = null) {
     }
     
     if (!targetPlant || !db[targetPlant]) {
-        console.error("> ERROR: Especie no localizada en los registros del operador.");
         return;
     }
 
     if (type === 'sequia') {
         db[targetPlant].h = '5%';
         db[targetPlant].t = '48°C';
-        console.warn(`> [ ALERTA ] Protocolo de sequía activado en núcleo: ${targetPlant.toUpperCase()}`);
     } 
     else if (type === 'restaurar') {
         // Restauración total: Pedimos datos frescos al servidor
-        console.log("> [ SISTEMA ] Forzando restauración de telemetría...");
         await syncUserPlants();
         
         // Actualizamos la UI si el usuario está viendo la misma planta
@@ -87,7 +83,6 @@ async function triggerOverride(type, plantName = null) {
         
         if (!response.ok) throw new Error("Servidor no respondió al Override.");
     } catch (e) { 
-        console.warn("> [ RED CAÍDA ] Override guardado en caché. Se enviará al reconectar.");
         if (typeof queueOfflineAction === 'function') {
             queueOfflineAction('OVERRIDE', { plant: targetPlant, action: type, data: db[targetPlant] });
         }

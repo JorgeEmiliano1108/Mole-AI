@@ -16,7 +16,10 @@ from . import views
 app_name = 'authentication'
 
 urlpatterns = [
-    # Login handshake — validates Supabase JWT and returns user info
+    # Local login (username/password)
+    path('login/', views.login_view, name='login'),
+    
+    # Supabase JWT validation
     path('validate-token/', views.validate_token_view, name='validate_token'),
 
     # Local Registration endpoint for new Farmers

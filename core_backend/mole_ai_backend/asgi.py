@@ -18,6 +18,7 @@ Optimized configuration for Django Channels + WebSocket + Static Files.
 
 import os
 import sys
+import logging
 from pathlib import Path
 
 # Agregar el directorio apps al path
@@ -36,11 +37,12 @@ from channels.security.websocket import AllowedHostsOriginValidator
 from apps.authentication.middleware import JwtAuthMiddleware
 
 # Importar routing con fallback mejorado
+logger = logging.getLogger(__name__)
 try:
     from apps.core.routing import websocket_urlpatterns
-    print("✅ WebSocket routes loaded from apps.core.routing")
+    logger.info("WebSocket routes loaded from apps.core.routing")
 except ImportError as e:
-    print(f"⚠️ Error loading core.routing: {e}")
+    logger.warning(f"Error loading core.routing: {e}")
     websocket_urlpatterns = []
 
 # Configuración ASGI con seguridad y manejo de errores

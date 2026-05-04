@@ -47,10 +47,9 @@ def get_user(token):
     try:
         from apps.authentication.jwks import get_verification_key
         
-        # Auto-detect algorithm and get correct verification key
-        verification_key, algorithms = get_verification_key(
-            settings.SUPABASE_URL, token
-        )
+        # Get local JWT verification key (HS256 only)
+        from apps.authentication.jwks import get_verification_key
+        verification_key, algorithms = get_verification_key(token)
         
         payload = jwt.decode(
             token,
@@ -167,9 +166,7 @@ class JwtHttpMiddleware:
         try:
             from apps.authentication.jwks import get_verification_key
 
-            verification_key, algorithms = get_verification_key(
-                settings.SUPABASE_URL, token
-            )
+            verification_key, algorithms = get_verification_key(token)
 
             payload = jwt.decode(
                 token,

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 import os
+import re
 import aiofiles
 from pydantic import BaseModel
 
@@ -7,18 +8,30 @@ from app.api.dependencies import get_current_user
 from app.application.use_cases.chat_usecase import MoleAIChatUseCase
 from app.domain.schemas import ChatRequest, ChatResponse, EmbeddingRequest, EmbeddingResponse, IngestPDFRequest, IngestPDFResponse, SourcesResponse, ContextUpdateRequest
 from app.infrastructure.adapters.pgvector_store import PgVectorStore
+from app.infrastructure.adapters.llm_client import LLMClient
+from app.infrastructure.adapters.redis_sensor_cache_adapter import RedisSensorCacheAdapter
+from app.infrastructure.adapters.citation_manager import CitationManager
+from app.core.config import settings
 
 router = APIRouter()
 
-# Lazy-initialized pgvector store (replaces module-level FAISS instance)
-_pgvector_store: PgVectorStore | None = None
+# Singleton objects are now in app.state (initialized in lifespan)
+# Dependency injection functions to get them from app.state
+def _get_llm_client() -> LLMClient:
+    from fastapi import Request
+    return Request.app.state.llm_client
 
-async def _get_pgvector_store() -> PgVectorStore:
-    global _pgvector_store
-    if _pgvector_store is None:
-        _pgvector_store = PgVectorStore()
-        await _pgvector_store.initialize()
-    return _pgvector_store
+def _get_pgvector_store() -> PgVectorStore:
+    from fastapi import Request
+    return Request.app.state.pgvector_store
+
+def _get_redis_adapter() -> RedisSensorCacheAdapter:
+    from fastapi import Request
+    return Request.app.state.redis_adapter
+
+def _get_citation_manager() -> CitationManager:
+    from fastapi import Request
+    return Request.app.state.citation_manager
 
 
 # Modelos de respuesta exclusivos para PDFs
@@ -34,14 +47,56 @@ class DeleteResponse(BaseModel):
 
 # ✅ RESTAURADO: El motor principal de Chat protegido con Zero-Trust
 @router.post("/api/v1/mole-ai/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, current_user_id: str = Depends(get_current_user)):
+async def chat_endpoint(
+    request: ChatRequest, 
+    current_user_id: str = Depends(get_current_user),
+    llm_client: LLMClient = Depends(_get_llm_client),
+    vector_store: PgVectorStore = Depends(_get_pgvector_store),
+    redis_adapter: RedisSensorCacheAdapter = Depends(_get_redis_adapter),
+    citation_manager: CitationManager = Depends(_get_citation_manager),
+):
     if request.user_id != current_user_id:
         raise HTTPException(
             status_code=403, 
             detail="Operación prohibida: El user_id de la petición no coincide con la firma del token."
         )
+    
+    # NOM-059-SEMARNAT Compliance Check (Regex Interception)
+    NOM059_PATTERN = re.compile(
+        r"(extraer|traficar|comercializar|extracción|vender|comprar).*(biznaga|cactácea|mamífero|especie protegida|NOM-059|prickly pear|succulent|protegida)|(biznaga|cactácea|mamífero|especie protegida|NOM-059|prickly pear|succulent|protegida)",
+        re.IGNORECASE
+    )
+    if NOM059_PATTERN.search(request.message):
+        raise HTTPException(
+            status_code=403,
+            detail="Solicitud prohibida: esta consulta viola la NOM-059-SEMARNAT. Para información oficial, consulte la lista SEMARNAT."
+        )
+    
     try:
-        response = await MoleAIChatUseCase().ainvoke(request)
+        # Load system prompt
+        from app.infrastructure.adapters.prompt_loader import load_prompt
+        try:
+            system_prompt = load_prompt("agronomist")
+        except Exception:
+            system_prompt = (
+                "Eres Mole.AI, un asistente agrónomo experto especializado en flora. "
+                "REGLA DE ORO: Si la información proporcionada en el CONTEXTO DISPONIBLE "
+                "(sensores, base local o Trefle API) no contiene la respuesta, DEBES "
+                "responder textualmente: 'No tengo suficiente información científica "
+                "para responder esto con seguridad.' "
+                "NUNCA inventes nombres científicos, tratamientos ni propiedades."
+            )
+        
+        # Create use case with injected dependencies
+        use_case = MoleAIChatUseCase(
+            llm_client=llm_client,
+            vector_store=vector_store,
+            redis_adapter=redis_adapter,
+            citation_manager=citation_manager,
+            system_prompt=system_prompt
+        )
+        
+        response = await use_case.ainvoke(request)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -51,4 +51,9 @@ class Settings(BaseSettings):
     RAG_CHUNK_OVERLAP: int = 100
 
 
+    # ── LLM Memory & Performance Limits ──────────────────
+    LLM_MAX_MEMORY_MB: int = 4096
+    LLM_MAX_NEW_TOKENS: int = 512
+    LLM_REQUEST_TIMEOUT: int = 30
+
 settings = Settings()

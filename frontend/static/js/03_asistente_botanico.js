@@ -106,7 +106,6 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
         }
 
     } catch (error) {
-        console.error("Error en motor IA:", error);
         document.getElementById(typingId)?.remove();
         const errNode = createNode('div', 'text-red-500', `> ERROR: Enlace neuronal con ${engine} interrumpido.`);
         chatMessages.appendChild(errNode);

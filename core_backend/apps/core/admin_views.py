@@ -110,7 +110,7 @@ def master_report_view(request):
             return Response({"job_id": resp.json().get("job_id"), "status": "processing"}, status=status.HTTP_202_ACCEPTED)
         return Response({"job_id": None, "status": "failed"}, status=500)
     except Exception as e:
-        print(f"Error calling ms3: {e}")
+        logger.error(f"Error calling ms3: {e}")
         return Response({"job_id": None, "status": "failed"}, status=500)
 
 @api_view(['GET'])

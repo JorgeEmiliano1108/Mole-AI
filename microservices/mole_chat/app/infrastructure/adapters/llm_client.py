@@ -40,12 +40,16 @@ class LLMClient:
         self.api_key = os.getenv("HUGGINGFACE_API_KEY")
         self.base_url = os.getenv("HF_INFERENCE_API_URL", "https://router.huggingface.co/hf-inference/v1")
         
+        # Use settings for timeout
+        from app.core.config import settings
+        
         self.llm = ChatOpenAI(
             model=self.model_name,
             api_key=self.api_key,
             base_url=self.base_url,
             max_retries=0,
-            timeout=int(os.getenv("HF_API_TIMEOUT", "30"))
+            timeout=settings.LLM_REQUEST_TIMEOUT,
+            max_tokens=settings.LLM_MAX_NEW_TOKENS
         )
         
         self.parser = PydanticOutputParser(pydantic_object=ChatResponse)

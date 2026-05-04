@@ -11,10 +11,9 @@ function openIotWizard() {
     const modal = document.getElementById('iot-wizard-modal');
     if (!modal) return;
     
-    modal.classList.remove('hidden');
-    nextIotStep(1);
-    console.log("> Iniciando protocolo de enlace IoT...");
-}
+     modal.classList.remove('hidden');
+     nextIotStep(1);
+ }
 
 function closeIotWizard() {
     const modal = document.getElementById('iot-wizard-modal');
@@ -25,12 +24,11 @@ function closeIotWizard() {
     const passInput = document.getElementById('wifi-pass');
     
     if (ssidInput) ssidInput.value = '';
-    if (passInput) {
-        passInput.value = '';
-        passInput.type = 'password'; 
-    }
-    console.log("> Buffer de credenciales Wi-Fi purgado por seguridad.");
-}
+     if (passInput) {
+         passInput.value = '';
+         passInput.type = 'password'; 
+     }
+ }
 
 function nextIotStep(stepNumber) {
     document.querySelectorAll('.iot-step').forEach(el => el.classList.add('hidden'));
@@ -66,7 +64,6 @@ async function startHardwareProvisioning() {
 
     try {
         if (!token) throw new Error("Autorización denegada. Token de seguridad faltante.");
-        console.log(`> Transmitiendo credenciales al servidor central de producción...`);
 
         // Uso de la constante API_BASE_URL para despliegues reales
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/api/iot/provisioning`, {
@@ -83,14 +80,12 @@ async function startHardwareProvisioning() {
         });
 
         if (!response.ok) throw new Error(`Fallo en el enlace de hardware. Código: ${response.status}`);
-
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        nextIotStep(5);
-        console.log("> [ OK ] Módulo ESP32 enlazado exitosamente.");
-
-    } catch (error) {
-        console.error("> [ ERROR CRÍTICO ] Falla de aprovisionamiento:", error);
+         
+         await new Promise(resolve => setTimeout(resolve, 1500));
+         
+         nextIotStep(5);
+         
+     } catch (error) {
         alert("[!] PROTOCOLO ABORTADO: No se pudo enlazar con el módulo de hardware. Verifique conexión.");
         nextIotStep(1);
     } finally {

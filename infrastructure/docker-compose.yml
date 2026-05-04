@@ -8,8 +8,8 @@ services:
   # --- API GATEWAY (Nginx) — Single Ingress Point ---
   nginx:
     build:
-      context: ..
-      dockerfile: frontend/Dockerfile
+      context: ../frontend
+      dockerfile: Dockerfile
     container_name: mole_ai_nginx
     ports:
       - "8080:80"
@@ -31,6 +31,7 @@ services:
       - "8000"
     volumes:
       - ../core_backend:/app
+      - ../infrastructure/mosquitto/certs:/app/mqtt_certs  # TLS certs for MQTT
     env_file:
       - ../.env
     depends_on:
@@ -106,8 +107,8 @@ services:
   db:
     image: pgvector/pgvector:pg16
     container_name: mole_ai_db
-    expose:
-      - "5432"
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
@@ -128,12 +129,12 @@ services:
   mqtt_broker:
     image: eclipse-mosquitto:2
     container_name: mqtt_broker
-    expose:
-      - "1883"
-      - "9001"
+    ports:
+      - "8883:8883"  # TLS port
+      - "1883:1883"  # Keep insecure for migration
     volumes:
       - ./mosquitto/config:/mosquitto/config
-      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/certs:/mosquitto/certs
       - ./mosquitto/log:/mosquitto/log
     networks:
       - mole_internal
@@ -161,6 +162,8 @@ services:
     container_name: ms1_vision
     volumes:
       - ../microservices/mole_vision/models:/app/models:rw
+    ports:
+      - "8001:8001"
     expose:
       - "8001"
     env_file:
@@ -177,6 +180,8 @@ services:
     build:
       context: ../microservices/mole_chat
     container_name: ms2_chat
+    ports:
+      - "8002:8002"
     expose:
       - "8002"
     volumes:
@@ -195,6 +200,8 @@ services:
     build:
       context: ../microservices/mole_report
     container_name: ms3_reports
+    ports:
+      - "8003:8003"
     expose:
       - "8003"
     env_file:
@@ -226,6 +233,24 @@ services:
     networks:
       - mole_internal
 
+  # --- PROMETHEUS (Observability) ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mole_ai_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - mole_internal
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
   # --- EDGE NODE (Gateway OpenClaw & Store-Forward) ---
   edge_node:
     build:
@@ -253,3 +278,4 @@ volumes:
   ai_rag_vectors:
   minio_data:
   edge_data:
+  prometheus_data:

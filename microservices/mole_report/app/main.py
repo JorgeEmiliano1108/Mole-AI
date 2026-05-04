@@ -3,8 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import reports
 from app.config import settings
 import os
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="MS-3 Reports Service", version="0.1.0")
+
+# Prometheus metrics instrumentation
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 # CORS configuration from environment (strict: use ORIGEN_PERMITIDO)
 _origen = os.getenv('ORIGEN_PERMITIDO', '')

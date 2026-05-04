@@ -12,7 +12,6 @@ async function withBackoff(fn, maxRetries = 3) {
             if (error.status === 429) {
                 attempt++;
                 const delay = Math.pow(2, attempt) * 1000;
-                console.warn(`[!] Limitador de tasa activado (429). Reintentando en ${delay}ms...`);
                 if (window.ApiService) ApiService.showToast(`Servidor ocupado. Reintentando en ${delay/1000}s...`, 'warn');
                 await new Promise(resolve => setTimeout(resolve, delay));
             } else {

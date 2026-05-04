@@ -1,6 +1,3 @@
-# syntax=docker/dockerfile:1
-# (La línea de arriba activa BuildKit features como cache mounts)
-
 # ==========================================
 # BASE: Dependencias de OS compartidas
 # ==========================================
@@ -38,9 +35,8 @@ RUN python -m venv /opt/venv
 
 COPY requirements.txt .
 
-# OPTIMIZACIÓN: Usar cache de BuildKit para pip (no se guarda en la imagen)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip setuptools wheel && \
+# Instalar dependencias Python
+RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt
 
 # ==========================================

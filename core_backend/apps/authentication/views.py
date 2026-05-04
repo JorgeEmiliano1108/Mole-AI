@@ -11,10 +11,13 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+
+from .infrastructure.authentication import SupabaseAuthentication
+from .infrastructure.local_jwt_auth import LocalJWTAuthentication
 
 
 @api_view(["GET", "PATCH", "DELETE"])
@@ -39,8 +42,8 @@ def user_profile_view(request):
             "last_name": user.last_name,
             "avatar_url": getattr(user, "avatar_url", None),
             "phone_number": getattr(user, "phone_number", None),
-            "supabase_uid": getattr(user, "supabase_uid", None),
-            "supabase_role": getattr(user, "supabase_role", "authenticated"),
+            "user_id": getattr(user, "id", None),
+            "role": "superuser" if user.is_superuser else ("admin" if user.is_staff else "authenticated"),
             "is_premium": getattr(user, "is_premium", False),
             "data_consent": getattr(user, "data_consent", False),
             "data_consent_date": getattr(user, "data_consent_date", None),
@@ -117,16 +120,16 @@ def user_subscription_view(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+@authentication_classes([LocalJWTAuthentication])
 def user_metadata_view(request):
     """
-    GET /api/v1/auth/metadata/ — Supabase JWT claims attached during authentication.
+    GET /api/v1/auth/metadata/ — JWT claims attached during authentication.
     """
     user = request.user
     return Response({
-        "supabase_uid": getattr(user, "supabase_uid", None),
-        "supabase_role": getattr(user, "supabase_role", None),
-        "app_metadata": getattr(user, "supabase_app_metadata", {}),
-        "user_metadata": getattr(user, "supabase_user_metadata", {}),
+        "user_id": getattr(user, "id", None),
+        "role": "superuser" if user.is_superuser else ("admin" if user.is_staff else "user"),
+        "is_premium": getattr(user, "is_premium", False),
     })
 
 
@@ -198,6 +201,80 @@ def register_view(request):
         "email_verification_required": True
     }, status=status.HTTP_201_CREATED)
 
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_view(request):
+    """
+    POST /api/v1/auth/login/
+    Local authentication with username/password.
+    Returns JWT token for local auth.
+    """
+    from django.contrib.auth import authenticate, get_user_model
+    from django.conf import settings
+    import jwt
+    from datetime import datetime, timedelta, timezone
+    
+    identifier = request.data.get("username")
+    password = request.data.get("password")
+    
+    if not identifier or not password:
+        return Response(
+            {"error": "Username y password requeridos."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Resolve user by username or email
+    User = get_user_model()
+    if "@" in identifier:
+        user_obj = User.objects.filter(email=identifier).first()
+        username = user_obj.username if user_obj else identifier
+    else:
+        username = identifier
+    
+    user = authenticate(request=request, username=username, password=password)
+    if user is None:
+        return Response(
+            {"error": "Credenciales inválidas."},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    # Determine role
+    if user.is_superuser:
+        role = "superuser"
+    elif user.is_staff:
+        role = "admin"
+    else:
+        role = "user"
+    
+    # Generate JWT (Local HS256)
+    signing_key = getattr(settings, 'JWT_SECRET_KEY', None) or settings.SECRET_KEY
+    signing_alg = getattr(settings, 'JWT_ALGORITHM', 'HS256')
+    
+    payload = {
+        "sub": str(user.id),
+        "username": user.username,
+        "email": user.email,
+        "role": role,
+        "aud": "authenticated",
+        "exp": datetime.now(timezone.utc) + timedelta(days=1),
+        "iat": datetime.now(timezone.utc),
+    }
+    
+    token = jwt.encode(payload, signing_key, algorithm=signing_alg)
+    
+    # Anti-fixation
+    try:
+        request.session.cycle_key()
+    except Exception:
+        pass
+    
+    return Response({
+        "token": token,
+        "role": role
+    })
+
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def validate_token_view(request):
@@ -205,65 +282,10 @@ def validate_token_view(request):
     POST /api/v1/auth/validate-token/
     Accepts a Supabase JWT in the Authorization header, validates it,
     creates/updates the Django user, and returns user info.
-    Used as the "login" handshake for the mobile/web client.
+    Used for Supabase authentication flows.
     """
-    identifier = request.data.get("username")
-    password = request.data.get("password")
-
-    # Hybrid Auth Protocol: Local authentication bypass
-    if identifier and password:
-        from django.contrib.auth import authenticate, get_user_model
-        from django.conf import settings
-        import jwt
-        from datetime import datetime, timedelta, timezone
-        
-        User = get_user_model()
-        
-        if "@" in identifier:
-            user_obj = User.objects.filter(email=identifier).first()
-            username = user_obj.username if user_obj else identifier
-        else:
-            username = identifier
-
-        user = authenticate(request=request, username=username, password=password)
-        if user is not None:
-            # Generar JWT local compatible con SupabaseAuthentication
-            role = "superuser" if user.is_superuser else "user"
-            # Preferimos usar SUPABASE_JWT_SECRET/ALGORITHM si están disponibles
-            signing_key = getattr(settings, 'SUPABASE_JWT_SECRET', None) or settings.SECRET_KEY
-            signing_alg = getattr(settings, 'SUPABASE_JWT_ALGORITHM', 'HS256')
-
-            payload = {
-                "sub": str(user.id),
-                "username": user.username,
-                "email": user.email,
-                "role": role,
-                "aud": "authenticated",
-                "exp": datetime.now(timezone.utc) + timedelta(days=1),
-                "iat": datetime.now(timezone.utc),
-            }
-
-            # Anti-fixation: cycle session key after successful authentication
-            try:
-                request.session.cycle_key()
-            except Exception:
-                # If sessions are not used, ignore but continue
-                pass
-
-            token = jwt.encode(payload, signing_key, algorithm=signing_alg)
-            return Response({
-                "token": token,
-                "role": role
-            })
-        else:
-            return Response(
-                {"error": "Credenciales inválidas."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-
-    # Supabase authentication fallback
     from apps.authentication.infrastructure.authentication import SupabaseAuthentication
-
+    
     auth = SupabaseAuthentication()
     try:
         result = auth.authenticate(request)
@@ -272,13 +294,13 @@ def validate_token_view(request):
             {"error": str(exc)},
             status=status.HTTP_401_UNAUTHORIZED,
         )
-
+    
     if result is None:
         return Response(
             {"error": "Authorization header con Bearer token requerido."},
             status=status.HTTP_401_UNAUTHORIZED,
         )
-
+    
     user, token = result
     # Rotate session key on successful Supabase authentication to avoid session fixation
     try:

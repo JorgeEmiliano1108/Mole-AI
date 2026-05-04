@@ -1,4 +1,3 @@
-import { moleApi } from '../api/apiService.js';
 // ==========================================================
 // 3. ASISTENTE BOTÁNICO (SISTEMA MULTI-MODELO) - 100% FUNCIONAL
 // ==========================================================
@@ -158,7 +157,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     try {
         const activeSessionId = localStorage.getItem('moleia_current_session_id') || localStorage.getItem('moleia_current_user') || 'anon';
         
-        const data = await moleApi.post('chat/', {
+        const data = await window.ApiService.post('chat/', {
             prompt: query,
             engine: engine,
             sessionId: activeSessionId

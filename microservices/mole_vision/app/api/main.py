@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.api.routers import router
@@ -116,6 +117,13 @@ def create_app() -> FastAPI:
             "status": "Production" if not settings.DEBUG else "Development",
             "service": settings.SERVICE_NAME,
         }
+    
+    # Prometheus metrics instrumentation
+    instrumentator = Instrumentator(
+        should_group_status_codes=False,
+        should_ignore_untemplated=True,
+    )
+    instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
     
     return app
 
