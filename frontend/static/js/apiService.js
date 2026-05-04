@@ -221,24 +221,43 @@ if (normalizedEndpoint.charAt(0) === '/') {
     normalizedEndpoint = normalizedEndpoint.slice(1);
 }
 // Remove query parameters (everything after '?')
+var queryPart = normalizedEndpoint.split('?')[1];
 normalizedEndpoint = normalizedEndpoint.split('?')[0];
 // Remove trailing '/' if present
 if (normalizedEndpoint.charAt(normalizedEndpoint.length - 1) === '/') {
     normalizedEndpoint = normalizedEndpoint.slice(0, -1);
 }
+// Re-add query part if existed
+if (queryPart) {
+    normalizedEndpoint = normalizedEndpoint + '?' + queryPart;
+}
+
+// Ensure trailing slash before query string (prevents Django 301 redirect losing query params)
+var urlParts = normalizedEndpoint.split('?');
+if (urlParts[0].charAt(urlParts[0].length - 1) !== '/') {
+    urlParts[0] = urlParts[0] + '/';
+}
+normalizedEndpoint = urlParts.join('?');
 
 var url = self.baseUrl + normalizedEndpoint;
 var timeout = self._getTimeout(normalizedEndpoint);
 method = method || 'GET';
 var silent = options.silent || false;
 
-// --- STEP 2: WHITELIST CHECK (Regex-based, match any path starting with 'auth/') ---
-// Allow any endpoint that starts with 'auth/' (public auth paths)
-var publicRegex = /^auth\//;
+// --- STEP 2: WHITELIST CHECK (Bulletproof: matches normalizedEndpoint without trailing slash) ---
+// Normalize even further: remove baseUrl prefix if somehow included
+var fullUrl = self.baseUrl + normalizedEndpoint;
+// Check if the normalizedEndpoint STARTS WITH 'auth' or 'plants/search' (no trailing slash required)
+// Handles: auth, auth/login, plants/search, plants/search/?q=..., etc.
+var publicRegex = /^(auth|plants\/search)/;
 var isPublic = publicRegex.test(normalizedEndpoint);
-
+// Fallback: also check fullUrl (in case baseUrl is included in normalizedEndpoint somehow)
+if (!isPublic) {
+    isPublic = /(auth|plants\/search)/.test(fullUrl);
+}
 if (isPublic) {
     options.allowAnonymous = true;
+    console.log('[ApiService] Public endpoint detected:', normalizedEndpoint);
 }
 
         // Enforce strict JWT presence and validity (Zero-Trust)
