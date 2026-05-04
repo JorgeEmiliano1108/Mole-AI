@@ -1,4 +1,3 @@
-import { moleApi } from '../api/apiService.js';
 import { spinner } from '../ui/spinner.js';
 // ==========================================================
 // 8. FLUJO DE DIAGNÓSTICO 
@@ -38,12 +37,12 @@ async function handleImageUpload(event) {
 
     try {
         // Zero-Trust: Validamos token antes de disparar a la red
-        if (!moleApi.isTokenPresent()) {
+        if (!window.ApiService.isTokenPresent()) {
             throw new Error("Acceso denegado: Se requiere autenticación para usar el Motor IA.");
         }
 
         // 🚀 USO DE API SERVICE: Endpoint 'diagnostic/' mapeado en tu backend
-        const data = await moleApi.upload('diagnostic/', formData);
+        const data = await window.ApiService.upload('diagnostic/', formData);
 
         // 4. Mapeo defensivo: El backend retorna 'analysis' (string largo), 
         // pero la UI busca datos particionados. Asignamos valores por defecto si no vienen particionados.

@@ -8,14 +8,14 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copiar solo lo necesario para build
-# IMPORTANTE: context es la raíz del repo (../), requiere prefijo frontend/
-COPY frontend/package*.json ./
-COPY frontend/vite.config.js ./
-COPY frontend/tailwind.config.js ./
-COPY frontend/postcss.config.js ./
-COPY frontend/src/ ./src/
-COPY frontend/static/ ./static/
-COPY frontend/*.html ./
+# Context es frontend/, no requiere prefijo
+COPY package*.json ./
+COPY vite.config.js ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
+COPY src/ ./src/
+COPY static/ ./static/
+COPY *.html ./
 
 # Instalar dependencias y compilar
 RUN npm ci
@@ -27,8 +27,12 @@ FROM nginx:1.25-alpine AS runtime
 # Copiar estáticos compilados desde el builder
 COPY --from=builder /app/dist/ /usr/share/nginx/html/
 
-# Copiar configuración del API Gateway
-COPY infrastructure/nginx/nginx.conf /etc/nginx/nginx.conf
+# Copiar carpeta static/ para apiService.js y otros assets estáticos
+COPY --from=builder /app/static/ /usr/share/nginx/html/static/
+
+# Copiar configuración del API Gateway (desde el contexto frontend/)
+# Nota: infrastructure/ está fuera del contexto, mover nginx.conf a frontend/
+COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 
