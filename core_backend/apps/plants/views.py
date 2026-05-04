@@ -89,8 +89,8 @@ def species_search_view(request):
             ),
             "protection_category": category,
         })
-
-    return Response(response_data)
+ 
+    return Response([response_data])
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])

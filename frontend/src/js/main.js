@@ -785,37 +785,10 @@ async function searchPlant(query) {
         floraSearchAbortController = null;
     }
 
-    // Defensive: ensure API base exists
-    if (!window.AppConfig || !window.AppConfig.API_BASE_URL) {
-        resultsContainer.textContent = '';
-        const err = document.createElement('p');
-        err.className = 'text-red-500 text-sm bg-red-500/10 p-2 border border-red-500/30';
-        err.textContent = 'ERROR: API base URL no configurada.';
-        resultsContainer.appendChild(err);
-        return;
-    }
-
-    floraSearchAbortController = new AbortController();
-    const signal = floraSearchAbortController.signal;
-
     try {
-        const url = `${window.AppConfig.API_BASE_URL}/plants/search/?q=${encodeURIComponent(query)}`;
-
-        const headers = { 'Content-Type': 'application/json' };
-        const token = (typeof window.getAuthToken === 'function') ? window.getAuthToken() : null;
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers,
-            signal
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
+        const data = await window.moleApi.get('plants/search/?q=' + encodeURIComponent(query));
         const results = Array.isArray(data) ? data : (data.results || []);
-
+        
         renderPlantResults(results);
     } catch (error) {
         if (error.name === 'AbortError') {
