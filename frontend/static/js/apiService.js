@@ -221,7 +221,7 @@ class ApiService {
         var silent = options.silent || false;
 
         // --- WHITELIST CHECK: Public auth endpoints ---
-        var publicPaths = ['auth/login', 'auth/register', 'auth/forgot'];
+        var publicPaths = ['auth/login', 'auth/register', 'auth/register/', 'auth/forgot'];
         var isPublic = publicPaths.some(function(p) { return cleanEndpoint.includes(p); });
         if (isPublic) {
             options.allowAnonymous = true;
