@@ -44,7 +44,7 @@ export function appendMessage(msg, isTyping = false) {
 
     if (msg.type === 'bot') {
         const textDiv = document.createElement('div');
-        textDiv.className = 'bg-transparent px-2 py-1 text-xs text-[#14fdce] crt-text-glow font-mono max-w-[95%] uppercase';
+        textDiv.className = 'bg-transparent px-2 py-1 text-xs text-mole-text crt-text-glow terminal-text max-w-[95%] uppercase';
         
         if (isTyping) {
             msgDiv.appendChild(textDiv);
@@ -157,7 +157,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     try {
         const activeSessionId = localStorage.getItem('moleia_current_session_id') || localStorage.getItem('moleia_current_user') || 'anon';
         
-        const data = await window.ApiService.post('chat/', {
+        const data = await window.ApiService.post('llm/chat/', {
             prompt: query,
             engine: engine,
             sessionId: activeSessionId

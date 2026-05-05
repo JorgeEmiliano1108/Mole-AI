@@ -41,8 +41,8 @@ async function handleImageUpload(event) {
             throw new Error("Acceso denegado: Se requiere autenticación para usar el Motor IA.");
         }
 
-        // 🚀 USO DE API SERVICE: Endpoint 'diagnostic/' mapeado en tu backend
-        const data = await window.ApiService.upload('diagnostic/', formData);
+        // 🚀 USO DE API SERVICE: Endpoint 'diagnostics/' mapeado en tu backend
+        const data = await window.ApiService.upload('diagnostics/', formData);
 
         // 4. Mapeo defensivo: El backend retorna 'analysis' (string largo), 
         // pero la UI busca datos particionados. Asignamos valores por defecto si no vienen particionados.

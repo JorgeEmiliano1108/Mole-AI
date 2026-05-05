@@ -70,6 +70,7 @@ def species_search_view(request):
         "ph": f"{species.ideal_ph_min}-{species.ideal_ph_max} (Opt: {species.ideal_ph_optimal})" if species.ideal_ph_min else None,
         "uv": "Moderado a Alto (Ver Ficha Téc.)",
         "recomendacion": "Mantener telemetría en observación. Posible riesgo según fenología.",
+        "image_url": species.image_url or '',
     }
 
     # CUMPLIMIENTO NOM-059: Advertencia legal si especie protegida

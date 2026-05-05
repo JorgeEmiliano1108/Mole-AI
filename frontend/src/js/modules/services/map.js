@@ -1,8 +1,7 @@
 // ==========================================================
 // 10. FLUJO DE GEOLOCALIZACIÓN (MAPA Y PERMISOS) [BACKEND ESTRICTO]
 // ==========================================================
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// Leaflet loaded via CDN in dashboard.html - uses global L
 
 export let mapInstance = null;
 export let userLocation = null;
@@ -47,7 +46,7 @@ export function openMapModal() {
     
     if (!mapInstance) {
         // Coordenadas iniciales (Centro de México), Zoom nivel 5
-        mapInstance = L.map('map-container').setView([23.6345, -102.5528], 5);
+            mapInstance = L.map('map').setView([23.6345, -102.5528], 5);
 
         // Capa de mapa oscuro (Estilo Terminal/Cyberpunk)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
