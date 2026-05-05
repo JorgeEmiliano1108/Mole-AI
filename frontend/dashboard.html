@@ -28,7 +28,7 @@
         .crt-flicker { animation: crtFlicker 5s infinite; }
     </style>
 </head>
-<body class="bg-mole-base text-mole-cyan font-mono min-h-screen overflow-x-hidden relative">
+<body class="bg-mole-bg text-mole-text font-sans min-h-screen overflow-x-hidden relative">
 
     <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
 
@@ -44,7 +44,7 @@
                     <div>
                         <h1 class="text-lg font-bold text-mole-cyan tracking-tight">DASHBOARD OPERATIVO</h1>
                         <div class="flex items-center gap-3">
-                            <span id="clock" class="text-xs text-mole-dim font-mono">00:00:00</span>
+                            <span id="clock" class="text-xs text-mole-text-dim font-mono">00:00:00</span>
                             <span class="text-mole-border">│</span>
                             <div class="flex items-center gap-1.5">
                                 <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-mole-red shrink-0"></span>
@@ -53,16 +53,30 @@
                         </div>
                     </div>
                 </div>
-                <div class="relative">
-                    <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-base border border-mole-border px-3 py-2 rounded hover:border-mole-cyan/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-cyan">
-                        <span class="text-xs font-bold text-mole-dim">OPERADOR</span>
-                        <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <div class="flex items-center gap-2">
+                    <!-- Theme Toggle (Solar/Pip-Boy Mode) -->
+                    <button id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Cambiar tema" class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber" title="Modo Solar / Pip-Boy">
+                        <!-- Sun Icon (shown in dark mode) -->
+                        <svg id="icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                        <!-- Moon Icon (shown in light mode) -->
+                        <svg id="icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path>
+                        </svg>
                     </button>
-                    <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
-                        <div class="p-3 border-b border-mole-border">
-                            <p id="dropdown-user-name" class="font-bold text-mole-cyan text-xs">AGENTE</p>
+
+                    <div class="relative">
+                        <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-base border border-mole-border px-3 py-2 rounded hover:border-mole-cyan/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-cyan">
+                            <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
+                            <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
+                            <div class="p-3 border-b border-mole-border">
+                                <p id="dropdown-user-name" class="font-bold text-mole-cyan text-xs">AGENTE</p>
+                            </div>
+                            <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR SESIÓN]</button>
                         </div>
-                        <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR SESIÓN]</button>
                     </div>
                 </div>
             </header>
@@ -72,28 +86,28 @@
                 <!-- Humidity -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-sky-500/30"></div>
-                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Humedad Suelo</span>
+                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Humedad Suelo</span>
                     <div class="text-2xl sm:text-3xl font-bold text-sky-400" id="txt-hum">--%</div>
                 </div>
 
                 <!-- Temperature -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-orange-500/30"></div>
-                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Temperatura</span>
+                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Temperatura</span>
                     <div class="text-2xl sm:text-3xl font-bold text-orange-400" id="txt-temp">--°C</div>
                 </div>
 
                 <!-- pH -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
-                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Nivel pH</span>
+                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Nivel pH</span>
                     <div class="text-2xl sm:text-3xl font-bold text-mole-green" id="txt-ph">--</div>
                 </div>
 
                 <!-- UV -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-violet-500/30"></div>
-                    <span class="text-[10px] text-mole-dim font-bold uppercase tracking-widest mb-2">Índice UV</span>
+                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Índice UV</span>
                     <div class="text-2xl sm:text-3xl font-bold text-violet-400" id="txt-uv">--</div>
                 </div>
             </div>
@@ -116,6 +130,14 @@
                             ESPERANDO FEED...
                         </div>
                         <img id="main-img" class="hidden absolute inset-0 w-full h-full object-cover" src="" alt="Monitor visual de la planta analizada">
+                        <!-- Hidden camera/file input for vision capture -->
+                        <input type="file" accept="image/*" id="camera-input" class="hidden" capture="environment">
+                    </div>
+                    <!-- Button to trigger camera/file input -->
+                    <div class="p-3 border-t border-mole-border flex gap-2">
+                        <label for="camera-input" class="flex-1 text-center text-xs font-bold bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors cursor-pointer tracking-widest uppercase">
+                            [ Capturar Imagen ]
+                        </label>
                     </div>
                 </div>
 
@@ -306,6 +328,51 @@
         </div>
     </div>
 
+    <!-- Leaflet CSS & JS (CDN) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- jsPDF (CDN) for PDF report generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Core API Service (classic script - must load before modules) -->
+    <script src="/static/js/apiService.js"></script>
+    
+    <script>
+        // Theme Toggle Function
+        function toggleTheme() {
+            const body = document.body;
+            const iconSun = document.getElementById('icon-sun');
+            const iconMoon = document.getElementById('icon-moon');
+
+            body.classList.toggle('light-mode');
+
+            if (body.classList.contains('light-mode')) {
+                if (iconSun) iconSun.classList.remove('hidden');
+                if (iconMoon) iconMoon.classList.add('hidden');
+                localStorage.setItem('mole_theme', 'solar');
+            } else {
+                if (iconSun) iconSun.classList.add('hidden');
+                if (iconMoon) iconMoon.classList.remove('hidden');
+                localStorage.setItem('mole_theme', 'pipboy');
+            }
+        }
+
+        // Apply saved theme on load
+        (function() {
+            const savedTheme = localStorage.getItem('mole_theme');
+            if (savedTheme === 'solar') {
+                document.body.classList.add('light-mode');
+                window.addEventListener('DOMContentLoaded', function() {
+                    const iconSun = document.getElementById('icon-sun');
+                    const iconMoon = document.getElementById('icon-moon');
+                    if (iconSun) iconSun.classList.remove('hidden');
+                    if (iconMoon) iconMoon.classList.add('hidden');
+                });
+            }
+        })();
+    </script>
+    
     <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>

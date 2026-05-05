@@ -169,7 +169,7 @@ async function renderAdminReports() {
     }
 }
 
-// --- EXPORTACIÓN INTELIGENTE (RECIBE EL TIPO DE REPORTE) ---
+// --- EXPORTACIÓN INTELIGENTE (PDF) ---
 export function generateMasterReport(type) {
     let targetData = [];
     let title = "";
@@ -186,28 +186,59 @@ export function generateMasterReport(type) {
         alert("SISTEMA OVERRIDE: No hay registros para compilar en esta bandeja.");
         return;
     }
-    
-    let reportText = "==========================================\n";
-    reportText += `   MOLE-IA | ${title} \n`;
-    reportText += "==========================================\n\n";
-    reportText += `FECHA DE EXTRACCIÓN: ${new Date().toLocaleDateString('en-GB')} - ${new Date().toLocaleTimeString('en-GB')}\n\n`;
-    
-    targetData.forEach(r => {
+
+    // Initialize jsPDF from CDN global
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    // Header
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(0, 229, 255);
+    doc.text('MOLE-IA', 105, 20, { align: 'center' });
+
+    doc.setFontSize(12);
+    doc.text(title, 105, 28, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('en-GB')} - ${new Date().toLocaleTimeString('en-GB')}`, 105, 34, { align: 'center' });
+
+    // Divider
+    doc.setDrawColor(0, 229, 255);
+    doc.line(15, 38, 195, 38);
+
+    // Records
+    let y = 46;
+    doc.setFontSize(9);
+    doc.setTextColor(0);
+
+    targetData.forEach((r, idx) => {
+        if (y > 280) { doc.addPage(); y = 20; }
+
+        doc.setFont('courier', 'bold');
+        doc.setTextColor(0, 229, 255);
+        doc.text(`[${r.time}]`, 15, y);
+
         if(type === 'usuarios') {
-            reportText += `[${r.time}] | OPERADOR: ${r.user} | CLASIFICACIÓN: ${r.type.toUpperCase().replace('_', ' ')}\n`;
-            reportText += `>> REPORTE: ${r.message}\n`;
+            doc.text(`OPERADOR: ${r.user}`, 60, y);
+            doc.setFont('courier', 'normal');
+            doc.setTextColor(100);
+            doc.text(`TIPO: ${r.type.toUpperCase().replace('_', ' ')}`, 15, y + 5);
+            doc.text(`MENSAJE: ${r.message}`, 15, y + 10);
+            y += 18;
         } else {
-            reportText += `[${r.time}] | OPERADOR: ${r.user} | ESPECÍMEN: ${r.plant}\n`;
-            reportText += `>> FALLO DETECTADO: ${r.issue}\n`;
+            doc.text(`OPERADOR: ${r.user}`, 60, y);
+            doc.setFont('courier', 'normal');
+            doc.setTextColor(100);
+            doc.text(`ESPECÍMEN: ${r.plant}`, 15, y + 5);
+            doc.text(`FALLO: ${r.issue}`, 15, y + 10);
+            y += 18;
         }
-        reportText += `------------------------------------------\n`;
+
+        doc.setDrawColor(200);
+        doc.line(15, y - 2, 195, y - 2);
     });
-    
-    const blob = new Blob([reportText], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `MOLE_IA_${type.toUpperCase()}_${Date.now()}.txt`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+
+    doc.save(`MOLE_IA_${type.toUpperCase()}_${Date.now()}.pdf`);
 }
