@@ -217,19 +217,19 @@ window.typeContent = typeContent;
 
 // Small compatibility shims for UI buttons - now using physical navigation
 function openUserCreationModal() {
-    window.location.href = '/login.html?view=register';
+    window.location.replace('/login.html?view=register');
 }
 
 function openAdminAddPlantModal() {
-    window.location.href = '/admin.html';
+    window.location.replace('/admin.html');
 }
 
 function returnToOverride() {
-    window.location.href = '/admin.html';
+    window.location.replace('/admin.html');
 }
 
 function startSystem() {
-    window.location.href = '/login.html';
+                window.location.replace('/login.html');
 }
 
 // ==========================================================
@@ -334,9 +334,9 @@ async function attemptLogin() {
             
             // 4. Role-based redirect
             if (role === 'superuser' || role === 'admin') {
-                window.location.href = '/admin.html'; // Admin panel
+                window.location.replace('/admin.html'); // Admin panel
             } else {
-                window.location.href = '/dashboard.html'; // Regular user dashboard
+                window.location.replace('/dashboard.html'); // Regular user dashboard
             }
         } else {
             throw new Error("Token no recibido desde el servidor.");
@@ -351,11 +351,17 @@ async function attemptLogin() {
 
 // --- CIERRE DE SESIÓN ---
 function logout() {
-    // Purga de memoria y sesión
+    // 1. Limpiar tokens (backend + cliente)
     try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
-    localStorage.removeItem('moleia_current_user'); 
-    localStorage.removeItem('moleia_user_role');
     
+    // 2. Limpiar TODAS las llaves de sesión (Zero-Trust)
+    localStorage.removeItem('moleia_current_user');
+    localStorage.removeItem('moleia_user_role');
+    localStorage.removeItem('moleia_chat_history_data');
+    localStorage.removeItem('moleia_current_session_id');
+    sessionStorage.clear(); // ← Limpieza total de sessionStorage
+    
+    // 3. Limpiar intervalos y listeners
     if (typeof detachChatListener === 'function') detachChatListener(); 
     if (window.monitorInterval) clearInterval(window.monitorInterval);  
     if (window.clockInterval) clearInterval(window.clockInterval);
@@ -363,12 +369,12 @@ function logout() {
     
     console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
     
-    // Force redirect with history replacement to prevent back-button access
+    // 4. Redirección SIN rastro en historial
     window.location.replace('/index.html'); // replace() instead of href prevents "back" to protected pages
 }
 
 function backToDashboard() {
-    window.location.href = '/dashboard.html';
+    window.location.replace('/dashboard.html'); // Prevent back-button to login
 }
 
 // ==========================================================
@@ -831,22 +837,29 @@ function renderPlantResults(results) {
         const name = safe(plant, 'name', 'nombre', 'common_name') || 'Desconocida';
         const scientific = safe(plant, 'scientific_name', 'nombre_cientifico') || '';
         const desc = safe(plant, 'description', 'descripcion') || 'Sin registro en la base de datos.';
-
+        // Backend sends formatted strings: "humedad", "temperatura", "ph"
+        const humidity = plant.humedad || '';
+        const temperature = plant.temperatura || '';
+        const ph = plant.ph || '';
+        const isProtected = plant.is_protected_nom059 === true || plant.is_protected_nom059 === 'true';
+        const warning = isProtected ? 
+            `ATENCIÓN: Especie protegida por NOM-059 (Categoría: ${plant.protection_category || 'Especial'}). Extracción ilegal sancionada.` : '';
+        
         const card = document.createElement('div');
         card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
-
+        
         const title = document.createElement('h3');
         title.className = 'font-bold text-[#00e5ff] text-sm tracking-widest';
         title.textContent = name.toUpperCase();
         card.appendChild(title);
-
+        
         if (scientific) {
             const sci = document.createElement('p');
             sci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
             sci.textContent = scientific;
             card.appendChild(sci);
         }
-
+        
         const snippet = document.createElement('p');
         snippet.className = 'text-xs text-[#00e5ff]/90 opacity-80';
         snippet.style.display = '-webkit-box';
@@ -855,7 +868,41 @@ function renderPlantResults(results) {
         snippet.style.overflow = 'hidden';
         snippet.textContent = desc;
         card.appendChild(snippet);
-
+        
+        // Agronomic parameters (humidity, temperature, pH)
+        if (humidity || temperature || ph) {
+            const params = document.createElement('div');
+            params.className = 'mt-2 flex flex-wrap gap-2';
+            
+            if (humidity) {
+                const hum = document.createElement('span');
+                hum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                hum.textContent = `💧 ${humidity}`;
+                params.appendChild(hum);
+            }
+            if (temperature) {
+                const temp = document.createElement('span');
+                temp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                temp.textContent = `🌡️ ${temperature}`;
+                params.appendChild(temp);
+            }
+            if (ph) {
+                const phSpan = document.createElement('span');
+                phSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                phSpan.textContent = `⚗️ pH: ${ph}`;
+                params.appendChild(phSpan);
+            }
+            card.appendChild(params);
+        }
+        
+        // NOM-059 Warning (if protected)
+        if (isProtected && warning) {
+            const alert = document.createElement('div');
+            alert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] leading-relaxed';
+            alert.textContent = warning;
+            card.appendChild(alert);
+        }
+        
         // Build expanded view on demand and restore original when closed
         const buildExpanded = () => {
             // Clear card
@@ -865,7 +912,16 @@ function renderPlantResults(results) {
             eTitle.className = 'font-bold text-[#00e5ff] text-sm tracking-widest border-b border-[#00e5ff]/30 pb-1 mb-2';
             eTitle.textContent = name.toUpperCase();
             card.appendChild(eTitle);
-
+            
+            // Add species image if available
+            if (plant.image_url) {
+                const eImage = document.createElement('img');
+                eImage.className = 'w-full h-48 object-cover rounded border border-[#00e5ff]/30 my-2';
+                eImage.src = plant.image_url;
+                eImage.alt = name + ' - imagen botánica';
+                card.appendChild(eImage);
+            }
+            
             if (scientific) {
                 const eSci = document.createElement('p');
                 eSci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
@@ -878,8 +934,46 @@ function renderPlantResults(results) {
             eDesc.textContent = desc;
             card.appendChild(eDesc);
 
+            // Agronomic parameters in expanded view (backend sends formatted strings)
+            const eHumidity = plant.humedad || '';
+            const eTemperature = plant.temperatura || '';
+            const ePh = plant.ph || '';
+            
+            if (eHumidity || eTemperature || ePh) {
+                const eParams = document.createElement('div');
+                eParams.className = 'mt-2 flex flex-wrap gap-2';
+                
+                if (eHumidity) {
+                    const eHum = document.createElement('span');
+                    eHum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    eHum.textContent = `💧 ${eHumidity}`;
+                    eParams.appendChild(eHum);
+                }
+                if (eTemperature) {
+                    const eTemp = document.createElement('span');
+                    eTemp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    eTemp.textContent = `🌡️ ${eTemperature}`;
+                    eParams.appendChild(eTemp);
+                }
+                if (ePh) {
+                    const ePhSpan = document.createElement('span');
+                    ePhSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    ePhSpan.textContent = `⚗️ pH: ${ePh}`;
+                    eParams.appendChild(ePhSpan);
+                }
+                card.appendChild(eParams);
+            }
+
+            // NOM-059 Warning in expanded view
+            if (isProtected && warning) {
+                const eAlert = document.createElement('div');
+                eAlert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] leading-relaxed';
+                eAlert.textContent = warning;
+                card.appendChild(eAlert);
+            }
+
             const closeBtn = document.createElement('button');
-            closeBtn.className = 'mt-3 text-xs text-black bg-[#00e5ff] px-2 py-1 hover:bg-white w-full font-bold tracking-widest';
+            closeBtn.className = 'mt-3 text-xs text-[#00e5ff] bg-transparent border border-[#00e5ff] px-2 py-1 hover:bg-[#00e5ff] hover:text-black w-full font-bold tracking-widest transition-all';
             closeBtn.textContent = '[ CERRAR FICHA ]';
             closeBtn.addEventListener('click', (ev) => {
                 ev.stopPropagation();

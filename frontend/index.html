@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="bg-mole-base text-mole-cyan font-mono min-h-screen relative overflow-x-hidden">
+<body class="bg-mole-base text-mole-cyan font-sans min-h-screen relative overflow-x-hidden">
 
 
 
@@ -47,11 +47,17 @@
                     </nav>
                 </div>
 
-                <button data-action="system:start" class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
-                    Iniciar Sistema
-                    <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </button>
-            </div>
+                 <button data-action="system:start" class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
+                     Iniciar Sistema
+                     <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                 </button>
+             </div>
+
+             <!-- Theme Toggle (bottom left) -->
+             <button onclick="toggleTheme()" aria-label="Cambiar tema" class="fixed bottom-4 left-4 z-40 w-10 h-10 bg-mole-surface border border-mole-border rounded-full flex items-center justify-center hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber">
+                 <svg id="index-icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                 <svg id="index-icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path></svg>
+             </button>
 
             <!-- Right Panel: Typewriter Output -->
             <div class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col min-h-[350px] lg:min-h-0 shadow-cyber relative overflow-hidden">
@@ -80,7 +86,37 @@
         </p>
     </div>
 
-     <script src="/static/js/apiService.js"></script>
-     <script type="module" src="/src/js/main.js"></script>
+    <!-- AppConfig: Define API base URL before apiService.js loads -->
+    <script>
+        window.AppConfig = {
+            API_BASE_URL: '/api/v1'  // Relative path via Nginx proxy
+        };
+
+        // Theme Toggle Function
+        function toggleTheme() {
+            const body = document.body;
+            body.classList.toggle('light-mode');
+            localStorage.setItem('mole_theme', body.classList.contains('light-mode') ? 'solar' : 'pipboy');
+        }
+
+        // Apply saved theme on load
+        (function() {
+            const savedTheme = localStorage.getItem('mole_theme');
+            if (savedTheme === 'solar') {
+                document.body.classList.add('light-mode');
+            }
+        })();
+        
+        // BFCache Guard for index.html
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                console.warn('[Index] Página restaurada de BFCache, re-validando...');
+                // El index no requiere auth, pero limpiamos cualquier estado residual
+            }
+        });
+    </script>
+
+    <script src="/static/js/apiService.js"></script>
+    <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>

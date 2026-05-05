@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme Architecture: Pip-Boy (Dark) vs Solar (Light) ────────── */
+:root {
+  /* Default: Pip-Boy (Dark Mode) */
+  --mole-bg: #0B0F19;
+  --mole-surface: #111827;
+  --mole-border: #1E293B;
+  --mole-text: #00E5FF;      /* WCAG AA compliant: 4.5:1 contrast on #0B0F19 */
+  --mole-text-dim: #94A3B8;
+  --mole-accent: #00E5FF;
+  --mole-green: #34D399;
+  --mole-amber: #FBBF24;
+  --mole-red: #F87171;
+}
+
+body.light-mode {
+  /* Solar Mode: Light theme for direct sunlight (azoteas/campo) */
+  --mole-bg: #F9FAFB;
+  --mole-surface: #FFFFFF;
+  --mole-border: #E5E7EB;
+  --mole-text: #111827;        /* Dark text on light background */
+  --mole-text-dim: #6B7280;
+  --mole-accent: #059669;     /* Emerald 600 */
+  --mole-green: #10B981;
+  --mole-amber: #D97706;
+  --mole-red: #DC2626;
+}
+
+/* Apply semantic colors via Tailwind arbitrary values */
+body {
+  font-family: 'Inter', system-ui, sans-serif; /* DEFAULT: Sans-serif for readability */
+}
+
+/* Reserve monospace ONLY for terminal/chat/telemetry */
+.terminal-text, .crt-chat, code, pre {
+  font-family: 'VT323', 'JetBrains Mono', monospace !important;
+}
+
 /* Custom animations */
 @keyframes biometric-scan {
   0% { top: -5%; opacity: 0; }

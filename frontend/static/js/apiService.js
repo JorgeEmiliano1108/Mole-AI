@@ -181,7 +181,30 @@ class ApiService {
             }
 
             if (!response.ok) {
-                var errorMessage = (data && data.message) ? data.message : 'Error HTTP ' + response.status;
+                var errorMessage = 'Error HTTP ' + response.status;
+                
+                // Django error formats: {"error": "..."} or {"message": "..."}, {"detail": "..."}, or validation errors
+                if (data && typeof data === 'object' && data !== null) {
+                    if (data.error) {
+                        errorMessage = String(data.error);
+                    } else if (data.message) {
+                        errorMessage = String(data.message);
+                    } else if (data.detail) {
+                        errorMessage = String(data.detail);
+                    } else {
+                        // Django REST Framework validation errors: {"field": ["error1", "error2"], ...}
+                        var messages = [];
+                        for (var key in data) {
+                            if (data.hasOwnProperty(key) && Array.isArray(data[key]) && data[key].length > 0) {
+                                messages.push(String(data[key][0]));
+                            }
+                        }
+                        if (messages.length > 0) {
+                            errorMessage = messages.join(' | ');
+                        }
+                    }
+                }
+                
                 var error = new Error(errorMessage);
                 error.status = response.status;
                 error.data = data;
@@ -371,7 +394,11 @@ if (isPublic) {
         return attemptRequest(0).catch(function (error) {
             if (!silent) {
                 var friendlyMsg = self._friendlyMessage(error);
-                ApiService.showToast(friendlyMsg, 'error');
+                // Avoid redundant toasts when form already shows error (register/login)
+                var isFormError = (normalizedEndpoint.includes('auth/register') || normalizedEndpoint.includes('auth/login'));
+                if (!isFormError) {
+                    ApiService.showToast(friendlyMsg, 'error');
+                }
                 console.error('[ApiService] ' + method + ' ' + endpoint + ' falló:', error);
             }
             throw error;
@@ -431,6 +458,6 @@ if (isPublic) {
     }
 }
 
-// Global instance
-window.ApiService = ApiService;
-window.moleApi = new ApiService();
+// Global instance (use instance, not class, so methods like .post() work directly)
+window.ApiService = new ApiService();
+window.moleApi = window.ApiService;
