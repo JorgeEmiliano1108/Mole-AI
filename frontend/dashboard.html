@@ -16,12 +16,12 @@
         .crt-screen { position: relative; background-color: #000 !important; overflow: hidden; }
         .crt-screen::before {
             content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 255, 170, 0.04) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
             z-index: 50; background-size: 100% 4px, 3px 100%; pointer-events: none;
         }
-        .crt-text-glow { color: #14fdce !important; text-shadow: 0 0 5px rgba(20,253,206,0.5), 0 0 10px rgba(20,253,206,0.3); }
-        .crt-text-glow-dim { color: rgba(20,253,206,0.7) !important; text-shadow: 0 0 2px rgba(20,253,206,0.4); }
-        .crt-bg-glow { background-color: #14fdce !important; color: #000 !important; text-shadow: none; box-shadow: 0 0 10px #14fdce; }
+        .crt-text-glow { color: #00FFCC !important; text-shadow: 0 0 5px rgba(0,255,204,0.5), 0 0 10px rgba(0,255,204,0.3); }
+        .crt-text-glow-dim { color: rgba(0,255,204,0.7) !important; text-shadow: 0 0 2px rgba(0,255,204,0.4); }
+        .crt-bg-glow { background-color: #00FFCC !important; color: #000 !important; text-shadow: none; box-shadow: 0 0 10px #00FFCC; }
         @keyframes crtFlicker {
             0% { opacity: 0.95; } 5% { opacity: 0.85; } 10% { opacity: 0.95; } 15% { opacity: 1; } 100% { opacity: 1; }
         }
@@ -44,11 +44,11 @@
                     <div>
                         <h1 class="text-lg font-bold text-mole-cyan tracking-tight">DASHBOARD OPERATIVO</h1>
                         <div class="flex items-center gap-3">
-                            <span id="clock" class="text-xs text-mole-text-dim font-mono">00:00:00</span>
+                            <span id="clock" class="text-xs text-mole-text-dim font-sans">00:00:00</span>
                             <span class="text-mole-border">│</span>
                             <div class="flex items-center gap-1.5">
                                 <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-mole-red shrink-0"></span>
-                                <span id="ws-status-label" class="text-[10px] font-bold text-mole-red tracking-wider font-mono">LINK DOWN</span>
+                                <span id="ws-status-label" class="text-xs font-bold text-mole-red tracking-wider font-sans">LINK DOWN</span>
                             </div>
                         </div>
                     </div>
@@ -67,13 +67,13 @@
                     </button>
 
                     <div class="relative">
-                        <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-base border border-mole-border px-3 py-2 rounded hover:border-mole-cyan/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-cyan">
+                        <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
                             <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
                             <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
                             <div class="p-3 border-b border-mole-border">
-                                <p id="dropdown-user-name" class="font-bold text-mole-cyan text-xs">AGENTE</p>
+                                <p id="dropdown-user-name" class="font-bold text-mole-accent text-xs">AGENTE</p>
                             </div>
                             <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR SESIÓN]</button>
                         </div>
@@ -86,28 +86,28 @@
                 <!-- Humidity -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-sky-500/30"></div>
-                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Humedad Suelo</span>
+                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Humedad Suelo</span>
                     <div class="text-2xl sm:text-3xl font-bold text-sky-400" id="txt-hum">--%</div>
                 </div>
 
                 <!-- Temperature -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-orange-500/30"></div>
-                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Temperatura</span>
+                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Temperatura</span>
                     <div class="text-2xl sm:text-3xl font-bold text-orange-400" id="txt-temp">--°C</div>
                 </div>
 
                 <!-- pH -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
-                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Nivel pH</span>
+                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Nivel pH</span>
                     <div class="text-2xl sm:text-3xl font-bold text-mole-green" id="txt-ph">--</div>
                 </div>
 
                 <!-- UV -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-full h-0.5 bg-violet-500/30"></div>
-                    <span class="text-[10px] text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Índice UV</span>
+                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Índice UV</span>
                     <div class="text-2xl sm:text-3xl font-bold text-violet-400" id="txt-uv">--</div>
                 </div>
             </div>
@@ -118,14 +118,14 @@
                 <!-- Camera / Image Monitor -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col h-72 lg:h-auto relative shadow-cyber">
                     <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
-                        <h3 class="font-bold text-mole-cyan text-xs tracking-wider flex items-center gap-2">
+                        <h3 class="font-bold text-mole-accent text-xs tracking-wider flex items-center gap-2">
                             <span class="w-1.5 h-1.5 rounded-full bg-mole-red animate-pulse"></span>
                             MONITOR VISUAL
                         </h3>
-                        <span id="plant-tag" class="text-[10px] font-bold bg-mole-base text-mole-dim px-2 py-1 rounded border border-mole-border">SIN ASIGNAR</span>
+                        <span id="plant-tag" class="text-xs font-bold bg-mole-bg text-mole-text-dim px-2 py-1 rounded border border-mole-border">SIN ASIGNAR</span>
                     </div>
-                    <div class="flex-1 bg-mole-base flex items-center justify-center relative">
-                        <div id="video-placeholder" class="text-mole-dim/50 text-xs font-mono animate-pulse flex flex-col items-center gap-2">
+                    <div class="flex-1 bg-mole-bg flex items-center justify-center relative">
+                        <div id="video-placeholder" class="text-mole-dim/50 text-xs font-sans animate-pulse flex flex-col items-center gap-2">
                             <svg class="w-8 h-8 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             ESPERANDO FEED...
                         </div>
@@ -135,7 +135,9 @@
                     </div>
                     <!-- Button to trigger camera/file input -->
                     <div class="p-3 border-t border-mole-border flex gap-2">
-                        <label for="camera-input" class="flex-1 text-center text-xs font-bold bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors cursor-pointer tracking-widest uppercase">
+                         <label for="camera-input" class="flex-1 text-center text-xs font-bold bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors cursor-pointer tracking-widest uppercase min-h-[44px] flex items-center justify-center">
+                             [ Capturar Imagen ]
+                         </label>
                             [ Capturar Imagen ]
                         </label>
                     </div>
@@ -151,8 +153,8 @@
                     </div>
                     <div class="p-4 flex-1 overflow-y-auto">
                         <div id="diagnostic-term" class="space-y-3">
-                            <p class="text-xs text-mole-dim font-mono">
-                                <span class="text-mole-cyan/50">[AWAIT]</span> Esperando datos de inferencia MS1...
+                            <p class="text-xs text-mole-dim font-sans">
+                                <span class="text-mole-accent/50">[AWAIT]</span> Esperando datos de inferencia MS1...
                             </p>
                         </div>
                     </div>
@@ -164,25 +166,25 @@
         <!-- Right / Terminal Chat Drawer (CRT Style) -->
         <div id="chat-window" style="z-index: 60; box-shadow: -5px 0 30px rgba(20,253,206,0.2);" class="fixed inset-y-0 right-0 w-full md:w-96 bg-black border-l-4 border-[#14fdce] transform translate-x-full flex flex-col transition-transform duration-300 crt-screen crt-flicker crt-chat">
             
-            <div class="px-4 py-3 border-b-2 border-[#14fdce] flex justify-between items-center bg-black">
-                <h3 class="font-bold text-[#14fdce] text-sm tracking-widest flex items-center gap-2 crt-text-glow">
-                    <span class="w-3 h-3 bg-[#14fdce] animate-pulse"></span>
+            <div class="px-4 py-3 border-b-2 border-mole-cyan flex justify-between items-center bg-black">
+                <h3 class="font-bold text-mole-cyan text-sm tracking-widest flex items-center gap-2 crt-text-glow">
+                    <span class="w-3 h-3 bg-mole-cyan animate-pulse"></span>
                     MOLE IA TERMINAL
                 </h3>
                 <div class="flex items-center gap-2">
-                    <button data-action="chat:history" class="text-[#14fdce] hover:bg-[#14fdce] hover:text-black px-1 border border-transparent hover:border-[#14fdce] focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Historial">[ LOGS ]</button>
-                    <button data-action="chat:new" class="text-[#14fdce] hover:bg-[#14fdce] hover:text-black px-1 border border-transparent hover:border-[#14fdce] focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Nueva Conversación">[ CLR ]</button>
-                    <div class="w-px h-4 bg-[#14fdce] mx-1"></div>
-                    <button aria-label="Cerrar chat" onclick="document.getElementById('chat-window').classList.add('translate-x-full')" class="text-red-500 hover:bg-red-500 hover:text-black px-1 border border-transparent hover:border-red-500 focus:outline-none transition-none text-xs">
+                <button data-action="chat:history" class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Historial">[ LOGS ]</button>
+                <button data-action="chat:new" class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Nueva Conversación">[ CLR ]</button>
+                    <div class="w-px h-4 bg-mole-cyan mx-1"></div>
+                    <button aria-label="Cerrar chat" onclick="document.getElementById('chat-window').classList.add('translate-x-full')" class="text-mole-red hover:bg-mole-red hover:text-black px-1 border border-transparent hover:border-mole-red focus:outline-none transition-none text-xs min-h-[44px] min-w-[44px]">
                         [ X ]
                     </button>
                 </div>
             </div>
 
             <!-- Terminal Banner -->
-            <div class="bg-black border-b border-[#14fdce]/30 px-4 py-1 flex gap-2 shrink-0">
-                <span class="text-[#14fdce] crt-text-glow-dim text-[10px] font-bold shrink-0">MOLE OS v8.01</span>
-                <p class="text-[10px] text-[#14fdce]/50 leading-tight">INICIALIZANDO SUBSISTEMA DE MEMORIA...</p>
+            <div class="bg-black border-b border-mole-cyan/30 px-4 py-1 flex gap-2 shrink-0">
+                <span class="text-mole-cyan crt-text-glow-dim text-xs font-bold shrink-0">MOLE OS v8.01</span>
+                <p class="text-xs text-mole-cyan/50 leading-tight">INICIALIZANDO SUBSISTEMA DE MEMORIA...</p>
             </div>
 
             <!-- Chat Messages -->
@@ -191,17 +193,17 @@
             </div>
 
             <!-- Terminal Input -->
-            <div class="p-3 border-t-2 border-[#14fdce] bg-black flex items-center gap-2">
-                <span class="text-[#14fdce] crt-text-glow font-bold">&gt;_</span>
-                <input type="text" id="chat-input" class="flex-1 bg-transparent border-none focus:ring-0 outline-none text-[#14fdce] crt-text-glow font-bold placeholder-[#14fdce]/30 uppercase" placeholder="INSERTE COMANDO..." autocomplete="off">
-                <button id="chat-send-btn" aria-label="Enviar mensaje" class="px-2 py-1 bg-transparent text-[#14fdce] border border-[#14fdce] hover:bg-[#14fdce] hover:text-black transition-none focus:outline-none focus:ring-0 font-bold crt-text-glow hover:crt-bg-glow">
+            <div class="p-3 border-t-2 border-mole-cyan bg-black flex items-center gap-2">
+                <span class="text-mole-cyan crt-text-glow font-bold">&gt;_</span>
+                <input type="text" id="chat-input" class="flex-1 bg-transparent border-none focus:ring-0 outline-none text-mole-cyan crt-text-glow font-bold placeholder-mole-cyan/30 uppercase" placeholder="INSERTE COMANDO..." autocomplete="off">
+                <button id="chat-send-btn" aria-label="Enviar mensaje" class="min-h-[44px] min-w-[44px] px-2 py-1 bg-transparent text-mole-cyan border border-mole-cyan hover:bg-mole-cyan hover:text-black transition-none focus:outline-none focus:ring-0 font-bold crt-text-glow hover:crt-bg-glow">
                     [ ENTER ]
                 </button>
             </div>
         </div>
 
         <!-- Mobile FAB to open Chat -->
-        <button aria-label="Abrir chat" onclick="document.getElementById('chat-window').classList.remove('translate-x-full')" class="fixed bottom-6 right-6 w-10 h-10 bg-mole-cyan rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-30 focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base overflow-hidden border-2 border-mole-cyan p-0.5">
+        <button aria-label="Abrir chat" onclick="document.getElementById('chat-window').classList.remove('translate-x-full')" class="fixed bottom-6 right-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-30 focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
             <img src="/static/assets/topo.png" alt="Abrir Copiloto IA" class="w-full h-full object-cover rounded-full bg-mole-base">
         </button>
 
@@ -210,12 +212,12 @@
     <!-- Analysis Modal -->
     <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('analysis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> ANÁLISIS DETALLADO</h2>
-            <div class="space-y-4 text-xs font-mono">
-                <p><span class="text-mole-dim">ESTADO GENERAL:</span> <span class="text-mole-green">ÓPTIMO</span></p>
-                <p><span class="text-mole-dim">FOTOPERIODO:</span> <span class="text-mole-cyan">14H/10H</span></p>
-                <p><span class="text-mole-dim">CANTIDAD DE AGUA:</span> <span class="text-mole-amber">MODERADA</span></p>
+            <button aria-label="Cerrar modal" onclick="closeModule('analysis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ANÁLISIS DETALLADO</h2>
+            <div class="space-y-4 text-xs font-sans">
+                <p><span class="text-mole-text-dim">ESTADO GENERAL:</span> <span class="text-mole-green">ÓPTIMO</span></p>
+                <p><span class="text-mole-text-dim">FOTOPERIODO:</span> <span class="text-mole-accent">14H/10H</span></p>
+                <p><span class="text-mole-text-dim">CANTIDAD DE AGUA:</span> <span class="text-mole-amber">MODERADA</span></p>
             </div>
         </div>
     </div>
@@ -223,22 +225,22 @@
     <!-- Contact Modal -->
     <div id="contact-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('contact')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> CONTACTO SEGURO</h2>
-            <input type="text" placeholder="Asunto" class="w-full bg-mole-base border border-mole-border p-2 mb-4 text-mole-cyan outline-none focus:border-mole-cyan">
-            <textarea placeholder="Mensaje encriptado..." class="w-full bg-mole-base border border-mole-border p-2 mb-4 text-mole-cyan h-32 outline-none focus:border-mole-cyan"></textarea>
-            <button onclick="closeModule('contact')" class="w-full bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">ENVIAR</button>
+            <button aria-label="Cerrar modal" onclick="closeModule('contact')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> CONTACTO SEGURO</h2>
+            <input type="text" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+            <textarea placeholder="Mensaje encriptado..." class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text h-32 outline-none focus:border-mole-accent"></textarea>
+            <button onclick="closeModule('contact')" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
         </div>
     </div>
 
     <!-- Add Plant Modal -->
     <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('addPlant')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> NUEVO ESPÉCIMEN</h2>
-            <input type="text" id="new-plant-name" placeholder="Nombre (ej. Tomate Alpha)" class="w-full bg-mole-base border border-mole-border p-2 mb-4 text-mole-cyan uppercase outline-none focus:border-mole-cyan">
-            <input type="text" id="new-plant-type" placeholder="Tipo (Frutal, Suculenta...)" class="w-full bg-mole-base border border-mole-border p-2 mb-4 text-mole-cyan uppercase outline-none focus:border-mole-cyan">
-            <button onclick="window.updatePlant('NUEVO')" class="w-full bg-mole-green/20 border border-mole-green text-mole-green py-2 hover:bg-mole-green hover:text-mole-base font-bold tracking-widest transition-colors mt-2 focus:outline-none focus:ring-2 focus:ring-mole-green rounded">VINCULAR CULTIVO</button>
+            <button aria-label="Cerrar modal" onclick="closeModule('addPlant')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> NUEVO ESPÉCIMEN</h2>
+            <input type="text" id="new-plant-name" placeholder="Nombre (ej. Tomate Alpha)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
+            <input type="text" id="new-plant-type" placeholder="Tipo (Frutal, Suculenta...)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
+            <button onclick="window.updatePlant('NUEVO')" class="w-full bg-mole-green/20 border border-mole-green text-mole-green py-2 hover:bg-mole-green hover:text-mole-base font-bold tracking-widest transition-colors mt-2 focus:outline-none focus:ring-2 focus:ring-mole-green rounded min-h-[44px]">VINCULAR CULTIVO</button>
         </div>
     </div>
 
@@ -253,15 +255,15 @@
     <!-- Diagnosis Result Modal -->
     <div id="diagnosis-result-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('diagnosis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> RESULTADO MS1</h2>
-            <div class="space-y-4 text-xs font-mono">
-                <p><span class="text-mole-dim">ESPECIE:</span> <span id="diag-species" class="text-mole-cyan">...</span></p>
-                <p><span class="text-mole-dim">ESTADO:</span> <span id="diag-status" class="text-mole-cyan">...</span></p>
-                <p><span class="text-mole-dim">PH ESTIMADO:</span> <span id="diag-ph" class="text-mole-cyan">...</span></p>
-                <div class="border border-mole-border p-2 bg-mole-base">
-                    <span class="text-mole-dim block mb-1">TRATAMIENTO:</span> 
-                    <span id="diag-treatment" class="text-mole-cyan">...</span>
+            <button aria-label="Cerrar modal" onclick="closeModule('diagnosis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> RESULTADO MS1</h2>
+            <div class="space-y-4 text-xs font-sans">
+                <p><span class="text-mole-text-dim">ESPECIE:</span> <span id="diag-species" class="text-mole-accent">...</span></p>
+                <p><span class="text-mole-text-dim">ESTADO:</span> <span id="diag-status" class="text-mole-accent">...</span></p>
+                <p><span class="text-mole-text-dim">PH ESTIMADO:</span> <span id="diag-ph" class="text-mole-accent">...</span></p>
+                <div class="border border-mole-border p-2 bg-mole-bg">
+                    <span class="text-mole-text-dim block mb-1">TRATAMIENTO:</span> 
+                    <span id="diag-treatment" class="text-mole-accent">...</span>
                 </div>
             </div>
         </div>
@@ -270,8 +272,8 @@
     <!-- History Modal -->
     <div id="history-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-2xl w-full rounded shadow-cyber relative h-[80vh] flex flex-col">
-            <button aria-label="Cerrar modal" onclick="closeModule('history')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> HISTORIAL DE DIAGNÓSTICOS</h2>
+            <button aria-label="Cerrar modal" onclick="closeModule('history')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> HISTORIAL DE DIAGNÓSTICOS</h2>
             <div id="history-list-container" class="flex-1 overflow-y-auto space-y-3">
                 <p class="text-mole-dim text-sm text-center mt-10 animate-pulse">Cargando registros...</p>
             </div>
@@ -281,8 +283,8 @@
     <!-- Map Modal -->
     <div id="map-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-2 max-w-4xl w-full rounded shadow-cyber relative h-[80vh] flex flex-col">
-            <button aria-label="Cerrar modal" onclick="closeModule('map')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold z-10 bg-mole-base p-1 focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-lg font-bold tracking-widest text-mole-cyan p-2">> GEOLOCALIZACIÓN REGIONAL</h2>
+            <button aria-label="Cerrar modal" onclick="closeModule('map')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold z-10 bg-mole-bg p-1 focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-lg font-bold tracking-widest text-mole-accent p-2">> GEOLOCALIZACIÓN REGIONAL</h2>
             <div id="map" class="flex-1 w-full bg-mole-base border border-mole-border"></div>
         </div>
     </div>
@@ -291,13 +293,13 @@
     <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
             <div class="border-2 border-transparent">
-                <button aria-label="Cerrar modal" data-action="modal:close-iot" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-                <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> ENLACE DE HARDWARE: ESP32_NODE</h2>
+                <button aria-label="Cerrar modal" data-action="modal:close-iot" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+                <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ENLACE DE HARDWARE: ESP32_NODE</h2>
                 <div id="iot-step-1" class="iot-step block">
-                    <p class="text-mole-dim mb-4 text-xs">Ingrese las credenciales de la red para sincronizar el módulo ESP32.</p>
-                    <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)" class="w-full bg-mole-base border border-mole-border p-2 mb-4 text-mole-cyan outline-none focus:border-mole-cyan">
-                    <input type="password" id="wifi-pass" placeholder="Contraseña WPA2" class="w-full bg-mole-base border border-mole-border p-2 mb-4 text-mole-cyan outline-none focus:border-mole-cyan">
-                    <button onclick="nextIotStep(2)" class="w-full bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">INICIAR HANDSHAKE</button>
+                <p class="text-mole-text-dim mb-4 text-xs font-sans">Ingrese las credenciales de la red para sincronizar el módulo ESP32.</p>
+                <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+                <input type="password" id="wifi-pass" placeholder="Contraseña WPA2" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+                    <button onclick="nextIotStep(2)" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR HANDSHAKE</button>
                 </div>
             </div>
         </div>
@@ -306,25 +308,25 @@
     <!-- User Profile Modal -->
     <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-sm w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('profile')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-cyan mb-4">> PERFIL OPERADOR</h2>
-            <div class="space-y-4 text-xs mb-6 font-mono">
-                <p><span class="text-mole-dim">ID:</span> <span class="text-mole-cyan" id="profile-id">OP-7734</span></p>
-                <p><span class="text-mole-dim">RANGO:</span> <span class="text-mole-cyan" id="profile-role">USUARIO ESTÁNDAR</span></p>
-                <p><span class="text-mole-dim">ZONA:</span> <span class="text-mole-cyan">SECTOR 7G</span></p>
+            <button aria-label="Cerrar modal" onclick="closeModule('profile')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> PERFIL OPERADOR</h2>
+            <div class="space-y-4 text-xs mb-6 font-sans">
+                <p><span class="text-mole-text-dim">ID:</span> <span class="text-mole-accent" id="profile-id">OP-7734</span></p>
+                <p><span class="text-mole-text-dim">RANGO:</span> <span class="text-mole-accent" id="profile-role">USUARIO ESTÁNDAR</span></p>
+                <p><span class="text-mole-text-dim">ZONA:</span> <span class="text-mole-accent">SECTOR 7G</span></p>
             </div>
-            <button onclick="openDeleteModal()" class="w-full bg-mole-red/10 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded">ELIMINAR CUENTA</button>
+            <button onclick="openDeleteModal()" class="w-full bg-mole-red/10 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]">ELIMINAR CUENTA</button>
         </div>
     </div>
 
     <!-- Delete Account Modal -->
     <div id="delete-account-modal" class="hidden fixed inset-0 bg-black/90 z-[60] items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-red p-6 max-w-sm w-full rounded shadow-cyber relative text-center">
-            <button aria-label="Cerrar modal" onclick="closeModule('delete')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded">[X]</button>
+            <button aria-label="Cerrar modal" onclick="closeModule('delete')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-red mb-4 animate-pulse">¡ADVERTENCIA CRÍTICA!</h2>
-            <p class="text-xs text-mole-red/80 mb-4 font-mono">Esta acción purgará permanentemente sus datos biométricos y cultivos de la base central.</p>
-            <input type="text" id="confirm-delete-input" placeholder="Escriba 'PURGAR'" class="w-full bg-mole-base border border-mole-red p-2 mb-4 text-mole-red text-center uppercase font-bold outline-none">
-            <button class="w-full bg-mole-red/20 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base opacity-50 cursor-not-allowed transition-all font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded" id="btn-confirm-delete">CONFIRMAR DESTRUCCIÓN</button>
+                <p class="text-xs text-mole-red/80 mb-4 font-sans">Esta acción purgará permanentemente sus datos biométricos y cultivos de la base central.</p>
+                <input type="text" id="confirm-delete-input" placeholder="Escriba 'PURGAR'" class="w-full bg-mole-bg border border-mole-red p-2 mb-4 text-mole-red text-center uppercase font-bold outline-none focus:border-mole-red">
+            <button class="w-full bg-mole-red/20 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base opacity-50 cursor-not-allowed transition-all font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]" id="btn-confirm-delete">CONFIRMAR DESTRUCCIÓN</button>
         </div>
     </div>
 
