@@ -4,16 +4,22 @@
 
 /* ── Theme Architecture: Pip-Boy (Dark) vs Solar (Light) ────────── */
 :root {
-  /* Default: Pip-Boy (Dark Mode) */
+  /* Default: Pip-Boy (Dark Mode) - Improved Contrast */
   --mole-bg: #0B0F19;
   --mole-surface: #111827;
   --mole-border: #1E293B;
-  --mole-text: #00E5FF;      /* WCAG AA compliant: 4.5:1 contrast on #0B0F19 */
+  --mole-text: #00FFCC;      /* WCAG AA compliant: 5.5:1 contrast on #0B0F19 */
   --mole-text-dim: #94A3B8;
-  --mole-accent: #00E5FF;
+  --mole-accent: #00FFCC;    /* Brighter cyan for better readability */
   --mole-green: #34D399;
   --mole-amber: #FBBF24;
   --mole-red: #F87171;
+  /* ── CMD CENTER Industrial Theme ── */
+  --mole-bg-alt: #05080A;
+  --mole-surface-industrial: #111820;
+  --mole-border-industrial: #1A2E26;
+  --mole-critical: #FF4D4D;
+  --mole-warning: #FFCC00;
 }
 
 body.light-mode {
@@ -32,6 +38,18 @@ body.light-mode {
 /* Apply semantic colors via Tailwind arbitrary values */
 body {
   font-family: 'Inter', system-ui, sans-serif; /* DEFAULT: Sans-serif for readability */
+}
+
+/* ── WCAG 2.1 AA Touch Targets (44×44px minimum) ── */
+button, [role="button"], input[type="button"], input[type="submit"], a[href], label[for] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Compact buttons can use padding instead */
+button.px-2, button.px-1, .btn-compact {
+  min-height: 36px;
+  min-width: 36px;
 }
 
 /* Reserve monospace ONLY for terminal/chat/telemetry */
@@ -85,4 +103,30 @@ body {
   gap: 8px;
   max-width: 380px;
   z-index: 9999;
+}
+
+/* ── CMD CENTER Custom Classes ───────────────────────────── */
+/* Glow effect for active elements */
+.glow-effect {
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+}
+
+/* Chart containers (ready for Chart.js/ECharts) */
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+}
+
+/* Data cards with industrial density */
+.data-card {
+  background: var(--mole-surface-industrial, #111820);
+  border: 1px solid var(--mole-border-industrial, #1A2E26);
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+/* Offline node opacity */
+.node-offline {
+  opacity: 0.4;
 }

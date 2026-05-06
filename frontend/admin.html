@@ -8,104 +8,362 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOLE-IA | Panel de Administración</title>
+    <title>MOLE-AI | CMD CENTER</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- ECharts CDN (for Radar) -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 </head>
-<body class="bg-mole-base text-mole-cyan font-mono min-h-screen overflow-x-hidden relative">
-
-
-
+<body class="bg-mole-bg-alt text-mole-text font-sans min-h-screen overflow-hidden relative">
+    
     <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
-
-    <main id="admin-dashboard" class="flex flex-col h-screen overflow-y-auto p-4 md:p-6">
-
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-mole-surface border border-mole-border rounded-lg p-4 md:p-5 mb-6 gap-4 shadow-cyber">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded bg-mole-amber/10 border border-mole-amber/30 flex items-center justify-center text-mole-amber">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold text-mole-cyan tracking-tight">ADMIN OVERRIDE</h1>
-                    <span class="text-[10px] font-bold text-mole-amber uppercase tracking-widest animate-pulse">MODO SUPERVISOR ACTIVO</span>
-                </div>
+    
+    <!-- L-FRAME LAYOUT -->
+    <div class="flex h-screen">
+        
+        <!-- SIDEBAR (Left L) -->
+        <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-mole-bg-alt border-r border-mole-border-industrial flex flex-col z-40">
+            <!-- Header -->
+            <div class="p-4 border-b border-mole-border-industrial">
+                <h1 class="text-mole-accent font-bold text-sm tracking-widest flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v18m0 0v-6m0 6h6m-6 0h-6m0 6v-6m0 6h6"></path>
+                    </svg>
+                    MOLE.AI CMD CENTER
+                </h1>
             </div>
-            <div class="flex flex-wrap gap-2 w-full md:w-auto">
-                <button data-action="admin:create-operator" class="flex-1 md:flex-none border border-mole-border bg-mole-base text-mole-dim px-3 py-2 rounded hover:border-mole-cyan/40 hover:text-mole-cyan font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-mole-cyan">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
-                    CREAR OPERADOR
+            
+            <!-- Navigation -->
+            <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+                <!-- Dashboard (Active) -->
+                <button onclick="switchView('dashboard')" class="w-full text-left px-3 py-2.5 text-mole-text hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded group">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                    <span class="text-xs font-bold tracking-wider">DASHBOARD</span>
+                    <!-- Active indicator (right border glow) -->
+                    <span class="ml-auto w-1 h-6 bg-mole-accent rounded-full glow-effect"></span>
+                    <!-- Notification bubble -->
+                    <span class="bg-mole-critical text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</span>
                 </button>
-                <button data-action="admin:add-plant" class="flex-1 md:flex-none border border-mole-border bg-mole-base text-mole-dim px-3 py-2 rounded hover:border-mole-green/40 hover:text-mole-green font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-mole-green">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                    REGISTRAR FLORA
+                
+                <!-- Flota IoT -->
+                <button onclick="switchView('iot-fleet')" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.674M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343 7.343l-.707-.707m2.364 9.314l-.707.707M12 21v-1m-6.364-1.636l.707-.707M6.343 16.657l.707-.707"></path>
+                    </svg>
+                    <span class="text-xs font-bold tracking-wider">FLOTA IoT</span>
+                    <span class="ml-auto bg-mole-warning text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</span>
                 </button>
-                <button data-action="nav:logout" class="flex-1 md:flex-none border border-mole-red/30 bg-mole-red/5 text-mole-red px-3 py-2 rounded hover:bg-mole-red/10 font-bold transition-colors text-[11px] tracking-wider flex justify-center items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-mole-red">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                    DESCONECTAR
+                
+                <!-- MLOps -->
+                <button onclick="switchView('mlops')" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86-.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span class="text-xs font-bold tracking-wider">MLOPS</span>
+                </button>
+                
+                <!-- Alertas -->
+                <button onclick="switchView('alerts')" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
+                    <svg class="w-4 h-4 text-mole-critical" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-xs font-bold tracking-wider">ALERTAS</span>
+                    <span class="ml-auto bg-mole-critical text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">5</span>
+                </button>
+            </nav>
+            
+            <!-- Footer: Collapse & Toggle View -->
+            <div class="p-3 border-t border-mole-border-industrial flex flex-col gap-2">
+                <button id="collapse-sidebar" class="w-full text-left px-3 py-2 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-2 rounded text-xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    COLAPSAR
+                </button>
+                <button id="toggle-view" onclick="window.location.replace('/dashboard.html')" class="w-full text-left px-3 py-2 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-green transition-colors flex items-center gap-2 rounded text-xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    CAMBIAR VISTA
                 </button>
             </div>
-        </header>
-
-        <!-- MLOps Panel -->
-        <div class="bg-mole-surface border border-mole-border rounded-lg p-5 flex flex-col mb-10 overflow-hidden shadow-cyber">
-            <div class="border-b border-mole-border pb-3 mb-5">
-                <h2 class="text-sm font-bold text-mole-cyan tracking-wider flex items-center gap-2">
-                    <svg class="w-4 h-4 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                    PANEL MLOps — ENTRENAMIENTO Y FINE-TUNING
-                </h2>
-                <p class="text-[11px] text-mole-dim mt-1">Gestión de la base de conocimientos y reentrenamiento de modelos de visión.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <!-- RAG Config -->
-                <div class="bg-mole-base border border-mole-border rounded-lg p-5">
-                    <h3 class="text-xs font-bold text-mole-cyan mb-1 tracking-wider">&gt; LLM: KNOWLEDGE BASE (MS2)</h3>
-                    <p class="text-[10px] text-mole-dim mb-5">Sube documentos PDF o TXT para alimentar el sistema RAG (Retrieval-Augmented Generation) del copiloto.</p>
-
-                    <div class="mb-5">
-                        <label class="block text-[10px] font-bold text-mole-dim uppercase tracking-widest mb-2">Seleccionar Documentos</label>
-                        <input type="file" id="mlops-rag-file" accept=".pdf,.txt" class="block w-full text-[11px] text-mole-dim file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-mole-border file:text-[10px] file:font-bold file:bg-mole-surface file:text-mole-cyan hover:file:bg-mole-cyan/10 hover:file:border-mole-cyan/30 transition-colors bg-mole-base border border-mole-border rounded cursor-pointer font-mono focus:outline-none focus:ring-2 focus:ring-mole-cyan">
+        </aside>
+        
+        <!-- MAIN CONTENT AREA (Right of Sidebar) -->
+        <main class="ml-64 flex-1 flex flex-col overflow-hidden">
+            
+            <!-- TOPBAR (Floating Superior) -->
+            <header id="topbar" class="sticky top-4 left-64 right-4 h-14 bg-mole-bg-alt/95 backdrop-blur-sm border border-mole-border-industrial rounded-lg z-30 mx-4 mt-4 px-4">
+                <div class="flex items-center justify-between h-full">
+                    <!-- Breadcrumb -->
+                    <div class="text-xs text-mole-text-dim font-mono" id="breadcrumb">
+                        Dashboard — Vista General
                     </div>
-
-                    <button data-action="mlops:train-rag" id="btn-train-rag" class="w-full border border-mole-cyan text-mole-cyan py-2.5 rounded font-bold tracking-widest text-[11px] hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber flex justify-center items-center gap-2 focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                        INGESTAR EN VECTOR DB
-                    </button>
+                    
+                    <!-- Center: Date, Time, Version -->
+                    <div class="text-[10px] text-mole-text-dim font-mono flex items-center gap-3" id="datetime-version">
+                        <span id="current-date">2026-05-05</span>
+                        <span>|</span>
+                        <span id="current-time">14:30:00</span>
+                        <span>|</span>
+                        <span class="text-mole-accent">BUILD v2.1.0</span>
+                    </div>
+                    
+                    <!-- Right: Bell, Online Pill, Export, Avatar -->
+                    <div class="flex items-center gap-3">
+                        <!-- Bell Icon with notification -->
+                        <button class="relative text-mole-text-dim hover:text-mole-accent transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-12 0v3.159c0 .538.214 1.055.595 1.436L15 17zm-6 3a2 2 0 104 0 2 2 0 00-4 0z"></path>
+                            </svg>
+                            <span class="absolute -top-1 -right-1 w-2 h-2 bg-mole-critical rounded-full"></span>
+                        </button>
+                        
+                        <!-- Online Pill -->
+                        <span class="bg-mole-green/20 text-mole-green px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 bg-mole-green rounded-full animate-pulse"></span>
+                            ONLINE
+                        </span>
+                        
+                        <!-- Export Button -->
+                        <button class="border border-mole-border-industrial px-3 py-1.5 rounded hover:border-mole-accent hover:text-mole-accent transition-colors flex items-center gap-1.5 text-xs">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l-3-3m0 0l3-3m-3 3h18"></path>
+                            </svg>
+                            EXPORTAR
+                        </button>
+                        
+                        <!-- Admin Avatar -->
+                        <div class="w-8 h-8 rounded-full bg-mole-surface-industrial border border-mole-border-industrial flex items-center justify-center text-mole-accent font-bold text-xs">
+                            AD
+                        </div>
+                    </div>
                 </div>
-
-                <!-- Vision Config -->
-                <div class="bg-mole-base border border-mole-border rounded-lg p-5 flex flex-col">
-                    <h3 class="text-xs font-bold text-mole-cyan mb-1 tracking-wider">&gt; VISION: RETRAIN CNN (MS1)</h3>
-                    <p class="text-[10px] text-mole-dim mb-5">Sube un archivo ZIP con imágenes clasificadas para mejorar la detección de plagas.</p>
-
-                    <div class="mb-5 flex-1">
-                        <label class="block text-[10px] font-bold text-mole-dim uppercase tracking-widest mb-2">Dataset de Entrenamiento (ZIP)</label>
-                        <input type="file" id="mlops-cnn-file" accept=".zip" class="block w-full text-[11px] text-mole-dim file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-mole-border file:text-[10px] file:font-bold file:bg-mole-surface file:text-mole-cyan hover:file:bg-mole-cyan/10 hover:file:border-mole-cyan/30 transition-colors bg-mole-base border border-mole-border rounded cursor-pointer font-mono focus:outline-none focus:ring-2 focus:ring-mole-green">
+            </header>
+            
+            <!-- SCROLLABLE CONTENT BELOW TOPBAR -->
+            <div class="flex-1 overflow-y-auto p-4 mt-20">
+                
+                <!-- VIEW 1: DASHBOARD GENERAL -->
+                <div id="view-dashboard" class="space-y-6">
+                    <h2 class="text-lg font-bold text-mole-accent tracking-wider">> DASHBOARD GENERAL</h2>
+                    <p class="text-xs text-mole-text-dim">Vista de métricas generales y monitoreo de misión.</p>
+                    
+                    <!-- KPI Cards will go here (Phase 2) -->
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="data-card">KPI 1: Escaneos (Sparkline here)</div>
+                        <div class="data-card">KPI 2: Alertas (Sparkline here)</div>
+                        <div class="data-card">KPI 3: Precisión MS1</div>
+                        <div class="data-card">KPI 4: Uptime Sistema</div>
                     </div>
-
-                    <button data-action="mlops:train-cnn" id="btn-train-cnn" class="w-full border border-mole-green text-mole-green py-2.5 rounded font-bold tracking-widest text-[11px] hover:bg-mole-green hover:text-mole-base transition-all mb-5 flex justify-center items-center gap-2 focus:outline-none focus:ring-2 focus:ring-mole-green focus:ring-offset-2 focus:ring-offset-mole-base">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                        INICIAR FINE-TUNING
-                    </button>
-
-                    <!-- Legal Disclaimer -->
-                    <div class="flex items-start bg-mole-amber/5 border border-mole-amber/20 rounded p-3 mt-auto gap-2">
-                        <span class="text-mole-amber text-[10px] font-bold shrink-0">[WARN]</span>
-                        <p class="text-[10px] text-mole-amber/70 leading-relaxed font-mono">
-                            Asegúrese de que el dataset no incluya especies endémicas extraídas ilegalmente. Todo modelo reentrenado hereda la directriz ética de la NOM-059-SEMARNAT.
-                        </p>
+                    
+                    <!-- Charts will go here (Phase 2) -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="chart-container">Gráfica de Área (Escaneos vs Alertas)</div>
+                        <div class="chart-container">Gráfica de Dona (Estado Flota)</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="chart-container">Barras Horizontales (Top Especies)</div>
+                        <div class="data-card h-64 overflow-y-auto">Panel Scrollable: Alertas Recientes</div>
                     </div>
                 </div>
+                
+                <!-- VIEW 2: FLOTA IoT -->
+                <div id="view-iot-fleet" class="hidden space-y-6">
+                    <h2 class="text-lg font-bold text-mole-accent tracking-wider">> FLOTA IoT — MONITOREO ESP32</h2>
+                    <p class="text-xs text-mole-text-dim">Gestión y monitoreo de nodos ESP32 en campo.</p>
+                    
+                    <!-- Filter Controls -->
+                    <div class="flex gap-2">
+                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-border-industrial rounded text-xs text-mole-text-dim hover:border-mole-accent">TODOS</button>
+                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-green/40 rounded text-xs text-mole-green hover:border-mole-accent">ONLINE</button>
+                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-warning/40 rounded text-xs text-mole-warning hover:border-mole-accent">ALERTA</button>
+                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-critical/40 rounded text-xs text-mole-critical hover:border-mole-accent">OFFLINE</button>
+                    </div>
+                    
+                    <!-- ESP32 Node Grid (Phase 2) -->
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="data-card">Nodo ESP32-001 (ID, Ubicación, Batería, Señal, Temp)</div>
+                        <div class="data-card node-offline">Nodo ESP32-002 (Sin señal — 2h)</div>
+                    </div>
+                    
+                    <!-- Radar Chart (Phase 2) -->
+                    <div class="chart-container">Gráfica Radar: Salud Promedio del Sistema</div>
+                </div>
+                
+                <!-- VIEW 3: MLOPS -->
+                <div id="view-mlops" class="hidden space-y-6">
+                    <h2 class="text-lg font-bold text-mole-accent tracking-wider">> MLOPS — ENTRENAMIENTO Y FINE-TUNING</h2>
+                    <p class="text-xs text-mole-text-dim">Gestión de modelos de IA y métricas de rendimiento.</p>
+                    
+                    <!-- Train vs Val Accuracy (Phase 2) -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="chart-container">Líneas: Train vs Val Accuracy</div>
+                        <div class="chart-container">Barras: Accuracy, Precision, Recall, F1</div>
+                    </div>
+                    
+                    <!-- Model Version History (Phase 2) -->
+                    <div class="data-card overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead>
+                                <tr class="text-mole-text-dim border-b border-mole-border-industrial">
+                                    <th class="text-left p-2">Versión</th>
+                                    <th class="text-left p-2">Fecha</th>
+                                    <th class="text-left p-2">Métricas</th>
+                                    <th class="text-right p-2">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-mole-border-industrial">
+                                    <td class="p-2">v2.1.0</td>
+                                    <td class="p-2 text-mole-text-dim">2026-05-05</td>
+                                    <td class="p-2"><span class="bg-mole-green/20 text-mole-green px-2 py-0.5 rounded text-[10px]">Activo</span></td>
+                                    <td class="p-2 text-right"><button class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- VIEW 4: ALERTAS -->
+                <div id="view-alerts" class="hidden space-y-6">
+                    <h2 class="text-lg font-bold text-mole-accent tracking-wider">> CENTRO DE ALERTAS</h2>
+                    <p class="text-xs text-mole-text-dim">Monitoreo y gestión de alertas del sistema.</p>
+                    
+                    <!-- Counter Blocks -->
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="data-card border-l-4 border-mole-critical">
+                            <div class="text-2xl font-bold text-mole-critical">12</div>
+                            <div class="text-[10px] text-mole-text-dim">CRÍTICA</div>
+                        </div>
+                        <div class="data-card border-l-4 border-mole-warning">
+                            <div class="text-2xl font-bold text-mole-warning">8</div>
+                            <div class="text-[10px] text-mole-text-dim">ALTA</div>
+                        </div>
+                        <div class="data-card border-l-4 border-mole-amber">
+                            <div class="text-2xl font-bold text-mole-amber">15</div>
+                            <div class="text-[10px] text-mole-text-dim">MEDIA</div>
+                        </div>
+                        <div class="data-card border-l-4 border-mole-green">
+                            <div class="text-2xl font-bold text-mole-green">23</div>
+                            <div class="text-[10px] text-mole-text-dim">BAJA</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alert Feed (Phase 2: Full-width cards with actions) -->
+                    <div class="space-y-3">
+                        <div class="data-card border-l-4 border-mole-critical flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-bold text-mole-critical">⚠️ NODO ESP32-005 SIN SEÑAL</p>
+                                <p class="text-[10px] text-mole-text-dim">Hace 3 horas — Sector 7G</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-mole-green hover:underline text-xs">[✓ RECONOCER]</button>
+                                <button class="text-mole-critical hover:underline text-xs">[🗑️ ELIMINAR]</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
-        </div>
-    </main>
-
-    <button id="return-override-btn" data-action="nav:return-override" class="hidden fixed bottom-5 left-5 z-50 border border-mole-red/50 bg-mole-red/10 text-mole-red px-4 py-2.5 rounded hover:bg-mole-red/20 font-bold tracking-widest transition-all text-[11px] flex items-center gap-2 shadow-cyber focus:outline-none focus:ring-2 focus:ring-mole-red focus:ring-offset-2 focus:ring-offset-mole-base">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        SALIR OVERRIDE
-    </button>
-
+        </main>
+    </div>
+    
+    <!-- Existing Admin Buttons (preserved for compatibility) -->
+    <div class="hidden">
+        <button data-action="admin:create-operator">CREAR OPERADOR</button>
+        <button data-action="admin:add-plant">REGISTRAR FLORA</button>
+        <button data-action="nav:logout">DESCONECTAR</button>
+    </div>
+    
     <script type="module" src="/src/js/main.js"></script>
+    <script>
+        // ============ VIEW SWITCHING LOGIC ===========
+        const VIEWS = {
+            dashboard: 'view-dashboard',
+            'iot-fleet': 'view-iot-fleet',
+            mlops: 'view-mlops',
+            alerts: 'view-alerts'
+        };
+        
+        function switchView(viewKey) {
+            // Hide all views
+            Object.values(VIEWS).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            
+            // Show selected view
+            const target = document.getElementById(VIEWS[viewKey]);
+            if (target) {
+                target.classList.remove('hidden');
+                updateBreadcrumb(viewKey);
+                updateActiveSidebar(viewKey);
+            }
+        }
+        
+        function updateBreadcrumb(viewKey) {
+            const breadcrumb = document.getElementById('breadcrumb');
+            if (!breadcrumb) return;
+            
+            const labels = {
+                dashboard: 'Dashboard — Vista General',
+                'iot-fleet': 'Flota IoT — Monitoreo ESP32',
+                mlops: 'MLOps — Entrenamiento y Fine-Tuning',
+                alerts: 'Centro de Alertas — Gestión'
+            };
+            breadcrumb.textContent = labels[viewKey] || 'Dashboard — Vista General';
+        }
+        
+        function updateActiveSidebar(viewKey) {
+            // Remove active state from all sidebar buttons
+            const sidebarButtons = document.querySelectorAll('#sidebar nav button');
+            sidebarButtons.forEach(btn => {
+                btn.classList.remove('text-mole-accent');
+                btn.classList.add('text-mole-text-dim');
+                // Remove glow indicator
+                const indicator = btn.querySelector('.bg-mole-accent');
+                if (indicator) indicator.remove();
+            });
+            
+            // Add active state to current view
+            const activeBtn = document.querySelector(`#sidebar nav button[onclick*="${viewKey}"]`);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-mole-text-dim');
+                activeBtn.classList.add('text-mole-accent');
+                // Add glow indicator
+                const indicator = document.createElement('span');
+                indicator.className = 'ml-auto w-1 h-6 bg-mole-accent rounded-full glow-effect';
+                activeBtn.appendChild(indicator);
+            }
+        }
+        
+        // ============ DATETIME UPDATE ===========
+        function updateDateTime() {
+            const now = new Date();
+            const dateEl = document.getElementById('current-date');
+            const timeEl = document.getElementById('current-time');
+            
+            if (dateEl) {
+                const formatted = now.toISOString().split('T')[0];
+                dateEl.textContent = formatted;
+            }
+            if (timeEl) {
+                const timeStr = now.toTimeString().split(' ')[0];
+                timeEl.textContent = timeStr;
+            }
+        }
+        
+        // Initialize
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+        switchView('dashboard'); // Default view
+    </script>
 </body>
 </html>
