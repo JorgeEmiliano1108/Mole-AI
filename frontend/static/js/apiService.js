@@ -40,16 +40,14 @@ class ApiService {
             }
 
             this.authToken = token;
-            // Persist primarily in localStorage for session continuity; also write to sessionStorage for compatibility
-            try { localStorage.setItem('mole_jwt', token); } catch (e) { /* ignore */ }
-            try { sessionStorage.setItem('mole_jwt', token); } catch (e) { /* ignore */ }
-            try { localStorage.setItem('moleia_token', token); } catch (e) { /* ignore */ }
-            console.log("CRITICAL: Token persisted to storage");
-            try {
-                if (!window.getAuthToken() && !sessionStorage.getItem('mole_jwt')) {
-                    console.error("CRITICAL: Token no se ha guardado correctamente en storage");
-                }
-            } catch (e) { /* ignore */ }
+            // Guardar directamente en localStorage de forma segura (única fuente de verdad)
+            try { 
+                localStorage.setItem('mole_jwt', token);
+                localStorage.setItem('moleia_token', token);
+                console.log("CRITICAL: Token persisted to localStorage");
+            } catch (e) { 
+                console.error('[ApiService] Error guardando token en localStorage'); 
+            }
             // Return a resolved promise so callers can `await` this operation
             resolve(true);
         });
@@ -58,7 +56,11 @@ class ApiService {
     getToken() {
         if (this.authToken) return this.authToken;
         var saved = null;
-        try { saved = window.getAuthToken(); } catch (e) { saved = null; }
+        // Leer DIRECTAMENTE de localStorage (sin depender de window.getAuthToken)
+        try { saved = localStorage.getItem('mole_jwt'); } catch (e) { saved = null; }
+        if (!saved) {
+            try { saved = localStorage.getItem('moleia_token'); } catch (e) { saved = null; }
+        }
         if (!saved) {
             try { saved = sessionStorage.getItem('mole_jwt'); } catch (e) { saved = null; }
         }

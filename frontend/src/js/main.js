@@ -1,3 +1,4 @@
+import '../css/main.css';
 import * as userDashboard from './modules/auth/userDashboard.js';
 import * as adminDashboard from './modules/auth/adminDashboard.js';
 import * as i18n from './modules/ui/i18n.js';
