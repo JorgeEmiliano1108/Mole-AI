@@ -18,6 +18,8 @@ import * as supervisor from './modules/services/supervisor.js';
 import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
+import { loadWiki } from './modules/services/wiki.js';
+window.loadWiki = loadWiki;
 
 // Safety check: Wait for global apiService to be loaded
 if (!window.moleApi) {

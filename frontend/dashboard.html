@@ -10,6 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOLE-IA | Dashboard Operativo</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
     <style>
         .crt-chat { font-family: 'VT323', monospace !important; text-transform: uppercase; letter-spacing: 1px; }
@@ -184,8 +185,8 @@
         <div id="view-wiki" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
             <h2 class="text-xl text-mole-cyan font-bold crt-text-glow border-b border-mole-cyan pb-2 mb-4">> WIKI INTERNA BOTÁNICA</h2>
             <div class="flex-1 bg-mole-surface border border-mole-border rounded shadow-cyber p-4 overflow-y-auto min-h-0">
-                <p class="text-mole-dim crt-text-glow-dim animate-pulse">Sincronizando enciclopedia botánica global...</p>
-            </div>
+    <div id="wiki-grid" class="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
+</div>
         </div>
 
         <div id="view-mapa" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
@@ -411,6 +412,11 @@
         function switchFieldView(viewId) {
             document.querySelectorAll('.field-view').forEach(v => v.classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
+            
+            // Trigger wiki load when the wiki view is activated
+            if (viewId === 'view-wiki' && typeof window.loadWiki === 'function') {
+                window.loadWiki();
+            }
             
             document.querySelectorAll('nav button').forEach(btn => {
                 if (btn.getAttribute('onclick').includes(viewId)) {
