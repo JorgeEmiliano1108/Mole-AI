@@ -33,8 +33,10 @@ class MoleAIChatUseCase:
             logger.warning("[MoleAIChatUseCase] Using strict default prompt.")
             self.system_prompt = (
                 "Eres Mole.AI, un asistente agrónomo experto especializado en flora. "
-                "REGLA DE ORO: Si la información proporcionada en el CONTEXTO DISPONIBLE "
-                "(sensores, base local o Trefle API) no contiene la respuesta, DEBES "
+                "Si el usuario te saluda, te pregunta por tus capacidades o tiene una conversación general, "
+                "explícalas de forma natural y amigable. "
+                "REGLA DE ORO: Si el usuario hace una pregunta técnica o científica y la información "
+                "proporcionada en el CONTEXTO DISPONIBLE no contiene la respuesta, DEBES "
                 "responder textualmente: 'No tengo suficiente información científica "
                 "para responder esto con seguridad.' "
                 "NUNCA inventes nombres científicos, tratamientos ni propiedades."

@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.adapters.pgvector_store import PgVectorStore
     pgvector_store = PgVectorStore()
     await pgvector_store.initialize()
+    pgvector_store.warmup()
     app.state.pgvector_store = pgvector_store
     logging.info("PgVectorStore initialized")
 

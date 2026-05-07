@@ -24,7 +24,12 @@ class RedisSensorCacheAdapter(SensorCachePort):
     async def _get_redis(self):
         if self._redis is None:
             # may raise if aioredis stub triggers an error
-            self._redis = await aioredis.from_url(self.redis_url, decode_responses=True)
+            self._redis = await aioredis.from_url(
+                self.redis_url, 
+                decode_responses=True,
+                socket_connect_timeout=2,
+                socket_timeout=2
+            )
         return self._redis
 
     async def get_context(self, user_id: str):
@@ -43,3 +48,9 @@ class RedisSensorCacheAdapter(SensorCachePort):
         except Exception as e:
             logging.warning(f"[RedisSensorCacheAdapter] Redis unavailable: {e}. Using fallback.")
             return {}  # Fallback: contexto vacío
+
+    async def close(self) -> None:
+        """Close Redis connection."""
+        if self._redis:
+            await self._redis.close()
+            self._redis = None
