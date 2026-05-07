@@ -95,7 +95,7 @@
         </aside>
         
         <!-- MAIN CONTENT AREA (Right of Sidebar) -->
-        <main class="ml-64 flex-1 flex flex-col overflow-hidden">
+        <main class="ml-64 flex-1 flex flex-col overflow-y-auto">
             
             <!-- TOPBAR (Floating Superior) -->
             <header id="topbar" class="sticky top-4 left-64 right-4 h-14 bg-mole-bg-alt/95 backdrop-blur-sm border border-mole-border-industrial rounded-lg z-30 mx-4 mt-4 px-4">
@@ -130,13 +130,13 @@
                             ONLINE
                         </span>
                         
-                        <!-- Export Button -->
-                        <button class="border border-mole-border-industrial px-3 py-1.5 rounded hover:border-mole-accent hover:text-mole-accent transition-colors flex items-center gap-1.5 text-xs">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l-3-3m0 0l3-3m-3 3h18"></path>
-                            </svg>
-                            EXPORTAR
-                        </button>
+                         <!-- Export Button (Solid accent bg, dark text) -->
+                         <button onclick="window.handleExport()" class="bg-mole-accent text-mole-bg px-3 py-1.5 rounded hover:bg-mole-accent/90 flex items-center gap-1.5 text-[10px] font-bold">
+                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path>
+                             </svg>
+                             EXPORTAR
+                         </button>
                         
                         <!-- Admin Avatar -->
                         <div class="w-8 h-8 rounded-full bg-mole-surface-industrial border border-mole-border-industrial flex items-center justify-center text-mole-accent font-bold text-xs">
@@ -147,96 +147,377 @@
             </header>
             
             <!-- SCROLLABLE CONTENT BELOW TOPBAR -->
-            <div class="flex-1 overflow-y-auto p-4 mt-20">
+            <div class="flex-1 overflow-y-auto p-4 mt-20 pb-12">
                 
                 <!-- VIEW 1: DASHBOARD GENERAL -->
-                <div id="view-dashboard" class="space-y-6">
+                <div id="view-dashboard" class="view-container space-y-6">
                     <h2 class="text-lg font-bold text-mole-accent tracking-wider">> DASHBOARD GENERAL</h2>
                     <p class="text-xs text-mole-text-dim">Vista de métricas generales y monitoreo de misión.</p>
                     
-                    <!-- KPI Cards will go here (Phase 2) -->
+                    <!-- KPI Cards (Fila Superior) -->
                     <div class="grid grid-cols-4 gap-4">
-                        <div class="data-card">KPI 1: Escaneos (Sparkline here)</div>
-                        <div class="data-card">KPI 2: Alertas (Sparkline here)</div>
-                        <div class="data-card">KPI 3: Precisión MS1</div>
-                        <div class="data-card">KPI 4: Uptime Sistema</div>
+                        <div class="data-card">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-mole-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002-2V3a2 2 0 00-2-2H7a2 2 0 012 3v2a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    <span class="text-[10px] text-mole-text-dim uppercase tracking-widest">Plantas Escaneadas</span>
+                                </div>
+                                <span class="text-[10px] bg-mole-green/20 text-mole-green px-1.5 py-0.5 rounded-full">+12% sem</span>
+                            </div>
+                            <div class="text-2xl font-mono font-bold text-mole-accent">1,247</div>
+                            <canvas id="spark-plantas" height="40" class="w-full mt-2"></canvas>
+                        </div>
+                        <div class="data-card">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-mole-critical" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 0v2m0-2h2m-2 0H6"></path>
+                                    </svg>
+                                    <span class="text-[10px] text-mole-text-dim uppercase tracking-widest">Alertas Activas</span>
+                                </div>
+                                <span class="text-[10px] bg-mole-critical/20 text-mole-critical px-1.5 py-0.5 rounded-full">+2 hoy</span>
+                            </div>
+                            <div class="text-2xl font-mono font-bold text-mole-critical">3</div>
+                            <canvas id="spark-alertas" height="40" class="w-full mt-2"></canvas>
+                        </div>
+                        <div class="data-card">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-mole-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m0 0l-6 6m4-2v4a2 2 0 002 2h4a2 2 0 002-2v-4a2 2 0 00-2-2h-4a2 2 0 00-2 2"></path>
+                                    </svg>
+                                    <span class="text-[10px] text-mole-text-dim uppercase tracking-widest">Dispositivos Online</span>
+                                </div>
+                                <span class="text-[10px] bg-mole-green/20 text-mole-green px-1.5 py-0.5 rounded-full">8/12</span>
+                            </div>
+                            <div class="text-2xl font-mono font-bold text-mole-green">8/12</div>
+                            <canvas id="spark-online" height="40" class="w-full mt-2"></canvas>
+                        </div>
+                        <div class="data-card">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-1">
+                                    <svg class="w-4 h-4 text-mole-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a10 10 0 1 1 0 20a10 10 0 1 1 0 -20z M12 8a4 4 0 1 1 0 8a4 4 0 1 1 0 -8z M12 11a1 1 0 1 0 0 2a1 1 0 1 0 0 -2z"></path>
+                                    </svg>
+                                    <span class="text-[10px] text-mole-text-dim uppercase tracking-widest">Precisión MS1</span>
+                                </div>
+                                <span class="text-[10px] bg-mole-amber/20 text-mole-amber px-1.5 py-0.5 rounded-full">96.2%</span>
+                            </div>
+                            <div class="text-2xl font-mono font-bold text-mole-amber">96.2%</div>
+                            <canvas id="spark-precision" height="40" class="w-full mt-2"></canvas>
+                        </div>
                     </div>
                     
                     <!-- Charts will go here (Phase 2) -->
                     <div class="grid grid-cols-3 gap-4">
-                        <div class="chart-container">Gráfica de Área (Escaneos vs Alertas)</div>
-                        <div class="chart-container">Gráfica de Dona (Estado Flota)</div>
+                        <div class="chart-container col-span-2">
+                            <h3 class="text-xs font-bold text-mole-text-dim mb-2 uppercase">Escaneos por Día</h3>
+                            <canvas id="chart-area-scans"></canvas>
+                        </div>
+                        <div class="chart-container col-span-1">
+                            <h3 class="text-xs font-bold text-mole-text-dim mb-2 uppercase">Estado de Flota</h3>
+                            <canvas id="chart-donut-fleet"></canvas>
+                            <div class="flex justify-center gap-4 mt-2 text-[10px]">
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-mole-green"></span> Online: 8</span>
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-mole-warning"></span> Warning: 2</span>
+                                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-mole-critical"></span> Offline: 2</span>
+                            </div>
+                        </div>
                     </div>
                     
+                    <!-- Row 3: Bar Chart + Recent Alerts -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="chart-container">Barras Horizontales (Top Especies)</div>
-                        <div class="data-card h-64 overflow-y-auto">Panel Scrollable: Alertas Recientes</div>
+                        <div class="chart-container">
+                            <h3 class="text-xs font-bold text-mole-text-dim mb-2 uppercase">Top Especies Detectadas</h3>
+                            <canvas id="chart-bar-species"></canvas>
+                        </div>
+                        <div class="data-card h-64 overflow-y-auto">
+                            <h3 class="text-xs font-bold text-mole-text-dim mb-2 uppercase">Alertas Recientes</h3>
+                            <div class="space-y-2 text-[11px]">
+                                <!-- Alert Item (Critical) -->
+                                <div class="flex items-center gap-2 border-l-2 border-mole-critical pl-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-mole-critical shrink-0"></span>
+                                    <div>
+                                        <p class="font-bold text-mole-text">Batería Crítica — ESP32-005</p>
+                                        <p class="text-mole-text-dim">Hace 3 horas — Fleet Monitor</p>
+                                    </div>
+                                </div>
+                                <!-- Alert Item (Warning) -->
+                                <div class="flex items-center gap-2 border-l-2 border-mole-warning pl-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-mole-warning shrink-0"></span>
+                                    <div>
+                                        <p class="font-bold text-mole-text">Temperatura Alta — Invernadero 2</p>
+                                        <p class="text-mole-text-dim">Hace 1 hora — Climate Control</p>
+                                    </div>
+                                </div>
+                                <!-- Alert Item (Info) -->
+                                <div class="flex items-center gap-2 border-l-2 border-mole-amber pl-2">
+                                    <div>
+                                        <p class="font-bold text-mole-text">Mantenimiento Requerido — ESP32-003</p>
+                                        <p class="text-mole-text-dim">Hace 5 horas — Maintenance</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- VIEW 2: FLOTA IoT -->
-                <div id="view-iot-fleet" class="hidden space-y-6">
+                <div id="view-iot-fleet" class="view-container hidden space-y-6">
                     <h2 class="text-lg font-bold text-mole-accent tracking-wider">> FLOTA IoT — MONITOREO ESP32</h2>
                     <p class="text-xs text-mole-text-dim">Gestión y monitoreo de nodos ESP32 en campo.</p>
                     
                     <!-- Filter Controls -->
                     <div class="flex gap-2">
-                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-border-industrial rounded text-xs text-mole-text-dim hover:border-mole-accent">TODOS</button>
-                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-green/40 rounded text-xs text-mole-green hover:border-mole-accent">ONLINE</button>
-                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-warning/40 rounded text-xs text-mole-warning hover:border-mole-accent">ALERTA</button>
-                        <button class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-critical/40 rounded text-xs text-mole-critical hover:border-mole-accent">OFFLINE</button>
+                        <button id="filter-all" class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-border-industrial rounded text-xs text-mole-text-dim hover:border-mole-accent">TODOS</button>
+                        <button id="filter-online" class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-green/40 rounded text-xs text-mole-green hover:border-mole-accent">ONLINE</button>
+                        <button id="filter-alert" class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-warning/40 rounded text-xs text-mole-warning hover:border-mole-accent">ALERTA</button>
+                        <button id="filter-offline" class="px-3 py-1.5 bg-mole-surface-industrial border border-mole-critical/40 rounded text-xs text-mole-critical hover:border-mole-accent">OFFLINE</button>
                     </div>
                     
-                    <!-- ESP32 Node Grid (Phase 2) -->
-                    <div class="grid grid-cols-4 gap-4">
-                        <div class="data-card">Nodo ESP32-001 (ID, Ubicación, Batería, Señal, Temp)</div>
-                        <div class="data-card node-offline">Nodo ESP32-002 (Sin señal — 2h)</div>
+                    <!-- Main Layout: Grid 4 (col-span-3 Left, col-span-1 Right) -->
+                    <div class="grid grid-cols-4 gap-6">
+                        <!-- Left: ESP32 Node Grid (col-span-3) -->
+                        <div class="col-span-3">
+                            <div class="grid grid-cols-3 gap-4">
+                                <!-- Node Online -->
+                                <div class="data-card">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <input type="checkbox" class="rounded border-mole-border-industrial bg-mole-surface-industrial">
+                                        <span class="text-[10px] bg-mole-green/20 text-mole-green px-1.5 py-0.5 rounded">Online</span>
+                                    </div>
+                                    <h3 class="font-bold text-mole-accent text-sm mb-1">ESP32-MX001</h3>
+                                    <p class="text-[10px] text-mole-text-dim mb-3">Ubicación: Sector 7G</p>
+                                    <div class="space-y-2 text-[10px]">
+                                        <div class="flex justify-between">
+                                            <span class="text-mole-text-dim">Firmware:</span>
+                                            <span class="text-mole-text">v2.1.0</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-mole-text-dim">Batería:</span>
+                                            <div class="flex items-center gap-1">
+                                                <div class="w-16 h-2 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                                    <div class="h-full bg-mole-green" style="width: 85%"></div>
+                                                </div>
+                                                <span class="text-mole-green font-mono">85%</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-mole-text-dim">Señal:</span>
+                                            <span class="text-mole-accent font-mono">-45 dBm</span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-mole-text-dim">Temp:</span>
+                                            <span class="text-mole-amber font-mono">28°C</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Node Offline (with .node-offline class) -->
+                                <div class="data-card node-offline">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <input type="checkbox" class="rounded border-mole-border-industrial bg-mole-surface-industrial" disabled>
+                                        <span class="text-[10px] bg-mole-critical/20 text-mole-critical px-1.5 py-0.5 rounded">Offline</span>
+                                    </div>
+                                    <h3 class="font-bold text-mole-text-dim text-sm mb-1">ESP32-MX002</h3>
+                                    <p class="text-[10px] text-mole-text-dim mb-3">Ubicación: Invernadero 3</p>
+                                    <button class="w-full mt-4 py-2 bg-mole-critical/10 border border-mole-critical text-mole-critical text-[10px] font-bold rounded">
+                                        Sin señal — 2h
+                                    </button>
+                                </div>
+                                
+                                <!-- More nodes... -->
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Salud Promedio Panel (col-span-1) -->
+                        <div class="col-span-1 space-y-4">
+                            <div class="data-card">
+                                <h3 class="text-xs font-bold text-mole-text-dim mb-2 uppercase">Salud Promedio del Sistema</h3>
+                                <canvas id="chart-radar-health" class="w-full"></canvas>
+                                <div class="space-y-2 mt-4 text-[10px]">
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-mole-text-dim">Batería</span>
+                                            <span class="text-mole-accent font-mono">92%</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                            <div class="h-full bg-mole-accent" style="width: 92%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-mole-text-dim">Señal</span>
+                                            <span class="text-mole-accent font-mono">-42 dBm</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                            <div class="h-full bg-mole-accent" style="width: 88%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-mole-text-dim">Temperatura</span>
+                                            <span class="text-mole-accent font-mono">26°C</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                            <div class="h-full bg-mole-accent" style="width: 75%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-mole-text-dim">Humedad</span>
+                                            <span class="text-mole-accent font-mono">68%</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                            <div class="h-full bg-mole-accent" style="width: 68%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-mole-text-dim">pH</span>
+                                            <span class="text-mole-accent font-mono">6.8</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                            <div class="h-full bg-mole-accent" style="width: 85%"></div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-1">
+                                            <span class="text-mole-text-dim">Uptime</span>
+                                            <span class="text-mole-accent font-mono">99.2%</span>
+                                        </div>
+                                        <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                            <div class="h-full bg-mole-accent" style="width: 99.2%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <!-- Radar Chart (Phase 2) -->
-                    <div class="chart-container">Gráfica Radar: Salud Promedio del Sistema</div>
                 </div>
                 
                 <!-- VIEW 3: MLOPS -->
-                <div id="view-mlops" class="hidden space-y-6">
+                <div id="view-mlops" class="view-container hidden space-y-6">
                     <h2 class="text-lg font-bold text-mole-accent tracking-wider">> MLOPS — ENTRENAMIENTO Y FINE-TUNING</h2>
                     <p class="text-xs text-mole-text-dim">Gestión de modelos de IA y métricas de rendimiento.</p>
                     
-                    <!-- Train vs Val Accuracy (Phase 2) -->
+                    <!-- Training Curves (Left) + Metrics (Right) -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="chart-container">Líneas: Train vs Val Accuracy</div>
-                        <div class="chart-container">Barras: Accuracy, Precision, Recall, F1</div>
+                        <div class="chart-container">
+                            <h3 class="text-xs font-bold text-mole-text-dim mb-2 uppercase">Curvas de Entrenamiento</h3>
+                            <canvas id="chart-line-training"></canvas>
+                        </div>
+                        <div class="data-card">
+                            <h3 class="text-xs font-bold text-mole-text-dim mb-3 uppercase">Métricas v2.1.0</h3>
+                            <div class="space-y-3 text-[10px]">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-mole-text">Accuracy</span>
+                                        <span class="text-mole-accent font-mono">94.2%</span>
+                                    </div>
+                                    <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                        <div class="h-full bg-mole-accent" style="width: 94.2%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-mole-text">Precision</span>
+                                        <span class="text-mole-accent font-mono">96.1%</span>
+                                    </div>
+                                    <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                        <div class="h-full bg-mole-accent" style="width: 96.1%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-mole-text">Recall</span>
+                                        <span class="text-mole-accent font-mono">92.8%</span>
+                                    </div>
+                                    <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                        <div class="h-full bg-mole-accent" style="width: 92.8%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="text-mole-text">F1 Score</span>
+                                        <span class="text-mole-accent font-mono">94.4%</span>
+                                    </div>
+                                    <div class="w-full h-1.5 bg-mole-surface-industrial rounded-full overflow-hidden">
+                                        <div class="h-full bg-mole-accent" style="width: 94.4%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-3 border-t border-mole-border-industrial text-[10px] grid grid-cols-3 gap-2">
+                                <div><span class="text-mole-text-dim">Inferencia:</span> 120ms</div>
+                                <div><span class="text-mole-text-dim">Tamaño:</span> 45MB</div>
+                                <div><span class="text-mole-text-dim">Dataset:</span> 12K img</div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Model Version History (Phase 2) -->
-                    <div class="data-card overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead>
-                                <tr class="text-mole-text-dim border-b border-mole-border-industrial">
-                                    <th class="text-left p-2">Versión</th>
-                                    <th class="text-left p-2">Fecha</th>
-                                    <th class="text-left p-2">Métricas</th>
-                                    <th class="text-right p-2">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="border-b border-mole-border-industrial">
-                                    <td class="p-2">v2.1.0</td>
-                                    <td class="p-2 text-mole-text-dim">2026-05-05</td>
-                                    <td class="p-2"><span class="bg-mole-green/20 text-mole-green px-2 py-0.5 rounded text-[10px]">Activo</span></td>
-                                    <td class="p-2 text-right"><button class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- Model Version History Table -->
+                    <div>
+                        <div class="flex mb-2">
+                            <div class="flex-1"></div> <!-- Spacer -->
+                         <button onclick="window.handleNewTraining()" class="ml-auto border border-mole-accent text-mole-accent px-3 py-1.5 rounded hover:bg-mole-accent hover:text-mole-bg-alt text-[10px] font-bold flex items-center gap-1">
+                                  NUEVO ENTRENAMIENTO
+                              </button>
+                         </div>
+                        <div class="data-card overflow-x-auto">
+                            <table class="w-full text-xs">
+                                <thead>
+                                    <tr class="text-mole-text-dim border-b border-mole-border-industrial">
+                                        <th class="text-left p-2">Versión</th>
+                                        <th class="text-center p-2">Accuracy</th>
+                                        <th class="text-center p-2">Precision</th>
+                                        <th class="text-center p-2">Recall</th>
+                                        <th class="text-center p-2">F1</th>
+                                        <th class="text-center p-2">Especies</th>
+                                        <th class="text-center p-2">Inferencia</th>
+                                        <th class="text-center p-2">Fecha</th>
+                                        <th class="text-center p-2">Estado</th>
+                                        <th class="text-right p-2">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-mole-border-industrial">
+                                        <td class="p-2">v2.1.0</td>
+                                        <td class="p-2 text-center text-mole-text">94.2%</td>
+                                        <td class="p-2 text-center text-mole-text">96.1%</td>
+                                        <td class="p-2 text-center text-mole-text">92.8%</td>
+                                        <td class="p-2 text-center text-mole-text">94.4%</td>
+                                        <td class="p-2 text-center text-mole-text-dim">1,247</td>
+                                        <td class="p-2 text-center text-mole-text-dim">120ms</td>
+                                        <td class="p-2 text-center text-mole-text-dim">2026-05-05</td>
+                                        <td class="p-2 text-center"><span class="bg-mole-green/20 text-mole-green px-2 py-0.5 rounded text-[10px]">Activo</span></td>
+                                         <td class="p-2 text-right"><button onclick="window.handleDeploy('v2.1.0')" class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
+                                     </tr>
+                                     <tr class="border-b border-mole-border-industrial">
+                                         <td class="p-2">v2.0.5</td>
+                                         <td class="p-2 text-center text-mole-text">92.1%</td>
+                                         <td class="p-2 text-center text-mole-text">90.3%</td>
+                                         <td class="p-2 text-center text-mole-text">91.2%</td>
+                                         <td class="p-2 text-center text-mole-text">91.6%</td>
+                                         <td class="p-2 text-center text-mole-text-dim">1,100</td>
+                                         <td class="p-2 text-center text-mole-text-dim">115ms</td>
+                                         <td class="p-2 text-center text-mole-text-dim">2026-04-20</td>
+                                         <td class="p-2 text-center"><span class="bg-mole-amber/20 text-mole-amber px-2 py-0.5 rounded text-[10px]">Inactivo</span></td>
+                                         <td class="p-2 text-right"><button onclick="window.handleDeploy('v2.0.5')" class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- VIEW 4: ALERTAS -->
-                <div id="view-alerts" class="hidden space-y-6">
+                <div id="view-alerts" class="view-container hidden space-y-6">
                     <h2 class="text-lg font-bold text-mole-accent tracking-wider">> CENTRO DE ALERTAS</h2>
                     <p class="text-xs text-mole-text-dim">Monitoreo y gestión de alertas del sistema.</p>
                     
-                    <!-- Counter Blocks -->
+                    <!-- Counter Blocks (Fila Superior) -->
                     <div class="grid grid-cols-4 gap-4">
                         <div class="data-card border-l-4 border-mole-critical">
                             <div class="text-2xl font-bold text-mole-critical">12</div>
@@ -256,24 +537,103 @@
                         </div>
                     </div>
                     
-                    <!-- Alert Feed (Phase 2: Full-width cards with actions) -->
-                    <div class="space-y-3">
-                        <div class="data-card border-l-4 border-mole-critical flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-mole-critical">⚠️ NODO ESP32-005 SIN SEÑAL</p>
-                                <p class="text-[10px] text-mole-text-dim">Hace 3 horas — Sector 7G</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button class="text-mole-green hover:underline text-xs">[✓ RECONOCER]</button>
-                                <button class="text-mole-critical hover:underline text-xs">[🗑️ ELIMINAR]</button>
-                            </div>
-                        </div>
+                    <!-- Sub-Header -->
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs text-mole-text-dim"><span id="alert-count">38</span> alertas - <span id="unrecognized-count">12</span> sin reconocer</p>
+                        <button class="border border-mole-green/30 text-mole-green px-3 py-1.5 rounded hover:bg-mole-green/10 text-[10px] font-bold">
+                            [✓ RECONOCER TODAS]
+                        </button>
                     </div>
-                </div>
-                
-            </div>
-        </main>
-    </div>
+                    
+                    <!-- Alert Feed (Full-width cards) -->
+                    <div class="space-y-3">
+                        <!-- Critical Alert -->
+                        <div class="data-card border-l-4 border-mole-critical flex items-start justify-between p-3">
+                            <div class="flex gap-3">
+                                <span class="w-2 h-2 rounded-full bg-mole-critical mt-1 shrink-0 animate-pulse"></span>
+                                <div>
+                                    <p class="text-xs font-bold text-mole-critical">⚠️ BATERÍA CRÍTICA — ESP32-MX005</p>
+                                    <p class="text-[10px] text-mole-text-dim">Nivel de batería al 4%. Requiere reemplazo inmediato.</p>
+                                    <div class="flex gap-2 mt-1 text-[10px] text-mole-text-dim">
+                                        <span>Módulo: Fleet Monitor</span>
+                                        <span>|</span>
+                                        <span>Hace 3 horas</span>
+                                    </div>
+                                    </div>
+                                 </div>
+                             <div class="flex gap-2 shrink-0">
+                                 <button onclick="window.handleAcknowledge('alert-001')" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
+                                     [✓ Reconocer]
+                                 </button>
+                                 <button onclick="window.handleDelete('alert-001')" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
+                                     [🗑️ Eliminar]
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         <!-- Warning Alert -->
+                        <div class="data-card border-l-4 border-mole-warning flex items-start justify-between p-3">
+                            <div class="flex gap-3">
+                                <span class="w-2 h-2 rounded-full bg-mole-warning mt-1 shrink-0"></span>
+                                <div>
+                                    <p class="text-xs font-bold text-mole-warning">⚠️ TEMPERATURA ALTA — INVERNADERO 3</p>
+                                    <p class="text-[10px] text-mole-text-dim">Temperatura: 38°C. Excede límite permisible (32°C).</p>
+                                    <div class="flex gap-2 mt-1 text-[10px] text-mole-text-dim">
+                                        <span>Módulo: Climate Control</span>
+                                        <span>|</span>
+                                        <span>Hace 1 hora</span>
+                                    </div>
+                                </div>
+                             </div>
+                             <div class="flex gap-2 shrink-0">
+                                 <button onclick="window.handleAcknowledge('alert-002')" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
+                                     [✓ Reconocer]
+                                 </button>
+                                 <button onclick="window.handleDelete('alert-002')" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
+                                     [🗑️ Eliminar]
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         <!-- Media Alert (Border Amber) -->
+                        <div class="data-card border-l-4 border-mole-amber flex items-start justify-between p-3">
+                            <div class="flex gap-3">
+                                <span class="w-2 h-2 rounded-full bg-mole-amber mt-1 shrink-0"></span>
+                                <div>
+                                    <p class="text-xs font-bold text-mole-amber">⚠️ MANTENIMIENTO REQUERIDO — ESP32-MX003</p>
+                                    <p class="text-[10px] text-mole-text-dim">Firmware desactualizado (v2.0.5 → v2.1.0).</p>
+                                    <div class="flex gap-2 mt-1 text-[10px] text-mole-text-dim">
+                                        <span>Módulo: Fleet Monitor</span>
+                                        <span>|</span>
+                                        <span>Hace 5 horas</span>
+                                    </div>
+                                </div>
+                            </div>
+                             <div class="flex gap-2 shrink-0">
+                                 <button onclick="window.handleAcknowledge('alert-003')" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
+                                     [✓ Reconocer]
+                                 </button>
+                                 <button onclick="window.handleDelete('alert-003')" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
+                                     [🗑️ Eliminar]
+                                 </button>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                 
+             </div>
+             
+             <!-- GLOBAL FOOTER (Inside main for proper L-Frame) -->
+             <footer class="h-8 bg-mole-bg-alt/95 backdrop-blur-sm border-t border-mole-border-industrial z-30 px-4 flex items-center justify-between text-[10px] mt-auto">
+                 <span class="text-mole-text-dim">MOLE.AI Platform v3.2.1 • <span class="text-mole-green">Compliant</span></span>
+                 <span class="flex items-center gap-3 text-mole-text-dim">
+                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-mole-green animate-pulse"></span> API: Online</span>
+                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-mole-green"></span> DB: Online</span>
+                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-mole-green"></span> MQTT: Online</span>
+                 </span>
+             </footer>
+         </main>
+     </div>
     
     <!-- Existing Admin Buttons (preserved for compatibility) -->
     <div class="hidden">
@@ -283,6 +643,8 @@
     </div>
     
     <script type="module" src="/src/js/main.js"></script>
+    <!-- ApiService MUST load before inline script -->
+    <script src="/static/js/apiService.js"></script>
     <script>
         // ============ VIEW SWITCHING LOGIC ===========
         const VIEWS = {
@@ -292,19 +654,91 @@
             alerts: 'view-alerts'
         };
         
-        function switchView(viewKey) {
+        async function switchView(viewKey) {
             // Hide all views
-            Object.values(VIEWS).forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('hidden');
-            });
+            document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
             
-            // Show selected view
-            const target = document.getElementById(VIEWS[viewKey]);
-            if (target) {
-                target.classList.remove('hidden');
-                updateBreadcrumb(viewKey);
-                updateActiveSidebar(viewKey);
+            // Show target view
+            const target = document.getElementById('view-' + viewKey);
+            if (target) target.classList.remove('hidden');
+            
+            // Update breadcrumb
+            updateBreadcrumb(viewKey);
+            
+            // Update sidebar active state
+            updateActiveSidebar(viewKey);
+            
+            // Load data based on view
+            try {
+                if (viewKey === 'dashboard') {
+                    await loadDashboardData();
+                } else if (viewKey === 'iot-fleet') {
+                    await loadIoTData();
+                } else if (viewKey === 'mlops') {
+                    await loadMLOpsData();
+                } else if (viewKey === 'alerts') {
+                    await loadAlertsData();
+                }
+            } catch (error) {
+                console.error('Error loading ' + viewKey + ' data:', error);
+            }
+        }
+        
+        // ============ DATA LOADING FUNCTIONS ============
+        async function loadDashboardData() {
+            try {
+                const data = await window.ApiService.getKPIData();
+                if (data && data.kpis) {
+                    // Update KPI cards with real data
+                    const kpis = data.kpis;
+                    const plantasEl = document.querySelector('#view-dashboard .data-card:nth-child(1) .text-2xl');
+                    const alertasEl = document.querySelector('#view-dashboard .data-card:nth-child(2) .text-2xl');
+                    const onlineEl = document.querySelector('#view-dashboard .data-card:nth-child(3) .text-2xl');
+                    const precisionEl = document.querySelector('#view-dashboard .data-card:nth-child(4) .text-2xl');
+                    
+                    if (plantasEl && kpis.plantas_escaneadas) plantasEl.textContent = kpis.plantas_escaneadas.toLocaleString();
+                    if (alertasEl && kpis.alertas_activas !== undefined) alertasEl.textContent = kpis.alertas_activas;
+                    if (onlineEl && kpis.dispositivos_online) onlineEl.textContent = kpis.dispositivos_online;
+                    if (precisionEl && kpis.precision_ms1) precisionEl.textContent = kpis.precision_ms1 + '%';
+                }
+            } catch (error) {
+                console.log('Dashboard data loading skipped (API not ready):', error.message);
+            }
+        }
+        
+        async function loadIoTData() {
+            try {
+                const data = await window.ApiService.getIoTFleet();
+                if (data && data.nodes) {
+                    // Populate IoT grid with real node data
+                    console.log('IoT Fleet data loaded:', data.nodes.length, 'nodes');
+                }
+            } catch (error) {
+                console.log('IoT data loading skipped (API not ready):', error.message);
+            }
+        }
+        
+        async function loadMLOpsData() {
+            try {
+                const data = await window.ApiService.getMLMetrics();
+                if (data && data.metrics) {
+                    // Update MLOps progress bars
+                    console.log('MLOps data loaded:', data.metrics);
+                }
+            } catch (error) {
+                console.log('MLOps data loading skipped (API not ready):', error.message);
+            }
+        }
+        
+        async function loadAlertsData() {
+            try {
+                const data = await window.ApiService.getAlerts();
+                if (data && data.alerts) {
+                    // Populate alerts feed
+                    console.log('Alerts data loaded:', data.alerts.length, 'alerts');
+                }
+            } catch (error) {
+                console.log('Alerts data loading skipped (API not ready):', error.message);
             }
         }
         
@@ -364,6 +798,308 @@
         updateDateTime();
         setInterval(updateDateTime, 1000);
         switchView('dashboard'); // Default view
+        
+        // ============ CHART INITIALIZATION ============
+        // Sparklines (KPI Cards)
+        function initSparklines() {
+            const sparkConfig = {
+                type: 'line',
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } },
+                    elements: { point: { radius: 0 }, line: { borderWidth: 1.5 } }
+                }
+            };
+            
+            // Plantas Escaneadas sparkline
+            const plantasCtx = document.getElementById('spark-plantas');
+            if (plantasCtx) {
+                new Chart(plantasCtx, {
+                    ...sparkConfig,
+                    data: {
+                        labels: Array.from({length: 12}, (_, i) => i),
+                        datasets: [{
+                            data: [80, 95, 110, 105, 120, 115, 130, 140, 135, 145, 150, 160],
+                            borderColor: '#00FFCC',
+                            backgroundColor: 'rgba(0, 255, 204, 0.1)'
+                        }]
+                    }
+                });
+            }
+            
+            // Alertas Activas sparkline
+            const alertasCtx = document.getElementById('spark-alertas');
+            if (alertasCtx) {
+                new Chart(alertasCtx, {
+                    ...sparkConfig,
+                    data: {
+                        labels: Array.from({length: 12}, (_, i) => i),
+                        datasets: [{
+                            data: [4, 3, 5, 4, 3, 2, 3, 4, 3, 2, 3, 3],
+                            borderColor: '#ff4d4d',
+                            backgroundColor: 'rgba(255, 77, 77, 0.1)'
+                        }]
+                    }
+                });
+            }
+            
+            // Dispositivos Online sparkline
+            const onlineCtx = document.getElementById('spark-online');
+            if (onlineCtx) {
+                new Chart(onlineCtx, {
+                    ...sparkConfig,
+                    data: {
+                        labels: Array.from({length: 12}, (_, i) => i),
+                        datasets: [{
+                            data: [6, 7, 8, 7, 8, 9, 8, 8, 7, 8, 8, 8],
+                            borderColor: '#00ff00',
+                            backgroundColor: 'rgba(0, 255, 0, 0.1)'
+                        }]
+                    }
+                });
+            }
+            
+            // Precisión MS1 sparkline
+            const precisionCtx = document.getElementById('spark-precision');
+            if (precisionCtx) {
+                new Chart(precisionCtx, {
+                    ...sparkConfig,
+                    data: {
+                        labels: Array.from({length: 12}, (_, i) => i),
+                        datasets: [{
+                            data: [94.5, 95.0, 95.5, 95.8, 96.0, 96.1, 96.2, 96.2, 96.3, 96.2, 96.2, 96.2],
+                            borderColor: '#ffcc00',
+                            backgroundColor: 'rgba(255, 204, 0, 0.1)'
+                        }]
+                    }
+                });
+            }
+        }
+        
+        // Dashboard Charts (Area + Donut + Bar)
+        function initDashboardCharts() {
+            // Area Chart - Escaneos por Área
+            const areaCtx = document.getElementById('chart-area-scans');
+            if (areaCtx) {
+                new Chart(areaCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Escaneos',
+                            data: [120, 190, 300, 500, 200, 300],
+                            borderColor: '#00FFCC',
+                            backgroundColor: 'rgba(0, 255, 204, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#c0c0c0' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+            
+            // Donut Chart - Estado del Fleet
+            const donutCtx = document.getElementById('chart-donut-fleet');
+            if (donutCtx) {
+                new Chart(donutCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Online', 'Warning', 'Offline'],
+                        datasets: [{
+                            data: [8, 2, 2],
+                            backgroundColor: ['#00ff00', '#ffcc00', '#ff4d4d']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: '#c0c0c0', padding: 10 } }
+                        }
+                    }
+                });
+            }
+            
+            // Bar Chart - Especies Detectadas
+            const barCtx = document.getElementById('chart-bar-species');
+            if (barCtx) {
+                new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Biznaga', 'Maguey', 'Nopal', 'Lechuguilla', 'Garumbe'],
+                        datasets: [{
+                            label: 'Detecciones',
+                            data: [45, 30, 25, 20, 15],
+                            backgroundColor: '#00FFCC'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: '#c0c0c0' } }
+                        },
+                        scales: {
+                            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // IoT Fleet Radar Chart (ECharts)
+        function initRadarChart() {
+            const radarEl = document.getElementById('chart-radar-health');
+            if (radarEl && typeof echarts !== 'undefined') {
+                const chart = echarts.init(radarEl);
+                chart.setOption({
+                    radar: {
+                        indicator: [
+                            { name: 'Batería', max: 100 },
+                            { name: 'Señal', max: 100 },
+                            { name: 'Temp', max: 80 },
+                            { name: 'Uptime', max: 100 },
+                            { name: 'Latencia', max: 500 }
+                        ],
+                        axisName: { color: '#c0c0c0' },
+                        splitArea: { areaStyle: { color: ['rgba(0,255,204,0.05)', 'rgba(0,255,204,0.02)'] } }
+                    },
+                    series: [{
+                        type: 'radar',
+                        data: [{
+                            value: [85, 92, 45, 98, 120],
+                            name: 'Promedio Fleet',
+                            areaStyle: { color: 'rgba(0,255,204,0.3)' },
+                            lineStyle: { color: '#00FFCC' }
+                        }]
+                    }]
+                });
+            }
+        }
+        
+        // MLOps Training Chart (ECharts)
+        function initTrainingChart() {
+            const trainingEl = document.getElementById('chart-line-training');
+            if (trainingEl && typeof echarts !== 'undefined') {
+                const chart = echarts.init(trainingEl);
+                chart.setOption({
+                    xAxis: {
+                        type: 'category',
+                        data: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5'],
+                        axisLabel: { color: '#c0c0c0' }
+                    },
+                    yAxis: {
+                        type: 'value',
+                        axisLabel: { color: '#c0c0c0' }
+                    },
+                    series: [{
+                        data: [0.72, 0.85, 0.92, 0.96, 0.962],
+                        type: 'line',
+                        smooth: true,
+                        lineStyle: { color: '#00FFCC' },
+                        areaStyle: { color: 'rgba(0,255,204,0.2)' }
+                    }],
+                    grid: { left: '10%', right: '10%', bottom: '15%' }
+                });
+            }
+        }
+        
+        // Initialize all charts after DOM loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                initSparklines();
+                initDashboardCharts();
+                initRadarChart();
+                initTrainingChart();
+            }, 100);
+        });
+        
+        // ============ BUTTON HANDLER FUNCTIONS (CLEAN) ============
+        
+        // Export data
+        window.handleExport = function() {
+            if (window.ApiService && typeof window.ApiService.exportData === 'function') {
+                window.ApiService.exportData().catch(e => {
+                    console.error('Export failed:', e);
+                    alert('Error al exportar datos: ' + (e.message || e));
+                });
+            } else {
+                console.warn('ApiService.exportData not available');
+            }
+        };
+        
+        // Start new training
+        window.handleNewTraining = function() {
+            if (!window.confirm('¿Iniciar nuevo entrenamiento ML?')) return;
+            
+            if (window.ApiService && typeof window.ApiService.triggerTraining === 'function') {
+                window.ApiService.triggerTraining({
+                    model_type: 'MS1',
+                    epochs: 50,
+                    learning_rate: 0.001
+                }).catch(e => {
+                    console.error('Training failed:', e);
+                    alert('Error al iniciar entrenamiento: ' + (e.message || e));
+                });
+            } else {
+                console.warn('ApiService.triggerTraining not available');
+            }
+        };
+        
+        // Deploy model
+        window.handleDeploy = function(modelId) {
+            if (!window.confirm('¿Desplegar modelo ' + modelId + ' a producción?')) return;
+            
+            if (window.ApiService && typeof window.ApiService.deployModel === 'function') {
+                window.ApiService.deployModel({
+                    model_id: modelId
+                }).catch(e => {
+                    console.error('Deploy failed:', e);
+                    alert('Error al desplegar modelo: ' + (e.message || e));
+                });
+            } else {
+                console.warn('ApiService.deployModel not available');
+            }
+        };
+        
+        // Acknowledge alert
+        window.handleAcknowledge = function(alertId) {
+            if (window.ApiService && typeof window.ApiService.acknowledgeAlert === 'function') {
+                window.ApiService.acknowledgeAlert(alertId).catch(e => {
+                    console.error('Acknowledge failed:', e);
+                    alert('Error al reconocer alerta: ' + (e.message || e));
+                });
+            } else {
+                console.warn('ApiService.acknowledgeAlert not available');
+            }
+        };
+        
+        // Delete alert
+        window.handleDelete = function(alertId) {
+            if (!window.confirm('¿Eliminar alerta ' + alertId + '?')) return;
+            
+            if (window.ApiService && typeof window.ApiService.deleteAlert === 'function') {
+                window.ApiService.deleteAlert(alertId).catch(e => {
+                    console.error('Delete failed:', e);
+                    alert('Error al eliminar alerta: ' + (e.message || e));
+                });
+            } else {
+                console.warn('ApiService.deleteAlert not available');
+            }
+        };
     </script>
 </body>
 </html>

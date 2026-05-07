@@ -114,8 +114,10 @@ button.px-2, button.px-1, .btn-compact {
 /* Chart containers (ready for Chart.js/ECharts) */
 .chart-container {
   position: relative;
-  height: 300px;
+  height: 300px !important;
+  max-height: 300px;
   width: 100%;
+  overflow: hidden;
 }
 
 /* Data cards with industrial density */
@@ -124,6 +126,15 @@ button.px-2, button.px-1, .btn-compact {
   border: 1px solid var(--mole-border-industrial, #1A2E26);
   border-radius: 0.5rem;
   padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Limit sparkline canvas growth - only for data-card canvases, NOT chart-container */
+.data-card canvas {
+  height: 40px !important;
+  max-height: 40px !important;
+  width: 100% !important;
 }
 
 /* Offline node opacity */

@@ -383,9 +383,11 @@ if (isPublic) {
                         }
 
                         // Exponential backoff: 1s, 2s, 4s
-                        var delay = self.retryBaseDelay * Math.pow(2, attempt);
-                        console.warn('[ApiService] Retry ' + (attempt + 1) + '/' + self.maxRetries + ' en ' + delay + 'ms...');
-                        if (!silent) { ApiService.showToast('Reintentando conexión (intento ' + (attempt + 1) + '/' + self.maxRetries + ')...', 'warn'); }
+var delay = self.retryBaseDelay * Math.pow(2, attempt);
+                       if (!silent) {
+                           console.warn('[ApiService] Retry ' + (attempt + 1) + '/' + self.maxRetries + ' en ' + delay + 'ms...');
+                           ApiService.showToast('Reintentando conexión (intento ' + (attempt + 1) + '/' + self.maxRetries + ')...', 'warn');
+                       }
                         setTimeout(function () {
                             attemptRequest(attempt + 1).then(resolve).catch(reject);
                         }, delay);
@@ -463,3 +465,77 @@ if (isPublic) {
 // Global instance (use instance, not class, so methods like .post() work directly)
 window.ApiService = new ApiService();
 window.moleApi = window.ApiService;
+
+// ============ CMD CENTER API METHODS ============
+
+/**
+ * Get KPI dashboard data
+ * GET /api/v1/metrics/kpi/
+ */
+ApiService.getKPIData = function() {
+    return this.get('metrics/kpi/');
+};
+
+/**
+ * Get IoT fleet status
+ * GET /api/v1/iot/fleet/
+ */
+ApiService.getIoTFleet = function() {
+    return this.get('iot/fleet/');
+};
+
+/**
+ * Get ML model metrics
+ * GET /api/v1/ml/metrics/
+ */
+ApiService.getMLMetrics = function() {
+    return this.get('ml/metrics/');
+};
+
+/**
+ * Get alerts list
+ * GET /api/v1/alerts/
+ */
+ApiService.getAlerts = function() {
+    return this.get('alerts/');
+};
+
+/**
+ * Acknowledge an alert
+ * POST /api/v1/alerts/{id}/acknowledge/
+ */
+ApiService.acknowledgeAlert = function(alertId) {
+    return this.post('alerts/' + alertId + '/acknowledge/');
+};
+
+/**
+ * Delete an alert
+ * DELETE /api/v1/alerts/{id}/
+ */
+ApiService.deleteAlert = function(alertId) {
+    return this.delete('alerts/' + alertId + '/');
+};
+
+/**
+ * Trigger model training
+ * POST /api/v1/ml/train/
+ */
+ApiService.triggerTraining = function(data) {
+    return this.post('ml/train/', data);
+};
+
+/**
+ * Deploy model version
+ * POST /api/v1/ml/deploy/
+ */
+ApiService.deployModel = function(data) {
+    return this.post('ml/deploy/', data);
+};
+
+/**
+ * Export dashboard data
+ * GET /api/v1/reports/export/
+ */
+ApiService.exportData = function() {
+    return this.get('reports/export/');
+};
