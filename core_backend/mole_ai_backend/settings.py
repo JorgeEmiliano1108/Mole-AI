@@ -29,8 +29,8 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Fail-fast checks for production environment: ensure critical secrets present
 if not DEBUG:
-    # C3 FIX: HARDWARE_API_KEY añadido — vacío = todos los nodos IoT rechazados (401)
-    required_in_prod = ['SECRET_KEY', 'HUGGINGFACE_API_KEY', 'JWT_SECRET_KEY', 'HARDWARE_API_KEY']
+    
+    required_in_prod = ['SECRET_KEY', 'JWT_SECRET_KEY', 'HARDWARE_API_KEY']
     missing = [v for v in required_in_prod if not os.getenv(v)]
     # database requirement: accept either DATABASE_URL or classic POSTGRES_* set
     db_ok = bool(os.getenv('DATABASE_URL')) or (
@@ -195,6 +195,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
