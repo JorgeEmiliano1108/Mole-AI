@@ -1,11 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./login.html",
-    "./dashboard.html",
-    "./admin.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./*.html",
+    "./src/**/*.{js,ts,jsx,tsx,css}",
   ],
   darkMode: 'class', // Enable class-based dark mode
   theme: {

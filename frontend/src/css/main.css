@@ -141,3 +141,14 @@ button.px-2, button.px-1, .btn-compact {
 .node-offline {
   opacity: 0.4;
 }
+
+/* --- Custom Mole OS overrides (Wiki) --- */
+.wiki-card {
+    background-color: var(--mole-surface);
+    border-color: var(--mole-border);
+}
+.image-wrapper {
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 0.25rem;
+}
