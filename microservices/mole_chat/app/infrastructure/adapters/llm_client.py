@@ -4,8 +4,6 @@ import asyncio
 from typing import Any, Optional
 
 from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.exceptions import OutputParserException
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 from pydantic import ValidationError
 
@@ -52,7 +50,6 @@ class LLMClient:
             max_tokens=settings.LLM_MAX_NEW_TOKENS
         )
         
-        self.parser = PydanticOutputParser(pydantic_object=ChatResponse)
         self.max_retries = max_retries
 
     @retry(
@@ -62,12 +59,20 @@ class LLMClient:
         reraise=True
     )
     async def _call_llm(self, prompt_text: str) -> ChatResponse:
-        format_instructions = self.parser.get_format_instructions()
-        final_prompt = f"{prompt_text}\n\nINSTRUCCIONES DE FORMATO OBLIGATORIAS:\n{format_instructions}"
-        
         logger.info(f"Iniciando inferencia RAG con LLM ({self.model_name})...")
-        chain = self.llm | self.parser
-        return await chain.ainvoke(final_prompt)
+        
+        # 1. Invocamos al LLM solo con el prompt puro
+        raw_message = await self.llm.ainvoke(prompt_text)
+        
+        # 2. Extraemos el texto crudo (con blindaje contra nulls y vacíos)
+        raw_text: str = (
+            getattr(raw_message, "content", None)
+            or "Lo siento, no pude procesar esa solicitud correctamente."
+        )
+        raw_text = raw_text.strip() or "Lo siento, no pude procesar esa solicitud correctamente."
+        
+        # 3. Construimos manualmente el ChatResponse
+        return ChatResponse(respuesta=raw_text)
 
     async def generate(self, prompt_text: str) -> ChatResponse:
         try:
@@ -78,9 +83,9 @@ class LLMClient:
             
             return validated_response
             
-        except (ValidationError, OutputParserException) as parse_err:
-            logger.error(f"[LLMClient] Error de parseo: {parse_err}")
-            return self._fallback_response()
+        except (asyncio.TimeoutError, TimeoutError, ConnectionError) as net_err:
+            logger.warning(f"[LLMClient] Error de red/timeout: {net_err}", exc_info=True)
+            return self._network_fallback_response()
             
         except Exception as e:
             logger.warning(f"[LLMClient] Colapso tras agotar reintentos: {e}", exc_info=True)
@@ -89,6 +94,16 @@ class LLMClient:
     def _fallback_response(self) -> ChatResponse:
         return ChatResponse(
             respuesta="El servidor de Inteligencia Artificial está experimentando congestión. Por favor, intenta de nuevo en unos minutos.",
+            sources=[],
+            disclaimer=LEGAL_DISCLAIMER
+        )
+
+    def _network_fallback_response(self) -> ChatResponse:
+        return ChatResponse(
+            respuesta=(
+                "El modelo de IA está tardando más de lo esperado. "
+                "Por favor, intenta de nuevo en unos minutos."
+            ),
             sources=[],
             disclaimer=LEGAL_DISCLAIMER
         )

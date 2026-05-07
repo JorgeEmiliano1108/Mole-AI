@@ -136,6 +136,10 @@ class PgVectorStore:
             self._model = SentenceTransformer(model_name)
         return self._model
 
+    def warmup(self) -> None:
+        """Warm up the embedding model to avoid first-query latency."""
+        self._get_model()
+
     def _encode(self, texts: List[str]) -> List[List[float]]:
         """Encode texts into embeddings (CPU, blocking)."""
         model = self._get_model()
