@@ -32,10 +32,27 @@
 
     <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
 
-    <main id="main-dashboard" class="flex flex-col h-screen md:flex-row">
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 w-full h-16 bg-mole-surface border-t border-mole-border z-[70] flex justify-around items-center md:hidden bg-mole-surface-industrial" style="background-color: #12141a;">
+        <button onclick="switchFieldView('view-monitoreo')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-cyan hover:text-mole-accent focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            <span class="text-[10px] font-bold mt-1">MONITOR</span>
+        </button>
+        <button onclick="switchFieldView('view-wiki')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+            <span class="text-[10px] font-bold mt-1">WIKI</span>
+        </button>
+        <button onclick="switchFieldView('view-mapa')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            <span class="text-[10px] font-bold mt-1">MAPA</span>
+        </button>
+    </nav>
+
+    <main id="main-dashboard" class="flex flex-col h-[calc(100vh-4rem)] md:h-screen md:flex-row pb-16 md:pb-0 relative">
 
         <!-- Left / Main Content -->
-        <div class="flex-1 flex flex-col min-h-0 overflow-y-auto w-full p-4 md:p-6">
+        <div id="view-monitoreo" class="field-view flex-1 flex flex-col min-h-0 w-full overflow-hidden">
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col min-h-0 w-full">
 
             <!-- Header -->
             <header class="flex justify-between items-center mb-6 bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber">
@@ -161,6 +178,21 @@
                 </div>
             </div>
 
+            </div>
+        </div>
+
+        <div id="view-wiki" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
+            <h2 class="text-xl text-mole-cyan font-bold crt-text-glow border-b border-mole-cyan pb-2 mb-4">> WIKI INTERNA BOTÁNICA</h2>
+            <div class="flex-1 bg-mole-surface border border-mole-border rounded shadow-cyber p-4 overflow-y-auto min-h-0">
+                <p class="text-mole-dim crt-text-glow-dim animate-pulse">Sincronizando enciclopedia botánica global...</p>
+            </div>
+        </div>
+
+        <div id="view-mapa" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
+            <h2 class="text-xl text-mole-cyan font-bold crt-text-glow border-b border-mole-cyan pb-2 mb-4">> MAPA TÁCTICO IOT</h2>
+            <div class="flex-1 bg-mole-surface border border-mole-border rounded shadow-cyber relative min-h-0 overflow-hidden">
+                <div id="main-map-container" class="absolute inset-0 bg-mole-base"></div>
+            </div>
         </div>
 
         <!-- Right / Terminal Chat Drawer (CRT Style) -->
@@ -375,6 +407,23 @@
         })();
     </script>
     
+    <script>
+        function switchFieldView(viewId) {
+            document.querySelectorAll('.field-view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            
+            document.querySelectorAll('nav button').forEach(btn => {
+                if (btn.getAttribute('onclick').includes(viewId)) {
+                    btn.classList.remove('text-mole-dim');
+                    btn.classList.add('text-mole-cyan');
+                } else {
+                    btn.classList.remove('text-mole-cyan');
+                    btn.classList.add('text-mole-dim');
+                }
+            });
+        }
+    </script>
+
     <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>

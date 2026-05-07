@@ -58,7 +58,7 @@ def species_search_view(request):
     ).first()
     
     if not species:
-        return Response({"error": "Especie no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        return Response([], status=status.HTTP_200_OK)
 
     response_data = {
         "id": str(species.id),

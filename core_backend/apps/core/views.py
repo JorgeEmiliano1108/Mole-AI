@@ -7,6 +7,7 @@ import math
 import logging
 import random
 import uuid
+import requests
 from datetime import datetime, timedelta
 from typing import Any, Dict, cast, List
 
@@ -278,7 +279,57 @@ def chat_history_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def llm_chat_view(request):
-    return Response({"response": "Chat básico activo"})
+    question = request.data.get('question', '').strip()
+    if not question:
+        question = request.data.get('message', '').strip()
+    if not question:
+        question = request.data.get('prompt', '').strip()
+    if not question:
+        return Response({'error': 'La pregunta no puede estar vacía.'}, status=400)
+
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    if not auth_header and 'Authorization' in request.headers:
+        auth_header = request.headers['Authorization']
+        
+    headers = {
+        'Authorization': auth_header,
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "user_id": str(request.user.id),
+        "message": question,
+        "session_id": request.session.session_key or "anon"
+    }
+
+    try:
+        # Llama al microservicio MS2 Chat
+        response = requests.post(
+            'http://ms2_chat:8002/api/v1/mole-ai/chat',
+            json=payload,
+            headers=headers,
+            timeout=60
+        )
+        response.raise_for_status()
+        data = response.json()
+        ai_response = data.get("respuesta", "Sin respuesta.")
+        
+        # Guardar en el historial de Django
+        LLMRequest.objects.create(
+            user=request.user,
+            prompt=question,
+            response=ai_response
+        )
+        
+        return Response({
+            "response": ai_response,
+            "sources": data.get("sources", []),
+            "disclaimer": data.get("disclaimer", "")
+        })
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error en proxy a MS2 Chat: {e}")
+        return Response({"error": "No se pudo comunicar con el motor de IA.", "details": str(e)}, status=503)
 
 # --- POLLING GENÉRICO DE TAREAS ---
 @api_view(['GET'])
