@@ -44,7 +44,7 @@ export function appendMessage(msg, isTyping = false) {
 
     if (msg.type === 'bot') {
         const textDiv = document.createElement('div');
-        textDiv.className = 'bg-transparent px-2 py-1 text-xs text-mole-text crt-text-glow terminal-text max-w-[95%] uppercase';
+        textDiv.className = 'bg-transparent px-2 py-1 text-sm text-mole-text crt-text-glow terminal-text max-w-[90%] uppercase';
         
         if (isTyping) {
             msgDiv.appendChild(textDiv);
@@ -73,18 +73,18 @@ export function appendMessage(msg, isTyping = false) {
         }
     } else if (msg.type === 'user') {
         const textDiv = document.createElement('div');
-        textDiv.className = 'bg-transparent px-2 py-1 text-xs text-[#14fdce] crt-text-glow font-mono max-w-[95%] text-right uppercase';
+        textDiv.className = 'bg-transparent px-2 py-1 text-sm text-[#14fdce] crt-text-glow font-mono max-w-[90%] text-right uppercase';
         textDiv.textContent = msg.text;
         msgDiv.appendChild(textDiv);
     } else if (msg.type === 'sys') {
         msgDiv.className = 'flex w-full mb-2 justify-start';
         const textSpan = document.createElement('span');
-        textSpan.className = 'text-[10px] text-[#14fdce]/60 font-mono w-full animate-pulse uppercase';
+        textSpan.className = 'text-xs text-[#14fdce]/60 font-mono w-full animate-pulse uppercase';
         textSpan.textContent = msg.text;
         msgDiv.appendChild(textSpan);
     } else if (msg.type === 'error') {
         const textDiv = document.createElement('div');
-        textDiv.className = 'bg-red-500/20 text-red-500 border border-red-500 px-2 py-1 text-[10px] font-mono max-w-[95%] w-full uppercase';
+        textDiv.className = 'bg-red-500/20 text-red-500 border border-red-500 px-2 py-1 text-xs font-mono max-w-[90%] w-full uppercase';
         textDiv.textContent = msg.text;
         msgDiv.appendChild(textDiv);
     }
@@ -161,7 +161,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
             prompt: query,
             engine: engine,
             sessionId: activeSessionId
-        });
+        }, { silent: true });
         
         const typingElement = document.getElementById(typingId);
         if(typingElement) typingElement.remove();

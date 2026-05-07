@@ -37,8 +37,8 @@ def _should_retry_exception(exc: BaseException) -> bool:
 class LLMClient:
     def __init__(self, model_name: Optional[str] = None, max_retries: int = 3):
         self.model_name = model_name or os.getenv("LLM_MODEL_ID", "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B")
-        self.api_key = os.getenv("HUGGINGFACE_API_KEY")
-        self.base_url = os.getenv("HF_INFERENCE_API_URL", "https://router.huggingface.co/hf-inference/v1")
+        self.api_key = os.getenv("LLM_API_KEY")
+        self.base_url = os.getenv("LLM_BASE_URL", "http://host.docker.internal:11434/v1")
         
         # Use settings for timeout
         from app.core.config import settings

@@ -153,6 +153,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         # 'apps.authentication.infrastructure.authentication.SupabaseAuthentication',  # Disabled for login, use in specific views
         'apps.authentication.infrastructure.authentication.HardwareAPIKeyAuthentication',
+        'apps.authentication.infrastructure.local_jwt_auth.LocalJWTAuthentication',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],

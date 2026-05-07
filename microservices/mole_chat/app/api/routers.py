@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
 import os
 import re
 import aiofiles
@@ -17,21 +17,17 @@ router = APIRouter()
 
 # Singleton objects are now in app.state (initialized in lifespan)
 # Dependency injection functions to get them from app.state
-def _get_llm_client() -> LLMClient:
-    from fastapi import Request
-    return Request.app.state.llm_client
+def _get_llm_client(request: Request) -> LLMClient:
+    return request.app.state.llm_client
 
-def _get_pgvector_store() -> PgVectorStore:
-    from fastapi import Request
-    return Request.app.state.pgvector_store
+def _get_pgvector_store(request: Request) -> PgVectorStore:
+    return request.app.state.pgvector_store
 
-def _get_redis_adapter() -> RedisSensorCacheAdapter:
-    from fastapi import Request
-    return Request.app.state.redis_adapter
+def _get_redis_adapter(request: Request) -> RedisSensorCacheAdapter:
+    return request.app.state.redis_adapter
 
-def _get_citation_manager() -> CitationManager:
-    from fastapi import Request
-    return Request.app.state.citation_manager
+def _get_citation_manager(request: Request) -> CitationManager:
+    return request.app.state.citation_manager
 
 
 # Modelos de respuesta exclusivos para PDFs
