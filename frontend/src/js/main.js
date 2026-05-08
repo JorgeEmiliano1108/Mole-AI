@@ -18,8 +18,34 @@ import * as supervisor from './modules/services/supervisor.js';
 import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
+import * as errorCatalog from './modules/api/errorCatalog.js';
 import { loadWiki } from './modules/services/wiki.js';
 window.loadWiki = loadWiki;
+
+// ─── RESILIENCE SENTINELS (GLOBAL HANDLERS) ─────────────────────────────────
+
+// 1. Network Status Monitoreo
+window.addEventListener('online', () => tactical.setNetworkStatus(true));
+window.addEventListener('offline', () => tactical.setNetworkStatus(false));
+
+// 2. Runtime Error Catch-all
+window.onerror = (msg, url, lineNo, columnNo, error) => {
+    // Si tactical ya cargó, usamos su Panic Mode
+    if (window.showPanicMode) {
+        window.showPanicMode(error || { message: msg });
+    }
+    return false; // Seguir logueando en consola
+};
+
+// 3. Unhandled Promise Rejections
+window.onunhandledrejection = (event) => {
+    if (window.showPanicMode) {
+        window.showPanicMode({ message: `PROMESA_FALLIDA: ${event.reason}` });
+    }
+};
+
+// Inicializar estado offline si arranca sin red
+if (!navigator.onLine) tactical.setNetworkStatus(false);
 
 // Safety check: Wait for global apiService to be loaded
 if (!window.moleApi) {
@@ -157,6 +183,11 @@ function showModule(moduleKey) {
                 if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
                 if (typeof fetchMapData === 'function') fetchMapData();
                 break;
+        }
+    } else {
+        console.warn(`[Router] Fallo de navegación: Módulo '${moduleKey}' no encontrado.`);
+        if (window.showTacticalToast) {
+            window.showTacticalToast(`Error 404 Interno: Módulo '${moduleKey}' no localizado.`, 'warn');
         }
     }
 }
@@ -303,7 +334,16 @@ async function submitRegistration() {
         }, 2000); 
 
     } catch (error) {
-        errorMsg.innerText = `ERROR: ${error.message || "NO SE PUDO CREAR EL REGISTRO."}`;
+        // Distinguir tipo de error para mensajes más precisos
+        if (error.status === 409) {
+            errorMsg.innerText = "ERROR: ESTE OPERADOR YA EXISTE EN EL SISTEMA.";
+        } else if (error.status === 422) {
+            errorMsg.innerText = "ERROR: DATOS INVÁLIDOS. VERIFICA LOS CAMPOS.";
+        } else if (error instanceof TypeError) {
+            errorMsg.innerText = "ERROR: SIN CONEXIÓN AL SERVIDOR CENTRAL.";
+        } else {
+            errorMsg.innerText = `ERROR: ${error.message || "NO SE PUDO CREAR EL REGISTRO."}`;
+        }
         errorMsg.classList.remove('hidden');
     }
 }
@@ -347,7 +387,15 @@ async function attemptLogin() {
 
     } catch (error) {
         console.warn("> Servidor rechazó credenciales o está offline.", error);
-        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        if (error instanceof TypeError) {
+            errorMsg.innerText = "ERROR: SIN CONEXIÓN AL SERVIDOR. VERIFICA TU RED.";
+        } else if (error.status === 401) {
+            errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        } else if (error.status >= 500) {
+            errorMsg.innerText = "ERROR: SERVIDOR CENTRAL FUERA DE LÍNEA. INTENTA MÁS TARDE.";
+        } else {
+            errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        }
         errorMsg.classList.remove('hidden');
     }
 }

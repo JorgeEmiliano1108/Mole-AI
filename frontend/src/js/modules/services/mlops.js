@@ -37,18 +37,7 @@ async function trainRagModel() {
         const formData = new FormData();
         formData.append('document', fileInput.files[0]);
 
-        await withBackoff(async () => {
-            const response = await fetch(`${window.AppConfig.API_BASE_URL}/ai/rag/train/`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${window.getAuthToken()}` },
-                body: formData
-            });
-            if (!response.ok) {
-                const err = new Error("Error en servidor");
-                err.status = response.status;
-                throw err;
-            }
-        });
+        await window.moleApi.upload('ai/rag/train/', formData, { silent: true });
         
         if (window.ApiService) ApiService.showToast('Base de Conocimiento RAG actualizada.', 'success');
         fileInput.value = '';
@@ -74,18 +63,7 @@ async function trainCnnModel() {
         const formData = new FormData();
         formData.append('dataset', fileInput.files[0]);
 
-        await withBackoff(async () => {
-            const response = await fetch(`${window.AppConfig.API_BASE_URL}/ai/vision/retrain/`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${window.getAuthToken()}` },
-                body: formData
-            });
-            if (!response.ok) {
-                const err = new Error("Error en servidor");
-                err.status = response.status;
-                throw err;
-            }
-        });
+        await window.moleApi.upload('ai/vision/retrain/', formData, { silent: true });
         
         if (window.ApiService) ApiService.showToast('Fine-Tuning de MS1 iniciado. Revise los logs.', 'success');
         fileInput.value = '';
@@ -98,22 +76,22 @@ async function trainCnnModel() {
 }
 
 async function forgotPassword() {
-    const user = prompt("Ingrese su usuario o correo para recuperar la credencial:");
-    if (!user) return;
+    // Usar el campo de usuario del formulario de login en lugar de prompt()
+    const userInput = document.getElementById('user-input');
+    const user = userInput ? userInput.value.trim() : '';
+    if (!user) {
+        if (window.showTacticalToast) window.showTacticalToast('Ingresa tu usuario para recuperar la credencial.', 'warn');
+        return;
+    }
 
     try {
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/auth/password-reset/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ identifier: user })
-        });
-
-        if (response.ok) {
-            alert("> PROTOCOLO DE RECUPERACIÓN INICIADO. Revise su terminal (correo).");
-        } else {
-            alert("> [ ERROR ] Credencial no encontrada o sistema bloqueado.");
-        }
+        await window.moleApi.post('auth/password-reset/', { identifier: user }, { silent: true, allowAnonymous: true });
+        if (window.showTacticalToast) window.showTacticalToast('Protocolo de recuperación iniciado. Revisa tu correo.', 'success');
     } catch (e) {
-        alert("> [ ERROR CRÍTICO ] No se pudo contactar al servidor central.");
+        if (e.status === 404) {
+            if (window.showTacticalToast) window.showTacticalToast('Credencial no encontrada en el sistema.', 'error');
+        } else {
+            if (window.showTacticalToast) window.showTacticalToast('No se pudo contactar al servidor central.', 'error');
+        }
     }
 }

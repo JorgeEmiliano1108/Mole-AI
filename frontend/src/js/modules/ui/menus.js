@@ -53,7 +53,9 @@ async function downloadReportPDF(reportId, btnElement) {
 
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Fallo en descarga de reporte:", error);
-        alert(`[!] ERROR: No se pudo verificar la autorización o establecer conexión para el reporte ${reportId}.`);
+        if (window.showTacticalToast) {
+            window.showTacticalToast(`Fallo en descarga del reporte ${reportId}.`, 'error');
+        }
         
         // Feedback visual de error (Se pone rojo)
         btnElement.innerText = "[ FALLO ]";

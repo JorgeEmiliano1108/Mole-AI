@@ -179,9 +179,49 @@ export function clearInferenceState(targetId, newContent = null) {
     delete el.dataset.originalContent;
 }
 
+// ─── 4. NETWORK & RUNTIME RESILIENCE ────────────────────────────────────────
+
+/**
+ * Muestra u oculta un banner táctico de estado de red.
+ * @param {boolean} isOnline - Estado actual de la conexión.
+ */
+export function setNetworkStatus(isOnline) {
+    let banner = document.getElementById('network-status-banner');
+    if (!isOnline) {
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'network-status-banner';
+            banner.className = 'fixed top-0 left-0 w-full z-[10000] bg-[#FBBF24] text-black text-[10px] font-bold py-1 text-center tracking-[0.2em] shadow-lg transition-all duration-500';
+            banner.style.fontFamily = "'JetBrains Mono', monospace";
+            banner.textContent = '>>> [ ESTADO: ENLACE NEURONAL PERDIDO - MODO CACHÉ ACTIVO ] <<<';
+            document.body.prepend(banner);
+        }
+    } else {
+        if (banner) {
+            banner.classList.replace('bg-[#FBBF24]', 'bg-[#34D399]');
+            banner.textContent = '>>> [ ESTADO: ENLACE RESTABLECIDO - SINCRONIZANDO... ] <<<';
+            setTimeout(() => {
+                if (banner && banner.parentNode) banner.remove();
+            }, 3000);
+        }
+    }
+}
+
+/**
+ * Dispara una alerta de fallo crítico en el runtime.
+ * @param {Error|Object} error - El error capturado.
+ */
+export function showPanicMode(error) {
+    const message = (error && error.message) ? error.message : "Fallo inesperado en el núcleo de ejecución.";
+    showTacticalToast(`CRITICAL_FAILURE: ${message.toUpperCase()}`, 'error', 15000);
+    console.error(">>> [ MOLE.AI PANIC MODE ] <<<", error);
+}
+
 // ─── GLOBAL EXPOSURE ────────────────────────────────────────────────────────
 // Make available on window for non-module scripts (legacy compat)
 window.showTacticalToast = showTacticalToast;
+window.setNetworkStatus = setNetworkStatus;
+window.showPanicMode = showPanicMode;
 window.setConnectionStatus = setConnectionStatus;
 window.bindWebSocket = bindWebSocket;
 window.showInferenceState = showInferenceState;

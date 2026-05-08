@@ -27,17 +27,7 @@ async function initAdminCharts() {
         // ====================================================================
         // 🚀 CONEXIÓN AL BACKEND: Petición segura de estadísticas globales
         // ====================================================================
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/admin/statistics`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${window.getAuthToken()}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) throw new Error("Error al obtener datos del servidor central");
-
-        const data = await response.json();
+        const data = await window.moleApi.get('admin/statistics', { silent: true });
 
         // Extracción de datos con Fallback (Por si el backend manda datos vacíos)
         const usuariosStats = data.usuarios || [1, 0, 0]; // [Activos, Inactivos, Suspendidos]
@@ -105,20 +95,16 @@ async function initAdminCharts() {
 
     } catch (error) {
         console.error("> Alerta de Supervisor: Fallo en telemetría global.", error);
-        // Aquí podrías mostrar un mensaje de error visual en el dashboard de admin
+        if (window.showTacticalToast) {
+            window.showTacticalToast('Fallo al cargar estadísticas del panel.', 'error');
+        }
     }
 }
 
 // Generación de Reporte TXT (Descarga con datos Reales del Backend)
 async function downloadAdminReport() {
     try {
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/admin/report-text`, {
-            headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
-        });
-        
-        if (!response.ok) throw new Error("No se pudo generar el reporte.");
-        
-        const data = await response.json(); // Supongamos que el server nos manda un JSON con los totales
+        const data = await window.moleApi.get('admin/report-text', { silent: true }); // Supongamos que el server nos manda un JSON con los totales
         
         const date = new Date().toLocaleString('en-GB');
         const fileContent = `
@@ -147,7 +133,9 @@ ESTADO DEL SERVIDOR: ONLINE
         window.URL.revokeObjectURL(url);
     } catch (error) {
         console.error("> Error al descargar reporte de admin:", error);
-        alert("> ERROR: Fallo de conexión con la base de datos central.");
+        if (window.showTacticalToast) {
+            window.showTacticalToast('Fallo de conexión con la base de datos central.', 'error');
+        }
     }
 }
 
@@ -166,10 +154,12 @@ async function renderLogList(plantName) {
     logContainer.appendChild(loadingDiv);
 
     try {
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/${plantName}/logs`, {
-            headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
-        });
-        const logs = response.ok ? await response.json() : [];
+        let logs = [];
+        try {
+            logs = await window.moleApi.get(`plants/${plantName}/logs`, { silent: true });
+        } catch (e) {
+            logs = [];
+        }
 
         logContainer.textContent = ''; // clear loading
         if (logs.length === 0) {
@@ -264,16 +254,16 @@ async function openModal() {
 
     try {
         // Pedimos los datos históricos (ej. últimas 7 horas) de ESA planta específica
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/${currentPlantName}/history`, {
-            headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
-        });
-        
-        // Si el servidor falla, usamos un fallback visual por defecto (para que no se rompa la UI)
-        const histData = response.ok ? await response.json() : {
-            labels: ['00:00','04:00','08:00','12:00','16:00','20:00','24:00'],
-            hum: [0,0,0,0,0,0,0],
-            temp: [0,0,0,0,0,0,0]
-        };
+        let histData;
+        try {
+            histData = await window.moleApi.get(`plants/${currentPlantName}/history`, { silent: true });
+        } catch (e) {
+            histData = {
+                labels: ['00:00','04:00','08:00','12:00','16:00','20:00','24:00'],
+                hum: [0,0,0,0,0,0,0],
+                temp: [0,0,0,0,0,0,0]
+            };
+        }
         
         hChart = new Chart(ctxH, { 
             type: 'line', 

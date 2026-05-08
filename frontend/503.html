@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | 503 - Mantenimiento Programado</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-mole-base text-mole-cyan font-mono min-h-screen relative overflow-x-hidden">
+
+    <div class="min-h-screen flex items-center justify-center p-4 sm:p-8">
+        <div class="w-full max-w-2xl">
+
+            <div class="bg-mole-surface border border-[#A78BFA]/50 rounded-lg p-6 sm:p-12 flex flex-col justify-center shadow-[0_0_15px_rgba(167,139,250,0.2)] relative overflow-hidden text-center">
+                <!-- Decorative corner brackets - Violet -->
+                <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-[#A78BFA]/50"></div>
+                <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-[#A78BFA]/50"></div>
+                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-[#A78BFA]/50"></div>
+                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#A78BFA]/50"></div>
+
+                <div class="flex flex-col items-center justify-center">
+                    <div class="mb-6 relative">
+                        <h1 class="text-7xl sm:text-9xl font-bold tracking-tight text-[#A78BFA] relative z-10" style="text-shadow: 0 0 20px rgba(167, 139, 250, 0.5);">503</h1>
+                        <div class="absolute inset-0 text-7xl sm:text-9xl font-bold tracking-tight text-[#A78BFA]/30 translate-x-1 translate-y-1 z-0 animate-pulse">503</div>
+                    </div>
+                    
+                    <h2 class="text-xl sm:text-2xl tracking-[0.1em] uppercase text-[#A78BFA] mb-2">MANTENIMIENTO PROGRAMADO</h2>
+                    <p class="text-sm text-mole-dim/80 mb-4 max-w-md mx-auto">El sistema se encuentra en fase de actualización y mejora. Esta operación es controlada y temporal.</p>
+
+                    <!-- Auto-refresh countdown -->
+                    <p class="text-xs text-[#A78BFA]/60 mb-8">Reintentando automáticamente en <span id="countdown" class="text-[#A78BFA] font-bold">30</span>s...</p>
+
+                    <div class="w-full h-px bg-gradient-to-r from-transparent via-[#A78BFA]/30 to-transparent mb-8"></div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md mx-auto">
+                        <button onclick="window.location.reload()" class="flex-1 px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-[#A78BFA]/50 hover:bg-[#A78BFA]/10 transition-all text-sm font-medium text-mole-dim hover:text-[#A78BFA] focus:outline-none focus:ring-2 focus:ring-[#A78BFA] uppercase">
+                            [ Reintentar Ahora ]
+                        </button>
+                        <a href="/index.html" class="flex-1 border-2 border-[#A78BFA] text-[#A78BFA] py-3 rounded font-bold tracking-widest text-sm hover:bg-[#A78BFA] hover:text-mole-base transition-all shadow-[0_0_10px_rgba(167,139,250,0.3)] hover:shadow-[0_0_20px_rgba(167,139,250,0.6)] uppercase flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-[#A78BFA]">
+                            Ir al Inicio
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Legal Disclaimer -->
+    <div class="fixed bottom-0 w-full bg-mole-surface/90 backdrop-blur-sm border-t border-[#A78BFA]/30 p-2.5 text-center z-30">
+        <p class="text-[10px] text-[#A78BFA]/70 font-mono">
+            <span class="text-[#A78BFA] font-bold">[MANTENIMIENTO]</span> Actualización del sistema en progreso. Todos los datos están seguros.
+        </p>
+    </div>
+
+    <script>
+        // Auto-refresh countdown (30 seconds)
+        let seconds = 30;
+        const countdownEl = document.getElementById('countdown');
+        const timer = setInterval(() => {
+            seconds--;
+            if (countdownEl) countdownEl.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(timer);
+                window.location.reload();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

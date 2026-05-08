@@ -195,6 +195,11 @@ class ApiService {
     // ─── FRIENDLY ERROR MESSAGES ────────────────────────────────────────
 
     _friendlyMessage(error) {
+        // Si el catálogo central está disponible, usarlo
+        if (window.ErrorCatalog && window.ErrorCatalog.getFriendlyMessage) {
+            return window.ErrorCatalog.getFriendlyMessage(error);
+        }
+        // Fallback inline (para cuando el catálogo aún no cargó)
         if (error instanceof TypeError) {
             return 'Sin conexión al servidor. Verifica tu red.';
         }
@@ -202,10 +207,17 @@ class ApiService {
             return 'La conexión es inestable. Reintentando...';
         }
         var s = error.status;
+        if (s === 400) return 'Los datos enviados no son válidos. Revisa el formulario.';
+        if (s === 403) return 'No tienes permisos para acceder a este recurso.';
+        if (s === 404) return 'El recurso solicitado no fue encontrado.';
+        if (s === 409) return 'El recurso que intentas crear ya existe.';
+        if (s === 422) return 'Los datos enviados no pudieron ser procesados.';
         if (s === 503) return 'El servicio de IA está procesando. Intenta en unos segundos.';
         if (s === 504) return 'Timeout del servidor. La conexión es inestable.';
         if (s === 429) return 'Demasiadas solicitudes. Espera un momento.';
         if (s === 401) return 'Sesión expirada. Vuelve a iniciar sesión.';
+        if (s === 501) return 'Esta funcionalidad aún no está disponible.';
+        if (s === 502) return 'Error de comunicación entre servicios. Reintenta.';
         if (s >= 500) return 'Error interno del servidor. Intenta más tarde.';
         return error.message || 'Error desconocido.';
     }
@@ -240,7 +252,7 @@ class ApiService {
                     // Token about to expire — clear and redirect to login
                     self.clearToken();
                     ApiService.showToast('Sesión a punto de expirar. Vuelve a iniciar sesión.', 'error');
-                    window.location.href = '/login/';
+                    window.location.href = '/login.html';
                     var err = new Error('TOKEN_EXPIRING');
                     err.status = 401;
                     return Promise.reject(err);
@@ -333,10 +345,19 @@ class ApiService {
                 if (typeof showModule === 'function') {
                     showModule('login');
                 } else {
-                    window.location.href = '/login/';
+                    window.location.href = '/login.html';
                 }
             } else if (error.status === 403) {
                 window.location.href = '/403.html';
+            } else if (error.status === 404) {
+                // 404 de API: no redirigir a página completa, solo informar vía toast
+                // (el catch del llamador puede manejar el caso específico)
+            } else if (error.status === 429) {
+                // Rate limit: no redirigir, solo toast (el retry ya se maneja en attemptRequest)
+            } else if (error.status === 501) {
+                // Funcionalidad no implementada: solo toast informativo, no redirect
+            } else if (error.status === 503) {
+                window.location.href = '/503.html';
             } else if (error.status >= 500) {
                 window.location.href = `/500.html?status=${error.status}`;
             }
@@ -368,16 +389,35 @@ class ApiService {
         return this.request(endpoint, 'POST', formData, options.headers, options);
     }
 
+    /**
+     * Extrae mensajes de error granulares de una respuesta 422.
+     * @param {Object} error - El objeto de error capturado.
+     * @returns {Object|string|null} - Objeto con errores por campo o mensaje principal.
+     */
+    static async parseValidationErrors(error) {
+        if (!error.response) return null;
+        try {
+            const data = await error.response.json();
+            // Soporta formatos comunes: { errors: {...} }, { detail: "..." } o el objeto raíz
+            return data.errors || data.detail || data;
+        } catch (e) {
+            return null;
+        }
+    }
+
     // ─── TOAST NOTIFICATIONS (Terminal Style) ───────────────────────────
 
     static showToast(message, type) {
         type = type || 'info';
         var container = document.getElementById('toast-container');
 
-        // Fallback to alert if toast container doesn't exist
+        // Fallback: crear container dinámicamente si no existe
         if (!container) {
-            alert('[' + type.toUpperCase() + '] ' + message);
-            return;
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.setAttribute('aria-live', 'polite');
+            container.style.cssText = 'position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:380px;';
+            document.body.appendChild(container);
         }
 
         var prefixes = {

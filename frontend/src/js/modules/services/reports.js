@@ -44,15 +44,9 @@ export function sendReport() {
         };
 
         try {
-            const token = window.getAuthToken();
-            // Endpoint para reportes de usuarios
-            const response = await fetch(`${window.AppConfig.API_BASE_URL}/reports/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(reportData)
-            });
+            const response = await window.moleApi.post('reports/users', reportData, { silent: true });
 
-            if (response.ok) {
+            if (response) {
                 btnStatus.innerText = "TRANSMISIÓN EXITOSA. CENTRAL NOTIFICADA.";
                 btnStatus.className = "text-center mt-4 text-xs font-bold text-[#00e5ff] tracking-widest";
                 msgInput.value = '';
@@ -84,13 +78,7 @@ async function logPlantIssue(plantName, issueDetails) {
     };
 
     try {
-        const token = window.getAuthToken();
-        // Endpoint para reportes de plantas/sistemas
-        await fetch(`${window.AppConfig.API_BASE_URL}/reports/plants`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify(reportData)
-        });
+        await window.moleApi.post('reports/plants', reportData, { silent: true });
     } catch (e) {
         let localPlantReports = JSON.parse(localStorage.getItem('moleia_plant_reports')) || [];
         localPlantReports.push(reportData);
@@ -117,8 +105,7 @@ async function renderAdminReports() {
     // 1. CARGAR REPORTES DE USUARIOS
     let userReports = [];
     try {
-        const resU = await fetch(`${window.AppConfig.API_BASE_URL}/reports/users`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if(resU.ok) userReports = await resU.json();
+        userReports = await window.moleApi.get('reports/users', { silent: true });
     } catch (e) {
         userReports = JSON.parse(localStorage.getItem('moleia_user_reports')) || [];
     }
@@ -127,8 +114,7 @@ async function renderAdminReports() {
     // 2. CARGAR REPORTES DE PLANTAS
     let plantReports = [];
     try {
-        const resP = await fetch(`${window.AppConfig.API_BASE_URL}/reports/plants`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if(resP.ok) plantReports = await resP.json();
+        plantReports = await window.moleApi.get('reports/plants', { silent: true });
     } catch (e) {
         plantReports = JSON.parse(localStorage.getItem('moleia_plant_reports')) || [];
     }
@@ -183,7 +169,9 @@ export function generateMasterReport(type) {
     }
 
     if(targetData.length === 0) {
-        alert("SISTEMA OVERRIDE: No hay registros para compilar en esta bandeja.");
+        if (window.showTacticalToast) {
+            window.showTacticalToast('No hay registros para compilar en esta bandeja.', 'warn');
+        }
         return;
     }
 

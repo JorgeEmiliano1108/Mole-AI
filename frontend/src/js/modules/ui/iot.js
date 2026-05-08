@@ -68,21 +68,11 @@ async function startHardwareProvisioning() {
         if (!token) throw new Error("Autorización denegada. Token de seguridad faltante.");
         console.log(`> Transmitiendo credenciales al servidor central de producción...`);
 
-        // Uso de la constante API_BASE_URL para despliegues reales
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/api/iot/provisioning`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${window.getAuthToken()}` 
-            },
-            body: JSON.stringify({ 
-                ssid: ssid, 
-                pass: password, 
-                operator: currentUser
-            })
-        });
-
-        if (!response.ok) throw new Error(`Fallo en el enlace de hardware. Código: ${response.status}`);
+        await window.moleApi.post('api/iot/provisioning', {
+            ssid: ssid,
+            pass: password,
+            operator: currentUser
+        }, { silent: true });
 
         await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -91,7 +81,9 @@ async function startHardwareProvisioning() {
 
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Falla de aprovisionamiento:", error);
-        alert("[!] PROTOCOLO ABORTADO: No se pudo enlazar con el módulo de hardware. Verifique conexión.");
+        if (window.showTacticalToast) {
+            window.showTacticalToast('Protocolo abortado: No se pudo enlazar con el módulo de hardware.', 'error');
+        }
         nextIotStep(1);
     } finally {
         if (closeBtn) closeBtn.classList.remove('hidden');

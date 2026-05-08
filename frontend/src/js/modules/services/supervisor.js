@@ -13,16 +13,9 @@ async function syncUserPlants() {
 
         if (!currentUser || !token) return;
 
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/users/${currentUser}/plantas`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            const userPlants = await response.json();
+        const userPlants = await window.moleApi.get(`users/${currentUser}/plantas`, { silent: true });
+
+        if (userPlants) {
             // Guardamos el inventario real en la memoria local (Única fuente de verdad)
             localStorage.setItem('moleia_plants', JSON.stringify(userPlants));
             console.log("> [ RED ] Banco de datos botánico sincronizado.");
@@ -76,16 +69,7 @@ async function triggerOverride(type, plantName = null) {
 
     // 3. Informamos al servidor (Usando la cola offline del Módulo 2 si falla)
     try {
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/sistema/override`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${window.getAuthToken()}`
-            },
-            body: JSON.stringify({ plant: targetPlant, action: type, data: db[targetPlant] })
-        });
-        
-        if (!response.ok) throw new Error("Servidor no respondió al Override.");
+        await window.moleApi.post('sistema/override', { plant: targetPlant, action: type, data: db[targetPlant] }, { silent: true });
     } catch (e) { 
         console.warn("> [ RED CAÍDA ] Override guardado en caché. Se enviará al reconectar.");
         if (typeof queueOfflineAction === 'function') {

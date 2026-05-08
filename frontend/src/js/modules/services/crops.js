@@ -92,7 +92,9 @@ async function registerNewPlant() {
     const currentUser = localStorage.getItem('moleia_current_user');
 
     if(!plantName) {
-        alert("ERROR: El espécimen requiere un identificador.");
+        if (window.showTacticalToast) {
+            window.showTacticalToast('El espécimen requiere un identificador.', 'warn');
+        }
         return;
     }
 
@@ -107,17 +109,9 @@ async function registerNewPlant() {
     };
 
     try {
-        const token = window.getAuthToken();
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/register/`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(newPlantData)
-        });
+        const response = await window.moleApi.post('plants/register/', newPlantData, { silent: true });
 
-        if (response.ok) {
+        if (response) {
             console.log(`> [ OK ] ${safePlantName.toUpperCase()} añadido a la base de datos central.`);
             closeAddPlantModal();
             
@@ -137,7 +131,28 @@ async function registerNewPlant() {
         }
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Fallo de comunicación con el backend:", error);
-        alert("ERROR: No se pudo conectar con el servidor central. El registro fue abortado.");
+        
+        // Intentar obtener detalles granulares del error
+        const details = await window.ApiService.parseValidationErrors(error);
+        const nameInput = document.getElementById('plant-name');
+
+        if (window.showTacticalToast) {
+            if (error.status === 409) {
+                window.showTacticalToast('Este espécimen ya existe en el sistema.', 'warn');
+                if (nameInput) {
+                    nameInput.classList.add('border-red-500', 'animate-pulse');
+                    nameInput.focus();
+                }
+            } else if (error.status === 422) {
+                const msg = (typeof details === 'string') ? details : 'Datos inválidos. Verifica nombre y tipo.';
+                window.showTacticalToast(msg, 'warn');
+                if (nameInput) nameInput.classList.add('border-red-500');
+            } else if (error instanceof TypeError) {
+                window.showTacticalToast('Sin conexión al servidor. Registro abortado.', 'error');
+            } else {
+                window.showTacticalToast('No se pudo conectar con el servidor. Registro abortado.', 'error');
+            }
+        }
     }
 }
 
@@ -173,3 +188,10 @@ export function updatePlant(name) {
     // Ejecutamos la lógica original
     originalUpdatePlant(name);
 }
+
+// Limpieza de estados de error al escribir
+document.addEventListener('input', (e) => {
+    if (e.target.id === 'plant-name') {
+        e.target.classList.remove('border-red-500', 'animate-pulse');
+    }
+});
