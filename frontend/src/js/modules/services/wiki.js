@@ -17,13 +17,9 @@ export async function loadWiki() {
         grid.innerHTML = '<p class="text-mole-red">Sesión caducada. Inicia sesión nuevamente.</p>';
         return;
     }
+    // ApiService.get already returns parsed JSON data (or throws on error)
     try {
-        const resp = await fetch(`${window.AppConfig.API_BASE_URL}/plants/species/`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        const species = await resp.json(); // Expect array of objects
+        const species = await window.ApiService.get('plants/species/');
         renderWikiCards(species);
     } catch (e) {
         console.error('Failed to load species catalog:', e);

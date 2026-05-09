@@ -18,6 +18,9 @@ services:
       - ms1_vision
       - ms2_chat
       - ms3_reports
+    volumes:
+      - ../frontend/dist:/usr/share/nginx/html:ro
+      - ../frontend/static:/usr/share/nginx/static:ro
     networks:
       - mole_public
       - mole_internal

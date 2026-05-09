@@ -75,6 +75,30 @@ export function closeMapModal() {
     if(modal) modal.classList.add('hidden');
 }
 
+export function initMapView() {
+    // Ensure the map container exists
+    const mapDiv = document.getElementById('map');
+    if (!mapDiv) {
+        console.warn('initMapView: #map element not found');
+        return;
+    }
+    if (!mapInstance) {
+        mapInstance = L.map('map').setView([23.6345, -102.5528], 5);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+            subdomains: 'abcd',
+            maxZoom: 20,
+            keepBuffer: 4,
+            updateWhenZooming: false
+        }).addTo(mapInstance);
+    } else {
+        // Refresh size if already initialized (e.g., modal instance)
+        setTimeout(() => mapInstance.invalidateSize(), 200);
+    }
+    // Load pins from backend
+    loadMapPins();
+}
+
 // 4. Dibujar los puntos de infección (BACKEND ESTRICTO)
 async function loadMapPins() {
     if (!mapInstance) return;

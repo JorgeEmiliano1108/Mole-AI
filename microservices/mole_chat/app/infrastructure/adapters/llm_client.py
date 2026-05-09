@@ -5,7 +5,6 @@ from typing import Any, Optional
 
 from langchain_openai import ChatOpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-from pydantic import ValidationError
 
 from app.domain.schemas import ChatResponse
 

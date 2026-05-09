@@ -13,7 +13,8 @@ import structlog
 from starlette.concurrency import run_in_threadpool
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
-from app.core.security import get_token_validator, SupabaseTokenValidator
+import jwt
+
 from app.application.ports import (
     VisionClientPort,
     EventPublisherPort,
@@ -47,11 +48,29 @@ def clean_exif(image_bytes: bytes) -> bytes:
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    validator: SupabaseTokenValidator = Depends(get_token_validator),
 ) -> dict:
-    """Extrae y valida el JWT integrándose nativamente con Swagger UI."""
+    """Extrae y valida el JWT usando la clave local.
+    Se espera que el token sea firmado con HS256 y la clave definida en JWT_SECRET_KEY.
+    """
     token = credentials.credentials
-    claims = await validator.validate(token)
+    try:
+        # Mantenemos TODAS las validaciones críticas.
+        claims = jwt.decode(
+            token, settings.JWT_SECRET_KEY, algorithms=["HS256"],
+            options={"verify_exp": True, "verify_aud": False}  # aud apagado por incompatibilidad de Django
+        )
+    except jwt.ExpiredSignatureError as exc:
+        logger.error("jwt_validation_failed", error_type="ExpiredSignatureError", detail=str(exc))
+        raise HTTPException(status_code=401, detail="Token expirado. Por favor inicie sesión nuevamente.")
+    except jwt.InvalidSignatureError as exc:
+        logger.error("jwt_validation_failed", error_type="InvalidSignatureError", detail=str(exc))
+        raise HTTPException(status_code=401, detail="Firma inválida. Las claves JWT_SECRET_KEY no coinciden.")
+    except jwt.PyJWTError as exc:
+        logger.error("jwt_validation_failed", error_type=type(exc).__name__, detail=str(exc))
+        raise HTTPException(status_code=401, detail=f"Error criptográfico: {type(exc).__name__}")
+    except Exception as exc:
+        logger.error("jwt_validation_failed", error_type=type(exc).__name__, detail=str(exc))
+        raise HTTPException(status_code=401, detail="Token inválido.")
     return claims
 
 
@@ -61,10 +80,18 @@ _diagnostic_repository: Optional[DiagnosticRepositoryPort] = None
 
 
 def get_vision_client() -> VisionClientPort:
-    """Factory para el cliente de visión (TFLite)."""
+    """Factory for vision client.
+    Instancia directamente TFLiteVisionAdapter. Si el archivo de modelo
+    ``settings.CNN_MODEL_PATH`` no existe, lanza RuntimeError explícito.
+    """
+    import os
     global _vision_adapter
     if _vision_adapter is None:
+        model_path = settings.CNN_MODEL_PATH
+        if not os.path.isfile(model_path):
+            raise RuntimeError(f"Model file not found: {model_path}")
         _vision_adapter = TFLiteVisionAdapter()
+        logger.info("vision_client_factory", chosen="tflite", model=model_path)
     return _vision_adapter
 
 
@@ -91,10 +118,10 @@ DiagnosticRepository = Annotated[DiagnosticRepositoryPort, Depends(get_diagnosti
 
 
 async def get_image_file(
-    file: UploadFile = File(...),
+    image: UploadFile = File(...),
 ) -> bytes:
     """Lee y sanitiza la imagen subida por el usuario."""
-    contents = await file.read()
+    contents = await image.read()
     
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(

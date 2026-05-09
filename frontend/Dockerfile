@@ -28,11 +28,12 @@ FROM nginx:1.25-alpine AS runtime
 COPY --from=builder /app/dist/ /usr/share/nginx/html/
 
 # Copiar carpeta static/ para apiService.js y otros assets estáticos
-COPY --from=builder /app/static/ /usr/share/nginx/html/static/
+COPY --from=builder /app/static/ /usr/share/nginx/static/
 
 # Copiar configuración del API Gateway (desde el contexto frontend/)
 # Nota: infrastructure/ está fuera del contexto, mover nginx.conf a frontend/
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY cors_headers.conf /etc/nginx/conf.d/cors_headers.conf
 
 EXPOSE 80
 
