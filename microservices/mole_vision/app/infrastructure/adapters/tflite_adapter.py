@@ -45,6 +45,10 @@ class TFLiteVisionAdapter(VisionClientPort):
         self.num_threads = num_threads or settings.CNN_NUM_THREADS
         self.timeout_sec = settings.INFERENCE_TIMEOUT_SECONDS
         
+        # Verify model file exists before interpreter init
+        import os
+        if not os.path.isfile(self.model_path):
+            raise RuntimeError(f"Model file not found: {self.model_path}")
         self._interpreter = tflite.Interpreter(
             model_path=self.model_path,
             num_threads=self.num_threads,

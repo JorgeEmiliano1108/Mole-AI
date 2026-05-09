@@ -195,7 +195,7 @@
         <div id="view-mapa" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
             <h2 class="text-xl text-mole-cyan font-bold crt-text-glow border-b border-mole-cyan pb-2 mb-4">> MAPA TÁCTICO IOT</h2>
             <div class="flex-1 bg-mole-surface border border-mole-border rounded shadow-cyber relative min-h-0 overflow-hidden">
-                <div id="main-map-container" class="absolute inset-0 bg-mole-base"></div>
+                <div id="map" class="absolute inset-0 bg-mole-base"></div>
             </div>
         </div>
 
@@ -263,7 +263,7 @@
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
             <button aria-label="Cerrar modal" onclick="closeModule('contact')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> CONTACTO SEGURO</h2>
-            <input type="text" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+            <input type="text" id="contact-subject" name="subject" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
             <textarea placeholder="Mensaje encriptado..." class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text h-32 outline-none focus:border-mole-accent"></textarea>
             <button onclick="closeModule('contact')" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
         </div>
@@ -288,22 +288,6 @@
         </div>
     </div>
 
-    <!-- Diagnosis Result Modal -->
-    <div id="diagnosis-result-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
-        <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('diagnosis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> RESULTADO MS1</h2>
-            <div class="space-y-4 text-xs font-sans">
-                <p><span class="text-mole-text-dim">ESPECIE:</span> <span id="diag-species" class="text-mole-accent">...</span></p>
-                <p><span class="text-mole-text-dim">ESTADO:</span> <span id="diag-status" class="text-mole-accent">...</span></p>
-                <p><span class="text-mole-text-dim">PH ESTIMADO:</span> <span id="diag-ph" class="text-mole-accent">...</span></p>
-                <div class="border border-mole-border p-2 bg-mole-bg">
-                    <span class="text-mole-text-dim block mb-1">TRATAMIENTO:</span> 
-                    <span id="diag-treatment" class="text-mole-accent">...</span>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- History Modal -->
     <div id="history-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
@@ -419,6 +403,11 @@
             // Trigger wiki load when the wiki view is activated
             if (viewId === 'view-wiki' && typeof window.loadWiki === 'function') {
                 window.loadWiki();
+            }
+            
+            // Trigger map init when the mapa view is activated
+            if (viewId === 'view-mapa' && typeof window.map !== 'undefined' && typeof window.map.initMapView === 'function') {
+                setTimeout(() => window.map.initMapView(), 100);
             }
             
             document.querySelectorAll('nav button').forEach(btn => {

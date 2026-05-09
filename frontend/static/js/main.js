@@ -1,6 +1,8 @@
 // ==========================================================
 // 0. CONFIGURACIÓN ESTRUCTURAL (MÓDULOS E IDIOMAS)
 // ==========================================================
+// *** Limpieza total de identidad: eliminar cualquier token residual ***
+
 const MODULES = {
     intro: 'intro-screen',
     login: 'login-screen',

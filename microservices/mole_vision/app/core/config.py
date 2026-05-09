@@ -3,6 +3,7 @@ Core Configuration - Centralized Settings
 Skill 01: Arquitectura Hexagonal - Capa Core
 """
 from typing import Optional
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     REDIS_CHANNEL_PREFIX: str = "mole_vision:"
     
     # Vision Model
-    CNN_MODEL_PATH: str = "/app/models/cnn.tflite"
+    CNN_MODEL_PATH: str = "/app/models/model.tflite"
     CNN_LABELS_PATH: str = "/app/models/labels.json"
     CNN_NUM_THREADS: int = 4
     
@@ -48,6 +49,7 @@ class Settings(BaseSettings):
     
     # CORS
     ORIGEN_PERMITIDO: str = "*"
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "default_secret")
     CORS_ALLOW_CREDENTIALS: bool = False
     
     # Security - JWKS Cache
