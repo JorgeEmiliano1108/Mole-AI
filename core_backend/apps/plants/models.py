@@ -29,6 +29,17 @@ class SpeciesCatalog(models.Model):
     ideal_ph_max = models.FloatField(null=True, blank=True)
     ideal_ph_optimal = models.FloatField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
+    category = models.CharField(
+        max_length=20,
+        choices=[
+            ('planta', 'Planta'),
+            ('plaga', 'Plaga'),
+            ('enfermedad', 'Enfermedad'),
+        ],
+        default='planta',
+        db_index=True,
+        help_text="Categoría taxonómica para filtrado en la Wiki.",
+    )
 
     # NOM-059: Protección de flora silvestre mexicana
     is_protected_nom059 = models.BooleanField(
@@ -110,3 +121,31 @@ class FavoritePlant(models.Model):
 
     def __str__(self):
         return f"Fav: {self.user} -> {self.plant.id}"
+
+# ---------------------------------------------------------------------------
+# Flora – ficha técnico‑plaga/plantilla (admin)
+# ---------------------------------------------------------------------------
+class Flora(models.Model):
+    """
+    Ficha técnica de flora o plaga que incluye foto real.
+    Relacionada al usuario que la crea (admin panel).
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='floras',
+        null=False,
+    )
+    common_name = models.CharField(max_length=128, help_text='Nombre común')
+    scientific_name = models.CharField(max_length=256, help_text='Nombre científico')
+    family = models.CharField(max_length=128, blank=True, help_text='Familia taxonómica')
+    treatment = models.TextField(blank=True, help_text='Método de tratamiento o control')
+    image = models.ImageField(upload_to='flora_images/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'flora'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.common_name} ({self.scientific_name})"

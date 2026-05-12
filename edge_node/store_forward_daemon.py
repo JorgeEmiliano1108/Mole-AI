@@ -47,9 +47,11 @@ load_dotenv()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 DB_PATH = Path(os.getenv("EDGE_DB_PATH", "edge_mole.sqlite3"))
+
+# WAN-ready: CLOUD_API_URL → BACKEND_BATCH_URL → localhost fallback
 BACKEND_BATCH_URL = os.getenv(
-    "BACKEND_BATCH_URL",
-    "http://localhost:8000/api/v1/sensor-data/batch/",
+    "CLOUD_API_URL",
+    os.getenv("BACKEND_BATCH_URL", "http://localhost:8000/api/v1/sensor-data/batch/"),
 )
 SYNC_INTERVAL_SECONDS = int(os.getenv("SYNC_INTERVAL", "30"))
 MAX_BATCH_SIZE = 200  # Keep Supabase free tier safe

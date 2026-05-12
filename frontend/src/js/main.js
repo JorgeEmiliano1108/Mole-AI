@@ -1,4 +1,7 @@
+import '../css/themes/pip-boy.css';
 import '../css/main.css';
+import './modules/ui/theme.js';
+import './modules/ui/navigation.js';
 import * as userDashboard from './modules/auth/userDashboard.js';
 import * as adminDashboard from './modules/auth/adminDashboard.js';
 import * as i18n from './modules/ui/i18n.js';
@@ -8,6 +11,7 @@ import * as menus from './modules/ui/menus.js';
 import * as security from './modules/ui/security.js';
 import * as memory from './modules/ui/memory.js';
 import * as iot from './modules/ui/iot.js';
+import { initIoTView } from './modules/services/iot.js';
 import * as config from './modules/api/config.js';
 import * as mlops from './modules/services/mlops.js';
 import * as vision from './modules/services/vision.js';
@@ -20,6 +24,7 @@ import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
 import { loadWiki } from './modules/services/wiki.js';
 window.loadWiki = loadWiki;
+window.initIoTView = initIoTView;
 
 // Safety check: Wait for global apiService to be loaded
 if (!window.moleApi) {
@@ -922,6 +927,11 @@ function renderPlantResults(results) {
                 eImage.className = 'w-full h-48 object-cover rounded border border-[#00e5ff]/30 my-2';
                 eImage.src = plant.image_url;
                 eImage.alt = name + ' - imagen botánica';
+                eImage.onerror = function() {
+                    this.onerror = null; // evitar loop infinito
+                    this.src = '/static/assets/topo.png';
+                    this.alt = 'Sin imagen disponible';
+                };
                 card.appendChild(eImage);
             }
             

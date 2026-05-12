@@ -25,6 +25,7 @@ import asyncio
 import json
 import logging
 import os
+import ssl
 from pathlib import Path
 from typing import Any, Optional
 
@@ -37,6 +38,19 @@ import websockets
 from websockets.exceptions import ConnectionClosed
 
 from store_forward_daemon import enqueue_reading, init_db
+
+# =============================================================================
+# Store & Forward — Singleton SQLite (Fix C: Persistencia)
+# =============================================================================
+_sf_db = None
+
+
+def get_sf_db():
+    """Retorna conexión SQLite singleton (thread-safe para asyncio)."""
+    global _sf_db
+    if _sf_db is None:
+        _sf_db = init_db()
+    return _sf_db
 
 # =============================================================================
 # Configuración de Logging (Cumple NOM-059 / LFPDPPP)
@@ -514,9 +528,9 @@ async def handle_node(ws: websockets.WebSocketServerProtocol):
                 }
                 
                 if flattened_sensors:
-                    # Llamada al Store & Forward
+                    # Store & Forward — usa singleton SQLite
                     enqueue_reading(
-                        con=init_db(),
+                        con=get_sf_db(),
                         device_id=node_name,
                         plant_id=plant_id,
                         sensors=flattened_sensors,
@@ -550,8 +564,9 @@ async def main():
     Inicia el Gateway OpenClaw con gestión completa del ciclo de vida:
       1. Pool asyncpg  → consulta PG para dispositivos no cacheados
       2. Cliente Redis → caché de claves públicas (con circuit breaker)
-      3. Servidor WebSocket → acepta conexiones de nodos ESP32
-      4. Shutdown limpio → cierra pool PG y cliente Redis
+      3. Store & Forward SQLite (singleton)
+      4. Servidor WebSocket → acepta conexiones de nodos ESP32 (TLS opcional)
+      5. Shutdown limpio → cierra pool PG y cliente Redis
     """
     logger.info("Starting OpenClaw Gateway on 0.0.0.0:18789")
 
@@ -561,11 +576,35 @@ async def main():
     # ── 2. Inicializar cliente Redis (Hallazgo #4 — circuit breaker activo) ─
     await get_redis_client()
 
-    # ── 3. Iniciar servidor WebSocket ─────────────────────────────────────
-    async with websockets.serve(handle_node, "0.0.0.0", 18789):
+    # ── 3. Inicializar Store & Forward SQLite (Singleton) ─────────────────
+    get_sf_db()
+    logger.info("Store & Forward SQLite singleton initialized.")
+
+    # ── 4. TLS/SSL Context (Fix B — Seguridad WAN) ────────────────────────
+    ssl_ctx = None
+    tls_cert = os.getenv("TLS_CERT_PATH")
+    tls_key  = os.getenv("TLS_KEY_PATH")
+    if tls_cert and tls_key:
+        try:
+            ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            ssl_ctx.load_cert_chain(tls_cert, tls_key)
+            logger.info("TLS enabled — cert: %s", tls_cert)
+        except Exception as exc:
+            logger.error("TLS init failed (%s). Running WITHOUT encryption.", exc)
+            ssl_ctx = None
+    else:
+        logger.warning(
+            "TLS_CERT_PATH / TLS_KEY_PATH not set. "
+            "WebSocket running in PLAINTEXT mode (acceptable for LAN only)."
+        )
+
+    # ── 5. Iniciar servidor WebSocket ─────────────────────────────────
+    async with websockets.serve(handle_node, "0.0.0.0", 18789, ssl=ssl_ctx):
+        proto = "wss" if ssl_ctx else "ws"
         logger.info(
-            "Gateway ready — accepting ESP32 connections | "
+            "Gateway ready [%s://0.0.0.0:18789] — accepting ESP32 connections | "
             "PG pool: %s | Redis: %s",
+            proto,
             "OK" if _pg_pool else "DEGRADED (solo-cache)",
             REDIS_URL.split("@")[-1] if "@" in REDIS_URL else REDIS_URL,
         )

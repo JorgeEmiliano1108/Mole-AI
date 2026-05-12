@@ -14,13 +14,18 @@ services:
     ports:
       - "8080:80"
     depends_on:
-      - django-backend
-      - ms1_vision
-      - ms2_chat
-      - ms3_reports
+      django-backend:
+        condition: service_healthy
+      ms1_vision:
+        condition: service_started
+      ms2_chat:
+        condition: service_started
+      ms3_reports:
+        condition: service_started
     volumes:
       - ../frontend/dist:/usr/share/nginx/html:ro
       - ../frontend/static:/usr/share/nginx/static:ro
+      - django_media:/usr/share/nginx/media:ro
     networks:
       - mole_public
       - mole_internal
@@ -35,8 +40,15 @@ services:
     volumes:
       - ../core_backend:/app
       - ../infrastructure/mosquitto/certs:/app/mqtt_certs  # TLS certs for MQTT
+      - django_media:/app/media
     env_file:
       - ../.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -304,3 +316,4 @@ volumes:
   minio_data:
   edge_data:
   prometheus_data:
+  django_media:  # Volumen compartido: Django escribe /app/media, Nginx lee /usr/share/nginx/media
