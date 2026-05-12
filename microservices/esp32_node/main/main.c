@@ -24,8 +24,10 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_task_wdt.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
@@ -260,10 +262,25 @@ void app_main(void)
 
     ESP_LOGI(TAG, "[5/6] Sensors: DHT20 + Soil initialized. LTR390 status: %s", ltr390 ? "OK" : "MOCK");
 
+    /* ── 5.5. Task Watchdog Timer (Production Hardening) ────────────── */
+    /* Si la tarea principal se congela por >30s (ej. WebSocket hung),
+     * el WDT fuerza un reboot del chip. Cumple ETSI EN 303 645 §5.6. */
+    esp_task_wdt_config_t wdt_cfg = {
+        .timeout_ms = 30000,    /* 30 segundos */
+        .idle_core_mask = 0,    /* No monitorear idle tasks */
+        .trigger_panic = true,  /* Reboot inmediato al expirar */
+    };
+    ESP_ERROR_CHECK(esp_task_wdt_init(&wdt_cfg));
+    ESP_ERROR_CHECK(esp_task_wdt_add(NULL));  /* Registrar tarea actual (app_main) */
+    ESP_LOGI(TAG, "[WDT] Task Watchdog activo (timeout: 30s)");
+
     /* ── 6. OpenClaw Agent (capabilities + connect + telemetry) ──────── */
     ESP_ERROR_CHECK(mole_openclaw_start(identity, dht20, ltr390, soil));
     ESP_LOGI(TAG, "[6/6] OpenClaw agent started");
 
+    /* Alimentar WDT antes de la transición a Deep Sleep */
+    esp_task_wdt_reset();
     ESP_LOGI(TAG, "All tasks launched. Executing Deep Sleep transition.");
+    esp_task_wdt_delete(NULL);  /* Desregistrar antes de dormir */
     enter_deep_sleep();
 }

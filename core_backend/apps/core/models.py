@@ -136,6 +136,22 @@ class DiagnosticoGeolocalizado(models.Model):
     def __str__(self):
         return f"{self.condition_name} @({self.latitude},{self.longitude})"
 
+# ---------------------------------------------------------------------------
+# IoT NODE – conexión de dispositivos ESP32
+# ---------------------------------------------------------------------------
+class IoTNode(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='iot_nodes')
+    name = models.CharField(max_length=128)
+    method = models.CharField(max_length=12, choices=[('wifi','Wi‑Fi'),('bluetooth','Bluetooth')])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'iot_nodes'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.method})"
+
 
 class FeedbackTicket(models.Model):
     """

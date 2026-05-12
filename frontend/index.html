@@ -9,6 +9,9 @@
 </head>
 <body class="bg-mole-base text-mole-cyan font-sans min-h-screen relative overflow-x-hidden">
 
+    <!-- Toast Container (OWASP: evita exponer errores crudos vía alert) -->
+    <div id="toast-container" aria-live="polite" aria-atomic="false" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
 
 
     <div id="intro-screen" class="min-h-screen flex items-center justify-center p-4 sm:p-8">
@@ -89,7 +92,7 @@
     <!-- AppConfig: Define API base URL before apiService.js loads -->
     <script>
         window.AppConfig = {
-            API_BASE_URL: '/api/v1'  // Relative path via Nginx proxy
+            API_BASE_URL: '/api/v1/'  // Trailing slash required: baseUrl + endpoint concatenation in apiService._buildUrl
         };
 
         // Theme Toggle Function
@@ -116,7 +119,7 @@
         });
     </script>
 
-    <script src="/static/js/apiService.js"></script>
+    <script type="module" src="/static/js/apiService.js"></script>
     <script type="module" src="/src/js/main.js"></script>
 </body>
 </html>

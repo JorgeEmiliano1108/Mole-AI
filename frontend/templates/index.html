@@ -11,15 +11,7 @@
     <script src="{% static 'vendor/leaflet/leaflet.js' %}" crossorigin="anonymous" defer></script>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
-    <style>
-        @keyframes biometric-scan { 0% { top: -5%; opacity: 0; } 5% { opacity: 0.8; } 95% { opacity: 0.8; } 100% { top: 105%; opacity: 0; } }
-        .animate-biometric-scan { animation: biometric-scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
-        /* Efecto de TV del Frontend */
-        @keyframes tvOn { 0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); } }
-        @keyframes tvOff { 0% { transform: scale(1, 1); opacity: 1; filter: brightness(1); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3); } 100% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10); } }
-        .tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
-        .tv-off { animation: tvOff 0.25s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
-    </style>
+
 </head>
 <body class="bg-black text-[#00e5ff] font-mono overflow-x-hidden md:overflow-hidden relative min-h-screen">
     <div class="scanline"></div>
@@ -119,7 +111,7 @@
     </button>
 
     <script src="{% static 'js/config.js' %}"></script>
-    <script src="{% static 'js/apiService.js' %}?v=2"></script>
+    <script type="module" src="{% static 'js/apiService.js' %}?v=2"></script>
     <script src="{% static 'js/mlops.js' %}"></script>
     <script src="{% static 'js/02_de_usuario.js' %}"></script>
     <script src="{% static 'js/03_asistente_botanico.js' %}"></script>

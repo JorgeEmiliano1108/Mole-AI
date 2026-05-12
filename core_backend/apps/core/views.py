@@ -223,8 +223,59 @@ def download_diagnostic_pdf(request, id):
 @permission_classes([IsAuthenticated])
 def map_hotspots_view(request):
     qs = DiagnosticoGeolocalizado.objects.select_related('user', 'diagnostic').all()[:100]
-    results = [{'lat': r.latitude, 'lng': r.longitude, 'severity': r.severity} for r in qs]
+    results = []
+    for r in qs:
+        sev = r.severity
+        # Normalizar 'critical' a 'high' para que el frontend lo renderice como rojo
+        if sev == 'critical':
+            sev = 'high'
+        results.append({
+            'lat': r.latitude,
+            'lng': r.longitude,
+            'severity': sev,
+            'species': r.condition_name
+        })
     return Response({'hotspots': results})
+
+@api_view(['GET'])
+@permission_classes([AllowAny]) # Accesible desde Leaflet (Frontend)
+def openweather_tile_proxy(request, layer, z, x, y):
+    """
+    Proxy seguro para capas de OpenWeather (Temp, Precipitación, etc).
+    Evita exponer la API KEY en el JS del frontend.
+    """
+    api_key = os.getenv("OPENWEATHER_API_KEY", "")
+    if not api_key:
+        return HttpResponse(status=501)
+        
+    url = f"https://tile.openweathermap.org/map/{layer}/{z}/{x}/{y}.png?appid={api_key}"
+    try:
+        r = requests.get(url, stream=True, timeout=5)
+        if r.status_code == 200:
+            return HttpResponse(r.raw, content_type="image/png")
+        return HttpResponse(status=r.status_code)
+    except requests.exceptions.RequestException:
+        return HttpResponse(status=502)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def current_weather_proxy(request):
+    """Proxy seguro para obtener clima actual por coordenadas."""
+    lat = request.GET.get('lat')
+    lon = request.GET.get('lon')
+    if not lat or not lon:
+        return Response({'error': 'lat and lon are required'}, status=400)
+    
+    api_key = os.getenv("OPENWEATHER_API_KEY", "")
+    if not api_key:
+        return Response({'error': 'API key not configured'}, status=501)
+        
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=es"
+    try:
+        r = requests.get(url, timeout=5)
+        return Response(r.json(), status=r.status_code)
+    except requests.exceptions.RequestException as e:
+        return Response({'error': str(e)}, status=502)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -236,6 +287,18 @@ def diagnosticos_geolocalizados_list(request):
 @permission_classes([IsAuthenticated])
 def diagnosticos_geolocalizados_create(request):
     return Response({"status": "created"}, status=201)
+
+# ---------------------------------------------------------------------------
+# IoT NODE – endpoint de creación
+# ---------------------------------------------------------------------------
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def iot_node_create(request):
+    from .serializers import IoTNodeCreateSerializer
+    ser = IoTNodeCreateSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    ser.save(user=request.user)
+    return Response({'status':'created','node':ser.data}, status=201)
 
 # --- CHAT Y RAG ---
 @api_view(['POST'])

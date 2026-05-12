@@ -69,3 +69,14 @@ class SpeciesSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError('ideal_temp_min cannot be greater than ideal_temp_max')
         return data
 
+# ---------------------------------------------------------------------------
+# FloraCreateSerializer – permite crear ficha con foto (multipart)
+# ---------------------------------------------------------------------------
+from apps.plants.models import Flora
+
+class FloraCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Flora
+        fields = ('id', 'user', 'common_name', 'scientific_name', 'family', 'treatment', 'image')
+        read_only_fields = ('id', 'user')
+

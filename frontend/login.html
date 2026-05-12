@@ -6,12 +6,7 @@
     <title>MOLE-IA | Autenticación</title>
     <link rel="stylesheet" href="/static/css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        /* HTML5 Validation — Retro-styled feedback */
-        input:focus { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.1); }
-        input:valid:not(:placeholder-shown) { border-color: rgba(52, 211, 153, 0.5); }
-        input:invalid:not(:placeholder-shown):not(:focus) { border-color: rgba(248, 113, 113, 0.5); }
-    </style>
+
 </head>
 <body class="bg-mole-base text-mole-cyan font-mono min-h-screen flex flex-col items-center justify-center p-4 relative overflow-x-hidden">
 
@@ -120,7 +115,7 @@
         </p>
     </div>
 
-    <script src="/static/js/apiService.js"></script>
+    <script type="module" src="/static/js/apiService.js"></script>
     <script type="module" src="/src/js/main.js"></script>
     
         <!-- BFCache Guard: Clear form data when restored from cache -->

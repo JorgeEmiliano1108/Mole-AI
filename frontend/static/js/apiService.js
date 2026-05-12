@@ -461,9 +461,10 @@ var delay = self.retryBaseDelay * Math.pow(2, attempt);
         type = type || 'info';
         var container = document.getElementById('toast-container');
 
-        // Fallback to alert if toast container doesn't exist
+        // OWASP fix: never expose raw server errors via alert()
+        // Silently log if toast container is absent (e.g. pages without #toast-container)
         if (!container) {
-            alert('[' + type.toUpperCase() + '] ' + message);
+            console.warn('[Toast fallback] ' + type + ': ' + message);
             return;
         }
 

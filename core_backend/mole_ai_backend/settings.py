@@ -271,7 +271,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# 12. Logging con PII Filter (LFPDPPP / NOM-059 Compliance)
+# 12. Logging con PII Filter
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

@@ -31,8 +31,12 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from django.conf import settings
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from django.http import HttpResponse
 
 urlpatterns = [
+    # Healthcheck Endpoint
+    path('health/', lambda r: HttpResponse('OK', status=200)),
+
     # Admin interface
     path('admin/', admin.site.urls),
     

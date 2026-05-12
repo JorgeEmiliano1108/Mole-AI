@@ -11,6 +11,7 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 from datetime import timedelta
+from .models import IoTNode
 
 from rest_framework import serializers
 from django.utils import timezone
@@ -283,3 +284,11 @@ class SensorDataPatchSerializer(serializers.Serializer):
                 "At least one field must be provided for update."
             )
         return attrs
+
+# ---------------------------------------------------------------------------
+# IoT NODE – serializer de creación
+# ---------------------------------------------------------------------------
+class IoTNodeCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IoTNode
+        fields = ('name','method')

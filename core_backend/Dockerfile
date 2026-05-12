@@ -1,66 +1,61 @@
-# ==========================================
-# ETAPA 1: BUILDER (La máquina pesada)
-# ==========================================
-FROM python:3.11-slim as builder
+# -------------------------------------------------
+# 1️⃣ Builder – compila dependencias pesadas
+# -------------------------------------------------
+FROM python:3.11-slim AS builder
 
-ENV PIP_NO_CACHE_DIR=1 \
-    PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /build
 
-# Instalamos compiladores pesados (se quedarán en esta etapa)
+# Herramientas de compilación (solo en builder)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+        build-essential \
+        libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Creamos un entorno virtual para aislar las librerías
+# Entorno virtual aislado
 RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# ==========================================
-# ETAPA 2: DESARROLLO (Para tu Docker Compose)
-# ==========================================
-FROM python:3.11-slim as development
+# -------------------------------------------------
+# 2️⃣ Runtime – capa mínima de ejecución
+# -------------------------------------------------
+FROM python:3.11-slim AS runtime
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 
-# Solo instalamos la librería de ejecución de Postgres (súper ligera)
+# Cliente PostgreSQL ligero y curl para healthcheck
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends libpq5 curl && \
+    rm -rf /var/lib/apt/lists/*
 
-# Copiamos las librerías ya compiladas desde el builder
+# Copia venv compilado
 COPY --from=builder /opt/venv /opt/venv
 
+# Crear usuario
 RUN useradd --create-home --shell /bin/bash appuser
 
-# En desarrollo, el código se monta por volumen, pero preparamos el entrypoint
-COPY entrypoint.sh /app/
-RUN chmod +x /app/entrypoint.sh && chown -R appuser:appuser /app
-
-USER appuser
-EXPOSE 8000
-ENTRYPOINT ["/app/entrypoint.sh"]
-
-# ==========================================
-# ETAPA 3: PRODUCCIÓN (La imagen final sellada)
-# ==========================================
-FROM development as production
-
-USER root
-# En producción, no hay volúmenes, copiamos el código final
+# Copiar código fuente y entrypoint (como root)
+WORKDIR /app
 COPY . /app/
-RUN chown -R appuser:appuser /app
+
+# Dar permisos ANTES de cambiar de usuario
+RUN chown -R appuser:appuser /app && chmod +x /app/entrypoint.sh
+
+# Cambiar a usuario sin privilegios al final
 USER appuser
 
-# Listo para despliegue
+EXPOSE 8000
+HEALTHCHECK --interval=5s --timeout=3s --retries=5 \
+    CMD ["curl", "-f", "http://127.0.0.1:8000/health/"] || exit 1
+ENTRYPOINT ["/app/entrypoint.sh"]

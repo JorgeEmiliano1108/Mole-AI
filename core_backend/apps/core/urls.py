@@ -24,8 +24,12 @@ urlpatterns = [
     
     # Mapas
     path('map/hotspots/', views.map_hotspots_view, name='map_hotspots'),
+    path('weather/tile/<str:layer>/<int:z>/<int:x>/<int:y>.png', views.openweather_tile_proxy, name='weather_tile_proxy'),
+    path('weather/current/', views.current_weather_proxy, name='current_weather_proxy'),
     path('diagnosticos/geolocalizados/', views.diagnosticos_geolocalizados_list, name='geo_list'),
     path('diagnosticos/geolocalizados/create/', views.diagnosticos_geolocalizados_create, name='geo_create'),
+    # IoT node creation endpoint
+    path('iot/nodes/', views.iot_node_create, name='iot_node_create'),
     
     # Conocimiento y Chat
     path('plant-knowledge/', views.plant_knowledge_view, name='plant_knowledge'),
