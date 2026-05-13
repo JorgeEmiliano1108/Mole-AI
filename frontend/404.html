@@ -4,53 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOLE-IA | 404 - No Encontrado</title>
+    <!-- Incluir fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Script temporal de Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { 
+                mono: ['"JetBrains Mono"', 'monospace'],
+                sans: ['Inter', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        /* Fondo de cuadrícula tipo radar/cyber */
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
 </head>
-<body class="bg-mole-base text-mole-cyan font-mono min-h-screen relative overflow-x-hidden">
+<body class="bg-[#0a0f0e] text-gray-300 font-sans min-h-screen relative flex flex-col grid-bg">
 
-    <div class="min-h-screen flex items-center justify-center p-4 sm:p-8">
-        <div class="w-full max-w-2xl">
+    <!-- Header (MOLE-AI y SYS_ERR_404) -->
+    <header class="w-full p-6 sm:p-8 flex justify-between items-center absolute top-0 left-0 z-10 font-mono">
+        <div class="text-[#2ee59d] font-bold text-xl tracking-widest">MOLE-AI</div>
+        <div class="flex items-center gap-2 text-[#ff8a75] text-xs sm:text-sm tracking-wider">
+            <!-- Icono Alert -->
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            SYS_ERR_404
+        </div>
+    </header>
 
-            <div class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-12 flex flex-col justify-center shadow-cyber relative overflow-hidden text-center">
-                <!-- Decorative corner brackets -->
-                <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-mole-cyan/30"></div>
-                <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-mole-cyan/30"></div>
-                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-mole-cyan/30"></div>
-                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-mole-cyan/30"></div>
-
-                <div class="flex flex-col items-center justify-center">
-                    <div class="mb-6 relative">
-                        <h1 class="text-7xl sm:text-9xl font-bold tracking-tight text-mole-cyan relative z-10" style="text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);">404</h1>
-                        <div class="absolute inset-0 text-7xl sm:text-9xl font-bold tracking-tight text-mole-cyan/30 translate-x-1 translate-y-1 z-0">404</div>
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-8 z-10 pt-24">
+        <div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+            
+            <!-- Columna Izquierda (Gráfico del Target 404) -->
+            <div class="bg-[#101716]/90 border border-[#1b2523] rounded p-8 sm:p-12 flex flex-col items-center justify-center shadow-lg relative overflow-hidden backdrop-blur-sm min-h-[400px]">
+                
+                <!-- Efecto de luz superior -->
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-32 bg-[#ff8a75] opacity-[0.03] blur-3xl rounded-full"></div>
+                
+                <!-- Radar box -->
+                <div class="w-48 h-48 border border-[#2d3a37] rounded-3xl relative flex items-center justify-center mb-10 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                    <!-- Crosshair -->
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-full h-[1px] bg-[#2d3a37]"></div>
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="h-full w-[1px] bg-[#2d3a37]"></div>
                     </div>
                     
-                    <h2 class="text-xl sm:text-2xl tracking-[0.1em] uppercase text-mole-cyan mb-2">SECTOR DESCONOCIDO</h2>
-                    <p class="text-sm text-mole-dim/80 mb-8 max-w-md mx-auto">La coordenada de red que buscas no existe o fue movida. El sistema no puede localizar este recurso en la base de datos.</p>
+                    <!-- Icono tachado (Search/Radar offline) -->
+                    <svg class="w-16 h-16 text-[#ff8a75] relative z-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        <!-- Línea diagonal gruesa tachando -->
+                        <line x1="6" y1="6" x2="18" y2="18" stroke-width="2.5"></line>
+                    </svg>
+                </div>
 
-                    <div class="w-full h-px bg-gradient-to-r from-transparent via-mole-border to-transparent mb-8"></div>
+                <div class="text-center font-mono">
+                    <div class="text-5xl font-bold text-[#ff8a75] mb-3 tracking-widest">404</div>
+                    <div class="text-xs text-[#8b9b96] tracking-[0.2em] uppercase">TARGET_NOT_FOUND</div>
+                </div>
+            </div>
 
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center w-full max-w-md mx-auto">
-                        <button onclick="window.history.back()" class="flex-1 px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan focus:outline-none focus:ring-2 focus:ring-mole-cyan uppercase">
-                            [ Volver Atrás ]
+            <!-- Columna Derecha (Mensaje y Botones) -->
+            <div class="flex flex-col">
+                <!-- Tarjeta de Texto -->
+                <div class="bg-[#101716]/90 border border-[#1b2523] rounded p-8 sm:p-10 shadow-lg backdrop-blur-sm h-full flex flex-col justify-center">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-[#f3f4f6] mb-5 tracking-wide uppercase font-sans">SEÑAL BOTÁNICA PERDIDA</h2>
+                    <p class="text-[#8b9b96] text-sm leading-relaxed mb-10">
+                        La entidad que buscas ha sido podada o nunca existió en este sector. Verifica las coordenadas o reinicia el escaneo del área.
+                    </p>
+                    
+                    <!-- Botones -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-auto">
+                        
+                        <!-- Botón 1: Reiniciar Escaneo -->
+                        <button onclick="window.location.reload()" class="flex items-center justify-center sm:justify-start gap-4 border border-[#2ee59d] text-[#2ee59d] hover:bg-[#2ee59d]/10 px-5 py-3 rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[#2ee59d]">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <div class="flex flex-col items-start text-left">
+                                <span class="text-[11px] font-mono font-semibold tracking-wider">Reiniciar</span>
+                                <span class="text-[11px] font-mono font-semibold tracking-wider">Escaneo</span>
+                            </div>
                         </button>
-                        <a href="/index.html" class="flex-1 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-mole-cyan">
-                            Ir al Inicio
-                        </a>
+                        
+                        <!-- Botón 2: Volver al Monitor -->
+                        <button onclick="window.location.href='/index.html'" class="flex items-center justify-center sm:justify-start gap-4 text-[#8b9b96] hover:text-white px-5 py-3 rounded-sm transition-all focus:outline-none hover:bg-[#ffffff05]">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            <div class="flex flex-col items-start text-left">
+                                <span class="text-[11px] font-mono font-semibold tracking-wider">Volver al</span>
+                                <span class="text-[11px] font-mono font-semibold tracking-wider">Monitor</span>
+                            </div>
+                        </button>
+
                     </div>
                 </div>
+                
+                <!-- El bloque DIAGNOSTIC_LOGS ha sido eliminado como solicitaste -->
 
             </div>
 
         </div>
-    </div>
-
-    <!-- Legal Disclaimer -->
-    <div class="fixed bottom-0 w-full bg-mole-surface/90 backdrop-blur-sm border-t border-mole-border p-2.5 text-center z-30">
-        <p class="text-[10px] text-mole-dim/70 font-mono">
-            <span class="text-mole-cyan/70 font-bold">[SISTEMA]</span> Error de enrutamiento detectado y registrado.
-        </p>
-    </div>
+    </main>
 
 </body>
 </html>

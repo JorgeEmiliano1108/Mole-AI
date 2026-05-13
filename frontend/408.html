@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | 408 - Sincronización Fallida</title>
+    <!-- Incluir fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
+    <!-- Script temporal de Tailwind en caso de que no se haya compilado -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { 
+                mono: ['"JetBrains Mono"', 'monospace'],
+                sans: ['Inter', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        /* Fondo de cuadrícula tipo matrix/cyber */
+        .cyber-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(46, 229, 157, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(46, 229, 157, 0.03) 1px, transparent 1px);
+            background-color: #080d0c;
+        }
+    </style>
+</head>
+<body class="cyber-grid text-gray-300 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <!-- Tarjeta Principal con Esquinas Neón -->
+    <div class="relative bg-[#0d1312]/95 backdrop-blur-md max-w-2xl w-full p-8 sm:p-12 shadow-[0_20px_50px_rgba(0,0,0,0.7)] flex flex-col items-center text-center">
+        
+        <!-- Esquinas iluminadas (Target corners) -->
+        <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-[#2ee59d] shadow-[-2px_-2px_10px_rgba(46,229,157,0.2)]"></div>
+        <div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-[#2ee59d] shadow-[2px_-2px_10px_rgba(46,229,157,0.2)]"></div>
+        <div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-[#2ee59d] shadow-[-2px_2px_10px_rgba(46,229,157,0.2)]"></div>
+        <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-[#2ee59d] shadow-[2px_2px_10px_rgba(46,229,157,0.2)]"></div>
+
+        <!-- Sutil resplandor central en la tarjeta -->
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-64 h-64 bg-[#2ee59d] opacity-[0.02] blur-[50px] rounded-full"></div>
+        </div>
+
+        <!-- Gráfico del Latido (Pulse Roto) -->
+        <div class="relative z-10 mb-8 mt-4 flex items-center justify-center w-full">
+            <svg class="w-48 h-16 sm:w-64 sm:h-20" viewBox="0 0 160 40" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <!-- Latido Izquierdo -->
+                <path d="M10 20 L 40 20 L 50 5 L 60 35 L 65 20 L 70 20" stroke="#2ee59d" class="drop-shadow-[0_0_5px_rgba(46,229,157,0.5)]"></path>
+                
+                <!-- X Central de ruptura -->
+                <path d="M75 15 L 85 25 M 85 15 L 75 25" stroke="#ff8a75" stroke-width="2" class="drop-shadow-[0_0_5px_rgba(255,138,117,0.5)]"></path>
+                
+                <!-- Latido Derecho -->
+                <path d="M90 20 L 95 20 L 105 5 L 115 35 L 125 20 L 150 20" stroke="#2ee59d" class="drop-shadow-[0_0_5px_rgba(46,229,157,0.5)]"></path>
+            </svg>
+        </div>
+
+        <!-- Títulos -->
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#2ee59d] mb-4 tracking-wide font-sans uppercase drop-shadow-[0_0_10px_rgba(46,229,157,0.3)]">Sincronización Fallida</h1>
+        <p class="text-[#8b9b96] text-sm sm:text-[15px] leading-relaxed mb-10 max-w-lg">
+            El núcleo central no ha recibido respuesta del sector en el tiempo asignado. El pulso de datos se ha fragmentado.
+        </p>
+
+        <!-- Consola de Diagnóstico -->
+        <div class="border border-[#1e2a27] rounded-sm bg-[#080d0c] w-full font-mono text-left relative z-10 mb-10">
+            <!-- Header Consola -->
+            <div class="flex items-center gap-3 p-4 border-b border-[#1e2a27]">
+                <!-- Icono System -->
+                <svg class="w-4 h-4 text-[#5b6b66]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <span class="text-[#a1b0ab] text-[10px] tracking-widest font-bold uppercase">SYSTEM_DIAGNOSTICS</span>
+            </div>
+            
+            <!-- Cuerpo Consola -->
+            <div class="p-4 space-y-2.5 text-[10px] sm:text-xs tracking-wider">
+                <!-- Fila 1 -->
+                <div class="flex justify-between items-center bg-[#101716] px-4 py-2.5 rounded-sm border border-[#1e2a27]/50">
+                    <span class="text-[#8b9b96]">ERR_CODE:</span>
+                    <span class="text-[#ffb475]">TIMEOUT_ERR_08</span>
+                </div>
+                <!-- Fila 2 -->
+                <div class="flex justify-between items-center bg-[#101716] px-4 py-2.5 rounded-sm border border-[#1e2a27]/50">
+                    <span class="text-[#8b9b96]">STATUS:</span>
+                    <span class="text-[#ffb475]">SIGNAL_DEGRADATION: 82%</span>
+                </div>
+                <!-- Fila 3 -->
+                <div class="flex justify-between items-center bg-[#101716] px-4 py-2.5 rounded-sm border border-[#1e2a27]/50">
+                    <span class="text-[#8b9b96]">ACTION:</span>
+                    <span class="text-[#2ee59d]">RECONNECT_STRATEGY: LINEAR_BACKOFF</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones Inferiores -->
+        <div class="flex flex-col sm:flex-row items-center justify-between w-full gap-5 relative z-10 font-mono text-[10px] sm:text-[11px] font-bold tracking-widest uppercase">
+            <!-- Botón Izquierdo -->
+            <button onclick="window.location.reload()" class="w-full sm:w-auto flex items-center justify-center gap-3 border border-[#1e2a27] hover:border-[#2ee59d] text-[#2ee59d] hover:bg-[#2ee59d]/5 px-6 py-3.5 transition-all focus:outline-none">
+                <!-- Icono de Rayo (Pulso) -->
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                REFORZAR PULSO
+            </button>
+            
+            <!-- Botón Derecho -->
+            <button onclick="window.location.href='/index.html'" class="w-full sm:w-auto flex items-center justify-center gap-3 text-[#8b9b96] hover:text-white px-4 py-3.5 transition-colors focus:outline-none">
+                <!-- Icono de Lupa/Terminal -->
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>
+                DIAGNÓSTICO DE RED
+            </button>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOLE-IA | 401 - Autenticación Requerida</title>
+    <!-- Incluir fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
+    <!-- Script temporal de Tailwind en caso de que no se haya compilado -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { 
+                mono: ['"JetBrains Mono"', 'monospace'],
+                sans: ['Inter', 'sans-serif']
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        /* Fondo de cuadrícula fina */
+        .fine-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-color: #090e0c;
+        }
+        /* Borde superior iluminado */
+        .top-glow-border {
+            box-shadow: inset 0 2px 20px rgba(46, 229, 157, 0.08), 0 -2px 12px rgba(46, 229, 157, 0.4);
+            border-top: 2px solid #2ee59d;
+        }
+    </style>
+</head>
+<body class="fine-grid text-gray-300 font-sans min-h-screen flex items-center justify-center p-4">
+
+    <!-- Tarjeta Principal -->
+    <div class="bg-[#101716]/95 border-x border-b border-[#1b2523] rounded-b-xl rounded-t-sm max-w-[550px] w-full p-8 sm:p-14 shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col items-center text-center top-glow-border backdrop-blur-sm">
+        
+        <!-- Icono Central (Hoja + Candado roto) -->
+        <div class="relative w-24 h-24 mb-10 mt-2">
+            <!-- Cuadrado exterior redondeado -->
+            <div class="absolute inset-0 border border-[#2ee59d] rounded-2xl opacity-60 shadow-[0_0_15px_rgba(46,229,157,0.1)]"></div>
+            <!-- Hoja -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <svg class="w-12 h-12 text-[#2ee59d]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" class="opacity-50"></path>
+                    <path d="M12 21.5C12 21.5 5 16 5 10C5 6.5 8 4 12 4C16 4 19 6.5 19 10C19 16 12 21.5 12 21.5Z"></path>
+                    <path d="M12 21.5V10"></path>
+                </svg>
+            </div>
+            <!-- Mini badge de error coral (Candado tachado) -->
+            <div class="absolute -bottom-3 -right-3 bg-[#0c1613] rounded-full p-1.5 border border-[#1b2523] shadow-xl">
+                <div class="border border-[#ff8a75] rounded-full p-2 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-[#ff8a75]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- llave u ojo tachado, optaremos por la llave tachada de la imagen original -->
+                        <path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4v-3.252a1 1 0 01.293-.707l8.964-8.964A6 6 0 1121 9z"></path>
+                        <line x1="3" y1="3" x2="21" y2="21"></line>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Títulos -->
+        <h1 class="text-2xl sm:text-[28px] font-extrabold text-[#f3f4f6] mb-5 tracking-wide font-sans uppercase">Autenticación Requerida</h1>
+        <p class="text-[#8b9b96] text-[13px] sm:text-[14.5px] leading-relaxed mb-10 px-2 sm:px-4">
+            La sesión ha caducado o el pulso de identidad no ha sido reconocido por el núcleo central. Es necesario revalidar el acceso para continuar con las operaciones.
+        </p>
+
+        <!-- Consola de Terminal -->
+        <div class="border border-[#1e2a27] rounded bg-[#0a0f0e]/60 w-full font-mono text-left mb-10 p-6 shadow-inner">
+            <div class="flex flex-col gap-3.5 text-[10px] sm:text-[11.5px] tracking-widest font-semibold">
+                <!-- Fila 1 -->
+                <div class="flex items-center">
+                    <span class="text-[#2ee59d] mr-3">>></span>
+                    <span class="text-[#8b9b96] w-[90px] shrink-0">ERR_CODE:</span>
+                    <span class="text-[#ff8a75]">AUTH_0401_NULL</span>
+                </div>
+                <!-- Fila 2 -->
+                <div class="flex items-center">
+                    <span class="text-[#2ee59d] mr-3">>></span>
+                    <span class="text-[#8b9b96] w-[90px] shrink-0">STATUS:</span>
+                    <span class="text-[#e5e7eb]">IDENTITY_SYNC_FAILED</span>
+                </div>
+                <!-- Fila 3 -->
+                <div class="flex items-center">
+                    <span class="text-[#2ee59d] mr-3">>></span>
+                    <span class="text-[#8b9b96] w-[90px] shrink-0">LEVEL:</span>
+                    <span class="text-[#ffb475]">PROTOCOL_ALPHA</span>
+                </div>
+                <!-- Fila 4 -->
+                <div class="flex items-center">
+                    <span class="text-[#2ee59d] mr-3">>></span>
+                    <span class="text-[#8b9b96] w-[90px] shrink-0">LOCATION:</span>
+                    <span class="text-[#e5e7eb]">SECURE_GATEWAY_OSLO</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-5 w-full">
+            <!-- Botón Revalidar -->
+            <button onclick="window.location.reload()" class="w-full sm:w-auto flex-1 flex items-center justify-center gap-3 bg-[#2ee59d] hover:bg-[#25c485] text-[#080d0c] px-6 py-4 rounded transition-colors focus:outline-none font-mono text-[11px] font-bold tracking-widest uppercase shadow-[0_0_20px_rgba(46,229,157,0.15)]">
+                <!-- Icono Geométrico / Fingerprint -->
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
+                REVALIDAR ACCESO
+            </button>
+            
+            <!-- Botón Volver -->
+            <button onclick="window.location.href='/index.html'" class="w-full sm:w-auto flex-1 flex items-center justify-center gap-3 border border-[#1e2a27] hover:border-[#8b9b96] text-[#a1b0ab] hover:text-white bg-[#0a0f0e] px-6 py-4 rounded transition-all focus:outline-none font-mono text-[11px] font-bold tracking-widest uppercase">
+                VOLVER AL INICIO
+            </button>
+        </div>
+
+    </div>
+
+</body>
+</html>
