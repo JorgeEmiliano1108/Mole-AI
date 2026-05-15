@@ -1,20 +1,32 @@
 """
 API Layer - Main Entry Point
-Skill 01: Arquitectura Hexagonal - FastAPI App
-Fase 3: MLOps Pipeline Integration (Vision Listener)
+Fase 3 (NVIDIA NIM): Migrated from TFLite to cloud vision inference.
 """
 import asyncio
 import os
 import logging
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
 from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.core.config import settings
 from app.api.routers import router
+
+
+def get_real_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+limiter = Limiter(key_func=get_real_ip)
 
 # Configure structlog
 structlog.configure(
@@ -50,13 +62,13 @@ async def lifespan(app: FastAPI):
     """
     slogger.info("service_starting", service=settings.SERVICE_NAME)
 
-    # ── Startup: Pre-load vision model ───────────────────────────────
+    # ── Startup: Verify NVIDIA NIM adapter ready ─────────────────────
     try:
-        from app.infrastructure.adapters.tflite_adapter import TFLiteVisionAdapter
-        adapter = TFLiteVisionAdapter()
-        slogger.info("vision_model_loaded", ready=adapter.is_ready())
+        from app.infrastructure.adapters.nvidia_vision_adapter import NvidiaVisionAdapter
+        adapter = NvidiaVisionAdapter()
+        slogger.info("nvidia_vision_adapter_ready", ready=adapter.is_ready())
     except Exception as e:
-        slogger.error("vision_model_load_failed", error=str(e))
+        slogger.error("vision_adapter_init_failed", error=str(e))
 
     # ── Startup: Launch Vision Training Listener ─────────────────────
     listener_task = None
@@ -96,7 +108,12 @@ def create_app() -> FastAPI:
     )
     
     app.include_router(router)
-    
+
+    # ── Rate Limiting ──────────────────────────────────────────────────────────────
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_middleware(SlowAPIMiddleware)
+
     # CORS from settings
     allow_origins = []
     if settings.ORIGEN_PERMITIDO:

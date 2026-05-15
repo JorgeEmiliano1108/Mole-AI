@@ -1,29 +1,31 @@
 """
 pgvector Store Adapter — Async PostgreSQL Vector Storage
 
-Replaces FAISS for production use. Uses asyncpg for non-blocking
-database operations and pgvector for similarity search.
+Replaces FAISS + sentence-transformers.
+Embeddings via NVIDIA NIM OpenAI-compatible embeddings endpoint.
+Similarity search via pgvector (cosine distance).
 
 Table schema:
     rag_knowledge_chunks (
         id          UUID PRIMARY KEY,
-        doc_id      UUID NOT NULL,     -- groups chunks from same document
+        doc_id      UUID NOT NULL,
         s3_key      TEXT NOT NULL,
         source_name TEXT NOT NULL,
         chunk_index INTEGER NOT NULL,
         content     TEXT NOT NULL,
-        embedding   vector(384),       -- dimension matches EMBEDDING_MODEL_ID
+        embedding   vector(1024),      -- NIM embedding dimension
         metadata    JSONB DEFAULT '{}',
         created_at  TIMESTAMPTZ DEFAULT NOW()
     )
 """
 import asyncio
 import logging
+import os
 import uuid
 from typing import List, Optional, Tuple
 
 import asyncpg
-from sentence_transformers import SentenceTransformer
+from openai import AsyncOpenAI
 
 from app.core.config import settings
 
@@ -40,7 +42,7 @@ CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
     source_name TEXT NOT NULL,
     chunk_index INTEGER NOT NULL,
     content     TEXT NOT NULL,
-    embedding   vector({settings.EMBEDDING_DIMENSION}),
+    embedding   vector(1024),
     metadata    JSONB DEFAULT '{{}}'::jsonb,
     created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -76,19 +78,14 @@ DELETE_BY_S3_KEY_SQL = f"DELETE FROM {TABLE_NAME} WHERE s3_key = $1;"
 class PgVectorStore:
     """
     Async adapter for pgvector-based RAG knowledge storage.
-
-    Lifecycle:
-        store = PgVectorStore()
-        await store.initialize()      # creates pool + table
-        await store.insert_chunks(...) # bulk insert embeddings
-        ctx, src = await store.asearch(query)
-        await store.close()
+    Embeddings generated via NVIDIA NIM openai-compatible endpoint.
     """
 
     def __init__(self):
         self._pool: Optional[asyncpg.Pool] = None
-        self._model: Optional[SentenceTransformer] = None
-        self._model_lock = asyncio.Lock()
+        # Lazy OpenAI client for embeddings
+        self._embed_client: Optional[AsyncOpenAI] = None
+        self._embed_model: str = os.getenv("NVIDIA_EMBEDDING_MODEL", "nvidia/nv-embedqa-e5-v5")
 
     # ── Connection Pool ──────────────────────────────────────────────────
 
@@ -128,28 +125,27 @@ class PgVectorStore:
 
     # ── Embedding Model (lazy load, thread-safe) ─────────────────────────
 
-    def _get_model(self) -> SentenceTransformer:
-        """Lazy-load the sentence-transformers model."""
-        if self._model is None:
-            model_name = settings.EMBEDDING_MODEL_ID
-            logger.info("loading_embedding_model", extra={"model": model_name})
-            self._model = SentenceTransformer(model_name)
-        return self._model
-
-    def warmup(self) -> None:
-        """Warm up the embedding model to avoid first-query latency."""
-        self._get_model()
-
-    def _encode(self, texts: List[str]) -> List[List[float]]:
-        """Encode texts into embeddings (CPU, blocking)."""
-        model = self._get_model()
-        embeddings = model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-        return embeddings.tolist()
+    def _get_embed_client(self) -> AsyncOpenAI:
+        if self._embed_client is None:
+            self._embed_client = AsyncOpenAI(
+                api_key=os.getenv("NVIDIA_API_KEY"),
+                base_url=os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+            )
+        return self._embed_client
 
     async def _encode_async(self, texts: List[str]) -> List[List[float]]:
-        """Run embedding encoding in a thread pool to avoid blocking the event loop."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._encode, texts)
+        """Generate embeddings via NVIDIA NIM embeddings endpoint (async, non-blocking)."""
+        client = self._get_embed_client()
+        response = await client.embeddings.create(
+            model=self._embed_model,
+            input=texts,
+            encoding_format="float",
+        )
+        return [item.embedding for item in response.data]
+
+    def warmup(self) -> None:
+        """No-op: NVIDIA embeddings require no local warmup."""
+        logger.info("pgvector_embed", extra={"model": self._embed_model})
 
     # ── CRUD Operations ──────────────────────────────────────────────────
 

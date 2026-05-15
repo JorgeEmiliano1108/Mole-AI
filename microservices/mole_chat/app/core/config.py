@@ -35,17 +35,16 @@ class Settings(BaseSettings):
     JWKS_CACHE_TTL_SECONDS: int = 300
 
     # ── PostgreSQL + pgvector (Fase 3 — MLOps Pipeline) ──────────────────
-    # C4 FIX: hostname corregido de 'db' → 'mole_ai_db' (container_name real)
-    DATABASE_URL: str = "postgresql://postgres:postgres@mole_ai_db:5432/mole_ai_db"
+    DATABASE_URL: str = ""
 
     # ── Embeddings ───────────────────────────────────────────────────────
     EMBEDDING_MODEL_ID: str = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384  # all-MiniLM-L6-v2 = 384d
 
     # ── MinIO / S3 (Training asset download) ─────────────────────────────
-    AWS_S3_ENDPOINT_URL: str = "http://mole_ai_minio:9000"
-    AWS_ACCESS_KEY_ID: str = "admin"
-    AWS_SECRET_ACCESS_KEY: str = "password123"
+    AWS_S3_ENDPOINT_URL: str = ""
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
     TRAINING_BUCKET_NAME: str = "mole-training-data"
 
     # ── RAG Chunking ─────────────────────────────────────────────────────

@@ -82,9 +82,17 @@ def download_report(
     if data.get("status") != "SUCCESS":
         raise HTTPException(status_code=400, detail="report not ready")
 
+    # Presigned URL stored by the Celery task (24h TTL)
+    presigned_url = data.get("result")
+    if presigned_url and presigned_url.startswith("http"):
+        return {"download_url": presigned_url}
+
+    # Fallback: regenerate presigned URL from s3_path if result was not set
     s3_path = data.get("pdf_s3_path")
     if not s3_path:
         raise HTTPException(status_code=500, detail="no pdf path stored")
 
-    # Return directly the static URL
-    return {"download_url": f"/static/reports/{job_id}.pdf"}
+    from infrastructure.storage.s3_adapter import S3Adapter
+    s3 = S3Adapter.from_env()
+    presigned_url = s3.generate_presigned_url(s3_path, expires_in=3600)
+    return {"download_url": presigned_url}

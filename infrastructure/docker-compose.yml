@@ -4,6 +4,12 @@ networks:
   mole_internal:
     driver: bridge
 
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   # --- API GATEWAY (Nginx) — Single Ingress Point ---
   nginx:
@@ -11,6 +17,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     container_name: mole_ai_nginx
+    logging: *default-logging
     ports:
       - "8080:80"
     depends_on:
@@ -25,7 +32,7 @@ services:
     volumes:
       - ../frontend/dist:/usr/share/nginx/html:ro
       - ../frontend/static:/usr/share/nginx/static:ro
-      - django_media:/usr/share/nginx/media:ro
+      # django_media removed — media now served from Amazon S3
     networks:
       - mole_public
       - mole_internal
@@ -35,12 +42,13 @@ services:
     build:
       context: ../core_backend
     container_name: django-backend
+    logging: *default-logging
     expose:
       - "8000"
     volumes:
       - ../core_backend:/app
       - ../infrastructure/mosquitto/certs:/app/mqtt_certs  # TLS certs for MQTT
-      - django_media:/app/media
+      # django_media removed — media now served from Amazon S3
     env_file:
       - ../.env
     healthcheck:
@@ -52,13 +60,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_started
       redis:
         condition: service_started
       mqtt_broker:
-        condition: service_started
-      minio:
         condition: service_started
     networks:
       - mole_public
@@ -69,6 +73,7 @@ services:
     build:
       context: ../core_backend
     container_name: django_celery_worker
+    logging: *default-logging
     entrypoint: [ "celery", "-A", "mole_ai_backend", "worker", "-l", "info", "-Q", "celery,training_queue" ]
     volumes:
       - ../core_backend:/app
@@ -77,11 +82,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_started
       redis:
-        condition: service_started
-      minio:
         condition: service_started
     networks:
       - mole_internal
@@ -91,6 +92,7 @@ services:
     build:
       context: ../core_backend
     container_name: django_celery_beat
+    logging: *default-logging
     entrypoint: [ "celery", "-A", "mole_ai_backend", "beat", "-l", "info" ]
     volumes:
       - ../core_backend:/app
@@ -99,8 +101,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_started
       redis:
         condition: service_started
     networks:
@@ -111,6 +111,7 @@ services:
     build:
       context: ../core_backend
     container_name: django_mqtt_listener
+    logging: *default-logging
     command: ["python", "manage.py", "mqtt_listener"]
     volumes:
       - ../core_backend:/app
@@ -119,32 +120,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      db:
-        condition: service_started
       mqtt_broker:
         condition: service_started
     networks:
       - mole_internal
 
-  # --- DATABASE (Postgres + pgvector) ---
-  db:
-    image: pgvector/pgvector:pg16
-    container_name: mole_ai_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    env_file:
-      - ../.env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - mole_internal
+
 
   # --- CACHE (Redis) ---
   redis:
     image: redis:7-alpine
     container_name: mole_ai_redis
+    logging: *default-logging
     expose:
       - "6379"
     networks:
@@ -164,29 +151,14 @@ services:
     networks:
       - mole_internal
 
-  # --- MINIO (S3-compatible) ---
-  minio:
-    image: minio/minio:latest
-    container_name: mole_ai_minio
-    command: server /data --console-address ":9001"
-    expose:
-      - "9000"
-    ports:
-      - "9001:9001"  # MinIO Console (dev only)
-    volumes:
-      - minio_data:/data
-    env_file:
-      - ../.env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - mole_internal
+  # MinIO removed — media & training assets now served from Amazon S3
 
   # --- MS1: Vision ---
   ms1_vision:
     build:
       context: ../microservices/mole_vision
     container_name: ms1_vision
+    logging: *default-logging
     volumes:
       - ../microservices/mole_vision/models:/app/models:rw
     ports:
@@ -198,9 +170,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - db
       - redis
-      - minio
     networks:
       - mole_internal
 
@@ -209,6 +179,7 @@ services:
     build:
       context: ../microservices/mole_chat
     container_name: ms2_chat
+    logging: *default-logging
     ports:
       - "8002:8002"
     expose:
@@ -220,9 +191,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      - db
       - redis
-      - minio
     networks:
       - mole_internal
 
@@ -231,6 +200,7 @@ services:
     build:
       context: ../microservices/mole_report
     container_name: ms3_reports
+    logging: *default-logging
     ports:
       - "8003:8003"
     expose:
@@ -244,8 +214,6 @@ services:
       - REDIS_URL=redis://redis:6379/2
     depends_on:
       - redis
-      - minio
-      - db
     networks:
       - mole_internal
 
@@ -254,6 +222,7 @@ services:
     build:
       context: ../microservices/mole_report
     container_name: ms3_celery_worker
+    logging: *default-logging
     command: [ "celery", "-A", "infrastructure.celery_app:celery_app", "worker", "--loglevel=info", "--concurrency=1", "-Q", "reports_queue" ]
     env_file:
       - ../.env
@@ -264,7 +233,6 @@ services:
     depends_on:
       - ms3_reports
       - redis
-      - db
     networks:
       - mole_internal
 
@@ -292,6 +260,7 @@ services:
       context: ../edge_node
       dockerfile: Dockerfile
     container_name: mole_ai_edge_node
+    logging: *default-logging
     ports:
       - "18789:18789" # Expone el WebSocket hacia el mundo físico (ESP32)
     volumes:
@@ -311,9 +280,8 @@ services:
       - mole_public
 
 volumes:
-  postgres_data:
   ai_rag_vectors:
-  minio_data:
   edge_data:
   prometheus_data:
-  django_media:  # Volumen compartido: Django escribe /app/media, Nginx lee /usr/share/nginx/media
+  # minio_data removed — S3
+  # django_media removed — S3

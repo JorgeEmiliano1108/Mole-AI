@@ -5,6 +5,7 @@ import aiofiles
 from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user
+from app.api.main import limiter
 from app.application.use_cases.chat_usecase import MoleAIChatUseCase
 from app.domain.schemas import ChatRequest, ChatResponse, EmbeddingRequest, EmbeddingResponse, IngestPDFRequest, IngestPDFResponse, SourcesResponse, ContextUpdateRequest
 from app.infrastructure.adapters.pgvector_store import PgVectorStore
@@ -41,10 +42,12 @@ class DeleteResponse(BaseModel):
     message: str
 
 
-# ✅ RESTAURADO: El motor principal de Chat protegido con Zero-Trust
+# ✅ Chat — Rate limited: 15 requests/minute per real client IP
 @router.post("/api/v1/mole-ai/chat", response_model=ChatResponse)
+@limiter.limit("15/minute")
 async def chat_endpoint(
-    request: ChatRequest, 
+    http_request: Request,
+    request: ChatRequest,
     current_user_id: str = Depends(get_current_user),
     llm_client: LLMClient = Depends(_get_llm_client),
     vector_store: PgVectorStore = Depends(_get_pgvector_store),
