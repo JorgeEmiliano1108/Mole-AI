@@ -1,11 +1,26 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 from app.api.routers import router
 import asyncio
 import logging
 import os
+
+
+def get_real_ip(request: Request) -> str:
+    """Extrae la IP real del cliente desde X-Forwarded-For (set by Nginx proxy)."""
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+limiter = Limiter(key_func=get_real_ip)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,10 +29,9 @@ async def lifespan(app: FastAPI):
 
     # ── Startup: Initialize singletons (cold start ONCE) ─────────
     
-    # 1. LLM Client (load model ONCE)
+    # 1. LLM Client
     from app.infrastructure.adapters.llm_client import LLMClient
-    from app.core.config import settings
-    model_name = settings.LLM_MODEL_ID or "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+    model_name = os.getenv("NVIDIA_CHAT_MODEL", "meta/llama-3.3-70b-instruct")
     llm_client = LLMClient(model_name=model_name)
     app.state.llm_client = llm_client
     logging.info(f"LLM Client initialized: {model_name}")
@@ -62,7 +76,12 @@ async def lifespan(app: FastAPI):
     await redis_adapter.close()
     logging.info("Pools closed.")
 
-app = FastAPI(title="MS-2 RAG+CAG Service", version="1.0", lifespan=lifespan)
+app = FastAPI(title="MS-2 RAG+CAG Service", version="2.0", lifespan=lifespan)
+
+# ── Rate Limiting ──────────────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Prometheus metrics instrumentation
 instrumentator = Instrumentator()

@@ -49,16 +49,16 @@ class Settings(BaseSettings):
     
     # CORS
     ORIGEN_PERMITIDO: str = "*"
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "default_secret")
+    JWT_SECRET_KEY: str = ""
     CORS_ALLOW_CREDENTIALS: bool = False
     
     # Security - JWKS Cache
     JWKS_CACHE_TTL_SECONDS: int = 300
 
     # ── MinIO / S3 (Training asset download — Fase 3) ────────────────────
-    AWS_S3_ENDPOINT_URL: str = "http://mole_ai_minio:9000"
-    AWS_ACCESS_KEY_ID: str = "admin"
-    AWS_SECRET_ACCESS_KEY: str = "password123"
+    AWS_S3_ENDPOINT_URL: str = ""
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
     TRAINING_BUCKET_NAME: str = "mole-training-data"
 
     # ── Fine-Tuning Pipeline ─────────────────────────────────────────────

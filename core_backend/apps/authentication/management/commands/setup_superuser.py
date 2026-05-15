@@ -9,7 +9,8 @@ class Command(BaseCommand):
         User = get_user_model()
         username = 'EmiMole'
         email = 'emi@mole.ai'
-        password = 'moleai2026'
+        import os
+        password = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'moleai2026')
 
         user, created = User.objects.get_or_create(
             username=username,

@@ -6,15 +6,16 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 
 class S3Adapter:
-    def __init__(self, endpoint: str, access_key: str, secret_key: str, bucket: str):
-        self.endpoint = endpoint
+    def __init__(self, endpoint: str | None, access_key: str, secret_key: str, bucket: str):
+        self.endpoint = endpoint  # None → native AWS S3
         self.bucket = bucket
-        self.s3 = boto3.client(
-            "s3",
-            endpoint_url=endpoint,
+        kwargs = dict(
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key,
         )
+        if endpoint:
+            kwargs["endpoint_url"] = endpoint
+        self.s3 = boto3.client("s3", **kwargs)
 
     @classmethod
     def from_env(cls):

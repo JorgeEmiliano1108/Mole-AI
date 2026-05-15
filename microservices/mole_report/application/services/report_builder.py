@@ -1,41 +1,53 @@
 import io
 import base64
-import matplotlib.pyplot as plt
 import gc
 from datetime import datetime
+from collections import defaultdict
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from jinja2 import Template
 
 class ReportBuilder:
-    def build_trend_image(self, x, y):
-        # Estilo de Mole.AI para la gráfica
-        fig, ax = plt.subplots(figsize=(7, 3.5))
+    def build_trend_image(self, sensor_data: dict):
+        # Object-Oriented API for thread-safety (no pyplot state machine)
+        fig = Figure(figsize=(7, 3.5))
+        canvas = FigureCanvas(fig)
+        ax = fig.subplots()
         try:
-            # Fondo limpio, línea verde gruesa y estilo moderno
             fig.patch.set_facecolor('#ffffff')
             ax.set_facecolor('#f8f9fa')
-            ax.plot(x, y, color="#27ae60", linewidth=3, marker='o', markersize=5)
+            
+            colors = ["#27ae60", "#2980b9", "#e67e22", "#8e44ad", "#e74c3c"]
+            color_idx = 0
+            
+            for sensor, data in sensor_data.items():
+                x = data["x"]
+                y = data["y"]
+                if not x or not y:
+                    continue
+                color = colors[color_idx % len(colors)]
+                ax.plot(x, y, color=color, linewidth=2, marker='o', markersize=4, label=str(sensor).capitalize())
+                color_idx += 1
             
             ax.set_title("Evolución de Sensores (Últimos 90 días)", fontsize=12, fontweight='bold', color="#2c3e50")
             ax.grid(True, linestyle='--', alpha=0.6, color="#bdc3c7")
+            ax.legend(loc="upper right", frameon=False, fontsize=9)
             
-            # Quitar los bordes de arriba y la derecha
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.spines['bottom'].set_color('#7f8c8d')
             ax.spines['left'].set_color('#7f8c8d')
             ax.tick_params(colors='#7f8c8d')
+            fig.autofmt_xdate()
 
             buf = io.BytesIO()
-            fig.savefig(buf, format="png", bbox_inches="tight", dpi=150) # Mayor DPI para nitidez
+            fig.savefig(buf, format="png", bbox_inches="tight", dpi=150)
             buf.seek(0)
             img_b64 = base64.b64encode(buf.read()).decode("utf-8")
         finally:
-            try:
-                plt.close(fig)
-                del fig, ax
-                gc.collect()
-            except Exception:
-                pass
+            fig.clear()
+            del ax, fig, canvas
+            gc.collect()
         return img_b64
 
     def build_report_html(self, logs, insights):
@@ -166,10 +178,36 @@ class ReportBuilder:
             """
         )
 
-        # fake trend for placeholder (se mantiene para la prueba mock)
-        x = list(range(10))
-        y = [i * 1.1 for i in x]
-        trends_img = self.build_trend_image(x, y)
+        # Procesar logs reales agrupados por sensor con objetos datetime
+        sensor_data = defaultdict(lambda: {"x": [], "y": []})
+        has_data = False
+        
+        if logs:
+            sorted_logs = sorted(logs, key=lambda r: r.get("timestamp", ""))
+            
+            for r in sorted_logs:
+                sensor = r.get("sensor")
+                timestamp_str = r.get("timestamp")
+                val_str = r.get("value")
+                
+                if not sensor or not timestamp_str or val_str is None:
+                    continue
+                    
+                try:
+                    clean_ts = timestamp_str.replace("Z", "+00:00")
+                    dt = datetime.fromisoformat(clean_ts)
+                    val = float(val_str)
+                    
+                    sensor_data[sensor]["x"].append(dt)
+                    sensor_data[sensor]["y"].append(val)
+                    has_data = True
+                except (ValueError, TypeError):
+                    continue
+
+        if not has_data:
+            trends_img = None
+        else:
+            trends_img = self.build_trend_image(dict(sensor_data))
         
         # Obtenemos la fecha actual para el reporte
         current_date = datetime.now().strftime("%d/%m/%Y %H:%M")

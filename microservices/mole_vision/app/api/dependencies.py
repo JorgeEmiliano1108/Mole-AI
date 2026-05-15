@@ -20,7 +20,7 @@ from app.application.ports import (
     EventPublisherPort,
     DiagnosticRepositoryPort,
 )
-from app.infrastructure.adapters.tflite_adapter import TFLiteVisionAdapter
+from app.infrastructure.adapters.nvidia_vision_adapter import NvidiaVisionAdapter
 from app.infrastructure.adapters.redis_publisher import RedisEventPublisher
 from app.infrastructure.adapters.supabase_adapter import SupabaseDiagnosticRepository
 
@@ -80,18 +80,11 @@ _diagnostic_repository: Optional[DiagnosticRepositoryPort] = None
 
 
 def get_vision_client() -> VisionClientPort:
-    """Factory for vision client.
-    Instancia directamente TFLiteVisionAdapter. Si el archivo de modelo
-    ``settings.CNN_MODEL_PATH`` no existe, lanza RuntimeError explícito.
-    """
-    import os
+    """Factory for vision client — NVIDIA NIM (Llama 3.2 Vision)."""
     global _vision_adapter
     if _vision_adapter is None:
-        model_path = settings.CNN_MODEL_PATH
-        if not os.path.isfile(model_path):
-            raise RuntimeError(f"Model file not found: {model_path}")
-        _vision_adapter = TFLiteVisionAdapter()
-        logger.info("vision_client_factory", chosen="tflite", model=model_path)
+        _vision_adapter = NvidiaVisionAdapter()
+        logger.info("vision_client_factory", chosen="nvidia_nim")
     return _vision_adapter
 
 

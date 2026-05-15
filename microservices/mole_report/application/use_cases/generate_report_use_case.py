@@ -1,10 +1,10 @@
+import io
 import logging
 import traceback
 from datetime import datetime
 from infrastructure.redis.job_metadata_store import JobMetadataStore
-from infrastructure.db.minio_client import MinioClient
-from infrastructure.faiss.faiss_reader_adapter import FAISSReaderAdapter
-from infrastructure.llm.huggingface_client import HuggingFaceClient
+from infrastructure.llm.nvidia_client import NvidiaReportClient
+from infrastructure.db.supabase_client import SupabaseClient
 from infrastructure.storage.s3_adapter import S3Adapter
 from application.services.report_builder import ReportBuilder
 from app.config import settings
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class GenerateReportUseCase:
     def __init__(self):
         self.job_store = JobMetadataStore.from_env()
+        self.nim = NvidiaReportClient.from_env()
         self.supabase = SupabaseClient.from_env()
-        self.hf = HuggingFaceClient.from_env()
 
     def _detect_anomalies(self, logs: list) -> list:
         # Simple statistical anomaly detection: points outside mean +/- 2*std
@@ -52,34 +52,11 @@ class GenerateReportUseCase:
             anomalies = self._detect_anomalies(combined_logs)
             self.job_store.set_progress(job_id, 40)
 
-            # 2) RAG: query FAISS using anomaly snippets
-            docs = []
-            with FAISSReaderAdapter() as faiss:
-                if anomalies:
-                    # build queries from anomaly sensor names / values
-                    for a in anomalies[:10]:
-                        q = f"anomaly sensor {a.get('sensor')} value {a.get('value')}"
-                        docs.extend(faiss.query(q, top_k=3))
-                else:
-                    docs = faiss.query("general plant health anomalies", top_k=5)
-
-            # deduplicate docs by source/text
-            seen = set()
-            unique_docs = []
-            for d in docs:
-                key = (d.get("meta", {}).get("source"), d.get("text", "")[:200])
-                if key in seen:
-                    continue
-                seen.add(key)
-                unique_docs.append(d)
-
-            self.job_store.set_progress(job_id, 55)
-
-            # 3) LLM: synthesize insights with prompt instructing Agronomist role
-            insights = self.hf.synthesize_insights(unique_docs, combined_logs)
+            # 2) NVIDIA NIM: Synthesize insights from telemetry
+            insights = self.nim.synthesize_insights(docs=[], logs=combined_logs)
             self.job_store.set_progress(job_id, 75)
 
-            # 4) Build report: figures + HTML (include COFEPRIS disclaimer in footer)
+            # 3) Build HTML report
             builder = ReportBuilder()
             html = builder.build_report_html(logs=combined_logs, insights=insights)
             # ensure disclaimer present
@@ -100,42 +77,25 @@ class GenerateReportUseCase:
                 html += _COFEPRIS_DISCLAIMER
             self.job_store.set_progress(job_id, 85)
 
-            # 5) Render PDF
+            # 5) Render PDF in-memory — ZERO DISK I/O
+            pdf_buffer = io.BytesIO()
             pdf_bytes = WeasyPrintReportGenerator.generate_pdf(html)
-            self.job_store.set_progress(job_id, 95)
+            pdf_buffer.write(pdf_bytes)
+            pdf_buffer.seek(0)
+            self.job_store.set_progress(job_id, 92)
 
-            # 6) Upload PDF to Cloud (S3) and Local Volume Backup
-            import os
-            
-            # Ruta absoluta limpia para evitar la duplicación de carpetas
-            BASE_DIR = "/srv/ms3_reports" 
-            reports_dir = os.path.join(BASE_DIR, "media", "reports")
-            os.makedirs(reports_dir, exist_ok=True)
-            
+            # 6) Upload raw bytes to S3 — NO local file write
             filename = f"report_{job_id}.pdf"
-            local_path = os.path.join(reports_dir, filename)
-            
-            # Backup Local 
-            with open(local_path, "wb") as f:
-                f.write(pdf_bytes)
-            
-            public_url = f"/static/reports/{filename}" # Fallback URL
-            
-            # Persistencia Principal en Nube (MinIO/S3)
-            try:
-                s3 = S3Adapter.from_env()
-                s3_key = f"reports/{filename}"
-                s3.upload_bytes(pdf_bytes, s3_key)
-                
-                # Si es exitoso, usar URL de S3 en lugar de la local
-                public_url = s3.generate_presigned_url(s3_key)
-                logger.info(f"Reporte subido exitosamente a MinIO: {s3_key}")
-            except Exception as e:
-                logger.error(f"Fallo al subir a S3, manteniendo URL local: {e}")
+            s3_key = f"reports/{filename}"
+            s3 = S3Adapter.from_env()
+            s3.upload_bytes(pdf_buffer.read(), s3_key)
+            presigned_url = s3.generate_presigned_url(s3_key, expires_in=86400)  # 24h
 
-            self.job_store.set_result(job_id, public_url)
+            self.job_store.set_result(job_id, presigned_url)
+            self.job_store.update_job(job_id, {"pdf_s3_path": s3_key})
             self.job_store.set_progress(job_id, 100)
             self.job_store.update_status(job_id, "SUCCESS")
+            logger.info(f"Reporte generado y subido a S3: {s3_key}")
 
             # 7) Audit: persist to Supabase audit table `reports_audit`
             try:

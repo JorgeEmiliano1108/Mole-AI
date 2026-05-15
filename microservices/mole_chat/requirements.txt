@@ -1,10 +1,6 @@
 # --- REPOSITORIO PARA VERSIONES LIGERAS (SOLO CPU) ---
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# --- FORZAR PYTORCH LIGERO ANTES DE LAS LIBRERIAS DE IA ---
-torch==2.2.1+cpu
-torchvision==0.17.1+cpu
-
 # --- FRAMEWORKS CORE ---
 fastapi==0.104.1
 uvicorn==0.24.0
@@ -20,15 +16,13 @@ PyJWT==2.8.0
 cryptography>=42.0.0
 
 # --- LANGCHAIN Y OPENAI ---
-langchain==0.1.20
-langchain-community==0.0.38
-langchain-core==0.1.52
-langchain-openai==0.1.6
-openai>=1.0,<2.0
+openai>=1.0.0
+slowapi>=0.1.9
+# Lightweight text utilities (no torch/FAISS)
+langchain-text-splitters>=0.2
+pypdf>=3.0
 
 # --- IA Y VECTORES ---
-faiss-cpu==1.7.4
-sentence-transformers==2.5.1
 pgvector>=0.2.5
 
 # --- UTILS (RAG/CAG y PDF) ---

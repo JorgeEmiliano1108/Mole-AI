@@ -5,9 +5,10 @@ Arquitectura Hexagonal - Capa de Adaptadores de Entrada
 from typing import Optional
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Request
 import structlog
 
+from app.api.main import limiter
 from app.api.dependencies import (
     get_current_user,
     get_image_file,
@@ -37,9 +38,12 @@ def get_analyze_use_case(
     )
 
 
+# Vision Analysis — 5 requests/minute per client IP (guards NVIDIA token budget)
 @router.post("/analyze", response_model=DiagnosticResponseSchema)
+@limiter.limit("5/minute")
 async def analyze_vision(
-    user: AuthenticatedUser, 
+    http_request: Request,
+    user: AuthenticatedUser,
     image_bytes: bytes = Depends(get_image_file),
     use_case: AnalyzePlantUseCase = Depends(get_analyze_use_case),
 ) -> DiagnosticResponseSchema:
@@ -113,16 +117,16 @@ async def health() -> HealthCheckSchema:
 @router.get("/healthz")
 async def healthz() -> dict:
     """Health check completo con verificación de componentes."""
-    from app.infrastructure.adapters.tflite_adapter import TFLiteVisionAdapter
+    from app.infrastructure.adapters.nvidia_vision_adapter import NvidiaVisionAdapter
     from app.infrastructure.adapters.redis_publisher import RedisEventPublisher
-    
+
     health = {
         "model_loaded": False,
         "redis_ok": False,
     }
-    
+
     try:
-        adapter = TFLiteVisionAdapter()
+        adapter = NvidiaVisionAdapter()
         health["model_loaded"] = adapter.is_ready()
     except Exception:
         health["model_loaded"] = False
