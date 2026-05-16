@@ -15,6 +15,7 @@ COPY tailwind.config.js ./
 COPY postcss.config.js ./
 COPY src/ ./src/
 COPY static/ ./static/
+COPY public/ ./public/
 COPY *.html ./
 
 # Supply Chain Hardening: bloquear scripts de terceros, permitir solo esbuild (Vite)
