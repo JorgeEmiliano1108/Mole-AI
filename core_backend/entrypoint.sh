@@ -2,48 +2,67 @@
 set -e
 
 echo "========================================="
-echo " Mole AI — Django Backend Entrypoint"
+echo " Mole AI — Django Backend Entrypoint (v2.0 AWS Native)"
 echo "========================================="
 
-# Validate critical environment variables in non-debug mode
+# Validate critical environment variables for Cloud-Native Production
 if [ "${DEBUG}" != "True" ] && [ "${DEBUG}" != "true" ]; then
-  echo "[0/3] Validating required environment variables for non-debug startup..."
+  echo "[0/4] Validating required Cloud-Native env vars..."
   missing=0
-  for v in SECRET_KEY SUPABASE_DB_PASSWORD POSTGRES_PASSWORD MINIO_ROOT_PASSWORD; do
+  # Strict variables for AWS/NVIDIA migration
+  for v in SECRET_KEY POSTGRES_PASSWORD POSTGRES_HOST AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY NVIDIA_API_KEY; do
     if [ -z "${!v}" ]; then
       echo "  ERROR: required env var '${v}' is not set"
       missing=1
     fi
   done
   if [ "$missing" -eq 1 ]; then
-    echo "One or more required environment variables are missing; aborting startup." >&2
+    echo "CRITICAL: Infrastructure variables missing; aborting startup." >&2
     exit 1
   fi
 fi
 
-# Wait for the database to be ready
-echo "[1/3] Waiting for database at ${SUPABASE_DB_HOST}:${SUPABASE_DB_PORT}..."
+# Wait for the RDS/PostgreSQL database to be ready
+DB_HOST=${POSTGRES_HOST:-mole-ai-db}
+DB_PORT=${POSTGRES_PORT:-5432}
+
+echo "[1/4] Waiting for database at ${DB_HOST}:${DB_PORT}..."
 while ! python -c "
 import socket, sys, os
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.settimeout(2)
 try:
-    s.connect((os.environ.get('SUPABASE_DB_HOST','db'), int(os.environ.get('SUPABASE_DB_PORT','5432'))))
+    s.connect(('${DB_HOST}', int('${DB_PORT}')))
     s.close()
 except Exception:
     sys.exit(1)
 " 2>/dev/null; do
-  echo "  DB not ready yet — retrying in 2s..."
+  echo "  DB not ready (RDS/Postgres) — retrying in 2s..."
   sleep 2
 done
-echo "  DB is accepting connections."
+echo "  DB connection established."
 
 # Apply migrations
-echo "[2/3] Applying database migrations..."
+echo "[2/4] Applying database migrations..."
 python manage.py migrate --noinput
 
-# Collect static files (silently)
-echo "[3/3] Collecting static files..."
-python manage.py collectstatic --noinput 2>/dev/null || true
+# Set up Superuser
+echo "[3/4] Setting up Superuser..."
+if [ -f "setup_superuser.py" ]; then
+  # Se ejecuta el script. Si falla (ej. el usuario ya existe), el '|| true' evita que el contenedor muera.
+  python setup_superuser.py || echo "  Notice: Superuser might already exist or script returned non-zero."
+else
+  echo "  Notice: setup_superuser.py not found in root directory. Skipping."
+fi
+
+# Collect static files (S3 Trap Protection)
+echo "[4/4] Collecting static files..."
+if [ "${SKIP_COLLECTSTATIC}" = "True" ] || [ "${SKIP_COLLECTSTATIC}" = "true" ]; then
+  echo "  Notice: SKIP_COLLECTSTATIC is True. Skipping S3 upload to speed up boot time."
+else
+  python manage.py collectstatic --noinput
+  echo "  Static files uploaded successfully."
+fi
 
 echo "========================================="
 echo " Starting Daphne on 0.0.0.0:8000"
