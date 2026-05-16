@@ -5,7 +5,7 @@ import aiofiles
 from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user
-from app.api.main import limiter
+from app.api.limiter import limiter
 from app.application.use_cases.chat_usecase import MoleAIChatUseCase
 from app.domain.schemas import ChatRequest, ChatResponse, EmbeddingRequest, EmbeddingResponse, IngestPDFRequest, IngestPDFResponse, SourcesResponse, ContextUpdateRequest
 from app.infrastructure.adapters.pgvector_store import PgVectorStore

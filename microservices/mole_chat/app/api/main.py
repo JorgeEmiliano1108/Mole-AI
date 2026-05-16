@@ -3,24 +3,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
+from app.api.limiter import limiter
 from app.api.routers import router
 import asyncio
 import logging
 import os
 
 
-def get_real_ip(request: Request) -> str:
-    """Extrae la IP real del cliente desde X-Forwarded-For (set by Nginx proxy)."""
-    forwarded_for = request.headers.get("X-Forwarded-For", "")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
 
-
-limiter = Limiter(key_func=get_real_ip)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

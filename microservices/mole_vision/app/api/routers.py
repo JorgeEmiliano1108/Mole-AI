@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Request
 import structlog
 
-from app.api.main import limiter
+from app.api.limiter import limiter
 from app.api.dependencies import (
     get_current_user,
     get_image_file,

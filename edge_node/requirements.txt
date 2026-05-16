@@ -10,3 +10,5 @@ Pillow>=10.0          # Image preprocessing for CNN
 numpy>=1.24           # Array ops for TFLite input tensor
 asyncpg>=0.29         # Async PostgreSQL driver — Gateway pubkey DB lookup (Hallazgo #2)
 PyNaCl>=1.5           # Ed25519 signature verification
+redis>=4.2.0          # Async Redis client (redis.asyncio) — Gateway pub/sub
+
