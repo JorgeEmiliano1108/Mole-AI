@@ -12,29 +12,14 @@
     <link rel="stylesheet" href="/static/css/styles.css">
 
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
-    <style>
-        .crt-chat { font-family: 'VT323', monospace !important; text-transform: uppercase; letter-spacing: 1px; }
-        .crt-screen { position: relative; background-color: #000 !important; overflow: hidden; }
-        .crt-screen::before {
-            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 255, 170, 0.04) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 50; background-size: 100% 4px, 3px 100%; pointer-events: none;
-        }
-        .crt-text-glow { color: #00FFCC !important; text-shadow: 0 0 5px rgba(0,255,204,0.5), 0 0 10px rgba(0,255,204,0.3); }
-        .crt-text-glow-dim { color: rgba(0,255,204,0.7) !important; text-shadow: 0 0 2px rgba(0,255,204,0.4); }
-        .crt-bg-glow { background-color: #00FFCC !important; color: #000 !important; text-shadow: none; box-shadow: 0 0 10px #00FFCC; }
-        @keyframes crtFlicker {
-            0% { opacity: 0.95; } 5% { opacity: 0.85; } 10% { opacity: 0.95; } 15% { opacity: 1; } 100% { opacity: 1; }
-        }
-        .crt-flicker { animation: crtFlicker 5s infinite; }
-    </style>
+
 </head>
-<body class="bg-mole-bg text-mole-text font-sans min-h-screen overflow-x-hidden relative">
+<body class="flex flex-col min-h-screen overflow-x-hidden bg-mole-bg text-mole-text font-sans">
 
     <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
 
 <!-- Bottom Navigation Bar / Sidebar -->
-<nav class="fixed bottom-0 w-full h-16 bg-mole-surface border-t border-mole-border z-[70] flex justify-around items-center md:top-0 md:left-0 md:bottom-auto md:h-screen md:w-20 md:flex-col md:justify-start md:items-stretch md:border-t-0 md:border-r bg-mole-surface-industrial" style="background-color:#12141a;">
+<nav class="fixed bottom-0 w-full h-16 border-t border-mole-border z-[70] flex justify-around md:top-0 md:left-0 md:bottom-auto md:h-screen md:w-20 md:flex-col md:justify-start md:items-center md:border-t-0 md:border-r bg-mole-surface-industrial" style="background-color:#12141a;">
     <!-- MONITOR (primer botón) -->
     <button onclick="switchFieldView('view-monitoreo')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-cyan hover:text-mole-accent focus:outline-none md:mt-6">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -50,57 +35,49 @@
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
         <span class="text-[10px] font-bold mt-1">MAPA</span>
     </button>
+
+    
+    <button onclick="switchFieldView('view-iot')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a1 1 0 100-2 1 1 0 000 2zm0 0v5m-2-3l2 2 2-2M8 9a5 5 0 018 0M5 9a9 9 0 0114 0" />
+        </svg>
+        <span class="text-[10px] font-bold mt-1">IOT</span>
+    </button>
+
 </nav>
 
-    <main id="main-dashboard" class="flex flex-col h-[calc(100vh-4rem)] md:h-screen md:flex-row pb-16 md:pb-0 md:ml-20 relative">
+<!-- Button lateral IoT -->
+<main id="main-dashboard" class="flex-1 flex flex-col pb-16 md:pb-0 md:ml-20 overflow-hidden">
+    <header class="flex items-center justify-between border-b border-mole-border p-4 md:px-6 bg-mole-surface">
+        <h1 class="text-2xl font-bold text-mole-cyan">DASHBOARD OPERATIVO</h1>
+        <div class="flex items-center gap-4">
+            <button id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Cambiar tema" class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber" title="Modo Solar / Pip-Boy">
+                <svg id="icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                </svg>
+                <svg id="icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path>
+                </svg>
+            </button>
+            <div class="relative">
+                <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
+                    <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
+                    <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
+                    <div class="p-3 border-b border-mole-border">
+                        <p id="dropdown-user-name" class="font-bold text-mole-accent text-xs">AGENTE</p>
+                    </div>
+                    <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR SESIÓN]</button>
+                </div>
+            </div>
+        </div>
+</header>
 
         <!-- Left / Main Content -->
-        <div id="view-monitoreo" class="field-view flex-1 flex flex-col min-h-0 w-full overflow-hidden">
-            <div class="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col min-h-0 w-full">
+        <div id="view-monitoreo" class="field-view flex-1 flex flex-col w-full overflow-hidden">
+            <div class="flex-1 overflow-y-auto py-4 md:py-6 flex flex-col min-h-0 w-full">
 
-            <!-- Header -->
-            <header class="flex justify-between items-center mb-6 bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber">
-                <div class="flex items-center gap-3">
-                    <div class="w-2 h-8 bg-mole-cyan/60 rounded-full"></div>
-                    <div>
-                        <h1 class="text-lg font-bold text-mole-cyan tracking-tight">DASHBOARD OPERATIVO</h1>
-                        <div class="flex items-center gap-3">
-                            <span id="clock" class="text-xs text-mole-text-dim font-sans">00:00:00</span>
-                            <span class="text-mole-border">│</span>
-                            <div class="flex items-center gap-1.5">
-                                <span id="ws-status-dot" class="w-2 h-2 rounded-full bg-mole-red shrink-0"></span>
-                                <span id="ws-status-label" class="text-xs font-bold text-mole-red tracking-wider font-sans">LINK DOWN</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <!-- Theme Toggle (Solar/Pip-Boy Mode) -->
-                    <button id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Cambiar tema" class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber" title="Modo Solar / Pip-Boy">
-                        <!-- Sun Icon (shown in dark mode) -->
-                        <svg id="icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                        <!-- Moon Icon (shown in light mode) -->
-                        <svg id="icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path>
-                        </svg>
-                    </button>
-
-                    <div class="relative">
-                        <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
-                            <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
-                            <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                        <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
-                            <div class="p-3 border-b border-mole-border">
-                                <p id="dropdown-user-name" class="font-bold text-mole-accent text-xs">AGENTE</p>
-                            </div>
-                            <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR SESIÓN]</button>
-                        </div>
-                    </div>
-                </div>
-            </header>
 
             <!-- Telemetry KPI Cards (Responsive Grid) -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -134,7 +111,7 @@
             </div>
 
             <!-- Content Area: Camera & AI Diagnostics -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
 
                 <!-- Camera / Image Monitor -->
                 <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col h-72 lg:h-auto relative shadow-cyber">
@@ -159,8 +136,6 @@
                          <label for="camera-input" class="flex-1 text-center text-xs font-bold bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors cursor-pointer tracking-widest uppercase min-h-[44px] flex items-center justify-center">
                              [ Capturar Imagen ]
                          </label>
-                            [ Capturar Imagen ]
-                        </label>
                     </div>
                 </div>
 
@@ -185,19 +160,125 @@
             </div>
         </div>
 
-        <div id="view-wiki" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
-            <h2 class="text-xl text-mole-cyan font-bold crt-text-glow border-b border-mole-cyan pb-2 mb-4">> WIKI INTERNA BOTÁNICA</h2>
-            <div class="flex-1 bg-mole-surface border border-mole-border rounded shadow-cyber p-4 overflow-y-auto min-h-0">
-    <div id="wiki-grid" class="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"></div>
-</div>
+<div id="view-wiki" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
+    <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-4">> ENCICLOPEDIA TÁCTICA FITOSANITARIA</h2>
+    
+    <!-- Header: Buscador + Filtros -->
+    <div class="flex flex-wrap items-center gap-3 mb-5 p-3 bg-mole-surface/50 border border-mole-border rounded">
+        <div class="flex flex-1 items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 focus-within:border-mole-cyan transition-colors min-w-[200px]">
+            <svg class="w-4 h-4 text-mole-dim flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"></path></svg>
+            <input id="wiki-search" type="text" placeholder="> BUSCAR ESPECIE, PLAGA, ENFERMEDAD..." class="flex-1 bg-transparent text-mole-cyan outline-none font-mono text-sm placeholder-mole-dim" autocomplete="off">
+            <span id="wiki-loading" class="text-mole-cyan text-xs animate-pulse hidden">SCAN...</span>
         </div>
+        <select id="wiki-filter-cat" class="bg-mole-bg border border-mole-border px-3 py-2 text-mole-text-dim outline-none focus:border-mole-cyan text-xs font-mono transition-colors cursor-pointer">
+            <option value="">TODAS LAS CATEGORÍAS</option>
+            <option value="planta">🌿 PLANTAS</option>
+            <option value="plaga">🐛 PLAGAS</option>
+            <option value="enfermedad">🦠 ENFERMEDADES</option>
+        </select>
+        <div id="wiki-count" class="text-mole-dim text-xs font-mono hidden">
+            <span id="wiki-count-num">0</span> REGISTROS
+        </div>
+    </div>
 
-        <div id="view-mapa" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
-            <h2 class="text-xl text-mole-cyan font-bold crt-text-glow border-b border-mole-cyan pb-2 mb-4">> MAPA TÁCTICO IOT</h2>
-            <div class="flex-1 bg-mole-surface border border-mole-border rounded shadow-cyber relative min-h-0 overflow-hidden">
-                <div id="main-map-container" class="absolute inset-0 bg-mole-base"></div>
+    <!-- Grid de Hover Cards -->
+    <div id="wiki-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto flex-1">
+        <!-- tarjetas renderizadas por src/js/modules/services/wiki.js -->
+    </div>
+</div>
+<div id="view-mapa" class="field-view hidden flex-1 flex flex-col h-full w-full p-0 relative bg-mole-base">
+    <!-- Contenedor absoluto completo para el mapa -->
+    <div id="map" class="absolute inset-0 z-10"></div>
+
+    <!-- ── LEFT SIDEBAR: Botones Nativos ── -->
+    <div class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-[400] p-2 bg-mole-surface/80 backdrop-blur-md border border-mole-border rounded-xl shadow-cyber">
+        <button id="btn-layer-temp" class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-orange-500 transition-colors" title="Temperatura">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </button>
+        <button id="btn-layer-precip" class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-sky-500 transition-colors" title="Precipitación">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+        </button>
+        <div class="w-full h-px bg-mole-border"></div>
+        <button id="btn-layer-plagas" class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-accent text-mole-base transition-colors shadow-[0_0_10px_rgba(0,229,255,0.4)]" title="Focos de Infección">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
+        </button>
+    </div>
+
+    <!-- ── RIGHT PANEL: Tarjeta Multipropósito (Clima o Plaga) ── -->
+    <div id="map-info-panel" class="absolute right-4 top-4 z-[400] w-72 bg-mole-surface/90 backdrop-blur-md border border-mole-cyan p-4 rounded-xl shadow-cyber hidden flex-col gap-3 font-sans">
+        <div class="flex justify-between items-start border-b border-mole-border pb-2">
+            <h3 id="info-title" class="text-sm font-bold text-mole-cyan tracking-wider truncate">SELECCIONE PUNTO</h3>
+            <button onclick="document.getElementById('map-info-panel').classList.add('hidden')" class="text-mole-dim hover:text-mole-red transition-colors focus:outline-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="info-content" class="flex flex-col gap-2 text-xs">
+            <!-- Contenido dinámico inyectado por JS -->
+        </div>
+    </div>
+
+    <!-- ── BOTTOM BAR: Leyenda de Gradiente (OpenWeather Style) ── -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[400] flex items-center bg-mole-surface/90 backdrop-blur-md border border-mole-border px-4 py-2 rounded-full shadow-cyber w-max max-w-[90vw]">
+        <span class="text-[10px] font-bold text-mole-text-dim mr-3">RIESGO:</span>
+        <div class="flex flex-col w-48 gap-1">
+            <div class="h-2 w-full rounded-full bg-gradient-to-r from-[#00e5ff] via-[#fbbf24] to-[#ef4444]"></div>
+            <div class="flex justify-between text-[8px] font-bold text-mole-text-dim tracking-wider uppercase">
+                <span>Seguro</span>
+                <span>Alerta</span>
+                <span>Crítico</span>
             </div>
         </div>
+    </div>
+</div>
+<div id="view-iot" class="field-view hidden flex-1 flex flex-col h-full w-full p-4 md:p-6">
+    <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-6">> VINCULACIÓN DE HARDWARE</h2>
+
+    <!-- Contenedor Central -->
+    <div class="max-w-lg mx-auto w-full flex flex-col gap-4">
+        
+        <!-- TABS: Wi-Fi / Bluetooth -->
+        <div class="flex border border-mole-border rounded-lg overflow-hidden">
+            <button id="tab-wifi" class="flex-1 py-2.5 text-xs font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors">
+                📶 Wi-Fi
+            </button>
+            <button id="tab-ble" class="flex-1 py-2.5 text-xs font-bold tracking-widest bg-mole-surface text-mole-dim hover:text-mole-cyan transition-colors">
+                📡 Bluetooth
+            </button>
+        </div>
+
+        <!-- PANEL WI-FI (visible por defecto) -->
+        <div id="panel-wifi" class="flex flex-col gap-3 bg-mole-surface border border-mole-border rounded-lg p-4">
+            <p class="text-mole-dim text-xs font-mono mb-1">Ingrese credenciales de red del nodo ESP32:</p>
+            <input id="prov-ssid" type="text" placeholder="> SSID" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+            <input id="prov-pass" type="password" placeholder="> CONTRASEÑA WPA2" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+            <input id="prov-node-name" type="text" placeholder="> NOMBRE DEL NODO (ej: ESP-INVERNADERO-01)" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+            <button id="btn-prov-wifi" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm mt-1">
+                VINCULAR DISPOSITIVO
+            </button>
+        </div>
+
+        <!-- PANEL BLUETOOTH (oculto por defecto) -->
+        <div id="panel-ble" class="hidden flex flex-col gap-3 bg-mole-surface border border-mole-border rounded-lg p-4">
+            <div class="flex justify-between items-center mb-1">
+                <p class="text-mole-dim text-xs font-mono">Dispositivos Bluetooth cercanos:</p>
+                <button id="btn-ble-scan" class="text-[10px] text-mole-cyan border border-mole-cyan px-2.5 py-1 rounded hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-wider">
+                    ESCANEAR
+                </button>
+            </div>
+            <div id="ble-device-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                <p class="text-mole-dim text-[10px] font-mono text-center py-6 opacity-50">[ Presione ESCANEAR para detectar nodos ]</p>
+            </div>
+            <button id="btn-prov-ble" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed mt-1" disabled>
+                VINCULAR DISPOSITIVO
+            </button>
+        </div>
+
+        <!-- STATUS (compartido) -->
+        <div id="prov-status" class="hidden bg-mole-bg border border-mole-border rounded-lg p-3 text-xs font-mono">
+            <span id="prov-status-text" class="text-mole-cyan"></span>
+        </div>
+    </div>
+</div>
 
         <!-- Right / Terminal Chat Drawer (CRT Style) -->
         <div id="chat-window" style="z-index: 60; box-shadow: -5px 0 30px rgba(20,253,206,0.2);" class="fixed inset-y-0 right-0 w-full md:w-96 bg-black border-l-4 border-[#14fdce] transform translate-x-full flex flex-col transition-transform duration-300 crt-screen crt-flicker crt-chat">
@@ -263,7 +344,7 @@
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
             <button aria-label="Cerrar modal" onclick="closeModule('contact')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> CONTACTO SEGURO</h2>
-            <input type="text" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+            <input type="text" id="contact-subject" name="subject" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
             <textarea placeholder="Mensaje encriptado..." class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text h-32 outline-none focus:border-mole-accent"></textarea>
             <button onclick="closeModule('contact')" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
         </div>
@@ -288,22 +369,6 @@
         </div>
     </div>
 
-    <!-- Diagnosis Result Modal -->
-    <div id="diagnosis-result-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
-        <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('diagnosis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
-            <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> RESULTADO MS1</h2>
-            <div class="space-y-4 text-xs font-sans">
-                <p><span class="text-mole-text-dim">ESPECIE:</span> <span id="diag-species" class="text-mole-accent">...</span></p>
-                <p><span class="text-mole-text-dim">ESTADO:</span> <span id="diag-status" class="text-mole-accent">...</span></p>
-                <p><span class="text-mole-text-dim">PH ESTIMADO:</span> <span id="diag-ph" class="text-mole-accent">...</span></p>
-                <div class="border border-mole-border p-2 bg-mole-bg">
-                    <span class="text-mole-text-dim block mb-1">TRATAMIENTO:</span> 
-                    <span id="diag-treatment" class="text-mole-accent">...</span>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- History Modal -->
     <div id="history-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
@@ -316,14 +381,7 @@
         </div>
     </div>
 
-    <!-- Map Modal -->
-    <div id="map-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
-        <div class="bg-mole-surface border-2 border-mole-cyan p-2 max-w-4xl w-full rounded shadow-cyber relative h-[80vh] flex flex-col">
-            <button aria-label="Cerrar modal" onclick="closeModule('map')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold z-10 bg-mole-bg p-1 focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
-            <h2 class="text-lg font-bold tracking-widest text-mole-accent p-2">> GEOLOCALIZACIÓN REGIONAL</h2>
-            <div id="map" class="flex-1 w-full bg-mole-base border border-mole-border"></div>
-        </div>
-    </div>
+
 
     <!-- IoT Wizard Modal -->
     <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
@@ -374,65 +432,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <!-- Core API Service (classic script - must load before modules) -->
-    <script src="/static/js/apiService.js"></script>
+    <script type="module" src="/static/js/apiService.js"></script>
     
-    <script>
-        // Theme Toggle Function
-        function toggleTheme() {
-            const body = document.body;
-            const iconSun = document.getElementById('icon-sun');
-            const iconMoon = document.getElementById('icon-moon');
 
-            body.classList.toggle('light-mode');
-
-            if (body.classList.contains('light-mode')) {
-                if (iconSun) iconSun.classList.remove('hidden');
-                if (iconMoon) iconMoon.classList.add('hidden');
-                localStorage.setItem('mole_theme', 'solar');
-            } else {
-                if (iconSun) iconSun.classList.add('hidden');
-                if (iconMoon) iconMoon.classList.remove('hidden');
-                localStorage.setItem('mole_theme', 'pipboy');
-            }
-        }
-
-        // Apply saved theme on load
-        (function() {
-            const savedTheme = localStorage.getItem('mole_theme');
-            if (savedTheme === 'solar') {
-                document.body.classList.add('light-mode');
-                window.addEventListener('DOMContentLoaded', function() {
-                    const iconSun = document.getElementById('icon-sun');
-                    const iconMoon = document.getElementById('icon-moon');
-                    if (iconSun) iconSun.classList.remove('hidden');
-                    if (iconMoon) iconMoon.classList.add('hidden');
-                });
-            }
-        })();
-    </script>
     
-    <script>
-        function switchFieldView(viewId) {
-            document.querySelectorAll('.field-view').forEach(v => v.classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
-            
-            // Trigger wiki load when the wiki view is activated
-            if (viewId === 'view-wiki' && typeof window.loadWiki === 'function') {
-                window.loadWiki();
-            }
-            
-            document.querySelectorAll('nav button').forEach(btn => {
-                if (btn.getAttribute('onclick').includes(viewId)) {
-                    btn.classList.remove('text-mole-dim');
-                    btn.classList.add('text-mole-cyan');
-                } else {
-                    btn.classList.remove('text-mole-cyan');
-                    btn.classList.add('text-mole-dim');
-                }
-            });
-        }
-    </script>
 
-    <script type="module" src="/src/js/main.js"></script>
+
+    </div>
+
+
+<script type="module" src="/src/js/main.js"></script>
 </body>
 </html>

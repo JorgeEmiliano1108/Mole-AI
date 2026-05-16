@@ -2,7 +2,7 @@
 // CONFIGURACIÓN GLOBAL
 // ==========================================================
 window.AppConfig = {
-    API_BASE_URL: window.location.origin + '/api/v1',
+    API_BASE_URL: window.location.origin + '/api/v1/',
     POLLING_INTERVAL: 5000, // 5 segundos para sensores
     AI_TIMEOUT: 120000      // 2 minutos para IA
 };
