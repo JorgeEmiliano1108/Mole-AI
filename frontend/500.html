@@ -23,68 +23,61 @@
       }
     </script>
 </head>
-<body class="bg-[#0b1011] text-gray-300 font-sans min-h-screen flex items-center justify-center p-4">
+<body class="bg-[#0b1011] text-gray-300 font-sans min-h-screen flex items-center justify-center p-4 overflow-x-hidden">
 
-    <!-- Main Container -->
-    <div class="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch my-8">
+    <!-- Tarjeta principal envolvente -->
+    <div class="bg-[#121615] border border-[#232e2a] rounded-xl max-w-[850px] w-full flex flex-col md:flex-row items-stretch shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden min-h-[300px]">
         
-        <!-- Columna Izquierda (Tarjeta de Colapso) -->
-        <div class="bg-[#101716] border border-[#21302b] rounded p-8 sm:p-10 flex flex-col relative shadow-[0_15px_40px_rgba(0,0,0,0.6)]">
+        <!-- Columna Izquierda (Gráfico) -->
+        <div class="w-full md:w-[40%] bg-[#171e1d] relative flex items-center justify-center min-h-[250px] border-b md:border-b-0 md:border-r border-[#232e2a] overflow-hidden p-8">
+            <!-- Imagen de la flor de fondo -->
+            <img src="/static/images/dark_flower.png" alt="Dark Flower" class="absolute inset-0 w-full h-full object-cover opacity-10 grayscale">
             
-            <!-- Resplandor/borde superior rojo de emergencia -->
-            <div class="absolute top-0 left-0 right-0 h-1 bg-[#ff5a5a] shadow-[0_0_20px_#ff5a5a] rounded-t"></div>
-            
-            <!-- Header 500 y Etiqueta Critical -->
-            <div class="flex justify-between items-center mb-8 mt-2">
-                <div class="flex items-center gap-3 text-[#ff5a5a]">
-                    <!-- Icono Warning -->
-                    <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <span class="text-4xl sm:text-5xl font-bold tracking-widest font-mono">500</span>
-                </div>
-                <div class="bg-[#8b2b2b]/30 border border-[#ff5a5a] text-[#ff5a5a] bg-[#ff5a5a] text-white text-[9px] sm:text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-sm flex items-center gap-2 uppercase">
-                    <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-[0_0_5px_white]"></span>
-                    CRITICAL OVERHEAT
-                </div>
+            <!-- Resplandor sutil trasero -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div class="w-32 h-32 bg-[#34e29c] opacity-[0.05] blur-3xl rounded-full"></div>
             </div>
 
-            <!-- Divisor -->
-            <div class="w-full h-px bg-[#21302b] mb-8"></div>
-
-            <!-- Contenido Texto -->
-            <div class="flex-grow">
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-white mb-6 tracking-wide font-sans">COLAPSO DEL NÚCLEO.</h1>
-                <p class="text-[#8b9b96] text-sm sm:text-[15px] leading-relaxed">
-                    El motor de IA ha encontrado una anomalía térmica insuperable. Se han suspendido todas las operaciones de monitoreo ambiental para evitar daños estructurales en el servidor central.
-                </p>
-            </div>
-
-            <!-- Botones -->
-            <div class="flex flex-col sm:flex-row items-center justify-start gap-4 sm:gap-6 mt-12 pt-6 border-t border-[#21302b]/50">
-                <!-- Botón Reiniciar -->
-                <button onclick="window.location.reload()" class="w-full sm:w-auto flex items-center justify-center gap-3 border border-[#2ee59d] text-[#2ee59d] hover:bg-[#2ee59d]/10 px-6 py-3 rounded-sm transition-all focus:outline-none focus:ring-1 focus:ring-[#2ee59d] font-mono text-[11px] font-bold tracking-widest uppercase shadow-[0_0_15px_rgba(46,229,157,0.1)] hover:shadow-[0_0_20px_rgba(46,229,157,0.2)]">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Forzar Reinicio
-                </button>
-                <!-- Botón Soporte -->
-                <button onclick="window.location.href='/index.html'" class="w-full sm:w-auto flex items-center justify-center gap-3 text-white hover:text-[#2ee59d] transition-colors px-4 py-3 font-mono text-[11px] font-bold tracking-widest uppercase focus:outline-none">
-                    <!-- Icono diadema/soporte simulado -->
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M15.536 8.464a5 5 0 010 7.072M8.464 8.464a5 5 0 000 7.072M12 10a2 2 0 110 4 2 2 0 010-4z"></path></svg>
-                    Contactar Soporte Técnico
-                </button>
+            <!-- Imagen del mole -->
+            <div class="relative z-10 shadow-[0_0_30px_rgba(0,0,0,0.8)] rounded-xl overflow-hidden border-2 border-gray-300 w-44 h-44 bg-black flex items-center justify-center">
+                 <img src="/static/images/error_500.png" alt="Error 500 Mole" class="w-full h-full object-cover" onerror="this.src='/static/images/error_400.png'">
             </div>
         </div>
-        
-        <!-- Columna Derecha (Imagen y Terminal) -->
-        <div class="flex flex-col gap-6">
-            <!-- Contenedor Imagen del Procesador -->
-            <div class="border border-[#21302b] rounded-sm p-3 bg-[#101716] shadow-[0_10px_30px_rgba(0,0,0,0.4)]">
-                <div class="w-full h-48 sm:h-56 bg-black relative overflow-hidden rounded-sm border border-[#21302b]">
-                    <!-- La imagen generada por IA -->
-                    <img src="/static/images/chip.png" alt="Chip Overheat" class="w-full h-full object-cover">
+
+        <!-- Columna Derecha (Contenido de Error) -->
+        <div class="w-full md:w-[60%] p-8 sm:p-10 relative flex flex-col justify-center">
+            
+            <!-- Marca de agua 500 de fondo -->
+            <div class="absolute top-1/2 -translate-y-1/2 right-8 text-[#1a2622] font-black text-8xl sm:text-9xl leading-none select-none z-0 tracking-tighter pointer-events-none font-mono">500</div>
+            
+            <!-- Contenido frontal -->
+            <div class="relative z-10 flex-grow flex flex-col h-full justify-between">
+                <div>
+                    <!-- Header: SYSTEM ALERT -->
+                    <div class="flex items-center gap-2 text-[#e2a875] mb-3">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                        <span class="text-[11px] font-mono font-bold tracking-[0.1em] uppercase">SYSTEM ALERT</span>
+                    </div>
+
+                    <!-- Título y Texto -->
+                    <h1 class="text-3xl sm:text-4xl font-bold text-[#34e29c] mb-1 tracking-wide font-sans">ERROR 500</h1>
+                    <p class="text-[#8c9f9a] text-xs sm:text-sm uppercase tracking-wider mb-8 font-medium">
+                        COLAPSO DEL NÚCLEO
+                    </p>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-start gap-6 font-mono text-[10px] sm:text-[11px] uppercase tracking-widest font-bold mt-12">
+                    <button onclick="window.location.reload()" class="w-full sm:w-auto flex items-center justify-center gap-2 border border-[#34e29c] text-[#34e29c] hover:bg-[#34e29c]/10 px-5 py-2.5 rounded-sm transition-all focus:outline-none focus:ring-1 focus:ring-[#34e29c]">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        FORZAR REINICIO
+                    </button>
+                    <button onclick="window.location.href='/index.html'" class="w-full sm:w-auto flex items-center justify-center gap-2 text-[#8c9f9a] hover:text-white transition-colors focus:outline-none">
+                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M15.536 8.464a5 5 0 010 7.072M8.464 8.464a5 5 0 000 7.072M12 10a2 2 0 110 4 2 2 0 010-4z"></path></svg>
+                        SOPORTE TÉCNICO
+                    </button>
                 </div>
             </div>
-
-
         </div>
 
     </div>
