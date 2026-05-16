@@ -52,6 +52,9 @@ COPY . /app/
 # Dar permisos ANTES de cambiar de usuario
 RUN chown -R appuser:appuser /app && chmod +x /app/entrypoint.sh
 
+# Crear directorio de logs con permisos correctos
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
+
 # Cambiar a usuario sin privilegios al final
 USER appuser
 

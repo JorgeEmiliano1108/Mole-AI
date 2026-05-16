@@ -56,6 +56,9 @@ COPY . /app
 
 RUN chown -R app:app /app
 
+# Crear directorio de logs con permisos correctos
+RUN mkdir -p /app/logs && chown -R app:app /app/logs
+
 USER app
 
 # Uvicorn para mejor compatibilidad con lifespan events

@@ -63,6 +63,9 @@ COPY --from=builder /opt/venv /opt/venv
 # OPTIMIZACIÓN CRÍTICA: COPY --chown evita duplicar la capa en el historial
 COPY --chown=appuser:appuser . /app
 
+# Crear directorio de logs con permisos correctos
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
+
 USER appuser
 EXPOSE 8001
 
