@@ -14,13 +14,18 @@ async function handleImageUpload(event) {
     if (!file) return;
 
     // 1. Pre-visualización inmediata (Cero Base64)
-    const preview = document.getElementById('scanned-image-preview');
+    const preview = document.getElementById('main-img');
+    const placeholder = document.getElementById('video-placeholder');
     if (preview) {
         // Liberar URL anterior si existe para evitar memory leaks
         if (preview.src && preview.src.startsWith('blob:')) {
             URL.revokeObjectURL(preview.src);
         }
         preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+    }
+    if (placeholder) {
+        placeholder.classList.add('hidden');
     }
 
     // 2. Activamos la pantalla de carga y deshabilitamos input
@@ -35,40 +40,64 @@ async function handleImageUpload(event) {
     const currentOp = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
     formData.append('operator', currentOp);
 
+    const term = document.getElementById('diagnostic-term');
+    if (!term) {
+        console.error("CRITICAL DOM ERROR: No se encontró '#diagnostic-term' en el documento.");
+        return;
+    }
     try {
+
         // Zero-Trust: Validamos token antes de disparar a la red
         if (!window.ApiService.isTokenPresent()) {
             throw new Error("Acceso denegado: Se requiere autenticación para usar el Motor IA.");
         }
 
-        // 🚀 USO DE API SERVICE: Endpoint 'diagnostics/' mapeado en tu backend
-        const data = await window.ApiService.upload('diagnostics/', formData);
+        // 🚀 USO DE API SERVICE: Endpoint 'vision/analyze/' mapeado en Gateway
+        // Debug: log Authorization header (masked) before request – helpful for 401 debugging
+        console.log('Authorization header →', window.ApiService.buildHeaders().Authorization);
+        const data = await window.ApiService.upload('vision/analyze/', formData);
 
-        // 4. Mapeo defensivo: El backend retorna 'analysis' (string largo), 
-        // pero la UI busca datos particionados. Asignamos valores por defecto si no vienen particionados.
-        document.getElementById('diag-species').innerText = data.species || "ESPECIE ESCANEADA";
-        document.getElementById('diag-status').innerText = data.status || "ANÁLISIS COMPLETADO";
-        document.getElementById('diag-ph').innerText = data.ph || "N/A";
-        document.getElementById('diag-treatment').innerText = data.treatment || data.analysis || "Procesamiento finalizado sin observaciones adicionales.";
+        if (term) {
+            term.innerHTML = `
+                <div class="space-y-2">
+                    <p class="text-xs"><span class="text-mole-text-dim">ESPECIE:</span> <span class="text-mole-accent font-bold">${data.species || 'DESCONOCIDA'}</span></p>
+                    <p class="text-xs"><span class="text-mole-text-dim">CONDICIÓN:</span> <span class="text-mole-cyan font-bold">${data.condition || 'NO DETECTADA'}</span></p>
+                    <p class="text-xs"><span class="text-mole-text-dim">SEVERIDAD:</span> <span class="text-mole-amber font-bold">${data.severity ? data.severity.toUpperCase() : 'N/A'}</span></p>
+                    <p class="text-xs"><span class="text-mole-text-dim">PH ESTIMADO:</span> <span class="text-mole-green font-bold">${data.ph_predicted !== null && data.ph_predicted !== undefined ? data.ph_predicted : 'N/A'}</span></p>
+                    <p class="text-xs"><span class="text-mole-text-dim">CONFIANZA:</span> <span class="text-mole-text font-bold">${data.confidence ? (data.confidence * 100).toFixed(1) + '%' : 'N/A'}</span></p>
+                </div>
+            `;
+        }
 
-        if (data.status && data.status.toLowerCase().includes('crítico') && typeof logPlantIssue === 'function') {
-            logPlantIssue(data.species || "ESPECIE ESCANEADA", data.treatment || data.analysis);
+        if (data.severity && data.severity.toLowerCase() === 'high' && typeof logPlantIssue === 'function') {
+            logPlantIssue(data.species || "ESPECIE ESCANEADA", data.condition);
         }
 
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Error en conexión con el motor de visión:", error);
-        document.getElementById('diag-species').innerText = "ERROR DE CONEXIÓN";
-        document.getElementById('diag-status').innerText = "Fallo al contactar MS1 (Visión).";
-        document.getElementById('diag-ph').innerText = "ERR";
-        document.getElementById('diag-treatment').innerText = error.message || "Verifique la red del clúster central y el estado del contenedor ms1_vision.";
+        // If unauthorized, clear token and redirect to login
+        if (error && error.status === 401) {
+            window.ApiService.clearToken();
+            window.location.href = '/login.html';
+            return; // Skip UI update, page navigation will occur
+        }
+        if (term) {
+                term.innerHTML = `
+                <div class="space-y-2">
+                    <p class="text-xs"><span class="text-mole-text-dim">ESPECIE:</span> <span class="text-mole-red font-bold">SISTEMA DESCONECTADO</span></p>
+                    <p class="text-xs"><span class="text-mole-text-dim">CONDICIÓN:</span> <span class="text-mole-red font-bold">Motor de Visión Inaccesible</span></p>
+                    <p class="text-xs"><span class="text-mole-text-dim">ERROR:</span> <span class="text-mole-red">${
+                        // Prefer detailed server message if available
+                        error.data?.detail?.title || error.message || "El servidor de IA está temporalmente fuera de línea. Por favor, reintente en unos minutos."
+                    }</span></p>
+                </div>
+            `;
+        }
         
     } finally {
         // 5. Transición final
         spinner.hideGlobal();
         camInput.disabled = false;
-        
-        const resultModal = document.getElementById('diagnosis-result-modal');
-        if (resultModal) resultModal.classList.remove('hidden');
         
         const cameraInput = document.getElementById('camera-input');
         if (cameraInput) cameraInput.value = '';

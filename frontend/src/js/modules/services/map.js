@@ -5,148 +5,229 @@
 
 export let mapInstance = null;
 export let userLocation = null;
-// Arreglo para guardar las referencias de los pines y borrarlos al actualizar
-export let mapMarkers = []; 
+
+// Grupos de capas GIS
+export let layers = {
+    base: null,
+    temp: null,
+    precip: null,
+    plagas: null
+};
 
 // 1. Pedir permiso de ubicación EXACTA
 export function requestLocation() {
     if ("geolocation" in navigator) {
-        
-        // GPS en modo "Francotirador" (Alta Precisión)
-        const opcionesGPS = {
-            enableHighAccuracy: true,
-            timeout: 10000,          
-            maximumAge: 0            
-        };
-
+        const opcionesGPS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
                 console.log("> UBICACIÓN EXACTA CAPTURADA:", userLocation);
-
-                // Si el mapa ya está abierto, lo centramos en ti con zoom 16
                 if (mapInstance) {
                     mapInstance.setView([userLocation.lat, userLocation.lng], 16);
                 }
             },
-            (error) => {
-                console.warn("> ACCESO A GPS DENEGADO O FALLIDO:", error.message);
-            },
+            (error) => console.warn("> ACCESO A GPS DENEGADO O FALLIDO:", error.message),
             opcionesGPS
         );
-    } else {
-        console.warn("> GEOLOCALIZACIÓN NO SOPORTADA POR EL NAVEGADOR.");
     }
 }
 
-// 2. Abrir el modal y renderizar el mapa base
-export function openMapModal() {
-    const modal = document.getElementById('map-modal');
-    if(modal) modal.classList.remove('hidden');
+// 2. Inicializar Mapa y Capas
+export function initMapView() {
+    console.log("[MAPA] Iniciando renderizado GIS...");
+    const mapDiv = document.getElementById('map');
+    if (!mapDiv) return;
     
-    if (!mapInstance) {
-        // Coordenadas iniciales (Centro de México), Zoom nivel 5
-            mapInstance = L.map('map').setView([23.6345, -102.5528], 5);
+    if (!window.mapInstance) {
+        window.mapInstance = L.map('map').setView([23.6345, -102.5528], 5);
+        mapInstance = window.mapInstance;
 
-        // Capa de mapa oscuro (Estilo Terminal/Cyberpunk)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-            subdomains: 'abcd',
-            maxZoom: 20,
-            keepBuffer: 4, 
-            updateWhenZooming: false 
+        // Base Ciberpunk (CartoDB Dark Matter)
+        layers.base = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 20
         }).addTo(mapInstance);
-    } else {
-        // Forzamos el redibujado del mapa al abrir el modal para evitar glitcheos grises
-        setTimeout(() => mapInstance.invalidateSize(), 400);
+
+        // Capas Climáticas (Proxy Local)
+        const baseUrl = window.AppConfig?.API_BASE_URL || '/api/v1/';
         
-        // Si tenemos la ubicación del usuario guardada, centramos el mapa ahí
-        if (userLocation) {
-            mapInstance.setView([userLocation.lat, userLocation.lng], 12);
-        }
+        layers.temp = L.tileLayer(`${baseUrl}weather/tile/temp_new/{z}/{x}/{y}.png`, {
+            opacity: 0.6, maxZoom: 18, attribution: '&copy; OpenWeather'
+        });
+        
+        layers.precip = L.tileLayer(`${baseUrl}weather/tile/precipitation_new/{z}/{x}/{y}.png`, {
+            opacity: 0.6, maxZoom: 18, attribution: '&copy; OpenWeather'
+        });
+
+        // Capa de Vectores (Plagas)
+        layers.plagas = L.layerGroup().addTo(mapInstance);
+
+        // Vincular Controles UI Flotantes y Clics de Mapa
+        setupLayerControls();
+        setupMapInteractivity();
     }
-
-    // 3. Cargar los pines de infección/distribución desde el Backend
-    loadMapPins();
+    
+    setTimeout(() => {
+        if (mapInstance) {
+            mapInstance.invalidateSize(true);
+            loadMapPins();
+        }
+    }, 500);
 }
 
-export function closeMapModal() {
-    const modal = document.getElementById('map-modal');
-    if(modal) modal.classList.add('hidden');
+window.initMapView = initMapView;
+
+function setupLayerControls() {
+    const toggleButtonLayer = (btnId, layerObj, activeClass, inactiveClass) => {
+        const btn = document.getElementById(btnId);
+        if (!btn || !layerObj) return;
+        
+        // Estado inicial de la capa
+        let isLayerActive = mapInstance.hasLayer(layerObj);
+
+        btn.addEventListener('click', () => {
+            isLayerActive = !isLayerActive;
+            if (isLayerActive) {
+                mapInstance.addLayer(layerObj);
+                btn.className = activeClass;
+            } else {
+                mapInstance.removeLayer(layerObj);
+                btn.className = inactiveClass;
+            }
+        });
+    };
+
+    // Clases comunes para el toggle de botones
+    const baseBtnClass = "w-10 h-10 flex items-center justify-center rounded-lg transition-colors";
+    
+    const tempInactive = `${baseBtnClass} bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-orange-500`;
+    const tempActive = `${baseBtnClass} bg-mole-accent text-mole-base shadow-[0_0_10px_rgba(0,229,255,0.4)]`;
+    
+    const precipInactive = `${baseBtnClass} bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-sky-500`;
+    const precipActive = `${baseBtnClass} bg-mole-accent text-mole-base shadow-[0_0_10px_rgba(0,229,255,0.4)]`;
+
+    const plagasInactive = `${baseBtnClass} bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-mole-green`;
+    const plagasActive = `${baseBtnClass} bg-mole-accent text-mole-base shadow-[0_0_10px_rgba(0,229,255,0.4)]`;
+
+    toggleButtonLayer('btn-layer-temp', layers.temp, tempActive, tempInactive);
+    toggleButtonLayer('btn-layer-precip', layers.precip, precipActive, precipInactive);
+    toggleButtonLayer('btn-layer-plagas', layers.plagas, plagasActive, plagasInactive);
 }
 
-// 4. Dibujar los puntos de infección (BACKEND ESTRICTO)
+function setupMapInteractivity() {
+    // 1. Clic en espacio vacío: Consultar clima actual
+    mapInstance.on('click', async (e) => {
+        const { lat, lng } = e.latlng;
+        const panel = document.getElementById('map-info-panel');
+        const title = document.getElementById('info-title');
+        const content = document.getElementById('info-content');
+
+        if (!panel || !title || !content) return;
+
+        // Estado Loading
+        panel.classList.remove('hidden');
+        title.innerText = "CLIMA ACTUAL";
+        content.innerHTML = `<div class="text-mole-cyan animate-pulse">Obteniendo telemetría orbital...</div>`;
+
+        try {
+            const res = await window.ApiService.get(`weather/current/?lat=${lat}&lon=${lng}`);
+            if (res && res.main) {
+                const temp = res.main.temp.toFixed(1);
+                const humidity = res.main.humidity;
+                const desc = res.weather[0]?.description || 'N/A';
+                const city = res.name || 'Coordenada Remota';
+
+                title.innerText = city.toUpperCase();
+                content.innerHTML = `
+                    <div class="flex justify-between border-b border-mole-border pb-1">
+                        <span class="text-mole-text-dim">Condición:</span>
+                        <span class="font-bold text-mole-cyan capitalize">${desc}</span>
+                    </div>
+                    <div class="flex justify-between border-b border-mole-border pb-1">
+                        <span class="text-mole-text-dim">Temperatura:</span>
+                        <span class="text-orange-400 font-mono">${temp}°C</span>
+                    </div>
+                    <div class="flex justify-between border-b border-mole-border pb-1">
+                        <span class="text-mole-text-dim">Humedad:</span>
+                        <span class="text-sky-400 font-mono">${humidity}%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-mole-text-dim">Coordenadas:</span>
+                        <span class="text-mole-text font-mono text-[10px]">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+                    </div>
+                `;
+            } else {
+                throw new Error("Respuesta inválida");
+            }
+        } catch (error) {
+            title.innerText = "ERROR DE CONEXIÓN";
+            content.innerHTML = `<div class="text-mole-red">Fallo al contactar satélite meteorológico.</div>`;
+        }
+    });
+}
+
+// 4. Dibujar los puntos de infección
 async function loadMapPins() {
-    if (!mapInstance) return;
+    if (!mapInstance || !layers.plagas) return;
 
-    // 4.1 Limpiar pines anteriores para evitar fugas de memoria y duplicados
-    mapMarkers.forEach(marker => mapInstance.removeLayer(marker));
-    mapMarkers = []; 
+    layers.plagas.clearLayers();
 
     let geoData = [];
     const currentUser = localStorage.getItem('moleia_current_user') || 'GLOBAL';
     const token = window.getAuthToken();
 
     try {
-        if (!token) throw new Error("Acceso denegado: Se requiere Token de Autenticación.");
-
-        // ========================================================
-        // 🚀 PETICIÓN AL SERVIDOR: Obtener coordenadas de los escaneos
-        // ========================================================
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/map/distribution?user=${currentUser}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`El servidor rechazó la solicitud. Código: ${response.status}`);
-        }
-        
-        geoData = await response.json();
-
+        if (!token) throw new Error("Acceso denegado: Se requiere Token.");
+        geoData = await window.ApiService.get(`map/hotspots/?user=${currentUser}`);
     } catch (error) {
         console.error("> [ ERROR CRÍTICO ] Fallo al sincronizar radar táctico:", error);
-        // NOTA: Al no haber datos de respaldo, 'geoData' se queda como un arreglo vacío.
-        // El mapa simplemente se mostrará sin pines.
-        return; 
+        return;
     }
 
-    // 4.2 Renderizar los pines reales del backend
     if (geoData && geoData.length > 0) {
+        const colorMap = { high: '#ef4444', critical: '#ef4444', medium: '#fbbf24', low: '#00e5ff', optimal: '#00e5ff' };
+        
         geoData.forEach(point => {
-            // Asignación de color según el estado si el backend no manda un color explícito
-            let pinColor = point.color;
-            if (!pinColor) {
-                const statusStr = (point.status || '').toLowerCase();
-                if (statusStr.includes('óptimo') || statusStr.includes('sano')) pinColor = '#00e5ff'; // Verde
-                else if (statusStr.includes('crítico') || statusStr.includes('infección')) pinColor = '#ef4444'; // Rojo
-                else pinColor = '#FBBF24'; // Naranja/Atención por defecto
-            }
+            const severity = (point.severity || 'low').toLowerCase();
+            const color = colorMap[severity] || '#9ca3af';
 
-            const customPin = L.divIcon({
-                className: 'custom-pin',
-                html: `<div style="background-color:${pinColor}; width:12px; height:12px; border-radius:50%; box-shadow: 0 0 15px ${pinColor}; border: 1px solid white;"></div>`,
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
+            const marker = L.circleMarker([point.lat, point.lng], {
+                radius: 8, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8
             });
 
-            // Agregamos el pin y su Popup
-            const marker = L.marker([point.lat, point.lng], { icon: customPin })
-                .addTo(mapInstance)
-                .bindPopup(`
-                    <div style="background:#001105; color:#00e5ff; border:1px solid #00e5ff; padding:8px; font-family:monospace; min-width: 150px; text-align: left;">
-                        <strong style="color:white; display:block; border-bottom:1px solid rgba(0,255,170,0.3); padding-bottom:4px; margin-bottom:4px; text-transform:uppercase; font-size: 11px;">
-                            ${point.species || 'ESPECIE DESCONOCIDA'}
-                        </strong>
-                        <span style="font-size: 10px;">Estado: <span style="color:${pinColor}; font-weight: bold;">${point.status || 'N/A'}</span></span>
-                    </div>
-                `);
-            
-            // Guardamos la referencia para poder borrarlo en la siguiente recarga
-            mapMarkers.push(marker);
+            // Reemplazo de bindPopup por inyección al Right Panel
+            marker.on('click', (e) => {
+                L.DomEvent.stopPropagation(e); // Evita que se dispare el evento del mapa vacío (clima)
+                
+                const panel = document.getElementById('map-info-panel');
+                const title = document.getElementById('info-title');
+                const content = document.getElementById('info-content');
+                
+                if(panel && title && content) {
+                    panel.classList.remove('hidden');
+                    title.innerText = (point.species || 'ESPECIE DESCONOCIDA').toUpperCase();
+                    title.className = "text-sm font-bold text-mole-green tracking-wider truncate";
+                    
+                    content.innerHTML = `
+                        <div class="flex justify-between border-b border-mole-border pb-1">
+                            <span class="text-mole-text-dim">Severidad:</span>
+                            <span class="font-bold uppercase" style="color: ${color}">${severity}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-mole-border pb-1">
+                            <span class="text-mole-text-dim">Latitud:</span>
+                            <span class="text-mole-text font-mono">${point.lat.toFixed(4)}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-mole-border pb-1">
+                            <span class="text-mole-text-dim">Longitud:</span>
+                            <span class="text-mole-text font-mono">${point.lng.toFixed(4)}</span>
+                        </div>
+                        <button class="w-full mt-2 py-1.5 text-xs font-bold text-mole-bg bg-mole-green hover:bg-mole-green/80 rounded transition-colors tracking-widest">
+                            VER DETALLES
+                        </button>
+                    `;
+                }
+            });
+
+            layers.plagas.addLayer(marker);
         });
     }
 }

@@ -1,0 +1,13 @@
+/* CRT theme (extracted from dashboard.html) */
+
+  .crt-chat { font-family: 'VT323', monospace !important; text-transform: uppercase; letter-spacing: 1px; }
+  .crt-screen { position: relative; background-color: #000 !important; overflow: hidden; }
+  .crt-screen::before { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 255, 204, 0.04) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); z-index: 50; background-size: 100% 4px, 3px 100%; pointer-events: none; }
+  .crt-text-glow { color: #00FFCC !important; text-shadow: 0 0 5px rgba(0,255,204,0.5), 0 0 10px rgba(0,255,204,0.3); }
+  .crt-text-glow-dim { color: rgba(0,255,204,0.7) !important; text-shadow: 0 0 2px rgba(0,255,204,0.4); }
+  .crt-bg-glow { background-color: #00FFCC !important; color: #000 !important; text-shadow: none; box-shadow: 0 0 10px #00FFCC; }
+  @keyframes crtFlicker { 0% { opacity: 0.95; } 5% { opacity: 0.85; } 10% { opacity: 0.95; } 15% { opacity: 1; } 100% { opacity: 1; } }
+  .crt-flicker { animation: crtFlicker 5s infinite; }
+  /* Ensure map container never collapses */
+  #map { min-height: 400px; height: 100% !important; z-index: 10; }
+  #view-iot { position: relative; z-index: 70; }

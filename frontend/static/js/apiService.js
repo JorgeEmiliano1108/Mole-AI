@@ -54,7 +54,16 @@ class ApiService {
     }
 
     getToken() {
-        if (this.authToken) return this.authToken;
+        // Si el token está guardado en memoria pero ya no existe en storage, lo consideramos inexistente.
+        if (this.authToken) {
+            const stored = localStorage.getItem('mole_jwt') || localStorage.getItem('moleia_token') || sessionStorage.getItem('mole_jwt');
+            if (!stored) {
+                // Token eliminado del storage (por ejemplo, usuario limpió cache). Descartamos el token en memoria.
+                this.authToken = null;
+                return null;
+            }
+            return this.authToken;
+        }
         var saved = null;
         // Leer DIRECTAMENTE de localStorage (sin depender de window.getAuthToken)
         try { saved = localStorage.getItem('mole_jwt'); } catch (e) { saved = null; }
@@ -172,10 +181,11 @@ class ApiService {
         var contentType = response.headers.get('content-type');
         var isJson = contentType && contentType.indexOf('application/json') !== -1;
 
+        // Resolve payload as JSON when possible, otherwise as raw text
         var dataPromise = isJson ? response.json() : response.text();
 
         return dataPromise.then(function (data) {
-            // COFEPRIS Disclaimer detection
+            // COFEPRIS Disclaimer detection (only applies to JSON payloads)
             if (isJson && data && typeof data === 'object' && data.disclaimer) {
                 window.dispatchEvent(new CustomEvent('disclaimerReceived', {
                     detail: { text: data.disclaimer }
@@ -183,30 +193,42 @@ class ApiService {
             }
 
             if (!response.ok) {
-                var errorMessage = 'Error HTTP ' + response.status;
-                
-                // Django error formats: {"error": "..."} or {"message": "..."}, {"detail": "..."}, or validation errors
-                if (data && typeof data === 'object' && data !== null) {
-                    if (data.error) {
-                        errorMessage = String(data.error);
-                    } else if (data.message) {
-                        errorMessage = String(data.message);
-                    } else if (data.detail) {
-                        errorMessage = String(data.detail);
+                // Base message includes status code for transparency
+                var errorMessage = 'Error ' + response.status;
+
+                // Try to extract a meaningful message from the payload
+                if (data) {
+                    if (isJson && typeof data === 'object' && data !== null) {
+                // Standard Django / DRF error shapes
+                if (data.error) {
+                    errorMessage = String(data.error);
+                } else if (data.message) {
+                    errorMessage = String(data.message);
+                } else if (data.detail) {
+                    // Handle Pydantic validation errors (array of detail objects)
+                    if (Array.isArray(data.detail)) {
+                        errorMessage = data.detail.map(err => `${err.loc.join('->')}: ${err.msg}`).join(' | ');
                     } else {
-                        // Django REST Framework validation errors: {"field": ["error1", "error2"], ...}
-                        var messages = [];
-                        for (var key in data) {
-                            if (data.hasOwnProperty(key) && Array.isArray(data[key]) && data[key].length > 0) {
-                                messages.push(String(data[key][0]));
-                            }
-                        }
-                        if (messages.length > 0) {
-                            errorMessage = messages.join(' | ');
+                        errorMessage = String(data.detail);
+                    }
+                } else {
+                    // Validation errors: {field: ["msg"]}
+                    var msgs = [];
+                    for (var k in data) {
+                        if (data.hasOwnProperty(k) && Array.isArray(data[k]) && data[k].length) {
+                            msgs.push(String(data[k][0]));
                         }
                     }
+                    if (msgs.length) {
+                        errorMessage = msgs.join(' | ');
+                    }
                 }
-                
+            } else {
+                // Non‑JSON response (plain‑text error). Use the raw text.
+                errorMessage = data.trim();
+            }
+                }
+
                 var error = new Error(errorMessage);
                 error.status = response.status;
                 error.data = data;
@@ -237,6 +259,12 @@ class ApiService {
 
     // ─── REQUEST WITH RETRY + TIMEOUT ───────────────────────────────────
 
+    _buildUrl(endpoint) {
+        var rawUrl = this.baseUrl + endpoint;
+        // Escudo Regex: Limpiar dobles barras excepto el protocolo (http://)
+        return rawUrl.replace(/([^:]\/)\/+/g, "$1");
+    }
+
     request(endpoint, method, body, customHeaders, options = {}) {
         var self = this;
 // --- STEP 1: NORMALIZE ENDPOINT (Remove leading slash, query params, trailing slash) ---
@@ -264,7 +292,7 @@ if (urlParts[0].charAt(urlParts[0].length - 1) !== '/') {
 }
 normalizedEndpoint = urlParts.join('?');
 
-var url = self.baseUrl + normalizedEndpoint;
+var url = self._buildUrl(normalizedEndpoint);
 var timeout = self._getTimeout(normalizedEndpoint);
 method = method || 'GET';
 var silent = options.silent || false;
@@ -403,7 +431,7 @@ var delay = self.retryBaseDelay * Math.pow(2, attempt);
                 if (!isFormError) {
                     ApiService.showToast(friendlyMsg, 'error');
                 }
-                console.error('[ApiService] ' + method + ' ' + endpoint + ' falló:', error);
+                console.error('[ApiService] ' + method + ' ' + endpoint + ' falló: Error ' + (error.status || '') + ': ' + error.message);
             }
             throw error;
         });
@@ -433,9 +461,10 @@ var delay = self.retryBaseDelay * Math.pow(2, attempt);
         type = type || 'info';
         var container = document.getElementById('toast-container');
 
-        // Fallback to alert if toast container doesn't exist
+        // OWASP fix: never expose raw server errors via alert()
+        // Silently log if toast container is absent (e.g. pages without #toast-container)
         if (!container) {
-            alert('[' + type.toUpperCase() + '] ' + message);
+            console.warn('[Toast fallback] ' + type + ': ' + message);
             return;
         }
 
