@@ -42,7 +42,7 @@ def get_analyze_use_case(
 @router.post("/analyze", response_model=DiagnosticResponseSchema)
 @limiter.limit("5/minute")
 async def analyze_vision(
-    http_request: Request,
+    request: Request,
     user: AuthenticatedUser,
     image_bytes: bytes = Depends(get_image_file),
     use_case: AnalyzePlantUseCase = Depends(get_analyze_use_case),

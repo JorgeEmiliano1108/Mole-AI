@@ -46,15 +46,15 @@ class DeleteResponse(BaseModel):
 @router.post("/api/v1/mole-ai/chat", response_model=ChatResponse)
 @limiter.limit("15/minute")
 async def chat_endpoint(
-    http_request: Request,
-    request: ChatRequest,
+    request: Request,
+    chat_request: ChatRequest,
     current_user_id: str = Depends(get_current_user),
     llm_client: LLMClient = Depends(_get_llm_client),
     vector_store: PgVectorStore = Depends(_get_pgvector_store),
     redis_adapter: RedisSensorCacheAdapter = Depends(_get_redis_adapter),
     citation_manager: CitationManager = Depends(_get_citation_manager),
 ):
-    if request.user_id != current_user_id:
+    if chat_request.user_id != current_user_id:
         raise HTTPException(
             status_code=403, 
             detail="Operación prohibida: El user_id de la petición no coincide con la firma del token."
@@ -65,7 +65,7 @@ async def chat_endpoint(
         r"(extraer|traficar|comercializar|extracción|vender|comprar).*(biznaga|cactácea|mamífero|especie protegida|NOM-059|prickly pear|succulent|protegida)|(biznaga|cactácea|mamífero|especie protegida|NOM-059|prickly pear|succulent|protegida)",
         re.IGNORECASE
     )
-    if NOM059_PATTERN.search(request.message):
+    if NOM059_PATTERN.search(chat_request.message):
         raise HTTPException(
             status_code=403,
             detail="Solicitud prohibida: esta consulta viola la NOM-059-SEMARNAT. Para información oficial, consulte la lista SEMARNAT."
@@ -95,7 +95,7 @@ async def chat_endpoint(
             system_prompt=system_prompt
         )
         
-        response = await use_case.ainvoke(request)
+        response = await use_case.ainvoke(chat_request)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

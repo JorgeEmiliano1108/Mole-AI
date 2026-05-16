@@ -48,6 +48,7 @@ services:
     volumes:
       - ../core_backend:/app
       - ../infrastructure/mosquitto/certs:/app/mqtt_certs  # TLS certs for MQTT
+      - backend_logs:/app/logs
       # django_media removed — media now served from Amazon S3
     env_file:
       - ../.env
@@ -77,6 +78,7 @@ services:
     entrypoint: [ "celery", "-A", "mole_ai_backend", "worker", "-l", "info", "-Q", "celery,training_queue" ]
     volumes:
       - ../core_backend:/app
+      - backend_logs:/app/logs
     env_file:
       - ../.env
     extra_hosts:
@@ -96,6 +98,7 @@ services:
     entrypoint: [ "celery", "-A", "mole_ai_backend", "beat", "-l", "info" ]
     volumes:
       - ../core_backend:/app
+      - backend_logs:/app/logs
     env_file:
       - ../.env
     extra_hosts:
@@ -115,6 +118,7 @@ services:
     command: ["python", "manage.py", "mqtt_listener"]
     volumes:
       - ../core_backend:/app
+      - backend_logs:/app/logs
     env_file:
       - ../.env
     extra_hosts:
@@ -147,7 +151,7 @@ services:
     volumes:
       - ./mosquitto/config:/mosquitto/config
       - ./mosquitto/certs:/mosquitto/certs
-      - ./mosquitto/log:/mosquitto/log
+      # mosquitto logs removed — rely on Docker log driver (x-logging anchor)
     networks:
       - mole_internal
 
@@ -283,5 +287,7 @@ volumes:
   ai_rag_vectors:
   edge_data:
   prometheus_data:
+  backend_logs:
   # minio_data removed — S3
   # django_media removed — S3
+
