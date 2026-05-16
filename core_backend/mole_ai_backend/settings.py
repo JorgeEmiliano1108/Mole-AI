@@ -55,7 +55,10 @@ def _split_env_list(var_name, default=None):
         return [x.strip() for x in (default or '').split(',') if x.strip()]
     return [x.strip() for x in raw.split(',') if x.strip()]
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'django-backend']
+ALLOWED_HOSTS = _split_env_list(
+    'DJANGO_ALLOWED_HOSTS',
+    default=os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,django-backend')
+)
 
 # 3. Definición de Aplicaciones
 INSTALLED_APPS = [

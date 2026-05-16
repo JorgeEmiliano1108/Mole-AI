@@ -49,6 +49,9 @@ services:
       # django_media removed — media now served from Amazon S3
     env_file:
       - ../.env
+    environment:
+      - DJANGO_ALLOWED_HOSTS
+      - CSRF_TRUSTED_ORIGINS
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 5s
