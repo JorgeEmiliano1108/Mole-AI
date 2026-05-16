@@ -29,10 +29,7 @@ services:
         condition: service_started
       ms3_reports:
         condition: service_started
-    volumes:
-      - ../frontend/dist:/usr/share/nginx/html:ro
-      - ../frontend/static:/usr/share/nginx/static:ro
-      # django_media removed — media now served from Amazon S3
+    # volumes removed — frontend assets baked into image via multi-stage build (Cloud-Native immutable)
     networks:
       - mole_public
       - mole_internal
