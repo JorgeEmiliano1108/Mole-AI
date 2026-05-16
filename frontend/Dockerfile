@@ -17,9 +17,10 @@ COPY src/ ./src/
 COPY static/ ./static/
 COPY *.html ./
 
-# Instalar dependencias y compilar
-RUN npm ci
-RUN npm run build
+# Supply Chain Hardening: bloquear scripts de terceros, permitir solo esbuild (Vite)
+RUN npm ci --ignore-scripts && \
+    npm rebuild esbuild && \
+    npm run build
 
 # ── Stage 2: Runtime (Nginx mínimo) ───────────────────────────────────────────
 FROM nginx:1.25-alpine AS runtime
@@ -31,7 +32,7 @@ COPY --from=builder /app/dist/ /usr/share/nginx/html/
 COPY --from=builder /app/static/ /usr/share/nginx/static/
 
 # Copiar configuración del API Gateway (desde el contexto frontend/)
-# Nota: infrastructure/ está fuera del contexto, mover nginx.conf a frontend/
+
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY cors_headers.conf /etc/nginx/conf.d/cors_headers.conf
 
