@@ -37,7 +37,7 @@
         <!-- ========================================== -->
         <!-- FORMULARIO DE LOGIN (Visible por defecto)  -->
         <!-- ========================================== -->
-        <form id="login-form" class="space-y-5" onsubmit="event.preventDefault(); document.querySelector('[data-action=\'auth:login\']').click();">
+        <form id="login-form" class="space-y-5">
             <div>
                 <label for="user-input" class="block text-xs font-bold text-mole-dim uppercase tracking-wider mb-2">Usuario</label>
                 <input type="text" id="user-input" required
@@ -73,7 +73,7 @@
         <!-- ========================================== -->
         <!-- FORMULARIO DE REGISTRO (Oculto por defecto)-->
         <!-- ========================================== -->
-        <form id="register-form" class="space-y-4 hidden" onsubmit="event.preventDefault(); document.querySelector('[data-action=\'auth:register\']').click();">
+        <form id="register-form" class="space-y-4 hidden">
             <div>
                 <label for="reg-username" class="block text-xs font-bold text-mole-dim uppercase tracking-wider mb-2">Nombre de Usuario</label>
                 <input type="text" id="reg-username" required minlength="3"
@@ -138,53 +138,7 @@
     <script type="module" src="/static/js/apiService.js"></script>
     <script type="module" src="/src/js/main.js"></script>
 
-    <!-- Password Visibility Toggle (querySelectorAll — class-based) -->
-    <script>
-        document.querySelectorAll('.toggle-pass-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var input = this.closest('.relative').querySelector('input[type="password"], input[type="text"]');
-                if (!input) return;
-                var isHidden = input.type === 'password';
-                input.type = isHidden ? 'text' : 'password';
-                this.setAttribute('aria-label', isHidden ? 'Ocultar contraseña' : 'Mostrar contraseña');
-                this.querySelector('.eye-open').classList.toggle('hidden', !isHidden);
-                this.querySelector('.eye-closed').classList.toggle('hidden', isHidden);
-            });
-        });
-    </script>
 
-        <!-- BFCache Guard: Clear form data when restored from cache -->
-        <script>
-            // Guardián BFCache: Detectar si la página se restaura del caché
-            window.addEventListener('pageshow', function(event) {
-                if (event.persisted) {
-                    console.warn('[Login] Página restaurada de BFCache, limpiando formulario...');
-                    
-                    // 1. Limpiar TODOS los campos del formulario
-                    document.getElementById('user-input')?.value = '';
-                    document.getElementById('pass-input')?.value = '';
-                    document.getElementById('reg-username')?.value = '';
-                    document.getElementById('reg-email')?.value = '';
-                    document.getElementById('reg-password')?.value = '';
-                    document.getElementById('reg-pass-confirm')?.value = '';
-                    
-                    // 2. Verificar si hay sesión activa (si sí, redirigir a dashboard)
-                    const token = localStorage.getItem('mole_jwt') || localStorage.getItem('moleia_token');
-                    if (token) {
-                        // Hay sesión activa, ir al dashboard
-                        window.location.replace('/dashboard.html');
-                    }
-                }
-            });
-        
-            // Guardián inicial: Si ya hay sesión, no permitir ver login
-            (function() {
-                const token = localStorage.getItem('mole_jwt') || localStorage.getItem('moleia_token');
-                if (token) {
-                    window.location.replace('/dashboard.html');
-                }
-            })();
-        </script>
 
 </body>
 </html>

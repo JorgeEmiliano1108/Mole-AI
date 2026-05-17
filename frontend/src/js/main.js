@@ -1,5 +1,6 @@
 import '../css/themes/pip-boy.css';
 import '../css/main.css';
+import './auth.js';
 import './modules/ui/theme.js';
 import './modules/ui/navigation.js';
 import * as userDashboard from './modules/auth/userDashboard.js';
