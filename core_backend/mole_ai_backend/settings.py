@@ -55,10 +55,12 @@ def _split_env_list(var_name, default=None):
         return [x.strip() for x in (default or '').split(',') if x.strip()]
     return [x.strip() for x in raw.split(',') if x.strip()]
 
-ALLOWED_HOSTS = _split_env_list(
-    'DJANGO_ALLOWED_HOSTS',
-    default=os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,django-backend')
-)
+# Lista de hosts internos necesarios para healthchecks y proxy reverso
+INTERNAL_HOSTS = ['localhost', '127.0.0.1', 'django-backend']
+
+# Leer de entorno y combinar con los hosts internos (usando set para evitar duplicados)
+env_hosts = _split_env_list('DJANGO_ALLOWED_HOSTS', default='')
+ALLOWED_HOSTS = list(set(env_hosts + INTERNAL_HOSTS))
 
 # 3. Definición de Aplicaciones
 INSTALLED_APPS = [
