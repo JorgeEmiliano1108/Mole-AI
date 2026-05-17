@@ -140,6 +140,59 @@ def sensor_data_patch_view(request, pk):
     except SensorLog.DoesNotExist:
         return Response(status=404)
 
+class EdgeNodeIngestView(APIView):
+    # Desactivamos clases de autenticación para esta demo/refactor si no tenemos el middleware listo,
+    # pero puedes aplicar @authentication_classes en producción.
+    permission_classes = [AllowAny] # Temporal, o usa HardwareOnlyPermission si ya envía el API key correcto
+    
+    def post(self, request):
+        payload = request.data
+        
+        # En un escenario real extraes device = request.device
+        # Aquí lo buscamos por token en el header
+        auth_header = request.headers.get('Authorization', '').replace('Bearer ', '')
+        from .models import Device, Plant, AmbientReading, SoilReading
+        
+        device = Device.objects.filter(auth_token=auth_header).first()
+        if not device:
+            # Fallback o manejar error
+            return Response({"error": "Device not found or unauthorized"}, status=401)
+        
+        # [Code Fix] Integración de make_aware para prevenir naive datetime
+        raw_timestamp = payload.get('timestamp', 0)
+        naive_dt = datetime.fromtimestamp(raw_timestamp)
+        recorded_at = timezone.make_aware(naive_dt)
+
+        with transaction.atomic():
+            if 'ambient' in payload:
+                AmbientReading.objects.create(
+                    device=device,
+                    recorded_at=recorded_at,
+                    **payload['ambient']
+                )
+
+            if 'soil' in payload:
+                plants_by_pin = {
+                    p.hardware_pin: p 
+                    for p in Plant.objects.filter(device=device)
+                }
+                
+                soil_objects = []
+                for pin, moisture in payload['soil'].items():
+                    plant = plants_by_pin.get(str(pin))
+                    if plant:
+                        soil_objects.append(
+                            SoilReading(
+                                plant=plant,
+                                recorded_at=recorded_at,
+                                soil_humidity=moisture
+                            )
+                        )
+                if soil_objects:
+                    SoilReading.objects.bulk_create(soil_objects)
+
+        return Response({"status": "ingested", "mapped_pins": len(soil_objects) if 'soil' in payload else 0})
+
 # --- INTELIGENCIA ARTIFICIAL Y DIAGNÓSTICOS ---
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

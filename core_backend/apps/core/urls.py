@@ -11,6 +11,7 @@ urlpatterns = [
     # Telemetría
     path('sensor-data/', views.sensor_data_view, name='sensor_data'),
     path('sensor-data/batch/', views.sensor_batch_view, name='sensor_batch'),
+    path('sensor-data/edge-batch/', views.EdgeNodeIngestView.as_view(), name='edge_ingest_batch'),
     path('sensor-data/<int:pk>/', views.sensor_data_patch_view, name='sensor_data_patch'),
     path('sensor-data/latest/', mock_sensor_data, name='mock_sensor'),
     path('telemetry/latest/', telemetry_latest_view, name='telemetry_latest'),

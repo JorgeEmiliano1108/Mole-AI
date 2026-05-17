@@ -222,3 +222,45 @@ class AuditLog(models.Model):
         if self.pk is not None:
             raise PermissionError("MoProSoft Compliance: Audit logs are append-only and cannot be modified.")
         super().save(*args, **kwargs)
+
+# ---------------------------------------------------------------------------
+# IOT DEEP MODELS (REFACTORING 1:N)
+# ---------------------------------------------------------------------------
+import uuid
+
+class Device(models.Model):
+    """El Microcontrolador físico (Gateway ESP32)"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    auth_token = models.CharField(max_length=128, unique=True, help_text="Bearer token")
+    status = models.CharField(max_length=20, default='offline')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class Plant(models.Model):
+    """Zona de suelo cultivado monitoreada por un pin de un Device"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='plants')
+    hardware_pin = models.CharField(max_length=10, help_text="Ej: '32', 'A0'")
+    name = models.CharField(max_length=100)
+    species = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        unique_together = ('device', 'hardware_pin')
+
+class AmbientReading(models.Model):
+    """Telemetría del entorno físico (DHT22 / LTR390)"""
+    id = models.BigAutoField(primary_key=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='ambient_readings')
+    recorded_at = models.DateTimeField(default=timezone.now)
+    air_temperature = models.FloatField(null=True, blank=True)
+    air_humidity = models.FloatField(null=True, blank=True)
+    light_level = models.FloatField(null=True, blank=True)
+    uv_index = models.FloatField(null=True, blank=True)
+
+class SoilReading(models.Model):
+    """Telemetría específica de una Planta (Suelo)"""
+    id = models.BigAutoField(primary_key=True)
+    plant = models.ForeignKey(Plant, on_delete=models.CASCADE, related_name='soil_readings')
+    recorded_at = models.DateTimeField(default=timezone.now)
+    soil_humidity = models.FloatField()
+    ph_level = models.FloatField(null=True, blank=True)
