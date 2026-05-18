@@ -6,14 +6,14 @@ idf_component_register(
         esp_wifi
         esp_netif
         esp_event
+        esp_http_server
+        esp_timer
         driver
         esp_adc
-        mbedtls
-        wifi_provisioning
+        esp_websocket_client
+        cjson
         sensor_dht20
         sensor_ltr390
         sensor_soil
-        mole_identity
         mole_ntp
-        mole_openclaw
 )

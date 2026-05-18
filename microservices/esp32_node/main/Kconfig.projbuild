@@ -1,18 +1,11 @@
 menu "Mole.AI Node Configuration"
 
-    config MQTT_BROKER_URI
-        string "Mole.AI MQTT Broker URI"
-        default "mqtt://192.168.1.100:1883"
+    config MOLE_WS_URI
+        string "Edge Node WebSocket URI"
+        default "ws://107.23.238.115:18789"
         help
-            MQTT endpoint of the Edge Node broker.
-            Format: mqtt://<edge_node_ip>:<port>
-
-    config HARDWARE_API_KEY
-        string "Mole.AI Hardware API Key"
-        default ""
-        help
-            API Key required for M2M authentication with Django backend.
-            This field is mandatory.
+            WebSocket endpoint of the Edge Node gateway.
+            Format: ws://<edge_node_ip>:<port>
 
     config MOLE_I2C_SDA
         int "I2C SDA GPIO"
@@ -25,13 +18,6 @@ menu "Mole.AI Node Configuration"
         default 22
         help
             GPIO pin for I2C clock line (DHT20 + LTR390).
-
-    config MOLE_SOIL_ADC_CHANNEL
-        int "Soil Moisture ADC Channel"
-        default 6
-        help
-            ADC1 channel for the capacitive soil moisture sensor.
-            Channel 6 = GPIO34 on ESP32.
 
     config MOLE_TELEMETRY_INTERVAL_MS
         int "Telemetry interval (ms)"

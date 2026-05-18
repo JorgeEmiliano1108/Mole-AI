@@ -22,23 +22,23 @@
 <!-- Bottom Navigation Bar / Sidebar -->
 <nav class="fixed bottom-0 w-full h-16 border-t border-mole-border z-[70] flex justify-around md:top-0 md:left-0 md:bottom-auto md:h-screen md:w-20 md:flex-col md:justify-start md:items-center md:border-t-0 md:border-r bg-mole-surface-industrial" style="background-color:#12141a;">
     <!-- MONITOR (primer botón) -->
-    <button onclick="switchFieldView('view-monitoreo')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-cyan hover:text-mole-accent focus:outline-none md:mt-6">
+    <button data-action="switch-field" data-target="view-monitoreo" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-cyan hover:text-mole-accent focus:outline-none md:mt-6">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span class="text-[10px] font-bold mt-1">MONITOR</span>
     </button>
     <!-- WIKI -->
-    <button onclick="switchFieldView('view-wiki')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+    <button data-action="switch-field" data-target="view-wiki" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
         <span class="text-[10px] font-bold mt-1">WIKI</span>
     </button>
     <!-- MAPA -->
-    <button onclick="switchFieldView('view-mapa')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+    <button data-action="switch-field" data-target="view-mapa" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
         <span class="text-[10px] font-bold mt-1">MAPA</span>
     </button>
 
     
-    <button onclick="switchFieldView('view-iot')" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+    <button data-action="switch-field" data-target="view-iot" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a1 1 0 100-2 1 1 0 000 2zm0 0v5m-2-3l2 2 2-2M8 9a5 5 0 018 0M5 9a9 9 0 0114 0" />
         </svg>
@@ -52,7 +52,7 @@
     <header class="flex items-center justify-between border-b border-mole-border p-4 md:px-6 bg-mole-surface">
         <h1 class="text-2xl font-bold text-mole-cyan">DASHBOARD OPERATIVO</h1>
         <div class="flex items-center gap-4">
-            <button id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Cambiar tema" class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber" title="Modo Solar / Pip-Boy">
+            <button id="theme-toggle-btn" data-action="toggle-theme" aria-label="Cambiar tema" class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber" title="Modo Solar / Pip-Boy">
                 <svg id="icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                 </svg>
@@ -61,7 +61,7 @@
                 </svg>
             </button>
             <div class="relative">
-                <button onclick="document.getElementById('profile-dropdown').classList.toggle('hidden')" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
+                <button data-action="toggle-dropdown" data-target="profile-dropdown" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
                     <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
                     <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                 </button>
@@ -209,7 +209,7 @@
     <div id="map-info-panel" class="absolute right-4 top-4 z-[400] w-72 bg-mole-surface/90 backdrop-blur-md border border-mole-cyan p-4 rounded-xl shadow-cyber hidden flex-col gap-3 font-sans">
         <div class="flex justify-between items-start border-b border-mole-border pb-2">
             <h3 id="info-title" class="text-sm font-bold text-mole-cyan tracking-wider truncate">SELECCIONE PUNTO</h3>
-            <button onclick="document.getElementById('map-info-panel').classList.add('hidden')" class="text-mole-dim hover:text-mole-red transition-colors focus:outline-none">
+            <button data-action="hide-panel" data-target="map-info-panel" class="text-mole-dim hover:text-mole-red transition-colors focus:outline-none">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
@@ -293,7 +293,7 @@
                 <button data-action="chat:history" class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Historial">[ LOGS ]</button>
                 <button data-action="chat:new" class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Nueva Conversación">[ CLR ]</button>
                     <div class="w-px h-4 bg-mole-cyan mx-1"></div>
-                    <button aria-label="Cerrar chat" onclick="document.getElementById('chat-window').classList.add('translate-x-full')" class="text-mole-red hover:bg-mole-red hover:text-black px-1 border border-transparent hover:border-mole-red focus:outline-none transition-none text-xs min-h-[44px] min-w-[44px]">
+                    <button aria-label="Cerrar chat" data-action="close-chat" class="text-mole-red hover:bg-mole-red hover:text-black px-1 border border-transparent hover:border-mole-red focus:outline-none transition-none text-xs min-h-[44px] min-w-[44px]">
                         [ X ]
                     </button>
                 </div>
@@ -321,7 +321,7 @@
         </div>
 
         <!-- Mobile FAB to open Chat -->
-        <button aria-label="Abrir chat" onclick="document.getElementById('chat-window').classList.remove('translate-x-full')" class="fixed bottom-6 right-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-30 focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
+        <button aria-label="Abrir chat" data-action="open-chat" class="fixed bottom-6 right-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-30 focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
             <img src="/static/assets/topo.png" alt="Abrir Copiloto IA" class="w-full h-full object-cover rounded-full bg-mole-base">
         </button>
 
@@ -330,7 +330,7 @@
     <!-- Analysis Modal -->
     <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('analysis')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="analysis" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ANÁLISIS DETALLADO</h2>
             <div class="space-y-4 text-xs font-sans">
                 <p><span class="text-mole-text-dim">ESTADO GENERAL:</span> <span class="text-mole-green">ÓPTIMO</span></p>
@@ -343,22 +343,22 @@
     <!-- Contact Modal -->
     <div id="contact-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('contact')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="contact" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> CONTACTO SEGURO</h2>
             <input type="text" id="contact-subject" name="subject" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
             <textarea placeholder="Mensaje encriptado..." class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text h-32 outline-none focus:border-mole-accent"></textarea>
-            <button onclick="closeModule('contact')" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
+            <button data-action="close-module" data-target="contact" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
         </div>
     </div>
 
     <!-- Add Plant Modal -->
     <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('addPlant')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="addPlant" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> NUEVO ESPÉCIMEN</h2>
             <input type="text" id="new-plant-name" placeholder="Nombre (ej. Tomate Alpha)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
             <input type="text" id="new-plant-type" placeholder="Tipo (Frutal, Suculenta...)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
-            <button onclick="window.updatePlant('NUEVO')" class="w-full bg-mole-green/20 border border-mole-green text-mole-green py-2 hover:bg-mole-green hover:text-mole-base font-bold tracking-widest transition-colors mt-2 focus:outline-none focus:ring-2 focus:ring-mole-green rounded min-h-[44px]">VINCULAR CULTIVO</button>
+            <button data-action="update-plant" class="w-full bg-mole-green/20 border border-mole-green text-mole-green py-2 hover:bg-mole-green hover:text-mole-base font-bold tracking-widest transition-colors mt-2 focus:outline-none focus:ring-2 focus:ring-mole-green rounded min-h-[44px]">VINCULAR CULTIVO</button>
         </div>
     </div>
 
@@ -374,7 +374,7 @@
     <!-- History Modal -->
     <div id="history-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-2xl w-full rounded shadow-cyber relative h-[80vh] flex flex-col">
-            <button aria-label="Cerrar modal" onclick="closeModule('history')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="history" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> HISTORIAL DE DIAGNÓSTICOS</h2>
             <div id="history-list-container" class="flex-1 overflow-y-auto space-y-3">
                 <p class="text-mole-dim text-sm text-center mt-10 animate-pulse">Cargando registros...</p>
@@ -394,7 +394,7 @@
                 <p class="text-mole-text-dim mb-4 text-xs font-sans">Ingrese las credenciales de la red para sincronizar el módulo ESP32.</p>
                 <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
                 <input type="password" id="wifi-pass" placeholder="Contraseña WPA2" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                    <button onclick="nextIotStep(2)" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR HANDSHAKE</button>
+                    <button data-action="next-iot-step" data-target="2" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR HANDSHAKE</button>
                 </div>
             </div>
         </div>
@@ -403,21 +403,21 @@
     <!-- User Profile Modal -->
     <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-sm w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" onclick="closeModule('profile')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="profile" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> PERFIL OPERADOR</h2>
             <div class="space-y-4 text-xs mb-6 font-sans">
                 <p><span class="text-mole-text-dim">ID:</span> <span class="text-mole-accent" id="profile-id">OP-7734</span></p>
                 <p><span class="text-mole-text-dim">RANGO:</span> <span class="text-mole-accent" id="profile-role">USUARIO ESTÁNDAR</span></p>
                 <p><span class="text-mole-text-dim">ZONA:</span> <span class="text-mole-accent">SECTOR 7G</span></p>
             </div>
-            <button onclick="openDeleteModal()" class="w-full bg-mole-red/10 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]">ELIMINAR CUENTA</button>
+            <button data-action="open-delete-modal" class="w-full bg-mole-red/10 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]">ELIMINAR CUENTA</button>
         </div>
     </div>
 
     <!-- Delete Account Modal -->
     <div id="delete-account-modal" class="hidden fixed inset-0 bg-black/90 z-[60] items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-red p-6 max-w-sm w-full rounded shadow-cyber relative text-center">
-            <button aria-label="Cerrar modal" onclick="closeModule('delete')" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="delete" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-red mb-4 animate-pulse">¡ADVERTENCIA CRÍTICA!</h2>
                 <p class="text-xs text-mole-red/80 mb-4 font-sans">Esta acción purgará permanentemente sus datos biométricos y cultivos de la base central.</p>
                 <input type="text" id="confirm-delete-input" placeholder="Escriba 'PURGAR'" class="w-full bg-mole-bg border border-mole-red p-2 mb-4 text-mole-red text-center uppercase font-bold outline-none focus:border-mole-red">
