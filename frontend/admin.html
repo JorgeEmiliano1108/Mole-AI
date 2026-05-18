@@ -40,7 +40,7 @@
             <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto p-3 space-y-1">
                 <!-- Dashboard (Active) -->
-                <button onclick="switchView('dashboard')" class="w-full text-left px-3 py-2.5 text-mole-text hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded group">
+                <button data-action="switch-view" data-target="dashboard" data-view="dashboard" class="w-full text-left px-3 py-2.5 text-mole-text hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded group">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
@@ -52,7 +52,7 @@
                 </button>
                 
                 <!-- Flota IoT -->
-                <button onclick="switchView('iot-fleet')" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
+                <button data-action="switch-view" data-target="iot-fleet" data-view="iot-fleet" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.674M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343 7.343l-.707-.707m2.364 9.314l-.707.707M12 21v-1m-6.364-1.636l.707-.707M6.343 16.657l.707-.707"></path>
                     </svg>
@@ -61,7 +61,7 @@
                 </button>
                 
                 <!-- MLOps -->
-                <button onclick="switchView('mlops')" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
+                <button data-action="switch-view" data-target="mlops" data-view="mlops" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86-.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                     </svg>
@@ -69,7 +69,7 @@
                 </button>
                 
                 <!-- Alertas -->
-                <button onclick="switchView('alerts')" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
+                <button data-action="switch-view" data-target="alerts" data-view="alerts" class="w-full text-left px-3 py-2.5 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-accent transition-colors flex items-center gap-3 rounded">
                     <svg class="w-4 h-4 text-mole-critical" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -86,7 +86,7 @@
                     </svg>
                     COLAPSAR
                 </button>
-                <button id="toggle-view" onclick="window.location.replace('/dashboard.html')" class="w-full text-left px-3 py-2 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-green transition-colors flex items-center gap-2 rounded text-xs">
+                <button id="toggle-view" data-action="navigate" data-target="/dashboard.html" class="w-full text-left px-3 py-2 text-mole-text-dim hover:bg-mole-surface-industrial hover:text-mole-green transition-colors flex items-center gap-2 rounded text-xs">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                     </svg>
@@ -132,7 +132,7 @@
                         </span>
                         
                          <!-- Export Button (Solid accent bg, dark text) -->
-                         <button onclick="window.handleExport()" class="bg-mole-accent text-mole-bg px-3 py-1.5 rounded hover:bg-mole-accent/90 flex items-center gap-1.5 text-[10px] font-bold">
+                         <button data-action="export" class="bg-mole-accent text-mole-bg px-3 py-1.5 rounded hover:bg-mole-accent/90 flex items-center gap-1.5 text-[10px] font-bold">
                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path>
                              </svg>
@@ -462,7 +462,7 @@
                     <div>
                         <div class="flex mb-2">
                             <div class="flex-1"></div> <!-- Spacer -->
-                         <button onclick="window.handleNewTraining()" class="ml-auto border border-mole-accent text-mole-accent px-3 py-1.5 rounded hover:bg-mole-accent hover:text-mole-bg-alt text-[10px] font-bold flex items-center gap-1">
+                         <button data-action="new-training" class="ml-auto border border-mole-accent text-mole-accent px-3 py-1.5 rounded hover:bg-mole-accent hover:text-mole-bg-alt text-[10px] font-bold flex items-center gap-1">
                                   NUEVO ENTRENAMIENTO
                               </button>
                          </div>
@@ -493,7 +493,7 @@
                                         <td class="p-2 text-center text-mole-text-dim">120ms</td>
                                         <td class="p-2 text-center text-mole-text-dim">2026-05-05</td>
                                         <td class="p-2 text-center"><span class="bg-mole-green/20 text-mole-green px-2 py-0.5 rounded text-[10px]">Activo</span></td>
-                                         <td class="p-2 text-right"><button onclick="window.handleDeploy('v2.1.0')" class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
+                                         <td class="p-2 text-right"><button data-action="deploy" data-target="v2.1.0" class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
                                      </tr>
                                      <tr class="border-b border-mole-border-industrial">
                                          <td class="p-2">v2.0.5</td>
@@ -505,7 +505,7 @@
                                          <td class="p-2 text-center text-mole-text-dim">115ms</td>
                                          <td class="p-2 text-center text-mole-text-dim">2026-04-20</td>
                                          <td class="p-2 text-center"><span class="bg-mole-amber/20 text-mole-amber px-2 py-0.5 rounded text-[10px]">Inactivo</span></td>
-                                         <td class="p-2 text-right"><button onclick="window.handleDeploy('v2.0.5')" class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
+                                         <td class="p-2 text-right"><button data-action="deploy" data-target="v2.0.5" class="text-mole-accent hover:underline text-[10px]">Desplegar</button></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -563,10 +563,10 @@
                                     </div>
                                  </div>
                              <div class="flex gap-2 shrink-0">
-                                 <button onclick="window.handleAcknowledge('alert-001')" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
+                                 <button data-action="acknowledge" data-id="alert-001" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
                                      [✓ Reconocer]
                                  </button>
-                                 <button onclick="window.handleDelete('alert-001')" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
+                                 <button data-action="delete-alert" data-id="alert-001" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
                                      [🗑️ Eliminar]
                                  </button>
                              </div>
@@ -587,10 +587,10 @@
                                 </div>
                              </div>
                              <div class="flex gap-2 shrink-0">
-                                 <button onclick="window.handleAcknowledge('alert-002')" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
+                                 <button data-action="acknowledge" data-id="alert-002" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
                                      [✓ Reconocer]
                                  </button>
-                                 <button onclick="window.handleDelete('alert-002')" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
+                                 <button data-action="delete-alert" data-id="alert-002" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
                                      [🗑️ Eliminar]
                                  </button>
                              </div>
@@ -611,10 +611,10 @@
                                 </div>
                             </div>
                              <div class="flex gap-2 shrink-0">
-                                 <button onclick="window.handleAcknowledge('alert-003')" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
+                                 <button data-action="acknowledge" data-id="alert-003" class="border border-mole-green/30 text-mole-green px-2 py-1 rounded hover:bg-mole-green/10 text-[10px]">
                                      [✓ Reconocer]
                                  </button>
-                                 <button onclick="window.handleDelete('alert-003')" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
+                                 <button data-action="delete-alert" data-id="alert-003" class="border border-mole-critical/30 text-mole-critical px-2 py-1 rounded hover:bg-mole-critical/10 text-[10px]">
                                      [🗑️ Eliminar]
                                  </button>
                              </div>
@@ -644,463 +644,8 @@
     </div>
     
     <script type="module" src="/src/js/main.js"></script>
-    <!-- ApiService MUST load before inline script -->
     <script type="module" src="/static/js/apiService.js"></script>
-    <script>
-        // ============ VIEW SWITCHING LOGIC ===========
-        const VIEWS = {
-            dashboard: 'view-dashboard',
-            'iot-fleet': 'view-iot-fleet',
-            mlops: 'view-mlops',
-            alerts: 'view-alerts'
-        };
-        
-        async function switchView(viewKey) {
-            // Hide all views
-            document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden'));
-            
-            // Show target view
-            const target = document.getElementById('view-' + viewKey);
-            if (target) target.classList.remove('hidden');
-            
-            // Update breadcrumb
-            updateBreadcrumb(viewKey);
-            
-            // Update sidebar active state
-            updateActiveSidebar(viewKey);
-            
-            // Load data based on view
-            try {
-                if (viewKey === 'dashboard') {
-                    await loadDashboardData();
-                } else if (viewKey === 'iot-fleet') {
-                    await loadIoTData();
-                } else if (viewKey === 'mlops') {
-                    await loadMLOpsData();
-                } else if (viewKey === 'alerts') {
-                    await loadAlertsData();
-                }
-            } catch (error) {
-                console.error('Error loading ' + viewKey + ' data:', error);
-            }
-        }
-        
-        // ============ DATA LOADING FUNCTIONS ============
-        async function loadDashboardData() {
-            try {
-                const data = await window.ApiService.getKPIData();
-                if (data && data.kpis) {
-                    // Update KPI cards with real data
-                    const kpis = data.kpis;
-                    const plantasEl = document.querySelector('#view-dashboard .data-card:nth-child(1) .text-2xl');
-                    const alertasEl = document.querySelector('#view-dashboard .data-card:nth-child(2) .text-2xl');
-                    const onlineEl = document.querySelector('#view-dashboard .data-card:nth-child(3) .text-2xl');
-                    const precisionEl = document.querySelector('#view-dashboard .data-card:nth-child(4) .text-2xl');
-                    
-                    if (plantasEl && kpis.plantas_escaneadas) plantasEl.textContent = kpis.plantas_escaneadas.toLocaleString();
-                    if (alertasEl && kpis.alertas_activas !== undefined) alertasEl.textContent = kpis.alertas_activas;
-                    if (onlineEl && kpis.dispositivos_online) onlineEl.textContent = kpis.dispositivos_online;
-                    if (precisionEl && kpis.precision_ms1) precisionEl.textContent = kpis.precision_ms1 + '%';
-                }
-            } catch (error) {
-                console.log('Dashboard data loading skipped (API not ready):', error.message);
-            }
-        }
-        
-        async function loadIoTData() {
-            try {
-                const data = await window.ApiService.getIoTFleet();
-                if (data && data.nodes) {
-                    // Populate IoT grid with real node data
-                    console.log('IoT Fleet data loaded:', data.nodes.length, 'nodes');
-                }
-            } catch (error) {
-                console.log('IoT data loading skipped (API not ready):', error.message);
-            }
-        }
-        
-        async function loadMLOpsData() {
-            try {
-                const data = await window.ApiService.getMLMetrics();
-                if (data && data.metrics) {
-                    // Update MLOps progress bars
-                    console.log('MLOps data loaded:', data.metrics);
-                }
-            } catch (error) {
-                console.log('MLOps data loading skipped (API not ready):', error.message);
-            }
-        }
-        
-        async function loadAlertsData() {
-            try {
-                const data = await window.ApiService.getAlerts();
-                if (data && data.alerts) {
-                    // Populate alerts feed
-                    console.log('Alerts data loaded:', data.alerts.length, 'alerts');
-                }
-            } catch (error) {
-                console.log('Alerts data loading skipped (API not ready):', error.message);
-            }
-        }
-        
-        function updateBreadcrumb(viewKey) {
-            const breadcrumb = document.getElementById('breadcrumb');
-            if (!breadcrumb) return;
-            
-            const labels = {
-                dashboard: 'Dashboard — Vista General',
-                'iot-fleet': 'Flota IoT — Monitoreo ESP32',
-                mlops: 'MLOps — Entrenamiento y Fine-Tuning',
-                alerts: 'Centro de Alertas — Gestión'
-            };
-            breadcrumb.textContent = labels[viewKey] || 'Dashboard — Vista General';
-        }
-        
-        function updateActiveSidebar(viewKey) {
-            // Remove active state from all sidebar buttons
-            const sidebarButtons = document.querySelectorAll('#sidebar nav button');
-            sidebarButtons.forEach(btn => {
-                btn.classList.remove('text-mole-accent');
-                btn.classList.add('text-mole-text-dim');
-                // Remove glow indicator
-                const indicator = btn.querySelector('.bg-mole-accent');
-                if (indicator) indicator.remove();
-            });
-            
-            // Add active state to current view
-            const activeBtn = document.querySelector(`#sidebar nav button[onclick*="${viewKey}"]`);
-            if (activeBtn) {
-                activeBtn.classList.remove('text-mole-text-dim');
-                activeBtn.classList.add('text-mole-accent');
-                // Add glow indicator
-                const indicator = document.createElement('span');
-                indicator.className = 'ml-auto w-1 h-6 bg-mole-accent rounded-full glow-effect';
-                activeBtn.appendChild(indicator);
-            }
-        }
-        
-        // ============ DATETIME UPDATE ===========
-        function updateDateTime() {
-            const now = new Date();
-            const dateEl = document.getElementById('current-date');
-            const timeEl = document.getElementById('current-time');
-            
-            if (dateEl) {
-                const formatted = now.toISOString().split('T')[0];
-                dateEl.textContent = formatted;
-            }
-            if (timeEl) {
-                const timeStr = now.toTimeString().split(' ')[0];
-                timeEl.textContent = timeStr;
-            }
-        }
-        
-        // Initialize
-        updateDateTime();
-        setInterval(updateDateTime, 1000);
-        switchView('dashboard'); // Default view
-        
-        // ============ CHART INITIALIZATION ============
-        // Sparklines (KPI Cards)
-        function initSparklines() {
-            const sparkConfig = {
-                type: 'line',
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { display: false }, y: { display: false } },
-                    elements: { point: { radius: 0 }, line: { borderWidth: 1.5 } }
-                }
-            };
-            
-            // Plantas Escaneadas sparkline
-            const plantasCtx = document.getElementById('spark-plantas');
-            if (plantasCtx) {
-                new Chart(plantasCtx, {
-                    ...sparkConfig,
-                    data: {
-                        labels: Array.from({length: 12}, (_, i) => i),
-                        datasets: [{
-                            data: [80, 95, 110, 105, 120, 115, 130, 140, 135, 145, 150, 160],
-                            borderColor: '#00FFCC',
-                            backgroundColor: 'rgba(0, 255, 204, 0.1)'
-                        }]
-                    }
-                });
-            }
-            
-            // Alertas Activas sparkline
-            const alertasCtx = document.getElementById('spark-alertas');
-            if (alertasCtx) {
-                new Chart(alertasCtx, {
-                    ...sparkConfig,
-                    data: {
-                        labels: Array.from({length: 12}, (_, i) => i),
-                        datasets: [{
-                            data: [4, 3, 5, 4, 3, 2, 3, 4, 3, 2, 3, 3],
-                            borderColor: '#ff4d4d',
-                            backgroundColor: 'rgba(255, 77, 77, 0.1)'
-                        }]
-                    }
-                });
-            }
-            
-            // Dispositivos Online sparkline
-            const onlineCtx = document.getElementById('spark-online');
-            if (onlineCtx) {
-                new Chart(onlineCtx, {
-                    ...sparkConfig,
-                    data: {
-                        labels: Array.from({length: 12}, (_, i) => i),
-                        datasets: [{
-                            data: [6, 7, 8, 7, 8, 9, 8, 8, 7, 8, 8, 8],
-                            borderColor: '#00ff00',
-                            backgroundColor: 'rgba(0, 255, 0, 0.1)'
-                        }]
-                    }
-                });
-            }
-            
-            // Precisión MS1 sparkline
-            const precisionCtx = document.getElementById('spark-precision');
-            if (precisionCtx) {
-                new Chart(precisionCtx, {
-                    ...sparkConfig,
-                    data: {
-                        labels: Array.from({length: 12}, (_, i) => i),
-                        datasets: [{
-                            data: [94.5, 95.0, 95.5, 95.8, 96.0, 96.1, 96.2, 96.2, 96.3, 96.2, 96.2, 96.2],
-                            borderColor: '#ffcc00',
-                            backgroundColor: 'rgba(255, 204, 0, 0.1)'
-                        }]
-                    }
-                });
-            }
-        }
-        
-        // Dashboard Charts (Area + Donut + Bar)
-        function initDashboardCharts() {
-            // Area Chart - Escaneos por Área
-            const areaCtx = document.getElementById('chart-area-scans');
-            if (areaCtx) {
-                new Chart(areaCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                        datasets: [{
-                            label: 'Escaneos',
-                            data: [120, 190, 300, 500, 200, 300],
-                            borderColor: '#00FFCC',
-                            backgroundColor: 'rgba(0, 255, 204, 0.2)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { labels: { color: '#c0c0c0' } }
-                        },
-                        scales: {
-                            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                            y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
-                        }
-                    }
-                });
-            }
-            
-            // Donut Chart - Estado del Fleet
-            const donutCtx = document.getElementById('chart-donut-fleet');
-            if (donutCtx) {
-                new Chart(donutCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Online', 'Warning', 'Offline'],
-                        datasets: [{
-                            data: [8, 2, 2],
-                            backgroundColor: ['#00ff00', '#ffcc00', '#ff4d4d']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { color: '#c0c0c0', padding: 10 } }
-                        }
-                    }
-                });
-            }
-            
-            // Bar Chart - Especies Detectadas
-            const barCtx = document.getElementById('chart-bar-species');
-            if (barCtx) {
-                new Chart(barCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Biznaga', 'Maguey', 'Nopal', 'Lechuguilla', 'Garumbe'],
-                        datasets: [{
-                            label: 'Detecciones',
-                            data: [45, 30, 25, 20, 15],
-                            backgroundColor: '#00FFCC'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { labels: { color: '#c0c0c0' } }
-                        },
-                        scales: {
-                            x: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                            y: { ticks: { color: '#6b7280' }, grid: { color: 'rgba(255,255,255,0.05)' } }
-                        }
-                    }
-                });
-            }
-        }
-        
-        // IoT Fleet Radar Chart (ECharts)
-        function initRadarChart() {
-            const radarEl = document.getElementById('chart-radar-health');
-            if (radarEl && typeof echarts !== 'undefined') {
-                const chart = echarts.init(radarEl);
-                chart.setOption({
-                    radar: {
-                        indicator: [
-                            { name: 'Batería', max: 100 },
-                            { name: 'Señal', max: 100 },
-                            { name: 'Temp', max: 80 },
-                            { name: 'Uptime', max: 100 },
-                            { name: 'Latencia', max: 500 }
-                        ],
-                        axisName: { color: '#c0c0c0' },
-                        splitArea: { areaStyle: { color: ['rgba(0,255,204,0.05)', 'rgba(0,255,204,0.02)'] } }
-                    },
-                    series: [{
-                        type: 'radar',
-                        data: [{
-                            value: [85, 92, 45, 98, 120],
-                            name: 'Promedio Fleet',
-                            areaStyle: { color: 'rgba(0,255,204,0.3)' },
-                            lineStyle: { color: '#00FFCC' }
-                        }]
-                    }]
-                });
-            }
-        }
-        
-        // MLOps Training Chart (ECharts)
-        function initTrainingChart() {
-            const trainingEl = document.getElementById('chart-line-training');
-            if (trainingEl && typeof echarts !== 'undefined') {
-                const chart = echarts.init(trainingEl);
-                chart.setOption({
-                    xAxis: {
-                        type: 'category',
-                        data: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5'],
-                        axisLabel: { color: '#c0c0c0' }
-                    },
-                    yAxis: {
-                        type: 'value',
-                        axisLabel: { color: '#c0c0c0' }
-                    },
-                    series: [{
-                        data: [0.72, 0.85, 0.92, 0.96, 0.962],
-                        type: 'line',
-                        smooth: true,
-                        lineStyle: { color: '#00FFCC' },
-                        areaStyle: { color: 'rgba(0,255,204,0.2)' }
-                    }],
-                    grid: { left: '10%', right: '10%', bottom: '15%' }
-                });
-            }
-        }
-        
-        // Initialize all charts after DOM loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(() => {
-                initSparklines();
-                initDashboardCharts();
-                initRadarChart();
-                initTrainingChart();
-            }, 100);
-        });
-        
-        // ============ BUTTON HANDLER FUNCTIONS (CLEAN) ============
-        
-        // Export data
-        window.handleExport = function() {
-            if (window.ApiService && typeof window.ApiService.exportData === 'function') {
-                window.ApiService.exportData().catch(e => {
-                    console.error('Export failed:', e);
-                    alert('Error al exportar datos: ' + (e.message || e));
-                });
-            } else {
-                console.warn('ApiService.exportData not available');
-            }
-        };
-        
-        // Start new training
-        window.handleNewTraining = function() {
-            if (!window.confirm('¿Iniciar nuevo entrenamiento ML?')) return;
-            
-            if (window.ApiService && typeof window.ApiService.triggerTraining === 'function') {
-                window.ApiService.triggerTraining({
-                    model_type: 'MS1',
-                    epochs: 50,
-                    learning_rate: 0.001
-                }).catch(e => {
-                    console.error('Training failed:', e);
-                    alert('Error al iniciar entrenamiento: ' + (e.message || e));
-                });
-            } else {
-                console.warn('ApiService.triggerTraining not available');
-            }
-        };
-        
-        // Deploy model
-        window.handleDeploy = function(modelId) {
-            if (!window.confirm('¿Desplegar modelo ' + modelId + ' a producción?')) return;
-            
-            if (window.ApiService && typeof window.ApiService.deployModel === 'function') {
-                window.ApiService.deployModel({
-                    model_id: modelId
-                }).catch(e => {
-                    console.error('Deploy failed:', e);
-                    alert('Error al desplegar modelo: ' + (e.message || e));
-                });
-            } else {
-                console.warn('ApiService.deployModel not available');
-            }
-        };
-        
-        // Acknowledge alert
-        window.handleAcknowledge = function(alertId) {
-            if (window.ApiService && typeof window.ApiService.acknowledgeAlert === 'function') {
-                window.ApiService.acknowledgeAlert(alertId).catch(e => {
-                    console.error('Acknowledge failed:', e);
-                    alert('Error al reconocer alerta: ' + (e.message || e));
-                });
-            } else {
-                console.warn('ApiService.acknowledgeAlert not available');
-            }
-        };
-        
-        // Delete alert
-        window.handleDelete = function(alertId) {
-            if (!window.confirm('¿Eliminar alerta ' + alertId + '?')) return;
-            
-            if (window.ApiService && typeof window.ApiService.deleteAlert === 'function') {
-                window.ApiService.deleteAlert(alertId).catch(e => {
-                    console.error('Delete failed:', e);
-                    alert('Error al eliminar alerta: ' + (e.message || e));
-                });
-            } else {
-                console.warn('ApiService.deleteAlert not available');
-            }
-        };
-    </script>
+    <script src="/src/js/admin.js" defer></script>
 </body>
 </html>
+
