@@ -111,6 +111,46 @@
                 </div>
             </div>
 
+            <!-- ISSUE-04: Health Toggle Bar + Dual View Panels -->
+            <div class="mb-4">
+                <!-- Toggle Switch -->
+                <div class="flex items-center justify-between bg-mole-surface border border-mole-border rounded-lg p-3 mb-3">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        <span class="text-xs font-bold text-mole-text-dim uppercase tracking-widest">System Health</span>
+                    </div>
+                    <div class="flex border border-mole-border rounded-lg overflow-hidden">
+                        <button id="health-toggle-botanico" class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors min-h-[44px] min-w-[44px]">
+                            🌱 BOTÁNICO
+                        </button>
+                        <button id="health-toggle-sre" class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-surface text-mole-dim hover:text-mole-cyan transition-colors min-h-[44px] min-w-[44px]">
+                            ⚙️ SRE
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Health Panel: Botánico (visible by default) -->
+                <div id="health-panel-botanico" class="bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
+                    <p class="text-xs text-mole-dim font-mono text-center py-4 animate-pulse">
+                        <span class="text-mole-cyan/50">[AWAIT]</span> Esperando enlace con dispositivo...
+                    </p>
+                </div>
+
+                <!-- Health Panel: SRE (hidden by default) -->
+                <div id="health-panel-sre" class="hidden bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-0.5 bg-amber-500/30"></div>
+                    <p class="text-xs text-mole-dim font-mono text-center py-4 animate-pulse">
+                        <span class="text-mole-cyan/50">[AWAIT]</span> Esperando enlace con dispositivo...
+                    </p>
+                </div>
+
+                <!-- Offline Overlay (hidden by default, activated when status === 'offline') -->
+                <div id="health-offline-overlay" class="hidden mt-2 bg-red-500/10 border-2 border-red-500/50 rounded-lg p-3 text-center animate-pulse">
+                    <span class="text-red-400 font-bold text-xs tracking-widest uppercase">⚠ DISPOSITIVO SIN SEÑAL — Última conexión expirada</span>
+                </div>
+            </div>
+
             <!-- Content Area: Camera & AI Diagnostics -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
 

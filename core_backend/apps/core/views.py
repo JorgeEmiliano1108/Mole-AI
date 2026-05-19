@@ -164,6 +164,12 @@ class EdgeNodeIngestView(APIView):
         recorded_at = timezone.make_aware(naive_dt)
 
         with transaction.atomic():
+            # ── ISSUE-01: Heartbeat — stamp last_seen on every frame ──
+            Device.objects.filter(pk=device.pk).update(
+                last_seen=timezone.now(),
+                status='online',
+            )
+
             if 'ambient' in payload:
                 AmbientReading.objects.create(
                     device=device,

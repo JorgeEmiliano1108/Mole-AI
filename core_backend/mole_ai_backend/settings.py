@@ -274,6 +274,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'cleanup_temp_files',
         'schedule': 86400.0,
     },
+    'check-device-liveness-every-minute': {
+        'task': 'check_device_liveness',
+        'schedule': 60.0,
+    },
 }
 
 # 12. Logging con PII Filter
@@ -352,6 +356,7 @@ CELERY_TASK_ROUTES = {
     # Tareas de limpieza se quedan en Django (cola por defecto)
     'apps.ai_models.tasks.cleanup_temp_files': {'queue': 'celery'},
     'apps.core.tasks.refresh_admin_stats_task': {'queue': 'celery'},
+    'apps.core.tasks.check_device_liveness': {'queue': 'celery'},
     
     # Tareas de Visión (MS1) - Asignamos a una cola dedicada
     'apps.ai_models.tasks.analyze_vision_async': {'queue': 'vision_queue'},

@@ -38,6 +38,7 @@
 #include "driver/i2c_master.h"
 #include "esp_http_server.h"
 #include "esp_websocket_client.h"
+#include "esp_adc/adc_oneshot.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include <arpa/inet.h>
@@ -758,6 +759,13 @@ void app_main(void)
         s_ltr390 = NULL;
     }
 
+    /* ADC1 Singleton Initialization */
+    adc_oneshot_unit_handle_t adc1_handle = NULL;
+    adc_oneshot_unit_init_cfg_t unit_cfg = {
+        .unit_id = ADC_UNIT_1,
+    };
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_cfg, &adc1_handle));
+
     /* Soil sensors — one per active ADC1 pin */
     const int soil_pins[] = MOLE_ACTIVE_SOIL_PINS;
     for (int i = 0; i < MOLE_NUM_ACTIVE_SOIL_PINS; i++) {
@@ -766,7 +774,7 @@ void app_main(void)
             ESP_LOGE(TAG, "Invalid soil GPIO %d — not an ADC1 pin!", soil_pins[i]);
             continue;
         }
-        esp_err_t err = sensor_soil_init(channel, &s_soil[i]);
+        esp_err_t err = sensor_soil_init(adc1_handle, channel, &s_soil[i]);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Soil sensor on GPIO %d failed (0x%x)", soil_pins[i], err);
             s_soil[i] = NULL;

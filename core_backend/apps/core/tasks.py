@@ -240,3 +240,45 @@ def generate_pdf_async(self, diagnostic_id, user_id):
             },
         )
         raise self.retry(exc=exc, countdown=5)
+
+# =============================================================================
+# Fase 3: IoT Heartbeat Liveness (Sprint Dashboard UI)
+# =============================================================================
+
+@shared_task(name="check_device_liveness")
+def check_device_liveness():
+    """
+    Evaluates the liveness of all devices based on their last_seen heartbeat.
+    > 3 min -> warning
+    > 10 min -> offline
+    """
+    import logging
+    from datetime import timedelta
+    from django.utils import timezone
+    from apps.core.models import Device
+
+    logger = logging.getLogger(__name__)
+    now = timezone.now()
+    
+    warning_threshold = now - timedelta(minutes=3)
+    offline_threshold = now - timedelta(minutes=10)
+
+    # 1. Mark devices as offline if they crossed the 10-minute threshold
+    offline_count = Device.objects.filter(
+        last_seen__lt=offline_threshold
+    ).exclude(status='offline').update(status='offline')
+
+    # 2. Mark devices as warning if they crossed the 3-minute threshold
+    #    (but are still within the 10-minute window)
+    warning_count = Device.objects.filter(
+        last_seen__lt=warning_threshold,
+        last_seen__gte=offline_threshold
+    ).exclude(status__in=['warning', 'offline']).update(status='warning')
+
+    if offline_count > 0 or warning_count > 0:
+        logger.info(
+            "check_device_liveness completed: Marked %d devices as offline, %d as warning.",
+            offline_count, warning_count
+        )
+    
+    return {"offline_count": offline_count, "warning_count": warning_count}

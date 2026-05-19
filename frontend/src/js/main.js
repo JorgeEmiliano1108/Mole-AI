@@ -24,8 +24,10 @@ import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
 import { loadWiki } from './modules/services/wiki.js';
+import { initHealthView, setDeviceId as setHealthDeviceId } from './modules/services/health.js';
 window.loadWiki = loadWiki;
 window.initIoTView = initIoTView;
+window.setHealthDeviceId = setHealthDeviceId;
 
 // Safety check: Wait for global apiService to be loaded
 if (!window.moleApi) {
@@ -37,22 +39,22 @@ function checkAuthGuard() {
     // 1. Check if we are in a protected page
     const protectedPages = ['/dashboard.html', '/admin.html'];
     const currentPath = window.location.pathname;
-    
+
     if (!protectedPages.some(p => currentPath.includes(p))) {
         return; // Not a protected page, allow
     }
-    
+
     // 2. Check for token and role
     const token = window.getAuthToken ? window.getAuthToken() : null;
     const role = localStorage.getItem('moleia_user_role');
-    
+
     if (!token && !role) {
         // No credentials - force redirect to index
         console.warn('[Route Guard] No credentials found, redirecting to index...');
         window.location.replace('/index.html'); // replace() prevents history entry
         return;
     }
-    
+
     // 3. Role-based validation for admin pages
     if (currentPath.includes('/admin.html') && role !== 'superuser' && role !== 'admin') {
         console.warn('[Route Guard] Insufficient privileges, redirecting...');
@@ -62,7 +64,7 @@ function checkAuthGuard() {
 }
 
 // Add event listeners for BFCache scenarios
-window.addEventListener('pageshow', function(event) {
+window.addEventListener('pageshow', function (event) {
     if (event.persisted) {
         console.warn('[Route Guard] Page restored from BFCache, re-validating...');
         checkAuthGuard();
@@ -143,22 +145,22 @@ function createNode(tag = 'div', className = '', text = '', attrs = {}) {
 function showModule(moduleKey) {
     // Solo modales - pantallas completas navegan con window.location.href
     const modalScreens = ['analysis', 'contact', 'addPlant', 'loading', 'diagnosis', 'history', 'map', 'iot', 'profile', 'delete'];
-    
+
     if (modalScreens.includes(moduleKey)) {
         // Ocultar otros modales primero
         modalScreens.forEach(key => {
             const el = document.getElementById(MODULES[key]);
             if (el) el.classList.add('hidden');
         });
-        
+
         const target = document.getElementById(MODULES[moduleKey]);
         if (target) {
             target.classList.remove('hidden');
             target.classList.add('flex');
         }
-        
+
         // Inicializaciones específicas por modal
-        switch(moduleKey) {
+        switch (moduleKey) {
             case 'map':
                 if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
                 if (typeof fetchMapData === 'function') fetchMapData();
@@ -205,10 +207,10 @@ initUsers();
 function typeContent(section) {
     const output = document.getElementById('typewriter-output');
     const text = introData[section];
-    output.textContent = ''; 
-    clearInterval(typeInterval); 
+    output.textContent = '';
+    clearInterval(typeInterval);
     let currentText = "", i = 0;
-    
+
     typeInterval = setInterval(() => {
         currentText += text.charAt(i);
         output.textContent = currentText;
@@ -238,7 +240,7 @@ function returnToOverride() {
 }
 
 function startSystem() {
-                window.location.replace('/login.html');
+    window.location.replace('/login.html');
 }
 
 // ==========================================================
@@ -269,7 +271,7 @@ async function submitRegistration() {
     const user = document.getElementById('reg-username').value.trim();
     const email = document.getElementById('reg-email').value.trim();
     const pass = document.getElementById('reg-password').value.trim();
-    const passConfirm = document.getElementById('reg-pass-confirm').value.trim(); 
+    const passConfirm = document.getElementById('reg-pass-confirm').value.trim();
     const errorMsg = document.getElementById('reg-error');
     const successMsg = document.getElementById('reg-success');
 
@@ -294,19 +296,19 @@ async function submitRegistration() {
     }
 
     try {
-        const response = await window.moleApi.post('auth/register/', { 
-            username: user, 
+        const response = await window.moleApi.post('auth/register/', {
+            username: user,
             email: email,
-            password: pass 
+            password: pass
         });
 
         successMsg.innerText = `[OK] OPERADOR "${user.toUpperCase()}" REGISTRADO.`;
         successMsg.classList.remove('hidden');
-        
+
         setTimeout(() => {
             document.getElementById('register-form').reset();
             toggleAuthForm('login');
-        }, 2000); 
+        }, 2000);
 
     } catch (error) {
         errorMsg.innerText = `ERROR: ${error.message || "NO SE PUDO CREAR EL REGISTRO."}`;
@@ -319,28 +321,28 @@ async function attemptLogin() {
     const user = document.getElementById('user-input').value.trim();
     const pass = document.getElementById('pass-input').value.trim();
     const errorMsg = document.getElementById('login-error');
-    
+
     errorMsg.classList.add('hidden');
 
     try {
-        const userData = await window.moleApi.post('auth/login/', { 
-            username: user, 
-            password: pass 
+        const userData = await window.moleApi.post('auth/login/', {
+            username: user,
+            password: pass
         });
 
         const token = userData.token || userData.access || userData.access_token;
         const role = userData.role; // 1. Extract role from response
         const username = userData.username || user; // 2. Get username
-        
+
         if (token) {
             await window.moleApi.setToken(token);
-            
+
             // 3. Save data to localStorage for UI consistency
             if (role) {
                 localStorage.setItem('moleia_user_role', role);
             }
             localStorage.setItem('moleia_current_user', username);
-            
+
             // 4. Role-based redirect
             if (role === 'superuser' || role === 'admin') {
                 window.location.replace('/admin.html'); // Admin panel
@@ -362,22 +364,22 @@ async function attemptLogin() {
 function logout() {
     // 1. Limpiar tokens (backend + cliente)
     try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
-    
+
     // 2. Limpiar TODAS las llaves de sesión (Zero-Trust)
     localStorage.removeItem('moleia_current_user');
     localStorage.removeItem('moleia_user_role');
     localStorage.removeItem('moleia_chat_history_data');
     localStorage.removeItem('moleia_current_session_id');
     sessionStorage.clear(); // ← Limpieza total de sessionStorage
-    
+
     // 3. Limpiar intervalos y listeners
-    if (typeof detachChatListener === 'function') detachChatListener(); 
-    if (window.monitorInterval) clearInterval(window.monitorInterval);  
+    if (typeof detachChatListener === 'function') detachChatListener();
+    if (window.monitorInterval) clearInterval(window.monitorInterval);
     if (window.clockInterval) clearInterval(window.clockInterval);
     if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
-    
+
     console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
-    
+
     // 4. Redirección SIN rastro en historial
     window.location.replace('/index.html'); // replace() instead of href prevents "back" to protected pages
 }
@@ -392,11 +394,11 @@ function backToDashboard() {
 function openModalWithTV(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
-    
+
     // Mostramos el contenedor oscuro de fondo
     modal.classList.remove('hidden');
     modal.classList.add('flex');
-    
+
     // Buscamos la caja interior para animar esa
     const modalContent = modal.querySelector('.border-2');
     if (modalContent) {
@@ -413,7 +415,7 @@ function closeModalWithTV(modalId) {
     if (modalContent) {
         modalContent.classList.remove('tv-on');
         modalContent.classList.add('tv-off');
-        
+
         // Esperamos a que acabe la animación (250ms) antes de ocultar el modal completo
         setTimeout(() => {
             modal.classList.add('hidden');
@@ -430,7 +432,7 @@ function closeModalWithTV(modalId) {
 function toggleProfileDropdown() {
     const dropdown = document.getElementById('profile-dropdown');
     if (!dropdown) return;
-    
+
     const currentUser = localStorage.getItem('moleia_current_user') || 'AGENTE MOLE';
     const dropdownUserName = document.getElementById('dropdown-user-name');
     if (dropdownUserName) dropdownUserName.innerText = currentUser.toUpperCase();
@@ -462,7 +464,7 @@ function updateClock() {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    
+
     const timeString = `${hours}:${minutes}:${seconds}`;
 
     // Actualiza todos los relojes que encuentre en la pantalla
@@ -476,6 +478,8 @@ updateClock();
 // Configura el intervalo para que se actualice cada 1000 milisegundos (1 segundo)
 window.clockInterval = setInterval(updateClock, 1000);
 
+// ── ISSUE-04: Initialize Health Polling (Heartbeat Dashboard) ──
+initHealthView();
 
 //Simulacion para ver pruebas//
 
@@ -486,9 +490,9 @@ function nextIotStep(step) {
     const wizardContainer = document.getElementById('iot-wizard-modal');
     const wizardContent = wizardContainer?.querySelector('.border-2');
     if (!wizardContainer || !wizardContent) return;
-    
+
     wizardContent.textContent = '';
-    
+
     const h2 = document.createElement('h2');
     h2.className = 'text-xl font-bold tracking-widest uppercase text-[#00e5ff] border-b border-[#00e5ff]/30 pb-2 mb-4';
     h2.textContent = '> ENLACE DE HARDWARE: ESP32_NODE';
@@ -536,9 +540,9 @@ function nextIotStep(step) {
             if (iotProgress) iotProgress.style.width = '75%';
             if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores analógicos...';
         }, 2000);
-        
+
         setTimeout(() => nextIotStep(3), 4000);
-        
+
     } else if (step === 3) {
         const stepDiv = document.createElement('div');
         stepDiv.id = 'iot-step-3';
@@ -591,7 +595,7 @@ function nextIotStep(step) {
 function closeIotAndShowPlantBtn() {
     closeModal('iot-wizard-modal');
     const btnCultivo = document.getElementById('new-user-plants');
-    if(btnCultivo) {
+    if (btnCultivo) {
         btnCultivo.classList.remove('hidden');
         btnCultivo.classList.add('flex'); // Lo mostramos para que ahora pueda agregar la planta
     }
@@ -610,7 +614,7 @@ function registerNewPlant() {
 
     // 1. Cerramos la ventana de agregar planta
     closeModalWithTV('add-plant-modal');
-    
+
     // 2. Ocultamos el botón de agregar planta (porque ya agregamos una)
     const newUserPlants = document.getElementById('new-user-plants');
     if (newUserPlants) {
@@ -622,7 +626,7 @@ function registerNewPlant() {
     const videoPlaceholder = document.getElementById('video-placeholder');
     const mainImg = document.getElementById('main-img');
     const plantTag = document.getElementById('plant-tag');
-    
+
     if (videoPlaceholder) videoPlaceholder.classList.add('hidden'); // Quitamos el texto de espera
     if (mainImg) mainImg.classList.remove('hidden'); // Mostramos la imagen de la planta
     if (plantTag) plantTag.innerText = finalName; // Ponemos el nombre que eligió el usuario
@@ -637,14 +641,14 @@ const ActionMap = {
     'type:vision': () => typeContent('vision'),
     'type:flora': () => loadFloraSearch(),
     'system:start': () => startSystem(),
-    
+
     // Auth Router Updates
     'auth:login': () => attemptLogin(),
     'auth:register': () => submitRegistration(),
     'nav:toggle-register': () => toggleAuthForm('register'),
     'nav:toggle-login': () => toggleAuthForm('login'),
     'auth:forgot': () => typeof forgotPassword === 'function' && forgotPassword(),
-    
+
     'mlops:train-rag': () => typeof trainRagModel === 'function' && trainRagModel(),
     'admin:create-operator': () => openUserCreationModal(),
     'admin:add-plant': () => openAdminAddPlantModal(),
@@ -655,12 +659,12 @@ const ActionMap = {
     'report:download': (target) => handleReportDownload(target),
     'menu:toggle-cultivos': () => toggleCultivosMenu(),
     'chat:new': () => typeof chat !== 'undefined' && chat.clearChatHistory ? chat.clearChatHistory() : console.warn("Módulo de chat no cargado."),
-    'chat:history': () => { 
-        const toast = document.getElementById('toast-container'); 
-        if(toast) { 
-            toast.innerHTML = `<div class="bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse"><p class="text-mole-cyan font-mono text-[11px] uppercase tracking-widest">&gt; HISTORIAL (EN CONSTRUCCIÓN)</p></div>`; 
-            setTimeout(() => toast.innerHTML='', 3000); 
-        } 
+    'chat:history': () => {
+        const toast = document.getElementById('toast-container');
+        if (toast) {
+            toast.innerHTML = `<div class="bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse"><p class="text-mole-cyan font-mono text-[11px] uppercase tracking-widest">&gt; HISTORIAL (EN CONSTRUCCIÓN)</p></div>`;
+            setTimeout(() => toast.innerHTML = '', 3000);
+        }
     }
 };
 
@@ -715,18 +719,18 @@ function loadFloraSearch() {
 
     // 2. Inyectar la interfaz del buscador estilo Terminal
     container.textContent = '';
-    
+
     const wrapper = document.createElement('div');
     wrapper.className = 'flex flex-col h-full w-full min-h-[200px]';
-    
+
     const topBar = document.createElement('div');
     topBar.className = 'flex items-center border-b border-[#00e5ff]/50 pb-2 mb-4';
-    
+
     const promptSpan = document.createElement('span');
     promptSpan.className = 'mr-2 animate-pulse';
     promptSpan.textContent = '>_';
     topBar.appendChild(promptSpan);
-    
+
     const inputField = document.createElement('input');
     inputField.type = 'text';
     inputField.id = 'flora-search-input';
@@ -734,18 +738,18 @@ function loadFloraSearch() {
     inputField.placeholder = 'Buscar espécimen (ej. Agave, Cempasúchil)...';
     inputField.autocomplete = 'off';
     topBar.appendChild(inputField);
-    
+
     wrapper.appendChild(topBar);
-    
+
     const resultsDiv = document.createElement('div');
     resultsDiv.id = 'flora-search-results';
     resultsDiv.className = 'flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin';
-    
+
     const waitingText = document.createElement('p');
     waitingText.className = 'text-[#00e5ff]/50 text-sm italic';
     waitingText.textContent = 'Esperando consulta de base de datos...';
     resultsDiv.appendChild(waitingText);
-    
+
     wrapper.appendChild(resultsDiv);
     container.appendChild(wrapper);
 
@@ -786,7 +790,7 @@ function loadFloraSearch() {
     };
 
     // Remove any previous identical listener to avoid duplicates
-    input.removeEventListener('input', input._floraListener || (() => {}));
+    input.removeEventListener('input', input._floraListener || (() => { }));
     input.addEventListener('input', onInput);
     input._floraListener = onInput;
 }
@@ -803,7 +807,7 @@ async function searchPlant(query) {
     try {
         const data = await window.moleApi.get('plants/search/?q=' + encodeURIComponent(query));
         const results = Array.isArray(data) ? data : (data.results || []);
-        
+
         renderPlantResults(results);
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -851,24 +855,24 @@ function renderPlantResults(results) {
         const temperature = plant.temperatura || '';
         const ph = plant.ph || '';
         const isProtected = plant.is_protected_nom059 === true || plant.is_protected_nom059 === 'true';
-        const warning = isProtected ? 
+        const warning = isProtected ?
             `ATENCIÓN: Especie protegida por NOM-059 (Categoría: ${plant.protection_category || 'Especial'}). Extracción ilegal sancionada.` : '';
-        
+
         const card = document.createElement('div');
         card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
-        
+
         const title = document.createElement('h3');
         title.className = 'font-bold text-[#00e5ff] text-sm tracking-widest';
         title.textContent = name.toUpperCase();
         card.appendChild(title);
-        
+
         if (scientific) {
             const sci = document.createElement('p');
             sci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
             sci.textContent = scientific;
             card.appendChild(sci);
         }
-        
+
         const snippet = document.createElement('p');
         snippet.className = 'text-xs text-[#00e5ff]/90 opacity-80';
         snippet.style.display = '-webkit-box';
@@ -877,12 +881,12 @@ function renderPlantResults(results) {
         snippet.style.overflow = 'hidden';
         snippet.textContent = desc;
         card.appendChild(snippet);
-        
+
         // Agronomic parameters (humidity, temperature, pH)
         if (humidity || temperature || ph) {
             const params = document.createElement('div');
             params.className = 'mt-2 flex flex-wrap gap-2';
-            
+
             if (humidity) {
                 const hum = document.createElement('span');
                 hum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
@@ -903,7 +907,7 @@ function renderPlantResults(results) {
             }
             card.appendChild(params);
         }
-        
+
         // NOM-059 Warning (if protected)
         if (isProtected && warning) {
             const alert = document.createElement('div');
@@ -911,7 +915,7 @@ function renderPlantResults(results) {
             alert.textContent = warning;
             card.appendChild(alert);
         }
-        
+
         // Build expanded view on demand and restore original when closed
         const buildExpanded = () => {
             // Clear card
@@ -921,21 +925,21 @@ function renderPlantResults(results) {
             eTitle.className = 'font-bold text-[#00e5ff] text-sm tracking-widest border-b border-[#00e5ff]/30 pb-1 mb-2';
             eTitle.textContent = name.toUpperCase();
             card.appendChild(eTitle);
-            
+
             // Add species image if available
             if (plant.image_url) {
                 const eImage = document.createElement('img');
                 eImage.className = 'w-full h-48 object-cover rounded border border-[#00e5ff]/30 my-2';
                 eImage.src = plant.image_url;
                 eImage.alt = name + ' - imagen botánica';
-                eImage.onerror = function() {
+                eImage.onerror = function () {
                     this.onerror = null; // evitar loop infinito
                     this.src = '/static/assets/topo.png';
                     this.alt = 'Sin imagen disponible';
                 };
                 card.appendChild(eImage);
             }
-            
+
             if (scientific) {
                 const eSci = document.createElement('p');
                 eSci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
@@ -952,11 +956,11 @@ function renderPlantResults(results) {
             const eHumidity = plant.humedad || '';
             const eTemperature = plant.temperatura || '';
             const ePh = plant.ph || '';
-            
+
             if (eHumidity || eTemperature || ePh) {
                 const eParams = document.createElement('div');
                 eParams.className = 'mt-2 flex flex-wrap gap-2';
-                
+
                 if (eHumidity) {
                     const eHum = document.createElement('span');
                     eHum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
@@ -1037,7 +1041,7 @@ Object.assign(window, tactical);
 // ── Wire ApiService.showToast to Tactical Toast ──────────────────────────
 // This replaces the legacy CSS-dependent toast with our design-system-native one.
 if (window.ApiService) {
-    window.ApiService.showToast = function(message, type) {
+    window.ApiService.showToast = function (message, type) {
         const typeMap = { error: 'error', warn: 'warn', info: 'info', success: 'success' };
         window.showTacticalToast(message, typeMap[type] || 'info');
     };
