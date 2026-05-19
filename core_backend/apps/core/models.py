@@ -230,10 +230,23 @@ import uuid
 
 class Device(models.Model):
     """El Microcontrolador físico (Gateway ESP32)"""
+
+    STATUS_CHOICES = [
+        ('online', 'Online'),
+        ('warning', 'Warning'),
+        ('offline', 'Offline'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     auth_token = models.CharField(max_length=128, unique=True, help_text="Bearer token")
-    status = models.CharField(max_length=20, default='offline')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offline')
+    last_seen = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Timestamp of last telemetry frame received (heartbeat)",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
 class Plant(models.Model):

@@ -21,28 +21,23 @@ struct sensor_soil {
     adc_channel_t             channel;
 };
 
-esp_err_t sensor_soil_init(int adc_channel, sensor_soil_handle_t *out_handle)
+esp_err_t sensor_soil_init(adc_oneshot_unit_handle_t adc_handle, int adc_channel, sensor_soil_handle_t *out_handle)
 {
+    if (!adc_handle) return ESP_ERR_INVALID_ARG;
+
     struct sensor_soil *s = calloc(1, sizeof(*s));
     if (!s) return ESP_ERR_NO_MEM;
 
     s->channel = (adc_channel_t)adc_channel;
-
-    /* Initialize ADC1 unit */
-    adc_oneshot_unit_init_cfg_t unit_cfg = {
-        .unit_id = ADC_UNIT_1,
-    };
-    esp_err_t err = adc_oneshot_new_unit(&unit_cfg, &s->adc_handle);
-    if (err != ESP_OK) { free(s); return err; }
+    s->adc_handle = adc_handle;
 
     /* Configure the channel: 12-bit width, 11dB attenuation (0–3.3V range) */
     adc_oneshot_chan_cfg_t chan_cfg = {
         .bitwidth = ADC_BITWIDTH_12,
         .atten    = ADC_ATTEN_DB_12,
     };
-    err = adc_oneshot_config_channel(s->adc_handle, s->channel, &chan_cfg);
+    esp_err_t err = adc_oneshot_config_channel(s->adc_handle, s->channel, &chan_cfg);
     if (err != ESP_OK) {
-        adc_oneshot_del_unit(s->adc_handle);
         free(s);
         return err;
     }
