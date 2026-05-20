@@ -264,6 +264,8 @@ CHANNEL_LAYERS = {
     }
 }
 
+from celery.schedules import crontab
+
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
 CELERY_ACCEPT_CONTENT = ['json']
@@ -277,6 +279,10 @@ CELERY_BEAT_SCHEDULE = {
     'check-device-liveness-every-minute': {
         'task': 'check_device_liveness',
         'schedule': 60.0,
+    },
+    'dlm-pipeline-daily-0300-utc': {
+        'task': 'dlm_pipeline',
+        'schedule': crontab(hour=3, minute=0),
     },
 }
 
