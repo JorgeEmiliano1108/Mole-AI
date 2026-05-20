@@ -125,6 +125,63 @@ class SensorBatchSerializer(serializers.Serializer):
     )
 
 
+# ── Edge Node Compact Contract (1:N Refactoring) ────────────────────────────
+
+class EdgeSoilItemSerializer(serializers.Serializer):
+    """Single soil reading: {p: "32", v: 2847}"""
+    p = serializers.CharField(max_length=10, help_text="Hardware pin identifier")
+    v = serializers.FloatField(min_value=0, max_value=4095, help_text="Raw ADC value or calibrated %")
+
+
+class EdgeFrameSerializer(serializers.Serializer):
+    """
+    Validates the compact JSON contract from ESP32 firmware (~180 bytes).
+    Contract: {ts: epoch, ri: minutes, a: {t,h,l,u}, s: [{p,v}]}
+    """
+    ts = serializers.FloatField(help_text="Unix epoch timestamp")
+    ri = serializers.IntegerField(
+        min_value=1, max_value=120, required=False, default=5,
+        help_text="Report interval in minutes",
+    )
+    a = serializers.DictField(required=False, allow_null=True, help_text="Ambient readings")
+    s = EdgeSoilItemSerializer(many=True, required=False, default=list, help_text="Soil readings array")
+
+    def validate_ts(self, value):
+        """A4: Only reject timestamps from the FUTURE (> now + 5min). Past timestamps are 100% valid."""
+        from django.utils import timezone as tz
+        from datetime import datetime, timedelta
+        naive_dt = datetime.fromtimestamp(value)
+        aware_dt = tz.make_aware(naive_dt)
+        if aware_dt > tz.now() + timedelta(minutes=5):
+            raise serializers.ValidationError(
+                "Timestamp rejected: future timestamp exceeds clock drift tolerance (>5min)."
+            )
+        return value
+
+    def validate_a(self, value):
+        """Expand compact ambient keys and validate ranges."""
+        if value is None:
+            return None
+        KEY_MAP = {'t': 'air_temperature', 'h': 'air_humidity', 'l': 'light_level', 'u': 'uv_index'}
+        RANGES = {
+            'air_temperature': (-40.0, 80.0),
+            'air_humidity': (0.0, 100.0),
+            'light_level': (0.0, 65535.0),
+            'uv_index': (0.0, 15.0),
+        }
+        expanded = {}
+        for short_key, val in value.items():
+            full_key = KEY_MAP.get(short_key)
+            if full_key and val is not None:
+                lo, hi = RANGES.get(full_key, (None, None))
+                if lo is not None and not (lo <= float(val) <= hi):
+                    raise serializers.ValidationError(
+                        f"{full_key} ({val}) out of range [{lo}, {hi}]"
+                    )
+                expanded[full_key] = float(val)
+        return expanded
+
+
 class DiagnosticRequestSerializer(serializers.Serializer):
     plant_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
     model_type = serializers.ChoiceField(

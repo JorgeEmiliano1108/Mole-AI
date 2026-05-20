@@ -13,6 +13,7 @@ import * as security from './modules/ui/security.js';
 import * as memory from './modules/ui/memory.js';
 import * as iot from './modules/ui/iot.js';
 import { initIoTView } from './modules/services/iot.js';
+import { initBindingsPanel, deleteBinding } from './modules/services/bindings.js';
 import * as config from './modules/api/config.js';
 import * as mlops from './modules/services/mlops.js';
 import * as vision from './modules/services/vision.js';
@@ -24,10 +25,47 @@ import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
 import { loadWiki } from './modules/services/wiki.js';
-import { initHealthView, setDeviceId as setHealthDeviceId } from './modules/services/health.js';
+import { initHealthView, setDeviceId as setHealthDeviceId, pausePolling, resumePolling } from './modules/services/health.js';
 window.loadWiki = loadWiki;
 window.initIoTView = initIoTView;
 window.setHealthDeviceId = setHealthDeviceId;
+
+// -- FE-02: Global State Singleton (session-scoped cache) --
+window.MoleState = window.MoleState || {
+    speciesCatalog: [],       // Populated once on login, read locally by wiki/health
+    speciesCatalogLoaded: false,
+    currentDeviceId: localStorage.getItem('moleia_device_id') || null,
+    _speciesPromise: null,    // PATCH-01: Promise guard against race conditions
+};
+
+async function _fetchSpeciesCatalog() {
+    try {
+        const data = await window.ApiService.get('plants/species/');
+        window.MoleState.speciesCatalog = Array.isArray(data) ? data : (data.results || []);
+        window.MoleState.speciesCatalogLoaded = true;
+    } catch (e) {
+        console.warn('[MoleState] Failed to load species catalog:', e.message);
+    }
+}
+
+function loadSpeciesCatalog() {
+    if (window.MoleState.speciesCatalogLoaded) return Promise.resolve();
+    if (!window.MoleState._speciesPromise) {
+        window.MoleState._speciesPromise = _fetchSpeciesCatalog();
+    }
+    return window.MoleState._speciesPromise;
+}
+
+// Public API: consumers await this before reading speciesCatalog
+window.MoleState.ensureSpeciesLoaded = function() {
+    return loadSpeciesCatalog();
+};
+
+// Trigger on DOMContentLoaded (after auth token is available)
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('moleia_token') || localStorage.getItem('mole_jwt');
+    if (token) loadSpeciesCatalog();
+});
 
 // Safety check: Wait for global apiService to be loaded
 if (!window.moleApi) {
@@ -634,8 +672,86 @@ function registerNewPlant() {
 }
 
 // ==========================================================
-// EVENT ROUTER CENTRALIZADO (PATRÓN DE DELEGACIÓN)
+// EVENT ROUTER CENTRALIZADO (PATRON DE DELEGACION)
 // ==========================================================
+
+// Modal ID map for close-module data-target resolution
+const MODAL_IDS = {
+    'analysis': 'analysis-modal',
+    'contact': 'contact-modal',
+    'addPlant': 'add-plant-modal',
+    'history': 'history-modal',
+    'profile': 'user-profile-modal',
+    'delete': 'delete-account-modal',
+};
+
+function handleSwitchField(target) {
+    const viewId = target.getAttribute('data-target');
+    if (!viewId) return;
+
+    // Pause health polling when leaving monitoreo view
+    if (typeof pausePolling === 'function') pausePolling();
+
+    // Delegate to navigation.js
+    if (typeof window.switchFieldView === 'function') {
+        window.switchFieldView(viewId);
+    }
+
+    // Resume health polling only when monitoreo is active
+    if (viewId === 'view-monitoreo' && typeof resumePolling === 'function') {
+        resumePolling();
+    }
+
+    // Initialize bindings panel when IoT view is activated
+    if (viewId === 'view-iot') {
+        initBindingsPanel();
+    }
+
+    // Update sidebar button highlight (data-action based, not onclick)
+    document.querySelectorAll('nav button[data-action="switch-field"]').forEach(btn => {
+        if (btn.getAttribute('data-target') === viewId) {
+            btn.classList.remove('text-mole-dim');
+            btn.classList.add('text-mole-cyan');
+        } else {
+            btn.classList.remove('text-mole-cyan');
+            btn.classList.add('text-mole-dim');
+        }
+    });
+}
+
+function handleToggleDropdown(target) {
+    const dropdownId = target.getAttribute('data-target');
+    if (!dropdownId) return;
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+    dropdown.classList.toggle('hidden');
+
+    // Close on outside click (one-shot)
+    if (!dropdown.classList.contains('hidden')) {
+        const closeOnOutside = (e) => {
+            if (!dropdown.contains(e.target) && !target.contains(e.target)) {
+                dropdown.classList.add('hidden');
+                document.removeEventListener('click', closeOnOutside);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeOnOutside), 0);
+    }
+}
+
+function handleCloseModule(target) {
+    const key = target.getAttribute('data-target');
+    const modalId = MODAL_IDS[key] || key;
+    if (typeof closeModalWithTV === 'function') {
+        closeModalWithTV(modalId);
+    } else {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+}
+
 const ActionMap = {
     'type:objetivo': () => typeContent('objetivo'),
     'type:vision': () => typeContent('vision'),
@@ -654,18 +770,47 @@ const ActionMap = {
     'admin:add-plant': () => openAdminAddPlantModal(),
     'nav:logout': () => logout(),
     'nav:return-override': () => returnToOverride(),
-    'modal:close-iot': () => closeModal('iot-wizard-modal'),
+    'modal:close-iot': () => closeModalWithTV('iot-wizard-modal'),
     'iot:finalize': () => closeIotAndShowPlantBtn(),
     'report:download': (target) => handleReportDownload(target),
     'menu:toggle-cultivos': () => toggleCultivosMenu(),
-    'chat:new': () => typeof chat !== 'undefined' && chat.clearChatHistory ? chat.clearChatHistory() : console.warn("Módulo de chat no cargado."),
+    'chat:new': () => typeof chat !== 'undefined' && chat.clearChatHistory ? chat.clearChatHistory() : console.warn("Modulo de chat no cargado."),
     'chat:history': () => {
         const toast = document.getElementById('toast-container');
         if (toast) {
-            toast.innerHTML = `<div class="bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse"><p class="text-mole-cyan font-mono text-[11px] uppercase tracking-widest">&gt; HISTORIAL (EN CONSTRUCCIÓN)</p></div>`;
+            toast.innerHTML = `<div class="bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse"><p class="text-mole-cyan font-mono text-[11px] uppercase tracking-widest">&gt; HISTORIAL (EN CONSTRUCCION)</p></div>`;
             setTimeout(() => toast.innerHTML = '', 3000);
         }
-    }
+    },
+
+    // -- FE-01: Orphan action handlers --
+    'switch-field': (target) => handleSwitchField(target),
+    'toggle-dropdown': (target) => handleToggleDropdown(target),
+    'toggle-theme': () => typeof window.toggleTheme === 'function' && window.toggleTheme(),
+    'open-chat': () => typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null,
+    'close-chat': () => typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null,
+    'close-module': (target) => handleCloseModule(target),
+    'hide-panel': (target) => {
+        const panelId = target.getAttribute('data-target');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (panel) { panel.classList.add('hidden'); panel.classList.remove('flex'); }
+    },
+    'open-delete-modal': () => {
+        const modal = document.getElementById('delete-account-modal');
+        if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    },
+    'update-plant': () => typeof updatePlantFromModal === 'function' && updatePlantFromModal(),
+    'next-iot-step': (target) => {
+        const step = target.getAttribute('data-target');
+        if (typeof advanceIotStep === 'function') advanceIotStep(step);
+    },
+
+    // -- FE-03: Binding CRUD actions --
+    'binding:delete': (target) => {
+        const bindingId = target.getAttribute('data-binding-id');
+        const deviceId  = target.getAttribute('data-device-id');
+        if (bindingId && deviceId) deleteBinding(bindingId, deviceId);
+    },
 };
 
 document.body.addEventListener('click', (event) => {

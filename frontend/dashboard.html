@@ -271,50 +271,81 @@
         </div>
     </div>
 </div>
-<div id="view-iot" class="field-view hidden flex-1 flex flex-col h-full w-full p-4 md:p-6">
-    <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-6">> VINCULACIÓN DE HARDWARE</h2>
+<div id="view-iot" class="field-view hidden flex-1 flex flex-col h-full w-full p-4 md:p-6 overflow-y-auto">
+    <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-6">> PANEL DE HARDWARE</h2>
 
-    <!-- Contenedor Central -->
-    <div class="max-w-lg mx-auto w-full flex flex-col gap-4">
-        
-        <!-- TABS: Wi-Fi / Bluetooth -->
-        <div class="flex border border-mole-border rounded-lg overflow-hidden">
-            <button id="tab-wifi" class="flex-1 py-2.5 text-xs font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors">
-                📶 Wi-Fi
-            </button>
-            <button id="tab-ble" class="flex-1 py-2.5 text-xs font-bold tracking-widest bg-mole-surface text-mole-dim hover:text-mole-cyan transition-colors">
-                📡 Bluetooth
-            </button>
+    <!-- Bindings Panel (FE-03) -->
+    <div id="bindings-panel" class="max-w-2xl mx-auto w-full flex flex-col gap-4">
+
+        <!-- Active Bindings Table -->
+        <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden shadow-cyber">
+            <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
+                <h3 class="text-xs font-bold text-mole-accent tracking-wider uppercase flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-mole-green"></span>
+                    BINDINGS ACTIVOS
+                </h3>
+                <span class="text-[10px] text-mole-dim font-mono"><span id="bindings-count">0</span> REGISTROS</span>
+            </div>
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-mole-border bg-mole-bg/50">
+                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">PIN</th>
+                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">PLANTA</th>
+                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">ESPECIE</th>
+                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider text-right">ACCION</th>
+                    </tr>
+                </thead>
+                <tbody id="bindings-table-body">
+                    <tr>
+                        <td colspan="4" class="text-center text-mole-dim text-xs py-6 font-mono animate-pulse">
+                            [AWAIT] Cargando bindings...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
-        <!-- PANEL WI-FI (visible por defecto) -->
-        <div id="panel-wifi" class="flex flex-col gap-3 bg-mole-surface border border-mole-border rounded-lg p-4">
-            <p class="text-mole-dim text-xs font-mono mb-1">Ingrese credenciales de red del nodo ESP32:</p>
-            <input id="prov-ssid" type="text" placeholder="> SSID" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
-            <input id="prov-pass" type="password" placeholder="> CONTRASEÑA WPA2" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
-            <input id="prov-node-name" type="text" placeholder="> NOMBRE DEL NODO (ej: ESP-INVERNADERO-01)" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
-            <button id="btn-prov-wifi" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm mt-1">
-                VINCULAR DISPOSITIVO
-            </button>
+        <!-- Assignment Form -->
+        <div class="bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber">
+            <h3 class="text-xs font-bold text-mole-cyan tracking-wider uppercase mb-3 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-mole-cyan animate-pulse"></span>
+                ASIGNAR PIN A PLANTA
+            </h3>
+            <form id="binding-form" class="flex flex-col gap-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="binding-pin" class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">PIN FISICO</label>
+                        <input id="binding-pin" type="text" placeholder="Ej: 32, A0" class="w-full bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="binding-plant-id" class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">PLANT_ID (UUID)</label>
+                        <input id="binding-plant-id" type="text" placeholder="UUID de UserPlant" class="w-full bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded" autocomplete="off">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm">
+                    CREAR BINDING
+                </button>
+            </form>
+            <p id="binding-status" class="hidden text-xs font-mono mt-2"></p>
         </div>
 
-        <!-- PANEL BLUETOOTH (oculto por defecto) -->
-        <div id="panel-ble" class="hidden flex flex-col gap-3 bg-mole-surface border border-mole-border rounded-lg p-4">
-            <div class="flex justify-between items-center mb-1">
-                <p class="text-mole-dim text-xs font-mono">Dispositivos Bluetooth cercanos:</p>
-                <button id="btn-ble-scan" class="text-[10px] text-mole-cyan border border-mole-cyan px-2.5 py-1 rounded hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-wider">
-                    ESCANEAR
+        <!-- Wi-Fi Provisioning (legacy, collapsed) -->
+        <details class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden">
+            <summary class="px-4 py-3 text-xs font-bold text-mole-dim uppercase tracking-wider cursor-pointer hover:text-mole-cyan transition-colors">
+                [+] PROVISIONING WI-FI / BLUETOOTH (LEGACY)
+            </summary>
+            <div class="p-4 border-t border-mole-border flex flex-col gap-3">
+                <p class="text-mole-dim text-xs font-mono mb-1">Credenciales de red del nodo ESP32:</p>
+                <input id="prov-ssid" type="text" placeholder="> SSID" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+                <input id="prov-pass" type="password" placeholder="> PASSWORD WPA2" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+                <input id="prov-node-name" type="text" placeholder="> NOMBRE DEL NODO (ej: ESP-INVERNADERO-01)" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+                <button id="btn-prov-wifi" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm mt-1">
+                    VINCULAR DISPOSITIVO
                 </button>
             </div>
-            <div id="ble-device-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                <p class="text-mole-dim text-[10px] font-mono text-center py-6 opacity-50">[ Presione ESCANEAR para detectar nodos ]</p>
-            </div>
-            <button id="btn-prov-ble" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed mt-1" disabled>
-                VINCULAR DISPOSITIVO
-            </button>
-        </div>
+        </details>
 
-        <!-- STATUS (compartido) -->
+        <!-- STATUS -->
         <div id="prov-status" class="hidden bg-mole-bg border border-mole-border rounded-lg p-3 text-xs font-mono">
             <span id="prov-status-text" class="text-mole-cyan"></span>
         </div>

@@ -20,7 +20,11 @@ User = get_user_model()
 
 class SensorLog(models.Model):
     """
-    Wide-table model for sensor readings.
+    [DEPRECATED — A3 FREEZE] Legacy wide-table model for sensor readings.
+    
+    New telemetry writes go to AmbientReading + SoilReading (1:N schema).
+    This table is retained as a historical read-only archive.
+    Do NOT create new SensorLog records. Use the relational models instead.
     """
 
     id = models.BigAutoField(primary_key=True)
@@ -108,7 +112,7 @@ class AIDiagnostic(models.Model):
 class DiagnosticoGeolocalizado(models.Model):
     """
     Tabla para almacenar diagnósticos con coordenadas geográficas.
-    Managed=True para que Django cree y migre esta tabla localmente (SQLite).
+    Managed=True para que Django cree y migre esta tabla localmente.
     """
 
     SEVERITY_LEVELS = [
@@ -216,11 +220,11 @@ class AuditLog(models.Model):
         return f"[{self.timestamp}] {self.action} by User {self.user_id}"
 
     def delete(self, *args, **kwargs):
-        raise PermissionError("MoProSoft Compliance: Audit logs are immutable and cannot be deleted.")
+        raise PermissionError("Audit logs are immutable and cannot be deleted.")
 
     def save(self, *args, **kwargs):
         if self.pk is not None:
-            raise PermissionError("MoProSoft Compliance: Audit logs are append-only and cannot be modified.")
+            raise PermissionError("Audit logs are append-only and cannot be modified.")
         super().save(*args, **kwargs)
 
 # ---------------------------------------------------------------------------
@@ -247,18 +251,32 @@ class Device(models.Model):
         db_index=True,
         help_text="Timestamp of last telemetry frame received (heartbeat)",
     )
+    report_interval_minutes = models.PositiveSmallIntegerField(
+        default=5,
+        help_text="Cadencia de reporte en minutos (1-120). Usado por Celery para calcular umbrales de liveness.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
-class Plant(models.Model):
-    """Zona de suelo cultivado monitoreada por un pin de un Device"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='plants')
+    class Meta:
+        db_table = 'devices'
+        managed = True
+
+    def __str__(self):
+        return f"{self.name} ({self.status})"
+
+class HardwareBinding(models.Model):
+    """Mapeo físico entre un Pin de Hardware y una Planta de Usuario"""
+    id = models.BigAutoField(primary_key=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='bindings')
     hardware_pin = models.CharField(max_length=10, help_text="Ej: '32', 'A0'")
-    name = models.CharField(max_length=100)
-    species = models.CharField(max_length=100, blank=True, null=True)
+    plant = models.OneToOneField('plants.UserPlant', on_delete=models.CASCADE, related_name='hardware_binding')
 
     class Meta:
+        db_table = 'hardware_bindings'
         unique_together = ('device', 'hardware_pin')
+
+    def __str__(self):
+        return f"{self.device.name} [{self.hardware_pin}] -> {self.plant.id}"
 
 class AmbientReading(models.Model):
     """Telemetría del entorno físico (DHT22 / LTR390)"""
@@ -271,9 +289,64 @@ class AmbientReading(models.Model):
     uv_index = models.FloatField(null=True, blank=True)
 
 class SoilReading(models.Model):
-    """Telemetría específica de una Planta (Suelo)"""
+    """Telemetría específica de una Planta (Suelo) enrutada a través de un Pin"""
     id = models.BigAutoField(primary_key=True)
-    plant = models.ForeignKey(Plant, on_delete=models.CASCADE, related_name='soil_readings')
+    binding = models.ForeignKey(HardwareBinding, on_delete=models.CASCADE, related_name='soil_readings')
     recorded_at = models.DateTimeField(default=timezone.now)
     soil_humidity = models.FloatField()
     ph_level = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'soil_readings'
+        ordering = ['-recorded_at']
+
+# ---------------------------------------------------------------------------
+# DATA LIFECYCLE MANAGEMENT -- Hourly Aggregates (DLM-01)
+# ---------------------------------------------------------------------------
+
+class HourlySoilAggregate(models.Model):
+    """Hourly downsampled soil telemetry. Idempotent via unique_together."""
+    id = models.BigAutoField(primary_key=True)
+    binding = models.ForeignKey(HardwareBinding, on_delete=models.CASCADE, related_name='hourly_soil')
+    hour = models.DateTimeField(db_index=True, help_text="Truncated to hour")
+    avg_soil_humidity = models.FloatField()
+    min_soil_humidity = models.FloatField()
+    max_soil_humidity = models.FloatField()
+    sample_count = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = 'hourly_soil_aggregates'
+        unique_together = ('binding', 'hour')
+        managed = True
+        ordering = ['-hour']
+
+class HourlyAmbientAggregate(models.Model):
+    """Hourly downsampled ambient telemetry. Idempotent via unique_together."""
+    id = models.BigAutoField(primary_key=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='hourly_ambient')
+    hour = models.DateTimeField(db_index=True)
+    avg_air_temperature = models.FloatField(null=True)
+    avg_air_humidity = models.FloatField(null=True)
+    avg_uv_index = models.FloatField(null=True)
+    avg_light_level = models.FloatField(null=True)
+    sample_count = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = 'hourly_ambient_aggregates'
+        unique_together = ('device', 'hour')
+        managed = True
+        ordering = ['-hour']
+
+class TelemetryArchive(models.Model):
+    """Registry of S3 exports. Purge task refuses to run without a matching record."""
+    id = models.BigAutoField(primary_key=True)
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='archives')
+    period_start = models.DateTimeField()
+    period_end = models.DateTimeField()
+    s3_key = models.CharField(max_length=512, unique=True)
+    rows_archived = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'telemetry_archives'
+        managed = True

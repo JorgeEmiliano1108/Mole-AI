@@ -330,23 +330,26 @@ if (isPublic) {
         try {
             if (token && typeof token === 'string' && token.trim() !== '') {
                 if (self.isTokenExpired(token)) {
-                    // Token about to expire — clear and redirect to login
-                    self.clearToken();
-                    ApiService.showToast('Sesión a punto de expirar. Vuelve a iniciar sesión.', 'error');
-                    window.location.href = '/login/';
-                    var err = new Error('TOKEN_EXPIRING');
-                    err.status = 401;
-                    return Promise.reject(err);
+                    // ISSUE-FE-06: If route is public, silently drop token and proceed anonymously
+                    if (options.allowAnonymous) {
+                        self.clearToken();
+                        token = null;
+                        console.log('[ApiService] Token expired on public route, proceeding anonymously.');
+                    } else {
+                        // Token about to expire — clear and redirect to login
+                        self.clearToken();
+                        ApiService.showToast('Sesión a punto de expirar. Vuelve a iniciar sesión.', 'error');
+                        window.location.href = '/login/';
+                        var err = new Error('TOKEN_EXPIRING');
+                        err.status = 401;
+                        return Promise.reject(err);
+                    }
                 }
             }
         } catch (e) {
             console.warn('[ApiService] Pre-flight token check failed, procediendo con limpieza.');
             self.clearToken();
-        }
-        // If anonymous request and token was expired, clear it so we don't send Authorization
-        if (options.allowAnonymous && token && self.isTokenExpired(token)) {
-            self.clearToken();
-            token = null;
+            if (options.allowAnonymous) token = null;
         }
 
         // Defensive guard: if a token exists but is not a plain string, clear it and fail early

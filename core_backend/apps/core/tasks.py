@@ -162,7 +162,7 @@ def generate_pdf_async(self, diagnostic_id, user_id):
     Queue: reports_queue (shared with generate_master_report_task)
     Retry: 2 attempts — PDF generation is mostly deterministic
 
-    LFPDPPP: user_id is hashed for the S3 key — no PII in object storage.
+    user_id is hashed for the S3 key — no PII in object storage.
     """
     import io
     import logging
@@ -248,9 +248,10 @@ def generate_pdf_async(self, diagnostic_id, user_id):
 @shared_task(name="check_device_liveness")
 def check_device_liveness():
     """
-    Evaluates the liveness of all devices based on their last_seen heartbeat.
-    > 3 min -> warning
-    > 10 min -> offline
+    Per-device dynamic liveness evaluation.
+    Thresholds derived from each device's report_interval_minutes:
+      warning  = 2x interval (missed 1 cycle)
+      offline  = 4x interval (missed 3 cycles)
     """
     import logging
     from datetime import timedelta
@@ -259,26 +260,338 @@ def check_device_liveness():
 
     logger = logging.getLogger(__name__)
     now = timezone.now()
-    
-    warning_threshold = now - timedelta(minutes=3)
-    offline_threshold = now - timedelta(minutes=10)
+    offline_count = 0
+    warning_count = 0
 
-    # 1. Mark devices as offline if they crossed the 10-minute threshold
-    offline_count = Device.objects.filter(
-        last_seen__lt=offline_threshold
-    ).exclude(status='offline').update(status='offline')
+    devices = Device.objects.exclude(status='offline', last_seen__isnull=True)
 
-    # 2. Mark devices as warning if they crossed the 3-minute threshold
-    #    (but are still within the 10-minute window)
-    warning_count = Device.objects.filter(
-        last_seen__lt=warning_threshold,
-        last_seen__gte=offline_threshold
-    ).exclude(status__in=['warning', 'offline']).update(status='warning')
+    for dev in devices.iterator():
+        if dev.last_seen is None:
+            continue
+
+        interval = dev.report_interval_minutes or 5
+        warning_edge = now - timedelta(minutes=interval * 2)
+        offline_edge = now - timedelta(minutes=interval * 4)
+
+        if dev.last_seen < offline_edge and dev.status != 'offline':
+            dev.status = 'offline'
+            dev.save(update_fields=['status'])
+            offline_count += 1
+        elif dev.last_seen < warning_edge and dev.status not in ('warning', 'offline'):
+            dev.status = 'warning'
+            dev.save(update_fields=['status'])
+            warning_count += 1
 
     if offline_count > 0 or warning_count > 0:
         logger.info(
-            "check_device_liveness completed: Marked %d devices as offline, %d as warning.",
+            "check_device_liveness: %d offline, %d warning.",
             offline_count, warning_count
         )
-    
+
     return {"offline_count": offline_count, "warning_count": warning_count}
+
+
+# =============================================================================
+# Fase 4: Data Lifecycle Management (DLM)
+# =============================================================================
+
+@shared_task(name="downsample_telemetry")
+def downsample_telemetry():
+    """
+    DLM-02: Compress raw readings older than 30 days into hourly aggregates.
+    Partitioned by Device (A2). Idempotent via ignore_conflicts (unique_together).
+    """
+    import logging
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db.models import Avg, Min, Max, Count
+    from django.db.models.functions import TruncHour
+    from apps.core.models import (
+        Device, SoilReading, AmbientReading,
+        HourlySoilAggregate, HourlyAmbientAggregate, HardwareBinding,
+    )
+
+    logger = logging.getLogger(__name__)
+    cutoff = timezone.now() - timedelta(days=30)
+    total_soil = 0
+    total_ambient = 0
+
+    for device in Device.objects.all().iterator():
+        # -- Soil aggregation per binding --
+        binding_ids = list(
+            HardwareBinding.objects.filter(device=device).values_list('pk', flat=True)
+        )
+        soil_aggs = (
+            SoilReading.objects
+            .filter(binding_id__in=binding_ids, recorded_at__lt=cutoff)
+            .annotate(hour=TruncHour('recorded_at'))
+            .values('binding_id', 'hour')
+            .annotate(
+                avg_soil_humidity=Avg('soil_humidity'),
+                min_soil_humidity=Min('soil_humidity'),
+                max_soil_humidity=Max('soil_humidity'),
+                sample_count=Count('id'),
+            )
+        )
+        soil_objs = [
+            HourlySoilAggregate(
+                binding_id=row['binding_id'],
+                hour=row['hour'],
+                avg_soil_humidity=row['avg_soil_humidity'],
+                min_soil_humidity=row['min_soil_humidity'],
+                max_soil_humidity=row['max_soil_humidity'],
+                sample_count=row['sample_count'],
+            )
+            for row in soil_aggs
+        ]
+        if soil_objs:
+            HourlySoilAggregate.objects.bulk_create(soil_objs, ignore_conflicts=True)
+            total_soil += len(soil_objs)
+
+        # -- Ambient aggregation --
+        ambient_aggs = (
+            AmbientReading.objects
+            .filter(device=device, recorded_at__lt=cutoff)
+            .annotate(hour=TruncHour('recorded_at'))
+            .values('hour')
+            .annotate(
+                avg_air_temperature=Avg('air_temperature'),
+                avg_air_humidity=Avg('air_humidity'),
+                avg_uv_index=Avg('uv_index'),
+                avg_light_level=Avg('light_level'),
+                sample_count=Count('id'),
+            )
+        )
+        ambient_objs = [
+            HourlyAmbientAggregate(
+                device=device,
+                hour=row['hour'],
+                avg_air_temperature=row['avg_air_temperature'],
+                avg_air_humidity=row['avg_air_humidity'],
+                avg_uv_index=row['avg_uv_index'],
+                avg_light_level=row['avg_light_level'],
+                sample_count=row['sample_count'],
+            )
+            for row in ambient_aggs
+        ]
+        if ambient_objs:
+            HourlyAmbientAggregate.objects.bulk_create(ambient_objs, ignore_conflicts=True)
+            total_ambient += len(ambient_objs)
+
+    logger.info("downsample_telemetry: %d soil, %d ambient aggregates upserted.", total_soil, total_ambient)
+    return {"soil_aggregates": total_soil, "ambient_aggregates": total_ambient}
+
+
+@shared_task(name="archive_telemetry_to_s3")
+def archive_telemetry_to_s3():
+    """
+    Export raw readings older than 30 days to S3 as two separate CSV.gz
+    files per device: one for soil, one for ambient.
+    Creates one TelemetryArchive record per file (A1: two records per cycle).
+    If any S3 upload fails, exception propagates and halts the chain.
+    """
+    import csv
+    import gzip
+    import logging
+    import tempfile
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.conf import settings as django_settings
+    import boto3
+    from apps.core.models import (
+        Device, SoilReading, AmbientReading,
+        HardwareBinding, TelemetryArchive,
+    )
+
+    logger = logging.getLogger(__name__)
+    cutoff = timezone.now() - timedelta(days=30)
+    period_start = cutoff - timedelta(days=30)
+    archived_count = 0
+
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=django_settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=django_settings.AWS_SECRET_ACCESS_KEY,
+        region_name=django_settings.AWS_S3_REGION_NAME,
+    )
+    bucket = django_settings.AWS_STORAGE_BUCKET_NAME
+    period_label = cutoff.strftime('%Y-%m')
+
+    for device in Device.objects.all().iterator():
+        binding_ids = list(
+            HardwareBinding.objects.filter(device=device).values_list('pk', flat=True)
+        )
+
+        # ── Soil archive ────────────────────────────────────────────────
+        soil_key = f"telemetry-archive/{device.pk}/{period_label}_soil.csv.gz"
+        if not TelemetryArchive.objects.filter(s3_key=soil_key).exists():
+            soil_qs = (
+                SoilReading.objects
+                .filter(binding_id__in=binding_ids, recorded_at__lt=cutoff)
+                .order_by('recorded_at')
+            )
+            soil_count = soil_qs.count()
+            if soil_count > 0:
+                with tempfile.NamedTemporaryFile(suffix='.csv.gz', delete=True) as tmp:
+                    with gzip.open(tmp.name, 'wt', newline='') as gz:
+                        writer = csv.writer(gz)
+                        writer.writerow(['binding_id', 'recorded_at', 'soil_humidity', 'ph_level'])
+                        for r in soil_qs.iterator(chunk_size=2000):
+                            writer.writerow([r.binding_id, r.recorded_at.isoformat(),
+                                             r.soil_humidity, r.ph_level])
+                    s3.upload_file(tmp.name, bucket, soil_key)
+
+                TelemetryArchive.objects.create(
+                    device=device, period_start=period_start, period_end=cutoff,
+                    s3_key=soil_key, rows_archived=soil_count,
+                )
+                logger.info("archive: device=%s soil -> s3://%s/%s (%d rows)",
+                            device.pk, bucket, soil_key, soil_count)
+                archived_count += 1
+
+        # ── Ambient archive ─────────────────────────────────────────────
+        ambient_key = f"telemetry-archive/{device.pk}/{period_label}_ambient.csv.gz"
+        if not TelemetryArchive.objects.filter(s3_key=ambient_key).exists():
+            ambient_qs = (
+                AmbientReading.objects
+                .filter(device=device, recorded_at__lt=cutoff)
+                .order_by('recorded_at')
+            )
+            ambient_count = ambient_qs.count()
+            if ambient_count > 0:
+                with tempfile.NamedTemporaryFile(suffix='.csv.gz', delete=True) as tmp:
+                    with gzip.open(tmp.name, 'wt', newline='') as gz:
+                        writer = csv.writer(gz)
+                        writer.writerow(['device_id', 'recorded_at', 'air_temperature',
+                                         'air_humidity', 'uv_index', 'light_level'])
+                        for r in ambient_qs.iterator(chunk_size=2000):
+                            writer.writerow([str(device.pk), r.recorded_at.isoformat(),
+                                             r.air_temperature, r.air_humidity,
+                                             r.uv_index, r.light_level])
+                    s3.upload_file(tmp.name, bucket, ambient_key)
+
+                TelemetryArchive.objects.create(
+                    device=device, period_start=period_start, period_end=cutoff,
+                    s3_key=ambient_key, rows_archived=ambient_count,
+                )
+                logger.info("archive: device=%s ambient -> s3://%s/%s (%d rows)",
+                            device.pk, bucket, ambient_key, ambient_count)
+                archived_count += 1
+
+    return {"archived_files": archived_count}
+
+
+@shared_task(name="purge_raw_telemetry")
+def purge_raw_telemetry():
+    """
+    DLM-04: Delete raw readings older than 30 days.
+    DUAL FAIL-SAFE: Verifies soil archive before purging soil, ambient archive
+    before purging ambient. Each entity type is independently guarded.
+    Batched deletes (10k rows) to avoid long-running locks on RDS.
+    Logs to AuditLog (MoProSoft compliance).
+    """
+    import logging
+    from datetime import timedelta
+    from django.utils import timezone
+    from django.db import transaction
+    from apps.core.models import (
+        Device, SoilReading, AmbientReading,
+        HardwareBinding, TelemetryArchive, AuditLog,
+    )
+
+    logger = logging.getLogger(__name__)
+    cutoff = timezone.now() - timedelta(days=30)
+    period_label = cutoff.strftime('%Y-%m')
+    BATCH_SIZE = 10_000
+    total_soil_purged = 0
+    total_ambient_purged = 0
+
+    for device in Device.objects.all().iterator():
+        soil_key = f"telemetry-archive/{device.pk}/{period_label}_soil.csv.gz"
+        ambient_key = f"telemetry-archive/{device.pk}/{period_label}_ambient.csv.gz"
+        binding_ids = list(
+            HardwareBinding.objects.filter(device=device).values_list('pk', flat=True)
+        )
+
+        # ── Soil purge (guarded by soil archive) ────────────────────────
+        soil_purged = 0
+        has_soil_archive = TelemetryArchive.objects.filter(device=device, s3_key=soil_key).exists()
+        has_soil_rows = SoilReading.objects.filter(
+            binding_id__in=binding_ids, recorded_at__lt=cutoff
+        ).exists() if binding_ids else False
+
+        if has_soil_rows and not has_soil_archive:
+            logger.critical(
+                "SOIL PURGE ABORTED for device=%s: no archive at %s.", device.pk, soil_key
+            )
+        elif has_soil_rows and has_soil_archive:
+            while True:
+                batch_ids = list(
+                    SoilReading.objects
+                    .filter(binding_id__in=binding_ids, recorded_at__lt=cutoff)
+                    .values_list('pk', flat=True)[:BATCH_SIZE]
+                )
+                if not batch_ids:
+                    break
+                with transaction.atomic():
+                    deleted, _ = SoilReading.objects.filter(pk__in=batch_ids).delete()
+                    soil_purged += deleted
+
+        # ── Ambient purge (guarded by ambient archive) ──────────────────
+        ambient_purged = 0
+        has_ambient_archive = TelemetryArchive.objects.filter(device=device, s3_key=ambient_key).exists()
+        has_ambient_rows = AmbientReading.objects.filter(
+            device=device, recorded_at__lt=cutoff
+        ).exists()
+
+        if has_ambient_rows and not has_ambient_archive:
+            logger.critical(
+                "AMBIENT PURGE ABORTED for device=%s: no archive at %s.", device.pk, ambient_key
+            )
+        elif has_ambient_rows and has_ambient_archive:
+            while True:
+                batch_ids = list(
+                    AmbientReading.objects
+                    .filter(device=device, recorded_at__lt=cutoff)
+                    .values_list('pk', flat=True)[:BATCH_SIZE]
+                )
+                if not batch_ids:
+                    break
+                with transaction.atomic():
+                    deleted, _ = AmbientReading.objects.filter(pk__in=batch_ids).delete()
+                    ambient_purged += deleted
+
+        # MoProSoft audit trail
+        if soil_purged > 0 or ambient_purged > 0:
+            AuditLog.objects.create(
+                action='DLM_PURGE_RAW_TELEMETRY',
+                details=(
+                    f"device={device.pk} | cutoff={cutoff.isoformat()} | "
+                    f"soil_deleted={soil_purged} | ambient_deleted={ambient_purged} | "
+                    f"soil_archive={soil_key} | ambient_archive={ambient_key}"
+                ),
+            )
+            logger.info(
+                "purge: device=%s soil=%d ambient=%d",
+                device.pk, soil_purged, ambient_purged
+            )
+
+        total_soil_purged += soil_purged
+        total_ambient_purged += ambient_purged
+
+    return {"soil_purged": total_soil_purged, "ambient_purged": total_ambient_purged}
+
+
+@shared_task(name="dlm_pipeline")
+def dlm_pipeline():
+    """
+    Orchestrator: runs the DLM chain via celery.chain().
+    If any step fails, subsequent steps do NOT execute.
+    """
+    from celery import chain
+    pipeline = chain(
+        downsample_telemetry.si(),
+        archive_telemetry_to_s3.si(),
+        purge_raw_telemetry.si(),
+    )
+    pipeline.apply_async()

@@ -141,63 +141,92 @@ def sensor_data_patch_view(request, pk):
         return Response(status=404)
 
 class EdgeNodeIngestView(APIView):
-    # Desactivamos clases de autenticación para esta demo/refactor si no tenemos el middleware listo,
-    # pero puedes aplicar @authentication_classes en producción.
-    permission_classes = [AllowAny] # Temporal, o usa HardwareOnlyPermission si ya envía el API key correcto
-    
+    """
+    POST /api/v1/sensor-data/edge-batch/
+    Ingests the compact ESP32 telemetry frame and demultiplexes into
+    AmbientReading + SoilReading (1:N relational schema).
+
+    Decisions: A1=partial success, A2=ACID, A3=freeze SensorLog, A4=future-only anti-replay.
+    """
+    permission_classes = [AllowAny]  # Temporal — will use HardwareOnlyPermission in production
+
     def post(self, request):
-        payload = request.data
-        
-        # En un escenario real extraes device = request.device
-        # Aquí lo buscamos por token en el header
+        from .models import Device, HardwareBinding, AmbientReading, SoilReading
+        from .serializers import EdgeFrameSerializer
+
+        # ── Auth: resolve Device by Bearer token ────────────────────────
         auth_header = request.headers.get('Authorization', '').replace('Bearer ', '')
-        from .models import Device, Plant, AmbientReading, SoilReading
-        
         device = Device.objects.filter(auth_token=auth_header).first()
         if not device:
-            # Fallback o manejar error
             return Response({"error": "Device not found or unauthorized"}, status=401)
-        
-        # [Code Fix] Integración de make_aware para prevenir naive datetime
-        raw_timestamp = payload.get('timestamp', 0)
-        naive_dt = datetime.fromtimestamp(raw_timestamp)
+
+        # ── Validate compact contract ───────────────────────────────────
+        serializer = EdgeFrameSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({"error": "Invalid frame", "details": serializer.errors}, status=400)
+
+        v = serializer.validated_data
+        naive_dt = datetime.fromtimestamp(v['ts'])
         recorded_at = timezone.make_aware(naive_dt)
+        ambient_data = v.get('a')  # Already expanded by serializer
+        soil_items = v.get('s', [])
 
+        soil_mapped = 0
+        orphaned_pins = []
+
+        # ── A2: ACID — entire frame succeeds or rolls back ─────────────
         with transaction.atomic():
-            # ── ISSUE-01: Heartbeat — stamp last_seen on every frame ──
-            Device.objects.filter(pk=device.pk).update(
-                last_seen=timezone.now(),
-                status='online',
-            )
+            # Heartbeat (ISSUE-01)
+            update_fields = {'last_seen': timezone.now(), 'status': 'online'}
+            if v.get('ri'):
+                update_fields['report_interval_minutes'] = v['ri']
+            Device.objects.filter(pk=device.pk).update(**update_fields)
 
-            if 'ambient' in payload:
+            # Ambient demux
+            if ambient_data:
                 AmbientReading.objects.create(
                     device=device,
                     recorded_at=recorded_at,
-                    **payload['ambient']
+                    **ambient_data
                 )
 
-            if 'soil' in payload:
-                plants_by_pin = {
-                    p.hardware_pin: p 
-                    for p in Plant.objects.filter(device=device)
+            # Soil demux (A1: partial success — skip unbound pins, report them)
+            if soil_items:
+                bindings_by_pin = {
+                    b.hardware_pin: b
+                    for b in HardwareBinding.objects.filter(device=device)
                 }
-                
+
                 soil_objects = []
-                for pin, moisture in payload['soil'].items():
-                    plant = plants_by_pin.get(str(pin))
-                    if plant:
+                for item in soil_items:
+                    binding = bindings_by_pin.get(str(item['p']))
+                    if binding:
                         soil_objects.append(
                             SoilReading(
-                                plant=plant,
+                                binding=binding,
                                 recorded_at=recorded_at,
-                                soil_humidity=moisture
+                                soil_humidity=item['v']
                             )
                         )
+                    else:
+                        orphaned_pins.append(str(item['p']))
+
                 if soil_objects:
                     SoilReading.objects.bulk_create(soil_objects)
+                    soil_mapped = len(soil_objects)
 
-        return Response({"status": "ingested", "mapped_pins": len(soil_objects) if 'soil' in payload else 0})
+                if orphaned_pins:
+                    logger.warning(
+                        "EdgeIngest: device=%s orphaned pins: %s",
+                        device.pk, orphaned_pins
+                    )
+
+        return Response({
+            "status": "ingested",
+            "ambient": ambient_data is not None,
+            "soil_mapped": soil_mapped,
+            "orphaned_pins": orphaned_pins,
+        })
 
 # --- INTELIGENCIA ARTIFICIAL Y DIAGNÓSTICOS ---
 @api_view(['POST'])
