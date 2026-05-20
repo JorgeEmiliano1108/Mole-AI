@@ -5,11 +5,13 @@
 # ── Stage 1: Builder ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
+# Activate pnpm via Corepack (SEC-01 / SEC-03)
+RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
+
 WORKDIR /app
 
-# Copiar solo lo necesario para build
-# Context es frontend/, no requiere prefijo
-COPY package*.json ./
+# Copy lockfile and package manifest first (layer cache optimization)
+COPY package.json pnpm-lock.yaml .npmrc ./
 COPY vite.config.js ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
@@ -18,10 +20,10 @@ COPY static/ ./static/
 COPY public/ ./public/
 COPY *.html ./
 
-# Supply Chain Hardening: bloquear scripts de terceros, permitir solo esbuild (Vite)
-RUN npm ci --ignore-scripts && \
-    npm rebuild esbuild && \
-    npm run build
+# Supply Chain Hardening: frozen lockfile + blocked scripts + esbuild whitelist
+RUN pnpm install --frozen-lockfile --ignore-scripts && \
+    pnpm rebuild esbuild && \
+    pnpm run build
 
 # ── Stage 2: Runtime (Nginx mínimo) ───────────────────────────────────────────
 FROM nginx:1.25-alpine AS runtime

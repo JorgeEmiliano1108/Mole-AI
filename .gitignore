@@ -53,6 +53,11 @@ frontend/dist/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+frontend/.pnpm-store/
+
+# Prohibited Package Managers (SEC-01: pnpm is the only authorized manager)
+package-lock.json
+yarn.lock
 
 # Databases
 *.sqlite3
