@@ -83,6 +83,8 @@ services:
     depends_on:
       redis:
         condition: service_started
+    healthcheck:
+      disable: true
     networks:
       - mole_internal
 
@@ -103,6 +105,8 @@ services:
     depends_on:
       redis:
         condition: service_started
+    healthcheck:
+      disable: true
     networks:
       - mole_internal
 
@@ -116,6 +120,7 @@ services:
     volumes:
       - ../core_backend:/app
       - backend_logs:/app/logs
+      - ../infrastructure/mosquitto/certs:/mosquitto/certs
     env_file:
       - ../.env
     extra_hosts:
@@ -123,6 +128,8 @@ services:
     depends_on:
       mqtt_broker:
         condition: service_started
+    healthcheck:
+      disable: true
     networks:
       - mole_internal
 

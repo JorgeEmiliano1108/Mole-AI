@@ -41,6 +41,7 @@ infrastructure/mosquitto/log/
 # Frontend (Only needed for frontend build, handled by multi-stage or separate builds)
 frontend/node_modules/
 frontend/dist/
+frontend/.pnpm-store/
 
 # Documentation
 docs/
