@@ -64,7 +64,14 @@ else
   echo "  Static files uploaded successfully."
 fi
 
-echo "========================================="
-echo " Starting Daphne on 0.0.0.0:8000"
-echo "========================================="
-exec daphne -b 0.0.0.0 -p 8000 mole_ai_backend.asgi:application
+if [ "$#" -gt 0 ]; then
+  echo "========================================="
+  echo " Executing custom command: $@"
+  echo "========================================="
+  exec "$@"
+else
+  echo "========================================="
+  echo " Starting Daphne on 0.0.0.0:8000"
+  echo "========================================="
+  exec daphne -b 0.0.0.0 -p 8000 mole_ai_backend.asgi:application
+fi

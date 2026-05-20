@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MOLE-IA | Terminal de Acceso</title>
+    <title>MOLE-IA | Terminal</title>
     <link rel="stylesheet" href="/static/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
+
 <body class="bg-mole-base text-mole-cyan font-sans min-h-screen relative overflow-x-hidden">
 
     <!-- Toast Container (OWASP: evita exponer errores crudos vía alert) -->
-    <div id="toast-container" aria-live="polite" aria-atomic="false" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" aria-live="polite" aria-atomic="false"
+        class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
 
 
@@ -19,7 +24,8 @@
         <div class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
 
             <!-- Left Panel: Identity & Navigation -->
-            <div class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col justify-between shadow-cyber relative overflow-hidden">
+            <div
+                class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col justify-between shadow-cyber relative overflow-hidden">
                 <!-- Decorative corner brackets -->
                 <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-mole-cyan/30"></div>
                 <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-mole-cyan/30"></div>
@@ -31,40 +37,70 @@
                         <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-mole-cyan">MOLE.AI</h1>
                         <span class="text-xs text-mole-dim font-mono">v2.1</span>
                     </div>
-                    <h2 class="text-sm tracking-[0.25em] uppercase text-mole-dim mb-8">Sistema de Monitoreo Agrícola</h2>
+                    <h2 class="text-sm tracking-[0.25em] uppercase text-mole-dim mb-8">Sistema de Monitoreo Agrícola
+                    </h2>
 
-                    <div class="w-full h-px bg-gradient-to-r from-mole-cyan/40 via-mole-border to-transparent mb-8"></div>
+                    <div class="w-full h-px bg-gradient-to-r from-mole-cyan/40 via-mole-border to-transparent mb-8">
+                    </div>
 
                     <nav class="flex flex-col gap-3">
-                        <button id="btn-objetivo" data-action="type:objetivo" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
-                            <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Objetivo del Sistema</span>
-                            <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
+                        <button id="btn-objetivo" data-action="type:objetivo"
+                            class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
+                            <span class="flex items-center gap-2"><span
+                                    class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span>
+                                Objetivo del Sistema</span>
+                            <span
+                                class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
                         </button>
-                        <button id="btn-vision" data-action="type:vision" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
-                            <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Visión y Diagnóstico IA</span>
-                            <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
+                        <button id="btn-vision" data-action="type:vision"
+                            class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
+                            <span class="flex items-center gap-2"><span
+                                    class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span>
+                                Visión y Diagnóstico IA</span>
+                            <span
+                                class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
                         </button>
-                        <button id="btn-flora" data-action="type:flora" class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
-                            <span class="flex items-center gap-2"><span class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span> Flora Mexicana</span>
-                            <span class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
+                        <button id="btn-flora" data-action="type:flora"
+                            class="text-left w-full px-4 py-3 rounded border border-mole-border bg-mole-base/50 hover:border-mole-cyan/50 hover:bg-mole-cyan/5 transition-all text-sm font-medium text-mole-dim hover:text-mole-cyan flex items-center justify-between group focus:outline-none focus:ring-2 focus:ring-mole-cyan">
+                            <span class="flex items-center gap-2"><span
+                                    class="text-mole-cyan/50 group-hover:text-mole-cyan transition-colors">&gt;</span>
+                                Flora Mexicana</span>
+                            <span
+                                class="text-mole-cyan/30 group-hover:text-mole-cyan transition-colors text-xs">[ENTER]</span>
                         </button>
                     </nav>
                 </div>
 
-                 <button data-action="system:start" class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
-                     Iniciar Sistema
-                     <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                 </button>
-             </div>
+                <button data-action="system:start"
+                    class="w-full mt-8 border-2 border-mole-cyan text-mole-cyan py-3 rounded font-bold tracking-widest text-sm hover:bg-mole-cyan hover:text-mole-base transition-all shadow-cyber hover:shadow-cyber-hover uppercase flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-mole-cyan focus:ring-offset-2 focus:ring-offset-mole-base">
+                    Iniciar Sistema
+                    <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                    </svg>
+                </button>
+            </div>
 
-             <!-- Theme Toggle (bottom left) -->
-             <button data-action="toggle-theme" aria-label="Cambiar tema" class="fixed bottom-4 left-4 z-40 w-10 h-10 bg-mole-surface border border-mole-border rounded-full flex items-center justify-center hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber">
-                 <svg id="index-icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                 <svg id="index-icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path></svg>
-             </button>
+            <!-- Theme Toggle (bottom left) -->
+            <button data-action="toggle-theme" aria-label="Cambiar tema"
+                class="fixed bottom-4 left-4 z-40 w-10 h-10 bg-mole-surface border border-mole-border rounded-full flex items-center justify-center hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber">
+                <svg id="index-icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                    </path>
+                </svg>
+                <svg id="index-icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path>
+                </svg>
+            </button>
 
             <!-- Right Panel: Typewriter Output -->
-            <div class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col min-h-[350px] lg:min-h-0 shadow-cyber relative overflow-hidden">
+            <div
+                class="bg-mole-surface border border-mole-border rounded-lg p-6 sm:p-10 flex flex-col min-h-[350px] lg:min-h-0 shadow-cyber relative overflow-hidden">
                 <div class="flex items-center gap-2 mb-6 text-xs text-mole-dim">
                     <div class="flex gap-1.5">
                         <span class="w-2.5 h-2.5 rounded-full bg-mole-red/60"></span>
@@ -74,8 +110,10 @@
                     <span class="ml-2 font-mono">mole@vault:~$</span>
                 </div>
                 <div class="flex-1 flex items-start">
-                    <div id="typewriter-output" class="text-base sm:text-lg leading-relaxed text-mole-cyan/80 font-mono whitespace-pre-wrap w-full">
-                        Seleccione una opción en el menú para conocer más sobre Mole.AI...<span class="animate-cursor-blink text-mole-cyan">█</span>
+                    <div id="typewriter-output"
+                        class="text-base sm:text-lg leading-relaxed text-mole-cyan/80 font-mono whitespace-pre-wrap w-full">
+                        Seleccione una opción en el menú para conocer más sobre Mole.AI...<span
+                            class="animate-cursor-blink text-mole-cyan">█</span>
                     </div>
                 </div>
             </div>
@@ -84,14 +122,18 @@
     </div>
 
     <!-- Legal Disclaimer -->
-    <div class="fixed bottom-0 w-full bg-mole-surface/90 backdrop-blur-sm border-t border-mole-border p-2.5 text-center z-30">
+    <div
+        class="fixed bottom-0 w-full bg-mole-surface/90 backdrop-blur-sm border-t border-mole-border p-2.5 text-center z-30">
         <p class="text-[10px] text-mole-dim/70 font-mono">
-            <span class="text-mole-amber/70 font-bold">[LEGAL]</span> Los diagnósticos generados por Mole.AI son informativos y probabilísticos. No sustituyen criterio de ingeniero agrónomo. Prohibido usar para tráfico de especies protegidas (NOM-059-SEMARNAT).
+            <span class="text-mole-amber/70 font-bold">[LEGAL]</span> Los diagnósticos generados por Mole.AI son
+            informativos y probabilísticos. No sustituyen criterio de ingeniero agrónomo. Prohibido usar para tráfico de
+            especies protegidas (NOM-059-SEMARNAT).
         </p>
     </div>
 
-    <script src="/src/js/index-boot.js"></script>
+    <script type="module" src="/src/js/index-boot.js"></script>
     <script type="module" src="/static/js/apiService.js"></script>
     <script type="module" src="/src/js/main.js"></script>
 </body>
+
 </html>
