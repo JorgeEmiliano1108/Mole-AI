@@ -49,6 +49,9 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
 SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
 
+# Confiar en la cabecera de Nginx (Terminación SSL en ALB o Nginx)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 def _split_env_list(var_name, default=None):
     raw = os.getenv(var_name)
     if raw is None:

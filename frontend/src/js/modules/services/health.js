@@ -23,6 +23,11 @@ window.addEventListener('userRoleReady', (e) => {
         toggleContainer.style.display = 'none'; // Hard hide
     }
 
+    if (role === 'guest') {
+        pausePolling();
+        return;
+    }
+
     if (!_healthInitialized) {
         initHealthView(isSre);
         _healthInitialized = true;
