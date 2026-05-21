@@ -94,6 +94,28 @@ function checkAuthGuard() {
         return;
     }
 
+    // 2.5 ADR-0002 Fase 3: Validate JWT expiration to prevent phantom permissions
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.exp && (Date.now() / 1000) > payload.exp) {
+                console.warn('[Route Guard] Token expired, clearing session...');
+                if (window.clearAuthToken) window.clearAuthToken();
+                localStorage.removeItem('moleia_user_role');
+                window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
+                window.location.replace('/index.html');
+                return;
+            }
+        } catch (e) {
+            console.warn('[Route Guard] Failed to decode token, treating as invalid:', e.message);
+            if (window.clearAuthToken) window.clearAuthToken();
+            localStorage.removeItem('moleia_user_role');
+            window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
+            window.location.replace('/index.html');
+            return;
+        }
+    }
+
     // 3. Role-based validation for admin pages
     if (currentPath.includes('/admin.html') && role !== 'superuser' && role !== 'admin') {
         console.warn('[Route Guard] Insufficient privileges, redirecting...');

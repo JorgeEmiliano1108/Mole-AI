@@ -2,7 +2,7 @@
 set -e
 
 echo "========================================="
-echo " Mole AI — Django Backend Entrypoint (v2.0 AWS Native)"
+echo " Mole AI — Django Backend Entrypoint     "
 echo "========================================="
 
 # Validate critical environment variables for Cloud-Native Production
@@ -17,7 +17,7 @@ if [ "${DEBUG}" != "True" ] && [ "${DEBUG}" != "true" ]; then
     fi
   done
   if [ "$missing" -eq 1 ]; then
-    echo "CRITICAL: Infrastructure variables missing; aborting startup." >&2
+    echo "Infrastructure variables missing; aborting startup." >&2
     exit 1
   fi
 fi
@@ -25,8 +25,10 @@ fi
 # Wait for the RDS/PostgreSQL database to be ready
 DB_HOST=${POSTGRES_HOST:-mole-ai-db}
 DB_PORT=${POSTGRES_PORT:-5432}
+DB_MAX_RETRIES=${DB_MAX_RETRIES:-30}
+DB_RETRY_COUNT=0
 
-echo "[1/4] Waiting for database at ${DB_HOST}:${DB_PORT}..."
+echo "[1/4] Waiting for database at ${DB_HOST}:${DB_PORT} (max ${DB_MAX_RETRIES} retries)..."
 while ! python -c "
 import socket, sys, os
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -37,7 +39,12 @@ try:
 except Exception:
     sys.exit(1)
 " 2>/dev/null; do
-  echo "  DB not ready (RDS/Postgres) — retrying in 2s..."
+  DB_RETRY_COUNT=$((DB_RETRY_COUNT + 1))
+  if [ "$DB_RETRY_COUNT" -ge "$DB_MAX_RETRIES" ]; then
+    echo "  CRITICAL: Database at ${DB_HOST}:${DB_PORT} unreachable after ${DB_MAX_RETRIES} attempts. Aborting." >&2
+    exit 1
+  fi
+  echo "  DB not ready (RDS/Postgres) — retrying in 2s... (${DB_RETRY_COUNT}/${DB_MAX_RETRIES})"
   sleep 2
 done
 echo "  DB connection established."
