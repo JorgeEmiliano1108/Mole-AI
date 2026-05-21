@@ -148,6 +148,7 @@ async function fetchHealth() {
 
 // ── Renderers ───────────────────────────────────────────────
 
+function renderPlaceholder() {
     const emptyState = document.getElementById('monitoreo-empty-state');
     const kpiCards = document.getElementById('monitoreo-kpi-cards');
     const panels = document.getElementById('monitoreo-panels');
@@ -205,6 +206,7 @@ function setupPlantRegistration() {
                         hardware_pin: pin,
                         plant_id: plantRes.id
                     });
+                    console.log("[SECURITY] AUDIT LOG: Hardware binding exitoso para dispositivo " + currentDeviceId);
                 } else {
                     console.warn("[FE-09] Planta creada pero no hay deviceId para bindear.");
                 }
@@ -213,8 +215,12 @@ function setupPlantRegistration() {
                 if (btnCancel) btnCancel.click();
                 fetchHealth(); // Refresh UI
             } catch (err) {
-                console.error("[FE-09] Error registering plant:", err);
-                alert("Error al registrar: " + (err.message || err));
+                console.error("[SECURITY] AUDIT LOG: Error registering plant / binding hardware:", err);
+                if (err.status === 403 || err.message.includes('403')) {
+                    alert("[LFPDPPP] Error de Privacidad: Permisos insuficientes para registrar datos sensibles.");
+                } else {
+                    alert("Error al registrar: " + (err.message || err));
+                }
             } finally {
                 btnSubmit.textContent = originalText;
                 btnSubmit.disabled = false;
