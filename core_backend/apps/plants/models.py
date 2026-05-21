@@ -17,6 +17,14 @@ from django.db import models
 
 
 class SpeciesCatalog(models.Model):
+    # Additional technical fields for the wiki
+    habitat = models.TextField(null=True, blank=True)
+    soil_type = models.TextField(null=True, blank=True)
+    irrigation = models.TextField(null=True, blank=True)
+    uses = models.TextField(null=True, blank=True)
+    uv_rays = models.FloatField(null=True, blank=True)
+    soil_humidity_min = models.FloatField(null=True, blank=True)
+    soil_humidity_max = models.FloatField(null=True, blank=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     scientific_name = models.TextField()
     common_name = models.TextField(null=True, blank=True)

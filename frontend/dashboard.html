@@ -647,39 +647,55 @@
 
 
 
-    <!-- IoT Wizard Modal -->
+<!-- IoT Wizard Modal -->
     <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
-        <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <div class="border-2 border-transparent">
-                <button aria-label="Cerrar modal" data-action="modal:close-iot"
-                    class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
-                <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ENLACE DE HARDWARE: ESP32_NODE
-                </h2>
-                <div id="iot-step-1" class="iot-step block">
-                    <!-- Sub-step 1A: Connect instructions -->
-                    <div id="iot-setup-instructions" class="block">
-                        <p class="text-mole-text mb-4 text-xs font-sans">
-                            1. Cambie la red Wi-Fi de su dispositivo actual a la red temporal del ESP32: <strong class="text-mole-cyan">MoleAI-Setup</strong> (o similar).<br>
-                            2. Una vez conectado, presione el botón de abajo para verificar el enlace.
-                        </p>
-                        <button id="btn-scan-esp"
-                            class="w-full bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded min-h-[44px]">CONFIRMAR CONEXIÓN Y ESCANEAR</button>
-                    </div>
+      <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
+        <button aria-label="Cerrar modal" data-action="modal:close-iot"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+        <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ENLACE DE HARDWARE: ESP32_NODE</h2>
 
-                    <!-- Sub-step 1B: Input WiFi credentials (hidden by default) -->
-                    <div id="iot-wifi-credentials" class="hidden mt-4">
-                        <p class="text-mole-text-dim mb-4 text-xs font-sans">¡Conexión local confirmada! Ingrese las credenciales de la red a la que se conectará permanentemente el ESP32.</p>
-                        <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)"
-                            class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                        <input type="password" id="wifi-pass" placeholder="Contraseña WPA2"
-                            class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                        <button data-action="next-iot-step" data-target="2"
-                            class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR
-                            HANDSHAKE</button>
-                    </div>
-                </div>
-            </div>
+        <!-- STEP 1 – Instruction block -->
+        <div id="iot-step-1" class="iot-step block">
+          <p class="text-mole-text mb-4 text-xs font-sans">
+            1️⃣ Cambie la red Wi‑Fi de su dispositivo a la red temporal del ESP32: 
+            <strong class="text-mole-cyan">MoleAI-Setup</strong>.<br>
+            2️⃣ Mantenga la pantalla del ESP32 visible y pulse el botón de abajo para iniciar la verificación.
+          </p>
+          <button id="btn-start-scan"
+                  class="w-full bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded min-h-[44px]">
+            CONFIRMAR CONEXIÓN Y ESCANEAR
+          </button>
         </div>
+
+        <!-- STEP 2 – Async ping to 192.168.4.1 -->
+        <div id="iot-step-2" class="iot-step hidden">
+          <p class="text-mole-text mb-4 text-xs font-sans">
+            ⏳ Esperando respuesta del ESP32 … (IP → <code>192.168.4.1</code>)
+          </p>
+          <div class="flex items-center gap-2">
+            <button id="btn-ping"
+                    class="flex-1 bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded min-h-[44px]">
+              REINTENTAR PING
+            </button>
+            <span id="ping-status" class="text-xs font-mono text-mole-dim"></span>
+          </div>
+        </div>
+
+        <!-- STEP 3 – Credentials form -->
+        <div id="iot-step-3" class="iot-step hidden">
+          <p class="text-mole-text-dim mb-4 text-xs font-sans">
+            ✅ Conexión confirmada. Ingrese las credenciales de la red Wi‑Fi permanente.
+          </p>
+          <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)"
+                 class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+          <input type="password" id="wifi-pass" placeholder="Contraseña WPA2"
+                 class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+          <button id="btn-start-provision"
+                  class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">
+            INICIAR HANDSHAKE
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- User Profile Modal -->
