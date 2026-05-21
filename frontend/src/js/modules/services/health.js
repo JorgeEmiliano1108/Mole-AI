@@ -11,19 +11,42 @@ let currentDeviceId = null;
 
 // ── Public API ──────────────────────────────────────────────
 
-export function initHealthView() {
-    // Restore persisted view mode
-    const saved = localStorage.getItem(LS_VIEW_MODE_KEY) || 'botanico';
+let _healthInitialized = false;
+
+window.addEventListener('userRoleReady', (e) => {
+    const role = e.detail?.role || localStorage.getItem('moleia_user_role');
+    const isSre = role === 'admin' || role === 'superuser';
+    
+    // UI Cleanup: Force hide SRE toggles if not SRE
+    const toggleContainer = document.getElementById('health-toggle-container');
+    if (!isSre && toggleContainer) {
+        toggleContainer.style.display = 'none'; // Hard hide
+    }
+
+    if (!_healthInitialized) {
+        initHealthView(isSre);
+        _healthInitialized = true;
+    }
+});
+
+export function initHealthView(isSre = false) {
+    // Enforce botánico view if not SRE
+    const saved = isSre ? (localStorage.getItem(LS_VIEW_MODE_KEY) || 'botanico') : 'botanico';
     setViewMode(saved);
 
     // Wire toggle buttons
     const btnBot = document.getElementById('health-toggle-botanico');
     const btnSre = document.getElementById('health-toggle-sre');
-    if (btnBot) btnBot.addEventListener('click', () => setViewMode('botanico'));
-    if (btnSre) btnSre.addEventListener('click', () => setViewMode('sre'));
+    if (btnBot) {
+        btnBot.replaceWith(btnBot.cloneNode(true));
+        document.getElementById('health-toggle-botanico').addEventListener('click', () => setViewMode('botanico'));
+    }
+    if (btnSre && isSre) {
+        btnSre.replaceWith(btnSre.cloneNode(true));
+        document.getElementById('health-toggle-sre').addEventListener('click', () => setViewMode('sre'));
+    }
 
-    // Start polling — uses a placeholder device ID until real selection exists
-    // TODO: Replace with actual device selector when IoTNode ↔ User FK is unified
+    // Start polling
     currentDeviceId = localStorage.getItem('moleia_device_id') || null;
 
     // FE-09: Plant Registration setup
@@ -114,13 +137,15 @@ async function fetchHealth() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        // Show toggle if we have data and user is SRE
+        // Fetch everything, backend determines what data it sends based on token.
+        // We handle UI visibility below based on role.
         const toggleContainer = document.getElementById('health-toggle-container');
         const role = localStorage.getItem('moleia_user_role');
         const isSre = role === 'admin' || role === 'superuser';
+        
         if (toggleContainer) {
-            if (isSre) toggleContainer.classList.remove('hidden');
-            else toggleContainer.classList.add('hidden');
+            toggleContainer.classList.toggle('hidden', !isSre);
+            if (!isSre) toggleContainer.style.display = 'none'; // Ensure hidden
         }
 
         renderBotanico(data);
