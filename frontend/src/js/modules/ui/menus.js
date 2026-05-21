@@ -2,7 +2,7 @@
 // 11. FLUJO DE DESCARGA DE REPORTES Y MENÚS [BACKEND ESTRICTO]
 // ==========================================================
 
-async function downloadReportPDF(reportId, btnElement) {
+export async function downloadReportPDF(reportId, btnElement) {
     if (!btnElement) return;
 
     // 1. Cambiamos el estado del botón a "descargando" y lo bloqueamos
@@ -20,7 +20,7 @@ async function downloadReportPDF(reportId, btnElement) {
         // ========================================================
         // 🚀 CONEXIÓN AL BACKEND: Pedir el PDF generado por la IA
         // ========================================================
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/reports/download/${reportId}?user=${currentUser}`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/diagnostics/${reportId}/download/`, {
             method: 'GET',
             headers: { 
                 'Authorization': `Bearer ${token}` 

@@ -79,6 +79,25 @@ def admin_stats_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
+def admin_report_text_view(request):
+    """
+    Devuelve las estadísticas básicas como JSON para que el frontend genere el TXT
+    """
+    active_users = User.objects.filter(is_active=True).count()
+    inactive_users = User.objects.filter(is_active=False).count()
+    total_plants = UserPlant.objects.count()
+    # Identificar plantas críticas (por ejemplo, con un sensor log reciente reportando baja humedad)
+    from apps.core.models import SensorLog
+    plantas_criticas = SensorLog.objects.filter(soil_humidity__lt=20).values('plant_id').distinct().count()
+    
+    return Response({
+        "total_usuarios": active_users + inactive_users,
+        "plantas_criticas": plantas_criticas
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def intercepted_reports_view(request):
     """
     Devuelve los últimos reportes interceptados
