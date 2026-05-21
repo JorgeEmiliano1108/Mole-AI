@@ -25,7 +25,7 @@ export function initHealthView() {
     // Start polling — uses a placeholder device ID until real selection exists
     // TODO: Replace with actual device selector when IoTNode ↔ User FK is unified
     currentDeviceId = localStorage.getItem('moleia_device_id') || null;
-    
+
     // FE-09: Plant Registration setup
     setupPlantRegistration();
 
@@ -113,7 +113,7 @@ async function fetchHealth() {
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        
+
         // Show toggle if we have data and user is SRE
         const toggleContainer = document.getElementById('health-toggle-container');
         const role = localStorage.getItem('moleia_user_role');
@@ -126,7 +126,7 @@ async function fetchHealth() {
         renderBotanico(data);
         renderSre(data);
         renderStatusOverlay(data);
-        
+
         // FE-09: Show/hide empty state based on soil sensors
         const emptyState = document.getElementById('monitoreo-empty-state');
         const kpiCards = document.getElementById('monitoreo-kpi-cards');
@@ -140,7 +140,7 @@ async function fetchHealth() {
             if (kpiCards) kpiCards.classList.add('hidden');
             if (panels) panels.classList.add('hidden');
         }
-        
+
     } catch (err) {
         console.warn('[Health] Fetch failed:', err.message);
     }
@@ -152,7 +152,7 @@ function renderPlaceholder() {
     const emptyState = document.getElementById('monitoreo-empty-state');
     const kpiCards = document.getElementById('monitoreo-kpi-cards');
     const panels = document.getElementById('monitoreo-panels');
-    
+
     if (emptyState) emptyState.classList.remove('hidden');
     if (kpiCards) kpiCards.classList.add('hidden');
     if (panels) panels.classList.add('hidden');
@@ -187,37 +187,37 @@ function setupPlantRegistration() {
             e.preventDefault();
             const nickname = document.getElementById('reg-plant-name')?.value;
             const pin = document.getElementById('reg-plant-pin')?.value;
-            
+
             if (!nickname || !pin) return;
-            
+
             const btnSubmit = formReg.querySelector('button[type="submit"]');
             const originalText = btnSubmit.textContent;
             btnSubmit.textContent = '...';
             btnSubmit.disabled = true;
-            
+
             try {
                 // 1. Create plant
                 const plantRes = await window.ApiService.post('plants/', { nickname });
                 if (!plantRes || !plantRes.id) throw new Error("Fallo al crear la planta");
-                
+
                 // 2. If device is selected, bind it
                 if (currentDeviceId) {
                     await window.ApiService.post(`devices/${currentDeviceId}/bindings/`, {
                         hardware_pin: pin,
                         plant_id: plantRes.id
                     });
-                    console.log("[SECURITY] AUDIT LOG: Hardware binding exitoso para dispositivo " + currentDeviceId);
+                    console.log("Hardware binding exitoso para dispositivo " + currentDeviceId);
                 } else {
-                    console.warn("[FE-09] Planta creada pero no hay deviceId para bindear.");
+                    console.warn("Planta creada pero no hay deviceId para bindear.");
                 }
-                
+
                 formReg.reset();
                 if (btnCancel) btnCancel.click();
                 fetchHealth(); // Refresh UI
             } catch (err) {
-                console.error("[SECURITY] AUDIT LOG: Error registering plant / binding hardware:", err);
+                console.error("Error registering plant / binding hardware:", err);
                 if (err.status === 403 || err.message.includes('403')) {
-                    alert("[LFPDPPP] Error de Privacidad: Permisos insuficientes para registrar datos sensibles.");
+                    alert("Permisos insuficientes para registrar datos.");
                 } else {
                     alert("Error al registrar: " + (err.message || err));
                 }
@@ -263,17 +263,17 @@ function renderBotanico(d) {
     // FE-04: Iterate soil[] array for multi-pin view (Vertical Scroll - Q-FE-04-1)
     let soilHtml = '';
     const soilData = d.soil || [];
-    
+
     if (soilData.length === 0) {
         soilHtml = `<div class="text-center text-mole-dim text-xs py-4 font-mono border border-dashed border-mole-border rounded">Sin pines configurados</div>`;
     } else {
         soilHtml = `<div class="flex flex-col gap-3 overflow-y-auto max-h-[300px] pr-1">`;
-        
+
         soilData.forEach(s => {
             const hum = s.soil_humidity;
             const idealMin = s.ideal_humidity_min;
             const idealMax = s.ideal_humidity_max;
-            
+
             let humStatus = 'neutral';
             if (hum != null && idealMin != null && idealMax != null) {
                 if (hum >= idealMin && hum <= idealMax) humStatus = 'optimal';
@@ -281,7 +281,7 @@ function renderBotanico(d) {
                 else humStatus = 'high';
             }
             const humColors = { optimal: 'text-emerald-400', low: 'text-sky-400', high: 'text-red-400', neutral: 'text-mole-dim' };
-            
+
             soilHtml += `
                 <div class="bg-mole-surface border border-mole-border/50 rounded p-3 shadow-cyber">
                     <div class="flex justify-between items-center mb-2">
@@ -301,7 +301,7 @@ function renderBotanico(d) {
                 </div>
             `;
         });
-        
+
         soilHtml += `</div>`;
     }
 
@@ -348,7 +348,7 @@ function renderSre(d) {
 
     const soilData = d.soil || [];
     let soilTable = `<div class="text-center text-mole-dim text-[10px] py-2 border border-dashed border-mole-border/50">Sin lecturas de suelo</div>`;
-    
+
     if (soilData.length > 0) {
         soilTable = `
             <table class="w-full text-[10px] font-mono mt-1">
