@@ -14,6 +14,51 @@ export function openIotWizard() {
     modal.classList.remove('hidden');
     nextIotStep(1);
     console.log("> Iniciando protocolo de enlace IoT...");
+    scanLocalEsp32();
+}
+
+/**
+ * ESCANEO LOCAL (AP MODE / CAPTIVE PORTAL)
+ * Intenta contactar al ESP32 en su IP de Gateway por defecto (192.168.4.1)
+ * para verificar si el usuario está conectado a la red "Mole_OpenClaw".
+ */
+export async function scanLocalEsp32() {
+    console.log("> [SCAN] Buscando dispositivo ESP32 en red local (192.168.4.1)...");
+    try {
+        // Hacemos una petición rápida al gateway del ESP32
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+        
+        // Asumiendo que el ESP32 en modo AP responde a /status o /info
+        const response = await fetch('http://192.168.4.1/status', {
+            method: 'GET',
+            mode: 'cors',
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log("> [SCAN OK] ESP32 Encontrado:", data);
+            // Mostrar indicación visual en la UI
+            const wizardTitle = document.querySelector('#iot-wizard-modal h2');
+            if (wizardTitle) {
+                wizardTitle.innerText = `> ENLACE DE HARDWARE: ${data.node_id || 'ESP32_NODE'} [ONLINE]`;
+                wizardTitle.classList.add('text-mole-green');
+                wizardTitle.classList.remove('text-mole-accent');
+            }
+        }
+    } catch (error) {
+        console.warn("> [SCAN WARN] No se detectó ESP32 en 192.168.4.1. ¿Está conectado al Captive Portal?", error.message);
+        // Fallback visual
+        const wizardTitle = document.querySelector('#iot-wizard-modal h2');
+        if (wizardTitle) {
+            wizardTitle.innerText = `> ENLACE DE HARDWARE: ESP32_NODE [OFFLINE]`;
+            wizardTitle.classList.add('text-mole-red');
+            wizardTitle.classList.remove('text-mole-accent');
+        }
+    }
 }
 
 export function closeIotWizard() {
