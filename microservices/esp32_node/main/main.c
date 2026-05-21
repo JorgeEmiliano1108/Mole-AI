@@ -88,14 +88,19 @@ static bool nvs_load_token(void)
 
     size_t len = sizeof(s_device_token);
     err = nvs_get_str(handle, MOLE_NVS_KEY_TOKEN, s_device_token, &len);
+
+    char wifi_ssid[32] = {0};
+    size_t ssid_len = sizeof(wifi_ssid);
+    esp_err_t ssid_err = nvs_get_str(handle, "wifi_ssid", wifi_ssid, &ssid_len);
+
     nvs_close(handle);
 
-    if (err == ESP_OK && len > 1) {
-        ESP_LOGI(TAG, "Device Token loaded from NVS (len=%d)", (int)len);
+    if (err == ESP_OK && len > 1 && ssid_err == ESP_OK && ssid_len > 1) {
+        ESP_LOGI(TAG, "Device Token and WiFi SSID loaded from NVS");
         return true;
     }
 
-    ESP_LOGW(TAG, "No device token in NVS.");
+    ESP_LOGW(TAG, "Missing device token or WiFi SSID in NVS.");
     return false;
 }
 
@@ -416,10 +421,12 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
     nvs_handle_t handle;
     ESP_ERROR_CHECK(nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &handle));
     ESP_ERROR_CHECK(nvs_set_str(handle, MOLE_NVS_KEY_TOKEN, token));
+    ESP_ERROR_CHECK(nvs_set_str(handle, "wifi_ssid", ssid));
+    ESP_ERROR_CHECK(nvs_set_str(handle, "wifi_pass", pass));
     ESP_ERROR_CHECK(nvs_set_u32(handle, "telemetry_int", interval_min));
     ESP_ERROR_CHECK(nvs_commit(handle));
     nvs_close(handle);
-    ESP_LOGI(TAG, "Device Token & Interval (%lu min) saved to NVS.", interval_min);
+    ESP_LOGI(TAG, "Device Token, WiFi SSID/Pass & Interval (%lu min) saved to NVS.", interval_min);
 
     const char *resp = "<html><body style='background:#0a0f14;color:#00ffc8;"
         "font-family:sans-serif;display:flex;justify-content:center;"
@@ -547,6 +554,23 @@ static void wifi_init_sta(void)
         WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(
         IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
+
+    /* Load Wi-Fi credentials from NVS */
+    char wifi_ssid[32] = {0};
+    char wifi_pass[64] = {0};
+    size_t size = sizeof(wifi_ssid);
+    nvs_handle_t handle;
+    if (nvs_open(MOLE_NVS_NAMESPACE, NVS_READONLY, &handle) == ESP_OK) {
+        nvs_get_str(handle, "wifi_ssid", wifi_ssid, &size);
+        size = sizeof(wifi_pass);
+        nvs_get_str(handle, "wifi_pass", wifi_pass, &size);
+        nvs_close(handle);
+    }
+
+    wifi_config_t wifi_cfg = {0};
+    strncpy((char *)wifi_cfg.sta.ssid, wifi_ssid, sizeof(wifi_cfg.sta.ssid) - 1);
+    strncpy((char *)wifi_cfg.sta.password, wifi_pass, sizeof(wifi_cfg.sta.password) - 1);
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
 
     /*
      * IFT-016 COMPLIANCE:
