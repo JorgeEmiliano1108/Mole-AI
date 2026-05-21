@@ -99,6 +99,9 @@ function checkAuthGuard() {
         window.location.replace('/dashboard.html');
         return;
     }
+
+    // FE-10: Emit role ready for downstream scripts (health.js)
+    window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: role } }));
 }
 
 // Add event listeners for BFCache scenarios
@@ -378,6 +381,7 @@ async function attemptLogin() {
             // 3. Save data to localStorage for UI consistency
             if (role) {
                 localStorage.setItem('moleia_user_role', role);
+                window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: role } }));
             }
             localStorage.setItem('moleia_current_user', username);
 
@@ -516,8 +520,8 @@ updateClock();
 // Configura el intervalo para que se actualice cada 1000 milisegundos (1 segundo)
 window.clockInterval = setInterval(updateClock, 1000);
 
-// ── ISSUE-04: Initialize Health Polling (Heartbeat Dashboard) ──
-initHealthView();
+// ── ISSUE-04 / FE-10: Health Polling now orchestrated by userRoleReady event in health.js ──
+// Removed direct call to initHealthView() from main.js to avoid Race Conditions.
 
 //Simulacion para ver pruebas//
 
