@@ -9,7 +9,7 @@ window.AppConfig = {
 
 // Helpers Globales para JWT (Unificando mole_jwt y moleia_token)
 window.getAuthToken = function() {
-    return window.getAuthToken() || window.getAuthToken() || sessionStorage.getItem('mole_jwt');
+    return localStorage.getItem('moleia_token') || localStorage.getItem('mole_jwt') || sessionStorage.getItem('mole_jwt');
 };
 
 window.setAuthToken = function(token) {
