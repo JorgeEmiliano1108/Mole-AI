@@ -25,6 +25,10 @@ export function initHealthView() {
     // Start polling — uses a placeholder device ID until real selection exists
     // TODO: Replace with actual device selector when IoTNode ↔ User FK is unified
     currentDeviceId = localStorage.getItem('moleia_device_id') || null;
+    
+    // FE-09: Plant Registration setup
+    setupPlantRegistration();
+
     if (currentDeviceId) {
         fetchHealth();
         startPolling();
@@ -64,6 +68,10 @@ export function resumePolling() {
 }
 
 function setViewMode(mode) {
+    const role = localStorage.getItem('moleia_user_role');
+    const isSre = role === 'admin' || role === 'superuser';
+    if (!isSre) mode = 'botanico'; // Force botanico for non-admins
+
     localStorage.setItem(LS_VIEW_MODE_KEY, mode);
 
     const btnBot = document.getElementById('health-toggle-botanico');
@@ -106,13 +114,33 @@ async function fetchHealth() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         
-        // Show toggle if we have data
+        // Show toggle if we have data and user is SRE
         const toggleContainer = document.getElementById('health-toggle-container');
-        if (toggleContainer) toggleContainer.classList.remove('hidden');
+        const role = localStorage.getItem('moleia_user_role');
+        const isSre = role === 'admin' || role === 'superuser';
+        if (toggleContainer) {
+            if (isSre) toggleContainer.classList.remove('hidden');
+            else toggleContainer.classList.add('hidden');
+        }
 
         renderBotanico(data);
         renderSre(data);
         renderStatusOverlay(data);
+        
+        // FE-09: Show/hide empty state based on soil sensors
+        const emptyState = document.getElementById('monitoreo-empty-state');
+        const kpiCards = document.getElementById('monitoreo-kpi-cards');
+        const panels = document.getElementById('monitoreo-panels');
+        if (data.soil && data.soil.length > 0) {
+            if (emptyState) emptyState.classList.add('hidden');
+            if (kpiCards) kpiCards.classList.remove('hidden');
+            if (panels) panels.classList.remove('hidden');
+        } else {
+            if (emptyState) emptyState.classList.remove('hidden');
+            if (kpiCards) kpiCards.classList.add('hidden');
+            if (panels) panels.classList.add('hidden');
+        }
+        
     } catch (err) {
         console.warn('[Health] Fetch failed:', err.message);
     }
@@ -120,22 +148,79 @@ async function fetchHealth() {
 
 // ── Renderers ───────────────────────────────────────────────
 
-function renderPlaceholder() {
-    const panelBot = document.getElementById('health-panel-botanico');
-    const panelSre = document.getElementById('health-panel-sre');
-    const toggle   = document.getElementById('health-toggle-container');
-    const overlay  = document.getElementById('health-offline-overlay');
-
-    if (toggle) toggle.classList.add('hidden');
-    if (overlay) overlay.classList.add('hidden');
-
-    const html = `<div class="flex flex-col items-center justify-center h-48 text-mole-dim font-mono text-sm opacity-50">
-        <span class="animate-pulse mb-2">[AWAIT]</span>
-        <span>Esperando enlace de hardware...</span>
-    </div>`;
+    const emptyState = document.getElementById('monitoreo-empty-state');
+    const kpiCards = document.getElementById('monitoreo-kpi-cards');
+    const panels = document.getElementById('monitoreo-panels');
     
-    if (panelBot) panelBot.innerHTML = html;
-    if (panelSre) panelSre.innerHTML = html;
+    if (emptyState) emptyState.classList.remove('hidden');
+    if (kpiCards) kpiCards.classList.add('hidden');
+    if (panels) panels.classList.add('hidden');
+}
+
+// -- FE-09: Plant Registration Logic -----------------------------
+function setupPlantRegistration() {
+    const btnAdd = document.getElementById('btn-add-plant');
+    const btnCancel = document.getElementById('btn-cancel-reg');
+    const formReg = document.getElementById('form-register-plant');
+
+    if (btnAdd) {
+        btnAdd.addEventListener('click', () => {
+            btnAdd.classList.add('hidden');
+            btnAdd.nextElementSibling.classList.add('hidden'); // text
+            if (formReg) formReg.classList.remove('hidden');
+        });
+    }
+
+    if (btnCancel) {
+        btnCancel.addEventListener('click', () => {
+            if (formReg) formReg.classList.add('hidden');
+            if (btnAdd) {
+                btnAdd.classList.remove('hidden');
+                btnAdd.nextElementSibling.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (formReg) {
+        formReg.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nickname = document.getElementById('reg-plant-name')?.value;
+            const pin = document.getElementById('reg-plant-pin')?.value;
+            
+            if (!nickname || !pin) return;
+            
+            const btnSubmit = formReg.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.textContent;
+            btnSubmit.textContent = '...';
+            btnSubmit.disabled = true;
+            
+            try {
+                // 1. Create plant
+                const plantRes = await window.ApiService.post('plants/', { nickname });
+                if (!plantRes || !plantRes.id) throw new Error("Fallo al crear la planta");
+                
+                // 2. If device is selected, bind it
+                if (currentDeviceId) {
+                    await window.ApiService.post(`devices/${currentDeviceId}/bindings/`, {
+                        hardware_pin: pin,
+                        plant_id: plantRes.id
+                    });
+                } else {
+                    console.warn("[FE-09] Planta creada pero no hay deviceId para bindear.");
+                }
+                
+                formReg.reset();
+                if (btnCancel) btnCancel.click();
+                fetchHealth(); // Refresh UI
+            } catch (err) {
+                console.error("[FE-09] Error registering plant:", err);
+                alert("Error al registrar: " + (err.message || err));
+            } finally {
+                btnSubmit.textContent = originalText;
+                btnSubmit.disabled = false;
+            }
+        });
+    }
 }
 
 function renderBotanico(d) {
@@ -212,6 +297,24 @@ function renderBotanico(d) {
         });
         
         soilHtml += `</div>`;
+    }
+
+    const role = localStorage.getItem('moleia_user_role');
+    const isSre = role === 'admin' || role === 'superuser';
+
+    if (!isSre) {
+        panel.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-8">
+                <span class="w-6 h-6 rounded-full mb-3 animate-pulse" style="background:${statusColor}"></span>
+                <span class="text-sm font-bold tracking-widest uppercase mb-2" style="color:${statusColor}">${statusLabel}</span>
+                <span class="text-[10px] text-mole-dim font-mono mb-4">NODO IOT: ${d.device_name || d.device_id}</span>
+                <div class="flex gap-2">
+                    <span class="text-[10px] text-mole-cyan font-mono border border-mole-cyan/30 px-3 py-1 rounded bg-mole-cyan/5">SENSORES: ${soilData.length}</span>
+                    <span class="text-[10px] text-mole-dim font-mono border border-mole-border px-3 py-1 rounded bg-mole-bg">${lastSeenStr}</span>
+                </div>
+            </div>
+        `;
+        return;
     }
 
     panel.innerHTML = `

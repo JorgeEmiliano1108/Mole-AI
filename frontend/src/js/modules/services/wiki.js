@@ -18,7 +18,20 @@ function setupWikiControls() {
         searchInput.dataset.wikiInit = '1';
         searchInput.addEventListener('input', () => {
             clearTimeout(_wikiDebounceTimer);
-            _wikiDebounceTimer = setTimeout(fetchAndRender, 300);
+            _wikiDebounceTimer = setTimeout(() => {
+                fetchAndRender();
+                saveSearchHistory(searchInput.value);
+                hideHistoryDropdown();
+            }, 500);
+        });
+
+        searchInput.addEventListener('focus', () => {
+            if (!searchInput.value.trim()) showHistoryDropdown();
+        });
+
+        // Hide with delay to allow click on dropdown items
+        searchInput.addEventListener('blur', () => {
+            setTimeout(hideHistoryDropdown, 200);
         });
     }
 
@@ -101,6 +114,64 @@ async function fetchAndRender() {
         if (loading) loading.classList.add('hidden');
     }
 }
+
+// -- FE-11: Wiki Search History --------------------------------
+const HISTORY_KEY = 'moleia_wiki_search_history';
+
+function saveSearchHistory(query) {
+    query = query.trim().toLowerCase();
+    if (query.length < 2) return;
+    
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) {}
+    
+    // Remove duplicate
+    history = history.filter(item => item !== query);
+    // Add to top
+    history.unshift(query);
+    // Limit to 10
+    history = history.slice(0, 10);
+    
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function showHistoryDropdown() {
+    const dropdown = document.getElementById('wiki-history-dropdown');
+    if (!dropdown) return;
+    
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) {}
+    
+    if (history.length === 0) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+    
+    dropdown.innerHTML = history.map(item => 
+        `<div class="wiki-history-item px-4 py-2 hover:bg-mole-cyan hover:text-mole-base text-mole-cyan text-xs font-mono cursor-pointer transition-colors border-b border-mole-border last:border-0" data-query="${item}">
+            <svg class="w-3 h-3 inline-block mr-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            ${item}
+        </div>`
+    ).join('');
+    
+    dropdown.querySelectorAll('.wiki-history-item').forEach(el => {
+        el.addEventListener('click', (e) => {
+            const searchInput = document.getElementById('wiki-search');
+            if (searchInput) {
+                searchInput.value = e.currentTarget.dataset.query;
+                fetchAndRender();
+            }
+        });
+    });
+    
+    dropdown.classList.remove('hidden');
+}
+
+function hideHistoryDropdown() {
+    const dropdown = document.getElementById('wiki-history-dropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+}
+
 
 function renderWikiCards(list) {
     const grid = document.getElementById('wiki-grid');
