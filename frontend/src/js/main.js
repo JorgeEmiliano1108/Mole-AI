@@ -89,6 +89,7 @@ function checkAuthGuard() {
     if (!token && !role) {
         // No credentials - force redirect to index
         console.warn('[Route Guard] No credentials found, redirecting to index...');
+        window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
         window.location.replace('/index.html'); // replace() prevents history entry
         return;
     }
