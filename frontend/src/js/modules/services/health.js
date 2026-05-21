@@ -57,7 +57,11 @@ export function initHealthView(isSre = false) {
     // FE-09: Plant Registration setup
     setupPlantRegistration();
 
-    if (currentDeviceId) {
+    const sectionContainer = document.getElementById('health-section-container');
+    if (!currentDeviceId) {
+        if (sectionContainer) sectionContainer.classList.add('hidden');
+    } else {
+        if (sectionContainer) sectionContainer.classList.remove('hidden');
         fetchHealth();
         startPolling();
     }
@@ -65,9 +69,17 @@ export function initHealthView(isSre = false) {
 
 export function setDeviceId(id) {
     currentDeviceId = id;
-    localStorage.setItem('moleia_device_id', id);
-    fetchHealth();
-    startPolling();
+    const sectionContainer = document.getElementById('health-section-container');
+    if (id) {
+        localStorage.setItem('moleia_device_id', id);
+        if (sectionContainer) sectionContainer.classList.remove('hidden');
+        fetchHealth();
+        startPolling();
+    } else {
+        localStorage.removeItem('moleia_device_id');
+        if (sectionContainer) sectionContainer.classList.add('hidden');
+        pausePolling();
+    }
 }
 
 // ── Internals ───────────────────────────────────────────────

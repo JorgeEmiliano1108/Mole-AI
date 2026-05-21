@@ -12,9 +12,39 @@ export function openIotWizard() {
     if (!modal) return;
     
     modal.classList.remove('hidden');
-    nextIotStep(1);
+    
+    // Reset modal state
+    const setupInstructions = document.getElementById('iot-setup-instructions');
+    const wifiCredentials = document.getElementById('iot-wifi-credentials');
+    if (setupInstructions) setupInstructions.classList.remove('hidden');
+    if (wifiCredentials) wifiCredentials.classList.add('hidden');
+    
+    const wizardTitle = document.querySelector('#iot-wizard-modal h2');
+    if (wizardTitle) {
+        wizardTitle.innerText = `> ENLACE DE HARDWARE: ESP32_NODE`;
+        wizardTitle.classList.remove('text-mole-green', 'text-mole-red');
+        wizardTitle.classList.add('text-mole-accent');
+    }
+    
+    // Wire scan button
+    const btnScan = document.getElementById('btn-scan-esp');
+    if (btnScan && !btnScan.dataset.wired) {
+        btnScan.dataset.wired = '1';
+        btnScan.addEventListener('click', async () => {
+            btnScan.disabled = true;
+            btnScan.textContent = 'ESCANEANDO RED LOCAL...';
+            const success = await scanLocalEsp32();
+            btnScan.disabled = false;
+            btnScan.textContent = 'CONFIRMAR CONEXIÓN Y ESCANEAR';
+            
+            if (success) {
+                if (setupInstructions) setupInstructions.classList.add('hidden');
+                if (wifiCredentials) wifiCredentials.classList.remove('hidden');
+            }
+        });
+    }
+    
     console.log("> Iniciando protocolo de enlace IoT...");
-    scanLocalEsp32();
 }
 
 /**
@@ -46,9 +76,11 @@ export async function scanLocalEsp32() {
             if (wizardTitle) {
                 wizardTitle.innerText = `> ENLACE DE HARDWARE: ${data.node_id || 'ESP32_NODE'} [ONLINE]`;
                 wizardTitle.classList.add('text-mole-green');
-                wizardTitle.classList.remove('text-mole-accent');
+                wizardTitle.classList.remove('text-mole-accent', 'text-mole-red');
             }
+            return true;
         }
+        return false;
     } catch (error) {
         console.warn("> [SCAN WARN] No se detectó ESP32 en 192.168.4.1. ¿Está conectado al Captive Portal?", error.message);
         // Fallback visual
@@ -56,8 +88,9 @@ export async function scanLocalEsp32() {
         if (wizardTitle) {
             wizardTitle.innerText = `> ENLACE DE HARDWARE: ESP32_NODE [OFFLINE]`;
             wizardTitle.classList.add('text-mole-red');
-            wizardTitle.classList.remove('text-mole-accent');
+            wizardTitle.classList.remove('text-mole-accent', 'text-mole-green');
         }
+        return false;
     }
 }
 

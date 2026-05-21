@@ -180,9 +180,9 @@
                 </div>
 
                 <!-- ISSUE-04: Health Toggle Bar + Dual View Panels -->
-                <div class="mb-4">
+                <div id="health-section-container" class="mb-4">
                     <!-- Toggle Switch -->
-                    <div
+                    <div id="health-toggle-container"
                         class="flex items-center justify-between bg-mole-surface border border-mole-border rounded-lg p-3 mb-3">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -656,15 +656,27 @@
                 <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ENLACE DE HARDWARE: ESP32_NODE
                 </h2>
                 <div id="iot-step-1" class="iot-step block">
-                    <p class="text-mole-text-dim mb-4 text-xs font-sans">Ingrese las credenciales de la red para
-                        sincronizar el módulo ESP32.</p>
-                    <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)"
-                        class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                    <input type="password" id="wifi-pass" placeholder="Contraseña WPA2"
-                        class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                    <button data-action="next-iot-step" data-target="2"
-                        class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR
-                        HANDSHAKE</button>
+                    <!-- Sub-step 1A: Connect instructions -->
+                    <div id="iot-setup-instructions" class="block">
+                        <p class="text-mole-text mb-4 text-xs font-sans">
+                            1. Cambie la red Wi-Fi de su dispositivo actual a la red temporal del ESP32: <strong class="text-mole-cyan">MoleAI-Setup</strong> (o similar).<br>
+                            2. Una vez conectado, presione el botón de abajo para verificar el enlace.
+                        </p>
+                        <button id="btn-scan-esp"
+                            class="w-full bg-mole-cyan/20 border border-mole-cyan text-mole-cyan py-2 hover:bg-mole-cyan hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded min-h-[44px]">CONFIRMAR CONEXIÓN Y ESCANEAR</button>
+                    </div>
+
+                    <!-- Sub-step 1B: Input WiFi credentials (hidden by default) -->
+                    <div id="iot-wifi-credentials" class="hidden mt-4">
+                        <p class="text-mole-text-dim mb-4 text-xs font-sans">¡Conexión local confirmada! Ingrese las credenciales de la red a la que se conectará permanentemente el ESP32.</p>
+                        <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)"
+                            class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+                        <input type="password" id="wifi-pass" placeholder="Contraseña WPA2"
+                            class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+                        <button data-action="next-iot-step" data-target="2"
+                            class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR
+                            HANDSHAKE</button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -551,7 +551,7 @@ window.clockInterval = setInterval(updateClock, 1000);
 // ==========================================================
 // SISTEMA DE VINCULACIÓN ESP32 (IOT WIZARD)
 // ==========================================================
-function nextIotStep(step) {
+function advanceIotStep(step) {
     const wizardContainer = document.getElementById('iot-wizard-modal');
     const wizardContent = wizardContainer?.querySelector('.border-2');
     if (!wizardContainer || !wizardContent) return;
@@ -606,7 +606,7 @@ function nextIotStep(step) {
             if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores analógicos...';
         }, 2000);
 
-        setTimeout(() => nextIotStep(3), 4000);
+        setTimeout(() => advanceIotStep(3), 4000);
 
     } else if (step === 3) {
         const stepDiv = document.createElement('div');
