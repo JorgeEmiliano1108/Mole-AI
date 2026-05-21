@@ -120,10 +120,12 @@ export function saveChatHistory() {
 export function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
     if (!chatWindow) return;
-    chatWindow.classList.toggle('hidden');
-    chatWindow.classList.toggle('flex');
-    if (!chatWindow.classList.contains('hidden')) {
-        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+    const isOpen = chatWindow.classList.contains('translate-x-0');
+    chatWindow.classList.toggle('translate-x-full', isOpen);
+    chatWindow.classList.toggle('translate-x-0', !isOpen);
+    if (!isOpen) {
+        const msgs = document.getElementById('chat-messages');
+        if (msgs) msgs.scrollTop = msgs.scrollHeight;
         document.getElementById('chat-input')?.focus();
     }
 }
