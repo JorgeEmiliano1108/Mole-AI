@@ -3,6 +3,7 @@
 # =============================================================================
 from django.urls import path
 from . import views
+from apps.core import admin_views
 from apps.core.api_views import (
     mock_sensor_data, telemetry_latest_view, sensors_ingest_view,
     device_health_view, device_bindings_view, device_binding_delete_view,
@@ -49,6 +50,18 @@ urlpatterns = [
     path('fichas/', views.fichas_public_view, name='fichas_public'),
     path('history/', views.consolidated_history_view, name='consolidated_history'),
     path('feedback/', views.feedback_create_view, name='feedback_create'),
+
+    # Admin Panel (Estadísticas y Reportes)
+    path('admin/statistics', admin_views.admin_stats_view, name='admin_stats'),
+    path('admin/report-text', admin_views.admin_report_text_view, name='admin_report_text'),
+    path('admin/users/create/', admin_views.admin_users_create_view, name='admin_users_create'),
+    path('admin/live-alerts', admin_views.live_alerts_view, name='live_alerts'),
+    path('admin/reports/generate', admin_views.master_report_view, name='admin_report_generate'),
+    path('admin/reports/<str:job_id>/status', admin_views.master_report_status_view, name='admin_report_status'),
+    
+    # Reportes
+    path('reports/users', admin_views.intercepted_reports_view, name='reports_users'),
+    path('reports/plants', views.sensor_log_view, name='reports_plants'),
 
     # Polling genérico de tareas asíncronas (Fase 2)
     path('tasks/status/<str:task_id>/', views.task_status_view, name='task_status'),

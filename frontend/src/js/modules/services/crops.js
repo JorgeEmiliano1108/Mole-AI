@@ -100,15 +100,13 @@ async function registerNewPlant() {
     console.log(`> Iniciando secuencia de registro en servidor para: ${safePlantName}...`);
 
     const newPlantData = {
-        usuario: currentUser,
-        nombre: safePlantName,
-        tipo: plantType,
-        timestamp: Date.now()
+        nickname: safePlantName,
+        species_id: null // To be linked later via UI
     };
 
     try {
         const token = window.getAuthToken();
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/register/`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

@@ -43,14 +43,26 @@ async function savePlantData(plantName, plantData) {
     // B. Intento de subida al Servidor
     if (navigator.onLine) {
         try {
-            // Reemplaza con tu endpoint real
-            const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/save`, {
+            // Extraer valores numéricos de los datos simulados
+            const valH = parseInt(String(plantData.h).replace(/[^0-9.-]/g, '')) || 0;
+            const valT = parseInt(String(plantData.t).replace(/[^0-9.-]/g, '')) || 0;
+            const valPH = parseFloat(plantData.ph) || 7.0;
+            
+            const sensorPayload = {
+                plant_id: plantName, // El backend deberá resolver el nombre o recibir el UUID real
+                recorded_at: new Date().toISOString(),
+                soil_humidity: valH,
+                air_temperature: valT,
+                ph_level: valPH
+            };
+
+            const response = await fetch(`${window.AppConfig.API_BASE_URL}/sensor-data/`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${window.getAuthToken()}`
                 },
-                body: JSON.stringify({ name: plantName, data: plantData, user: localStorage.getItem('moleia_current_user') })
+                body: JSON.stringify(sensorPayload)
             });
 
             if (!response.ok) throw new Error("Fallo en el servidor.");
@@ -80,13 +92,24 @@ window.addEventListener('online', async () => {
     for (let task of queue) {
         if (task.type === 'SAVE_PLANT') {
             try {
-                await fetch(`${window.AppConfig.API_BASE_URL}/plants/save`, {
+                // Extraer numéricos
+                const valH = parseInt(String(task.data.data.h).replace(/[^0-9.-]/g, '')) || 0;
+                const valT = parseInt(String(task.data.data.t).replace(/[^0-9.-]/g, '')) || 0;
+                const valPH = parseFloat(task.data.data.ph) || 7.0;
+
+                await fetch(`${window.AppConfig.API_BASE_URL}/sensor-data/`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${window.getAuthToken()}`
                     },
-                    body: JSON.stringify({ name: task.data.name, data: task.data.data, user: localStorage.getItem('moleia_current_user') })
+                    body: JSON.stringify({
+                        plant_id: task.data.name,
+                        recorded_at: new Date(task.timestamp).toISOString(),
+                        soil_humidity: valH,
+                        air_temperature: valT,
+                        ph_level: valPH
+                    })
                 });
             } catch (err) {
                 console.error("> Fallo al sincronizar tarea:", err);

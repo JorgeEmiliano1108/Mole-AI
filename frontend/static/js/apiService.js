@@ -365,9 +365,14 @@ if (isPublic) {
             return new Promise(function (resolve, reject) {
                 var controller = new AbortController();
                 var timer = setTimeout(function () { controller.abort(); }, timeout);
+                
+                // Si el usuario provee un signal externo, abortamos el interno cuando este dispare
+                if (options.signal) {
+                    options.signal.addEventListener('abort', () => controller.abort());
+                }
 
                 var headers = self.buildHeaders(customHeaders);
-                var options = {
+                var fetchOptions = {
                     method: method.toUpperCase(),
                     headers: headers,
                     signal: controller.signal
@@ -377,10 +382,10 @@ if (isPublic) {
                 if (body !== null && body !== undefined && method !== 'GET' && method !== 'HEAD') {
                     if (body instanceof FormData) {
                         // Let browser set Content-Type with boundary for multipart
-                        delete options.headers['Content-Type'];
-                        options.body = body;
+                        delete fetchOptions.headers['Content-Type'];
+                        fetchOptions.body = body;
                     } else {
-                        options.body = JSON.stringify(body);
+                        fetchOptions.body = JSON.stringify(body);
                     }
                 }
 
@@ -396,7 +401,7 @@ if (isPublic) {
                     console.log(" HEADERs HIGH:", headers);
                 } catch (e) { /* ignore logging errors */ }
 
-                fetch(url, options)
+                fetch(url, fetchOptions)
                     .then(function (response) {
                         clearTimeout(timer);
                         return self.handleResponse(response);

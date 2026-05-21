@@ -658,7 +658,7 @@ function nextIotStep(step) {
 
 // Función especial para cerrar el modal de IOT y mostrar el botón de "+ VINCULAR CULTIVO"
 function closeIotAndShowPlantBtn() {
-    closeModal('iot-wizard-modal');
+    closeModalWithTV('iot-wizard-modal');
     const btnCultivo = document.getElementById('new-user-plants');
     if (btnCultivo) {
         btnCultivo.classList.remove('hidden');
@@ -871,7 +871,7 @@ async function handleReportDownload(btnElement) {
     }
 
     // Reutilizamos la función existente downloadReportPDF con el elemento button
-    await downloadReportPDF(reportId, btnElement);
+    await menus.downloadReportPDF(reportId, btnElement);
 }
 
 // ==========================================================
@@ -977,7 +977,8 @@ async function searchPlant(query) {
     }
 
     try {
-        const data = await window.moleApi.get('plants/search/?q=' + encodeURIComponent(query));
+        floraSearchAbortController = new AbortController();
+        const data = await window.moleApi.get('plants/search/?q=' + encodeURIComponent(query), {}, { signal: floraSearchAbortController.signal });
         const results = Array.isArray(data) ? data : (data.results || []);
 
         renderPlantResults(results);
