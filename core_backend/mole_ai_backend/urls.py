@@ -47,6 +47,7 @@ urlpatterns = [
         path('training/', include('apps.training_data.urls')),
         path('', include('apps.core.urls')),
         path('plants/', include('apps.plants.urls')),
+        path('user-plants/', include('apps.plants.urls_user')),
     ])),
     
     # Swagger API Docs

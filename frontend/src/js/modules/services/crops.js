@@ -106,7 +106,7 @@ async function registerNewPlant() {
 
     try {
         const token = window.getAuthToken();
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/user-plants/`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

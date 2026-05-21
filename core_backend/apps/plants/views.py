@@ -99,8 +99,8 @@ def species_search_view(request):
 @permission_classes([IsAuthenticated])
 def plant_list_view(request):
     """
-    GET  /api/v1/plants/  — List the authenticated user's plants.
-    POST /api/v1/plants/  — Create a new plant, return the generated plant_id (UUID).
+    GET  /api/v1/user-plants/  — List the authenticated user's plants.
+    POST /api/v1/user-plants/  — Create a new plant, return the generated plant_id (UUID).
     """
     if request.method == "GET":
         plants = UserPlant.objects.filter(user=request.user)
@@ -108,11 +108,6 @@ def plant_list_view(request):
         return Response({"results": serializer.data, "count": len(serializer.data)})
     
     # POST
-    # Si es ADMIN y viene multipart/form-data (se espera un "classification" o "technical_file")
-    if getattr(request.user, 'is_staff', False) or getattr(request.user, 'is_superuser', False):
-        if 'technical_file' in request.FILES or 'image' in request.FILES or 'classification' in request.data:
-            return Response({"status": "success", "message": "Cultivo registrado"}, status=status.HTTP_201_CREATED)
-
     serializer = PlantCreateSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(
