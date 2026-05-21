@@ -316,7 +316,7 @@ LOGGING = {
         },
         'file': {
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'mole_ai.log',
+            'filename': '/tmp/mole_ai.log',
             'when': 'midnight',
             'interval': 1,
             'backupCount': 15,  # Retención de 15 días

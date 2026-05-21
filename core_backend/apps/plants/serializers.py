@@ -55,6 +55,13 @@ class SpeciesSerializer(serializers.ModelSerializer):
             'ideal_ph_min',
             'ideal_ph_max',
             'ideal_ph_optimal',
+            'habitat',
+            'soil_type',
+            'irrigation',
+            'uses',
+            'uv_rays',
+            'soil_humidity_min',
+            'soil_humidity_max',
             'image_url',
         ]
         read_only_fields = ['id']

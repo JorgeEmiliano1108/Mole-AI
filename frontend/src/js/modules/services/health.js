@@ -20,7 +20,7 @@ window.addEventListener('userRoleReady', (e) => {
     // UI Cleanup: Force hide SRE toggles if not SRE
     const toggleContainer = document.getElementById('health-toggle-container');
     if (!isSre && toggleContainer) {
-        toggleContainer.style.display = 'none'; // Hard hide
+        toggleContainer.classList.add('hidden'); // Tailwind hidden class
     }
 
     if (role === 'guest') {
@@ -58,10 +58,13 @@ export function initHealthView(isSre = false) {
     setupPlantRegistration();
 
     const sectionContainer = document.getElementById('health-section-container');
+    const toggleContainer = document.getElementById('health-toggle-container');
     if (!currentDeviceId) {
         if (sectionContainer) sectionContainer.classList.add('hidden');
+        if (toggleContainer) toggleContainer.classList.add('hidden'); // hide toggles in zero‑state
     } else {
         if (sectionContainer) sectionContainer.classList.remove('hidden');
+        if (toggleContainer) toggleContainer.classList.remove('hidden');
         fetchHealth();
         startPolling();
     }
