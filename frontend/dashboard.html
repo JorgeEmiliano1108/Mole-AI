@@ -1,372 +1,540 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <!-- BFCache Prevention -->
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOLE-IA | Dashboard Operativo</title>
     <link rel="stylesheet" href="/static/css/styles.css">
 
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=VT323&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&family=VT323&display=swap"
+        rel="stylesheet">
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
+
 <body class="flex flex-col min-h-screen overflow-x-hidden bg-mole-bg text-mole-text font-sans">
 
     <div id="toast-container" aria-live="polite" class="fixed top-4 right-4 z-50"></div>
 
-<!-- Bottom Navigation Bar / Sidebar -->
-<nav class="fixed bottom-0 w-full h-16 border-t border-mole-border z-[70] flex justify-around md:top-0 md:left-0 md:bottom-auto md:h-screen md:w-20 md:flex-col md:justify-start md:items-center md:border-t-0 md:border-r bg-mole-surface-industrial" style="background-color:#12141a;">
-    <!-- MONITOR (primer botón) -->
-    <button data-action="switch-field" data-target="view-monitoreo" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-cyan hover:text-mole-accent focus:outline-none md:mt-6">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        <span class="text-[10px] font-bold mt-1">MONITOR</span>
-    </button>
-    <!-- WIKI -->
-    <button data-action="switch-field" data-target="view-wiki" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-        <span class="text-[10px] font-bold mt-1">WIKI</span>
-    </button>
-    <!-- MAPA -->
-    <button data-action="switch-field" data-target="view-mapa" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-        <span class="text-[10px] font-bold mt-1">MAPA</span>
-    </button>
+    <!-- Bottom Navigation Bar / Sidebar -->
+    <nav class="fixed bottom-0 w-full h-16 border-t border-mole-border z-[70] flex justify-around md:top-0 md:left-0 md:bottom-auto md:h-screen md:w-20 md:flex-col md:justify-start md:items-center md:border-t-0 md:border-r bg-mole-surface-industrial"
+        style="background-color:#12141a;">
+        <!-- MONITOR (primer botón) -->
+        <button data-action="switch-field" data-target="view-monitoreo"
+            class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-cyan hover:text-mole-accent focus:outline-none md:mt-6">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span class="text-[10px] font-bold mt-1">MONITOR</span>
+        </button>
+        <!-- WIKI -->
+        <button data-action="switch-field" data-target="view-wiki"
+            class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            <span class="text-[10px] font-bold mt-1">WIKI</span>
+        </button>
+        <!-- MAPA -->
+        <button data-action="switch-field" data-target="view-mapa"
+            class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <span class="text-[10px] font-bold mt-1">MAPA</span>
+        </button>
 
-    
-    <button data-action="switch-field" data-target="view-iot" class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11a1 1 0 100-2 1 1 0 000 2zm0 0v5m-2-3l2 2 2-2M8 9a5 5 0 018 0M5 9a9 9 0 0114 0" />
-        </svg>
-        <span class="text-[10px] font-bold mt-1">IOT</span>
-    </button>
 
-</nav>
+        <button data-action="switch-field" data-target="view-iot"
+            class="flex flex-col items-center justify-center min-h-[64px] min-w-[64px] text-mole-dim hover:text-mole-accent focus:outline-none">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 11a1 1 0 100-2 1 1 0 000 2zm0 0v5m-2-3l2 2 2-2M8 9a5 5 0 018 0M5 9a9 9 0 0114 0" />
+            </svg>
+            <span class="text-[10px] font-bold mt-1">IOT</span>
+        </button>
 
-<!-- Button lateral IoT -->
-<main id="main-dashboard" class="flex-1 flex flex-col pb-24 md:pb-0 md:ml-20 overflow-hidden">
-    <header class="flex items-center justify-between border-b border-mole-border p-4 md:px-6 bg-mole-surface">
-        <h1 class="text-2xl font-bold text-mole-cyan">DASHBOARD OPERATIVO</h1>
-        <div class="flex items-center gap-4">
-            <button id="theme-toggle-btn" data-action="toggle-theme" aria-label="Cambiar tema" class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber" title="Modo Solar / Pip-Boy">
-                <svg id="icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                </svg>
-                <svg id="icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path>
-                </svg>
-            </button>
-            <div class="relative">
-                <button data-action="toggle-dropdown" data-target="profile-dropdown" aria-haspopup="true" aria-expanded="false" class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
-                    <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
-                    <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+    </nav>
+
+    <!-- Button lateral IoT -->
+    <main id="main-dashboard" class="flex-1 flex flex-col pb-24 md:pb-0 md:ml-20 overflow-hidden">
+        <header class="flex items-center justify-between border-b border-mole-border p-4 md:px-6 bg-mole-surface">
+            <h1 class="text-2xl font-bold text-mole-cyan">DASHBOARD OPERATIVO</h1>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle-btn" data-action="toggle-theme" aria-label="Cambiar tema"
+                    class="min-h-[44px] min-w-[44px] flex items-center justify-center bg-mole-base border border-mole-border rounded hover:border-mole-amber/50 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-amber"
+                    title="Modo Solar / Pip-Boy">
+                    <svg id="icon-sun" class="w-5 h-5 text-mole-amber hidden" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                        </path>
+                    </svg>
+                    <svg id="icon-moon" class="w-5 h-5 text-mole-cyan" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9 9 0 008.354-5.646z"></path>
+                    </svg>
                 </button>
-                <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
-                    <div class="p-3 border-b border-mole-border">
-                        <p id="dropdown-user-name" class="font-bold text-mole-accent text-xs">AGENTE</p>
+                <div class="relative">
+                    <button data-action="toggle-dropdown" data-target="profile-dropdown" aria-haspopup="true"
+                        aria-expanded="false"
+                        class="flex items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 rounded hover:border-mole-accent/30 transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent">
+                        <span class="text-xs font-bold text-mole-text-dim">OPERADOR</span>
+                        <svg class="w-3 h-3 text-mole-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <div id="profile-dropdown"
+                        class="hidden absolute right-0 mt-2 w-48 bg-mole-surface border border-mole-border rounded-lg shadow-cyber z-50 overflow-hidden">
+                        <div class="p-3 border-b border-mole-border">
+                            <p id="dropdown-user-name" class="font-bold text-mole-accent text-xs">AGENTE</p>
+                        </div>
+                        <button data-action="nav:logout"
+                            class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR
+                            SESIÓN]</button>
                     </div>
-                    <button data-action="nav:logout" class="w-full text-left px-3 py-2.5 text-mole-red hover:bg-mole-red/10 text-xs font-bold transition-colors tracking-wider focus:outline-none focus:ring-2 focus:ring-mole-cyan rounded">[CERRAR SESIÓN]</button>
                 </div>
             </div>
-        </div>
-</header>
+        </header>
 
         <!-- Left / Main Content -->
         <div id="view-monitoreo" class="field-view flex-1 flex flex-col w-full overflow-hidden">
             <div class="flex-1 overflow-y-auto py-4 md:py-6 flex flex-col min-h-0 w-full">
 
-
-            <!-- Telemetry KPI Cards (Responsive Grid) -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                <!-- Humidity -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-sky-500/30"></div>
-                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Humedad Suelo</span>
-                    <div class="text-2xl sm:text-3xl font-bold text-sky-400" id="txt-hum">--%</div>
+                <!-- Empty State & Registration Form -->
+                <div id="monitoreo-empty-state" class="flex flex-col items-center justify-center flex-1 w-full max-w-md mx-auto py-10 px-4">
+                    <div id="btn-add-plant" class="w-16 h-16 rounded-full bg-mole-surface border-2 border-dashed border-mole-cyan flex items-center justify-center text-mole-cyan hover:bg-mole-cyan hover:text-black hover:border-solid transition-colors cursor-pointer shadow-cyber-hover mb-4" tabindex="0">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    </div>
+                    <p class="text-mole-dim text-xs font-mono text-center mb-6">SIN DISPOSITIVOS ACTIVOS<br>Seleccione [+] para registrar una planta</p>
+                    
+                    <form id="form-register-plant" class="hidden w-full bg-mole-surface border border-mole-cyan/50 p-4 rounded-lg shadow-cyber flex flex-col gap-4">
+                        <h3 class="text-mole-cyan font-bold text-sm border-b border-mole-cyan/30 pb-2 uppercase tracking-wider">Registrar Planta</h3>
+                        <div>
+                            <label class="block text-[10px] text-mole-dim uppercase mb-1">Nombre de Planta</label>
+                            <input type="text" id="reg-plant-name" class="w-full bg-mole-bg border border-mole-border px-3 py-2 text-mole-cyan text-sm focus:border-mole-cyan outline-none" placeholder="Ej: Tomate Cherry" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-mole-dim uppercase mb-1">Número de Sensor de Humedad (PIN)</label>
+                            <input type="text" id="reg-plant-pin" class="w-full bg-mole-bg border border-mole-border px-3 py-2 text-mole-cyan text-sm focus:border-mole-cyan outline-none" placeholder="Ej: 32" required>
+                        </div>
+                        <div class="flex justify-end gap-2 mt-2">
+                            <button type="button" id="btn-cancel-reg" class="px-3 py-1.5 border border-mole-border text-mole-dim hover:text-mole-cyan text-xs font-bold transition-colors">CANCELAR</button>
+                            <button type="submit" class="px-3 py-1.5 bg-mole-cyan text-mole-base font-bold text-xs hover:bg-mole-cyan/80 transition-colors">REGISTRAR</button>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- Temperature -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-orange-500/30"></div>
-                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Temperatura</span>
-                    <div class="text-2xl sm:text-3xl font-bold text-orange-400" id="txt-temp">--°C</div>
+                <!-- Telemetry KPI Cards (Responsive Grid) -->
+                <div id="monitoreo-kpi-cards" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <!-- Humidity -->
+                    <div
+                        class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-0.5 bg-sky-500/30"></div>
+                        <span
+                            class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Humedad
+                            Suelo</span>
+                        <div class="text-2xl sm:text-3xl font-bold text-sky-400" id="txt-hum">--%</div>
+                    </div>
+
+                    <!-- Temperature -->
+                    <div
+                        class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-0.5 bg-orange-500/30"></div>
+                        <span
+                            class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Temperatura</span>
+                        <div class="text-2xl sm:text-3xl font-bold text-orange-400" id="txt-temp">--°C</div>
+                    </div>
+
+                    <!-- pH -->
+                    <div
+                        class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
+                        <span
+                            class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Nivel
+                            pH</span>
+                        <div class="text-2xl sm:text-3xl font-bold text-mole-green" id="txt-ph">--</div>
+                    </div>
+
+                    <!-- UV -->
+                    <div
+                        class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-0.5 bg-violet-500/30"></div>
+                        <span
+                            class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Índice
+                            UV</span>
+                        <div class="text-2xl sm:text-3xl font-bold text-violet-400" id="txt-uv">--</div>
+                    </div>
                 </div>
 
-                <!-- pH -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
-                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Nivel pH</span>
-                    <div class="text-2xl sm:text-3xl font-bold text-mole-green" id="txt-ph">--</div>
+                <!-- ISSUE-04: Health Toggle Bar + Dual View Panels -->
+                <div class="mb-4">
+                    <!-- Toggle Switch -->
+                    <div
+                        class="flex items-center justify-between bg-mole-surface border border-mole-border rounded-lg p-3 mb-3">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                </path>
+                            </svg>
+                            <span class="text-xs font-bold text-mole-text-dim uppercase tracking-widest">System
+                                Health</span>
+                        </div>
+                        <div class="flex flex-col sm:flex-row border border-mole-border rounded-lg overflow-hidden">
+                            <button id="health-toggle-botanico"
+                                class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors min-h-[44px] min-w-[44px]">
+                                🌱 BOTÁNICO
+                            </button>
+                            <button id="health-toggle-sre"
+                                class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-surface text-mole-dim hover:text-mole-cyan transition-colors min-h-[44px] min-w-[44px]">
+                                ⚙️ SRE
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Health Panel: Botánico (visible by default) -->
+                    <div id="health-panel-botanico"
+                        class="bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
+                        <p class="text-xs text-mole-dim font-mono text-center py-4 animate-pulse">
+                            <span class="text-mole-cyan/50">[AWAIT]</span> Esperando enlace con dispositivo...
+                        </p>
+                    </div>
+
+                    <!-- Health Panel: SRE (hidden by default) -->
+                    <div id="health-panel-sre"
+                        class="hidden bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-0.5 bg-amber-500/30"></div>
+                        <p class="text-xs text-mole-dim font-mono text-center py-4 animate-pulse">
+                            <span class="text-mole-cyan/50">[AWAIT]</span> Esperando enlace con dispositivo...
+                        </p>
+                    </div>
+
+                    <!-- Offline Overlay (hidden by default, activated when status === 'offline') -->
+                    <div id="health-offline-overlay"
+                        class="hidden mt-2 bg-red-500/10 border-2 border-red-500/50 rounded-lg p-3 text-center animate-pulse">
+                        <span class="text-red-400 font-bold text-xs tracking-widest uppercase">⚠ DISPOSITIVO SIN SEÑAL —
+                            Última conexión expirada</span>
+                    </div>
                 </div>
 
-                <!-- UV -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 flex flex-col shadow-cyber relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-violet-500/30"></div>
-                    <span class="text-xs text-mole-text-dim font-bold uppercase tracking-widest mb-2 font-sans">Índice UV</span>
-                    <div class="text-2xl sm:text-3xl font-bold text-violet-400" id="txt-uv">--</div>
+                <!-- Content Area: Camera & AI Diagnostics -->
+                <div id="monitoreo-panels" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
+
+                    <!-- Camera / Image Monitor -->
+                    <div
+                        class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col min-h-[200px] h-auto relative shadow-cyber">
+                        <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
+                            <h3 class="font-bold text-mole-accent text-xs tracking-wider flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 rounded-full bg-mole-red animate-pulse"></span>
+                                MONITOR VISUAL
+                            </h3>
+                            <span id="plant-tag"
+                                class="text-xs font-bold bg-mole-bg text-mole-text-dim px-2 py-1 rounded border border-mole-border">SIN
+                                ASIGNAR</span>
+                        </div>
+                        <div class="flex-1 bg-mole-bg flex items-center justify-center relative">
+                            <div id="video-placeholder"
+                                class="text-mole-dim/50 text-xs font-sans animate-pulse flex flex-col items-center gap-2">
+                                <svg class="w-8 h-8 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                                    </path>
+                                </svg>
+                                ESPERANDO FEED...
+                            </div>
+                            <img id="main-img" class="hidden absolute inset-0 w-full h-full object-cover" src=""
+                                alt="Monitor visual de la planta analizada">
+                            <!-- Hidden camera/file input for vision capture -->
+                            <input type="file" accept="image/*" id="camera-input" class="hidden" capture="environment">
+                        </div>
+                        <!-- Button to trigger camera/file input -->
+                        <div class="p-3 border-t border-mole-border flex gap-2">
+                            <label for="camera-input"
+                                class="flex-1 text-center text-xs font-bold bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors cursor-pointer tracking-widest uppercase min-h-[44px] flex items-center justify-center">
+                                [ Capturar Imagen ]
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- AI Diagnostics Panel -->
+                    <div
+                        class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col min-h-[200px] h-auto shadow-cyber">
+                        <div
+                            class="px-4 py-3 border-b border-mole-border flex justify-between items-center bg-mole-green/5">
+                            <h3 class="font-bold text-mole-green text-xs tracking-wider flex items-center gap-2">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                    </path>
+                                </svg>
+                                DIAGNÓSTICO AI (VISIÓN MS1)
+                            </h3>
+                        </div>
+                        <div class="p-4 flex-1 overflow-y-auto">
+                            <div id="diagnostic-term" class="space-y-3">
+                                <p class="text-xs text-mole-dim font-sans">
+                                    <span class="text-mole-accent/50">[AWAIT]</span> Esperando datos de inferencia
+                                    MS1...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="view-wiki" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
+            <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-4">>
+                ENCICLOPEDIA TÁCTICA FITOSANITARIA</h2>
+
+            <!-- Header: Buscador + Filtros -->
+            <div
+                class="flex flex-wrap items-center gap-3 mb-5 p-3 bg-mole-surface/50 border border-mole-border rounded">
+                <div
+                    class="relative flex flex-1 items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 focus-within:border-mole-cyan transition-colors min-w-[200px]">
+                    <svg class="w-4 h-4 text-mole-dim flex-shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"></path>
+                    </svg>
+                    <input id="wiki-search" type="text" placeholder="> BUSCAR ESPECIE, PLAGA, ENFERMEDAD..."
+                        class="flex-1 bg-transparent text-mole-cyan outline-none font-mono text-sm placeholder-mole-dim"
+                        autocomplete="off">
+                    <span id="wiki-loading" class="text-mole-cyan text-xs animate-pulse hidden">SCAN...</span>
+                    
+                    <div id="wiki-history-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-mole-surface border border-mole-border rounded shadow-cyber z-50 max-h-48 overflow-y-auto">
+                        <!-- History items injected here -->
+                    </div>
+                </div>
+                <select id="wiki-filter-cat"
+                    class="bg-mole-bg border border-mole-border px-3 py-2 text-mole-text-dim outline-none focus:border-mole-cyan text-xs font-mono transition-colors cursor-pointer">
+                    <option value="">TODAS LAS CATEGORÍAS</option>
+                    <option value="planta">🌿 PLANTAS</option>
+                    <option value="plaga">🐛 PLAGAS</option>
+                    <option value="enfermedad">🦠 ENFERMEDADES</option>
+                </select>
+                <div id="wiki-count" class="text-mole-dim text-xs font-mono hidden">
+                    <span id="wiki-count-num">0</span> REGISTROS
                 </div>
             </div>
 
-            <!-- ISSUE-04: Health Toggle Bar + Dual View Panels -->
-            <div class="mb-4">
-                <!-- Toggle Switch -->
-                <div class="flex items-center justify-between bg-mole-surface border border-mole-border rounded-lg p-3 mb-3">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                        <span class="text-xs font-bold text-mole-text-dim uppercase tracking-widest">System Health</span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row border border-mole-border rounded-lg overflow-hidden">
-                        <button id="health-toggle-botanico" class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors min-h-[44px] min-w-[44px]">
-                            🌱 BOTÁNICO
-                        </button>
-                        <button id="health-toggle-sre" class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-surface text-mole-dim hover:text-mole-cyan transition-colors min-h-[44px] min-w-[44px]">
-                            ⚙️ SRE
-                        </button>
-                    </div>
-                </div>
+            <!-- Grid de Hover Cards -->
+            <div id="wiki-grid"
+                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto flex-1">
+                <!-- tarjetas renderizadas por src/js/modules/services/wiki.js -->
+            </div>
+        </div>
+        <div id="view-mapa" class="field-view hidden flex-1 flex flex-col h-full w-full p-0 relative bg-mole-base">
+            <!-- Contenedor absoluto completo para el mapa -->
+            <div id="map" class="absolute inset-0 z-10"></div>
 
-                <!-- Health Panel: Botánico (visible by default) -->
-                <div id="health-panel-botanico" class="bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/30"></div>
-                    <p class="text-xs text-mole-dim font-mono text-center py-4 animate-pulse">
-                        <span class="text-mole-cyan/50">[AWAIT]</span> Esperando enlace con dispositivo...
-                    </p>
-                </div>
+            <!-- ── LEFT SIDEBAR: Botones Nativos ── -->
+            <div
+                class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-[400] p-2 bg-mole-surface/80 backdrop-blur-md border border-mole-border rounded-xl shadow-cyber">
+                <button id="btn-layer-temp"
+                    class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-orange-500 transition-colors"
+                    title="Temperatura">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                        </path>
+                    </svg>
+                </button>
+                <button id="btn-layer-precip"
+                    class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-sky-500 transition-colors"
+                    title="Precipitación">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z">
+                        </path>
+                    </svg>
+                </button>
+                <div class="w-full h-px bg-mole-border"></div>
+                <button id="btn-layer-plagas"
+                    class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-accent text-mole-base transition-colors shadow-[0_0_10px_rgba(0,229,255,0.4)]"
+                    title="Focos de Infección">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                        </path>
+                    </svg>
+                </button>
+            </div>
 
-                <!-- Health Panel: SRE (hidden by default) -->
-                <div id="health-panel-sre" class="hidden bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-full h-0.5 bg-amber-500/30"></div>
-                    <p class="text-xs text-mole-dim font-mono text-center py-4 animate-pulse">
-                        <span class="text-mole-cyan/50">[AWAIT]</span> Esperando enlace con dispositivo...
-                    </p>
+            <!-- ── RIGHT PANEL: Tarjeta Multipropósito (Clima o Plaga) ── -->
+            <div id="map-info-panel"
+                class="absolute right-4 top-4 z-[400] w-72 bg-mole-surface/90 backdrop-blur-md border border-mole-cyan p-4 rounded-xl shadow-cyber hidden flex-col gap-3 font-sans">
+                <div class="flex justify-between items-start border-b border-mole-border pb-2">
+                    <h3 id="info-title" class="text-sm font-bold text-mole-cyan tracking-wider truncate">SELECCIONE
+                        PUNTO</h3>
+                    <button data-action="hide-panel" data-target="map-info-panel"
+                        class="text-mole-dim hover:text-mole-red transition-colors focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
-
-                <!-- Offline Overlay (hidden by default, activated when status === 'offline') -->
-                <div id="health-offline-overlay" class="hidden mt-2 bg-red-500/10 border-2 border-red-500/50 rounded-lg p-3 text-center animate-pulse">
-                    <span class="text-red-400 font-bold text-xs tracking-widest uppercase">⚠ DISPOSITIVO SIN SEÑAL — Última conexión expirada</span>
+                <div id="info-content" class="flex flex-col gap-2 text-xs">
+                    <!-- Contenido dinámico inyectado por JS -->
                 </div>
             </div>
 
-            <!-- Content Area: Camera & AI Diagnostics -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
+            <!-- ── BOTTOM BAR: Leyenda de Gradiente (OpenWeather Style) ── -->
+            <div
+                class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[400] flex items-center bg-mole-surface/90 backdrop-blur-md border border-mole-border px-4 py-2 rounded-full shadow-cyber w-max max-w-[90vw]">
+                <span class="text-[10px] font-bold text-mole-text-dim mr-3">RIESGO:</span>
+                <div class="flex flex-col w-48 gap-1">
+                    <div class="h-2 w-full rounded-full bg-gradient-to-r from-[#00e5ff] via-[#fbbf24] to-[#ef4444]">
+                    </div>
+                    <div class="flex justify-between text-[8px] font-bold text-mole-text-dim tracking-wider uppercase">
+                        <span>Seguro</span>
+                        <span>Alerta</span>
+                        <span>Crítico</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="view-iot" class="field-view hidden flex-1 flex flex-col h-full w-full p-4 md:p-6 overflow-y-auto">
+            <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-6">> PANEL DE
+                HARDWARE</h2>
 
-                <!-- Camera / Image Monitor -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col min-h-[200px] h-auto relative shadow-cyber">
+            <!-- Bindings Panel (FE-03) -->
+            <div id="bindings-panel" class="max-w-2xl mx-auto w-full flex flex-col gap-4">
+
+                <!-- Active Bindings Table -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden shadow-cyber">
                     <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
-                        <h3 class="font-bold text-mole-accent text-xs tracking-wider flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 rounded-full bg-mole-red animate-pulse"></span>
-                            MONITOR VISUAL
+                        <h3 class="text-xs font-bold text-mole-accent tracking-wider uppercase flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-mole-green"></span>
+                            BINDINGS ACTIVOS
                         </h3>
-                        <span id="plant-tag" class="text-xs font-bold bg-mole-bg text-mole-text-dim px-2 py-1 rounded border border-mole-border">SIN ASIGNAR</span>
+                        <span class="text-[10px] text-mole-dim font-mono"><span id="bindings-count">0</span>
+                            REGISTROS</span>
                     </div>
-                    <div class="flex-1 bg-mole-bg flex items-center justify-center relative">
-                        <div id="video-placeholder" class="text-mole-dim/50 text-xs font-sans animate-pulse flex flex-col items-center gap-2">
-                            <svg class="w-8 h-8 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                            ESPERANDO FEED...
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-mole-border bg-mole-bg/50">
+                                    <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">
+                                        PIN</th>
+                                    <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">
+                                        PLANTA</th>
+                                    <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">
+                                        ESPECIE</th>
+                                    <th
+                                        class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider text-right">
+                                        ACCION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bindings-table-body">
+                                <tr>
+                                    <td colspan="4"
+                                        class="text-center text-mole-dim text-xs py-6 font-mono animate-pulse">
+                                        [AWAIT] Cargando bindings...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Assignment Form -->
+                <div class="bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber">
+                    <h3 class="text-xs font-bold text-mole-cyan tracking-wider uppercase mb-3 flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-mole-cyan animate-pulse"></span>
+                        ASIGNAR PIN A PLANTA
+                    </h3>
+                    <form id="binding-form" class="flex flex-col gap-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="binding-pin"
+                                    class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">PIN
+                                    FISICO</label>
+                                <input id="binding-pin" type="text" placeholder="Ej: 32, A0"
+                                    class="w-full bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded"
+                                    autocomplete="off">
+                            </div>
+                            <div>
+                                <label for="binding-plant-id"
+                                    class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">PLANT_ID
+                                    (UUID)</label>
+                                <input id="binding-plant-id" type="text" placeholder="UUID de UserPlant"
+                                    class="w-full bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded"
+                                    autocomplete="off">
+                            </div>
                         </div>
-                        <img id="main-img" class="hidden absolute inset-0 w-full h-full object-cover" src="" alt="Monitor visual de la planta analizada">
-                        <!-- Hidden camera/file input for vision capture -->
-                        <input type="file" accept="image/*" id="camera-input" class="hidden" capture="environment">
-                    </div>
-                    <!-- Button to trigger camera/file input -->
-                    <div class="p-3 border-t border-mole-border flex gap-2">
-                         <label for="camera-input" class="flex-1 text-center text-xs font-bold bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors cursor-pointer tracking-widest uppercase min-h-[44px] flex items-center justify-center">
-                             [ Capturar Imagen ]
-                         </label>
-                    </div>
+                        <button type="submit"
+                            class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm">
+                            CREAR BINDING
+                        </button>
+                    </form>
+                    <p id="binding-status" class="hidden text-xs font-mono mt-2"></p>
                 </div>
 
-                <!-- AI Diagnostics Panel -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col min-h-[200px] h-auto shadow-cyber">
-                    <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center bg-mole-green/5">
-                        <h3 class="font-bold text-mole-green text-xs tracking-wider flex items-center gap-2">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                            DIAGNÓSTICO AI (VISIÓN MS1)
-                        </h3>
+                <!-- Wi-Fi Provisioning (legacy, collapsed) -->
+                <details class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden">
+                    <summary
+                        class="px-4 py-3 text-xs font-bold text-mole-dim uppercase tracking-wider cursor-pointer hover:text-mole-cyan transition-colors">
+                        [+] PROVISIONING WI-FI / BLUETOOTH (LEGACY)
+                    </summary>
+                    <div class="p-4 border-t border-mole-border flex flex-col gap-3">
+                        <p class="text-mole-dim text-xs font-mono mb-1">Credenciales de red del nodo ESP32:</p>
+                        <input id="prov-ssid" type="text" placeholder="> SSID"
+                            class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+                        <input id="prov-pass" type="password" placeholder="> PASSWORD WPA2"
+                            class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+                        <input id="prov-node-name" type="text" placeholder="> NOMBRE DEL NODO (ej: ESP-INVERNADERO-01)"
+                            class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
+                        <button id="btn-prov-wifi"
+                            class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm mt-1">
+                            VINCULAR DISPOSITIVO
+                        </button>
                     </div>
-                    <div class="p-4 flex-1 overflow-y-auto">
-                        <div id="diagnostic-term" class="space-y-3">
-                            <p class="text-xs text-mole-dim font-sans">
-                                <span class="text-mole-accent/50">[AWAIT]</span> Esperando datos de inferencia MS1...
-                            </p>
-                        </div>
-                    </div>
+                </details>
+
+                <!-- STATUS -->
+                <div id="prov-status"
+                    class="hidden bg-mole-bg border border-mole-border rounded-lg p-3 text-xs font-mono">
+                    <span id="prov-status-text" class="text-mole-cyan"></span>
                 </div>
             </div>
-
-            </div>
         </div>
-
-<div id="view-wiki" class="field-view hidden flex-1 flex flex-col min-h-0 w-full overflow-hidden p-4 md:p-6">
-    <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-4">> ENCICLOPEDIA TÁCTICA FITOSANITARIA</h2>
-    
-    <!-- Header: Buscador + Filtros -->
-    <div class="flex flex-wrap items-center gap-3 mb-5 p-3 bg-mole-surface/50 border border-mole-border rounded">
-        <div class="flex flex-1 items-center gap-2 bg-mole-bg border border-mole-border px-3 py-2 focus-within:border-mole-cyan transition-colors min-w-[200px]">
-            <svg class="w-4 h-4 text-mole-dim flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"></path></svg>
-            <input id="wiki-search" type="text" placeholder="> BUSCAR ESPECIE, PLAGA, ENFERMEDAD..." class="flex-1 bg-transparent text-mole-cyan outline-none font-mono text-sm placeholder-mole-dim" autocomplete="off">
-            <span id="wiki-loading" class="text-mole-cyan text-xs animate-pulse hidden">SCAN...</span>
-        </div>
-        <select id="wiki-filter-cat" class="bg-mole-bg border border-mole-border px-3 py-2 text-mole-text-dim outline-none focus:border-mole-cyan text-xs font-mono transition-colors cursor-pointer">
-            <option value="">TODAS LAS CATEGORÍAS</option>
-            <option value="planta">🌿 PLANTAS</option>
-            <option value="plaga">🐛 PLAGAS</option>
-            <option value="enfermedad">🦠 ENFERMEDADES</option>
-        </select>
-        <div id="wiki-count" class="text-mole-dim text-xs font-mono hidden">
-            <span id="wiki-count-num">0</span> REGISTROS
-        </div>
-    </div>
-
-    <!-- Grid de Hover Cards -->
-    <div id="wiki-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto flex-1">
-        <!-- tarjetas renderizadas por src/js/modules/services/wiki.js -->
-    </div>
-</div>
-<div id="view-mapa" class="field-view hidden flex-1 flex flex-col h-full w-full p-0 relative bg-mole-base">
-    <!-- Contenedor absoluto completo para el mapa -->
-    <div id="map" class="absolute inset-0 z-10"></div>
-
-    <!-- ── LEFT SIDEBAR: Botones Nativos ── -->
-    <div class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-[400] p-2 bg-mole-surface/80 backdrop-blur-md border border-mole-border rounded-xl shadow-cyber">
-        <button id="btn-layer-temp" class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-orange-500 transition-colors" title="Temperatura">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-        </button>
-        <button id="btn-layer-precip" class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-surface/80 text-mole-dim hover:bg-mole-bg hover:text-sky-500 transition-colors" title="Precipitación">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-        </button>
-        <div class="w-full h-px bg-mole-border"></div>
-        <button id="btn-layer-plagas" class="w-10 h-10 flex items-center justify-center rounded-lg bg-mole-accent text-mole-base transition-colors shadow-[0_0_10px_rgba(0,229,255,0.4)]" title="Focos de Infección">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg>
-        </button>
-    </div>
-
-    <!-- ── RIGHT PANEL: Tarjeta Multipropósito (Clima o Plaga) ── -->
-    <div id="map-info-panel" class="absolute right-4 top-4 z-[400] w-72 bg-mole-surface/90 backdrop-blur-md border border-mole-cyan p-4 rounded-xl shadow-cyber hidden flex-col gap-3 font-sans">
-        <div class="flex justify-between items-start border-b border-mole-border pb-2">
-            <h3 id="info-title" class="text-sm font-bold text-mole-cyan tracking-wider truncate">SELECCIONE PUNTO</h3>
-            <button data-action="hide-panel" data-target="map-info-panel" class="text-mole-dim hover:text-mole-red transition-colors focus:outline-none">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-        <div id="info-content" class="flex flex-col gap-2 text-xs">
-            <!-- Contenido dinámico inyectado por JS -->
-        </div>
-    </div>
-
-    <!-- ── BOTTOM BAR: Leyenda de Gradiente (OpenWeather Style) ── -->
-    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[400] flex items-center bg-mole-surface/90 backdrop-blur-md border border-mole-border px-4 py-2 rounded-full shadow-cyber w-max max-w-[90vw]">
-        <span class="text-[10px] font-bold text-mole-text-dim mr-3">RIESGO:</span>
-        <div class="flex flex-col w-48 gap-1">
-            <div class="h-2 w-full rounded-full bg-gradient-to-r from-[#00e5ff] via-[#fbbf24] to-[#ef4444]"></div>
-            <div class="flex justify-between text-[8px] font-bold text-mole-text-dim tracking-wider uppercase">
-                <span>Seguro</span>
-                <span>Alerta</span>
-                <span>Crítico</span>
-            </div>
-        </div>
-    </div>
-</div>
-<div id="view-iot" class="field-view hidden flex-1 flex flex-col h-full w-full p-4 md:p-6 overflow-y-auto">
-    <h2 class="text-xl font-bold text-mole-cyan crt-text-glow border-b border-mole-cyan pb-2 mb-6">> PANEL DE HARDWARE</h2>
-
-    <!-- Bindings Panel (FE-03) -->
-    <div id="bindings-panel" class="max-w-2xl mx-auto w-full flex flex-col gap-4">
-
-        <!-- Active Bindings Table -->
-        <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden shadow-cyber">
-            <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
-                <h3 class="text-xs font-bold text-mole-accent tracking-wider uppercase flex items-center gap-2">
-                    <span class="w-1.5 h-1.5 rounded-full bg-mole-green"></span>
-                    BINDINGS ACTIVOS
-                </h3>
-                <span class="text-[10px] text-mole-dim font-mono"><span id="bindings-count">0</span> REGISTROS</span>
-            </div>
-            <div class="overflow-x-auto">
-            <table class="w-full text-left">
-                <thead>
-                    <tr class="border-b border-mole-border bg-mole-bg/50">
-                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">PIN</th>
-                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">PLANTA</th>
-                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider">ESPECIE</th>
-                        <th class="py-2 px-2 text-[10px] text-mole-dim font-bold uppercase tracking-wider text-right">ACCION</th>
-                    </tr>
-                </thead>
-                <tbody id="bindings-table-body">
-                    <tr>
-                        <td colspan="4" class="text-center text-mole-dim text-xs py-6 font-mono animate-pulse">
-                            [AWAIT] Cargando bindings...
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            </div>
-        </div>
-
-        <!-- Assignment Form -->
-        <div class="bg-mole-surface border border-mole-border rounded-lg p-4 shadow-cyber">
-            <h3 class="text-xs font-bold text-mole-cyan tracking-wider uppercase mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-1.5 rounded-full bg-mole-cyan animate-pulse"></span>
-                ASIGNAR PIN A PLANTA
-            </h3>
-            <form id="binding-form" class="flex flex-col gap-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label for="binding-pin" class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">PIN FISICO</label>
-                        <input id="binding-pin" type="text" placeholder="Ej: 32, A0" class="w-full bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded" autocomplete="off">
-                    </div>
-                    <div>
-                        <label for="binding-plant-id" class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">PLANT_ID (UUID)</label>
-                        <input id="binding-plant-id" type="text" placeholder="UUID de UserPlant" class="w-full bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded" autocomplete="off">
-                    </div>
-                </div>
-                <button type="submit" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm">
-                    CREAR BINDING
-                </button>
-            </form>
-            <p id="binding-status" class="hidden text-xs font-mono mt-2"></p>
-        </div>
-
-        <!-- Wi-Fi Provisioning (legacy, collapsed) -->
-        <details class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden">
-            <summary class="px-4 py-3 text-xs font-bold text-mole-dim uppercase tracking-wider cursor-pointer hover:text-mole-cyan transition-colors">
-                [+] PROVISIONING WI-FI / BLUETOOTH (LEGACY)
-            </summary>
-            <div class="p-4 border-t border-mole-border flex flex-col gap-3">
-                <p class="text-mole-dim text-xs font-mono mb-1">Credenciales de red del nodo ESP32:</p>
-                <input id="prov-ssid" type="text" placeholder="> SSID" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
-                <input id="prov-pass" type="password" placeholder="> PASSWORD WPA2" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
-                <input id="prov-node-name" type="text" placeholder="> NOMBRE DEL NODO (ej: ESP-INVERNADERO-01)" class="bg-mole-bg border border-mole-border p-2.5 text-mole-cyan font-mono text-sm outline-none focus:border-mole-cyan rounded">
-                <button id="btn-prov-wifi" class="w-full py-2.5 bg-mole-green text-mole-base font-bold tracking-widest rounded hover:bg-mole-green/80 transition-colors text-sm mt-1">
-                    VINCULAR DISPOSITIVO
-                </button>
-            </div>
-        </details>
-
-        <!-- STATUS -->
-        <div id="prov-status" class="hidden bg-mole-bg border border-mole-border rounded-lg p-3 text-xs font-mono">
-            <span id="prov-status-text" class="text-mole-cyan"></span>
-        </div>
-    </div>
-</div>
 
         <!-- Right / Terminal Chat Drawer (CRT Style) -->
-        <div id="chat-window" style="z-index: 60; box-shadow: -5px 0 30px rgba(20,253,206,0.2);" class="fixed inset-y-0 right-0 w-full md:w-96 bg-black border-l-4 border-[#14fdce] transform translate-x-full flex flex-col transition-transform duration-300 crt-screen crt-flicker crt-chat">
-            
+        <div id="chat-window" style="z-index: 60; box-shadow: -5px 0 30px rgba(20,253,206,0.2);"
+            class="fixed inset-y-0 right-0 w-full md:w-96 bg-black border-l-4 border-[#14fdce] transform translate-x-full flex flex-col transition-transform duration-300 crt-screen crt-flicker crt-chat">
+
             <div class="px-4 py-3 border-b-2 border-mole-cyan flex justify-between items-center bg-black">
                 <h3 class="font-bold text-mole-cyan text-sm tracking-widest flex items-center gap-2 crt-text-glow">
                     <span class="w-3 h-3 bg-mole-cyan animate-pulse"></span>
                     MOLE IA TERMINAL
                 </h3>
                 <div class="flex items-center gap-2">
-                <button data-action="chat:history" class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Historial">[ LOGS ]</button>
-                <button data-action="chat:new" class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow" title="Nueva Conversación">[ CLR ]</button>
+                    <button data-action="chat:history"
+                        class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow"
+                        title="Historial">[ LOGS ]</button>
+                    <button data-action="chat:new"
+                        class="text-mole-cyan hover:bg-mole-cyan hover:text-black px-1 border border-transparent hover:border-mole-cyan focus:outline-none transition-none crt-text-glow hover:crt-bg-glow"
+                        title="Nueva Conversación">[ CLR ]</button>
                     <div class="w-px h-4 bg-mole-cyan mx-1"></div>
-                    <button aria-label="Cerrar chat" data-action="close-chat" class="text-mole-red hover:bg-mole-red hover:text-black px-1 border border-transparent hover:border-mole-red focus:outline-none transition-none text-xs min-h-[44px] min-w-[44px]">
+                    <button aria-label="Cerrar chat" data-action="close-chat"
+                        class="text-mole-red hover:bg-mole-red hover:text-black px-1 border border-transparent hover:border-mole-red focus:outline-none transition-none text-xs min-h-[44px] min-w-[44px]">
                         [ X ]
                     </button>
                 </div>
@@ -386,16 +554,21 @@
             <!-- Terminal Input -->
             <div class="p-3 border-t-2 border-mole-cyan bg-black flex items-center gap-2">
                 <span class="text-mole-cyan crt-text-glow font-bold">&gt;_</span>
-                <input type="text" id="chat-input" class="flex-1 bg-transparent border-none focus:ring-0 outline-none text-mole-cyan crt-text-glow font-bold placeholder-mole-cyan/30 uppercase" placeholder="INSERTE COMANDO..." autocomplete="off">
-                <button id="chat-send-btn" aria-label="Enviar mensaje" class="min-h-[44px] min-w-[44px] px-2 py-1 bg-transparent text-mole-cyan border border-mole-cyan hover:bg-mole-cyan hover:text-black transition-none focus:outline-none focus:ring-0 font-bold crt-text-glow hover:crt-bg-glow">
+                <input type="text" id="chat-input"
+                    class="flex-1 bg-transparent border-none focus:ring-0 outline-none text-mole-cyan crt-text-glow font-bold placeholder-mole-cyan/30 uppercase"
+                    placeholder="INSERTE COMANDO..." autocomplete="off">
+                <button id="chat-send-btn" aria-label="Enviar mensaje"
+                    class="min-h-[44px] min-w-[44px] px-2 py-1 bg-transparent text-mole-cyan border border-mole-cyan hover:bg-mole-cyan hover:text-black transition-none focus:outline-none focus:ring-0 font-bold crt-text-glow hover:crt-bg-glow">
                     [ ENTER ]
                 </button>
             </div>
         </div>
 
         <!-- Mobile FAB to open Chat -->
-        <button aria-label="Abrir chat" data-action="open-chat" class="fixed bottom-20 right-6 md:bottom-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-[80] focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
-            <img src="/static/assets/topo.png" alt="Abrir Copiloto IA" class="w-full h-full object-cover rounded-full bg-mole-base">
+        <button aria-label="Abrir chat" data-action="open-chat"
+            class="fixed bottom-20 right-6 md:bottom-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-[80] focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
+            <img src="/static/assets/topo.png" alt="Abrir Copiloto IA"
+                class="w-full h-full object-cover rounded-full bg-mole-base">
         </button>
 
     </main>
@@ -403,12 +576,16 @@
     <!-- Analysis Modal -->
     <div id="analysis-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" data-action="close-module" data-target="analysis" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="analysis"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ANÁLISIS DETALLADO</h2>
             <div class="space-y-4 text-xs font-sans">
-                <p><span class="text-mole-text-dim">ESTADO GENERAL:</span> <span class="text-mole-green">ÓPTIMO</span></p>
-                <p><span class="text-mole-text-dim">FOTOPERIODO:</span> <span class="text-mole-accent">14H/10H</span></p>
-                <p><span class="text-mole-text-dim">CANTIDAD DE AGUA:</span> <span class="text-mole-amber">MODERADA</span></p>
+                <p><span class="text-mole-text-dim">ESTADO GENERAL:</span> <span class="text-mole-green">ÓPTIMO</span>
+                </p>
+                <p><span class="text-mole-text-dim">FOTOPERIODO:</span> <span class="text-mole-accent">14H/10H</span>
+                </p>
+                <p><span class="text-mole-text-dim">CANTIDAD DE AGUA:</span> <span
+                        class="text-mole-amber">MODERADA</span></p>
             </div>
         </div>
     </div>
@@ -416,29 +593,40 @@
     <!-- Contact Modal -->
     <div id="contact-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" data-action="close-module" data-target="contact" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="contact"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> CONTACTO SEGURO</h2>
-            <input type="text" id="contact-subject" name="subject" placeholder="Asunto" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-            <textarea placeholder="Mensaje encriptado..." class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text h-32 outline-none focus:border-mole-accent"></textarea>
-            <button data-action="close-module" data-target="contact" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
+            <input type="text" id="contact-subject" name="subject" placeholder="Asunto"
+                class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+            <textarea placeholder="Mensaje encriptado..."
+                class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text h-32 outline-none focus:border-mole-accent"></textarea>
+            <button data-action="close-module" data-target="contact"
+                class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base font-bold tracking-widest transition-colors focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">ENVIAR</button>
         </div>
     </div>
 
     <!-- Add Plant Modal -->
     <div id="add-plant-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" data-action="close-module" data-target="addPlant" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="addPlant"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> NUEVO ESPÉCIMEN</h2>
-            <input type="text" id="new-plant-name" placeholder="Nombre (ej. Tomate Alpha)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
-            <input type="text" id="new-plant-type" placeholder="Tipo (Frutal, Suculenta...)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
-            <button data-action="update-plant" class="w-full bg-mole-green/20 border border-mole-green text-mole-green py-2 hover:bg-mole-green hover:text-mole-base font-bold tracking-widest transition-colors mt-2 focus:outline-none focus:ring-2 focus:ring-mole-green rounded min-h-[44px]">VINCULAR CULTIVO</button>
+            <input type="text" id="new-plant-name" placeholder="Nombre (ej. Tomate Alpha)"
+                class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
+            <input type="text" id="new-plant-type" placeholder="Tipo (Frutal, Suculenta...)"
+                class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text uppercase outline-none focus:border-mole-accent">
+            <button data-action="update-plant"
+                class="w-full bg-mole-green/20 border border-mole-green text-mole-green py-2 hover:bg-mole-green hover:text-mole-base font-bold tracking-widest transition-colors mt-2 focus:outline-none focus:ring-2 focus:ring-mole-green rounded min-h-[44px]">VINCULAR
+                CULTIVO</button>
         </div>
     </div>
 
     <!-- Loading Scan Modal -->
     <div id="loading-scan-modal" class="hidden fixed inset-0 bg-black/90 z-[60] items-center justify-center p-4">
         <div class="text-center">
-            <div class="w-16 h-16 border-4 border-mole-cyan border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <div
+                class="w-16 h-16 border-4 border-mole-cyan border-t-transparent rounded-full animate-spin mx-auto mb-4">
+            </div>
             <p class="text-mole-cyan font-bold tracking-widest animate-pulse">> PROCESANDO IMAGEN EN RED NEURONAL...</p>
         </div>
     </div>
@@ -446,8 +634,10 @@
 
     <!-- History Modal -->
     <div id="history-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
-        <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-2xl w-full rounded shadow-cyber relative h-[80vh] flex flex-col">
-            <button aria-label="Cerrar modal" data-action="close-module" data-target="history" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+        <div
+            class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-2xl w-full rounded shadow-cyber relative h-[80vh] flex flex-col">
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="history"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> HISTORIAL DE DIAGNÓSTICOS</h2>
             <div id="history-list-container" class="flex-1 overflow-y-auto space-y-3">
                 <p class="text-mole-dim text-sm text-center mt-10 animate-pulse">Cargando registros...</p>
@@ -461,13 +651,20 @@
     <div id="iot-wizard-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-lg w-full rounded shadow-cyber relative">
             <div class="border-2 border-transparent">
-                <button aria-label="Cerrar modal" data-action="modal:close-iot" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
-                <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ENLACE DE HARDWARE: ESP32_NODE</h2>
+                <button aria-label="Cerrar modal" data-action="modal:close-iot"
+                    class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+                <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> ENLACE DE HARDWARE: ESP32_NODE
+                </h2>
                 <div id="iot-step-1" class="iot-step block">
-                <p class="text-mole-text-dim mb-4 text-xs font-sans">Ingrese las credenciales de la red para sincronizar el módulo ESP32.</p>
-                <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                <input type="password" id="wifi-pass" placeholder="Contraseña WPA2" class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
-                    <button data-action="next-iot-step" data-target="2" class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR HANDSHAKE</button>
+                    <p class="text-mole-text-dim mb-4 text-xs font-sans">Ingrese las credenciales de la red para
+                        sincronizar el módulo ESP32.</p>
+                    <input type="text" id="wifi-ssid" placeholder="SSID (Nombre de Red)"
+                        class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+                    <input type="password" id="wifi-pass" placeholder="Contraseña WPA2"
+                        class="w-full bg-mole-bg border border-mole-border p-2 mb-4 text-mole-text outline-none focus:border-mole-accent">
+                    <button data-action="next-iot-step" data-target="2"
+                        class="w-full bg-mole-accent/20 border border-mole-accent text-mole-accent py-2 hover:bg-mole-accent hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-accent rounded min-h-[44px]">INICIAR
+                        HANDSHAKE</button>
                 </div>
             </div>
         </div>
@@ -476,25 +673,36 @@
     <!-- User Profile Modal -->
     <div id="user-profile-modal" class="hidden fixed inset-0 bg-black/80 z-50 items-center justify-center p-4">
         <div class="bg-mole-surface border-2 border-mole-cyan p-6 max-w-sm w-full rounded shadow-cyber relative">
-            <button aria-label="Cerrar modal" data-action="close-module" data-target="profile" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="profile"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-accent mb-4">> PERFIL OPERADOR</h2>
             <div class="space-y-4 text-xs mb-6 font-sans">
-                <p><span class="text-mole-text-dim">ID:</span> <span class="text-mole-accent" id="profile-id">OP-7734</span></p>
-                <p><span class="text-mole-text-dim">RANGO:</span> <span class="text-mole-accent" id="profile-role">USUARIO ESTÁNDAR</span></p>
+                <p><span class="text-mole-text-dim">ID:</span> <span class="text-mole-accent"
+                        id="profile-id">OP-7734</span></p>
+                <p><span class="text-mole-text-dim">RANGO:</span> <span class="text-mole-accent"
+                        id="profile-role">USUARIO ESTÁNDAR</span></p>
                 <p><span class="text-mole-text-dim">ZONA:</span> <span class="text-mole-accent">SECTOR 7G</span></p>
             </div>
-            <button data-action="open-delete-modal" class="w-full bg-mole-red/10 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]">ELIMINAR CUENTA</button>
+            <button data-action="open-delete-modal"
+                class="w-full bg-mole-red/10 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base transition-colors font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]">ELIMINAR
+                CUENTA</button>
         </div>
     </div>
 
     <!-- Delete Account Modal -->
     <div id="delete-account-modal" class="hidden fixed inset-0 bg-black/90 z-[60] items-center justify-center p-4">
-        <div class="bg-mole-surface border-2 border-mole-red p-6 max-w-sm w-full rounded shadow-cyber relative text-center">
-            <button aria-label="Cerrar modal" data-action="close-module" data-target="delete" class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
+        <div
+            class="bg-mole-surface border-2 border-mole-red p-6 max-w-sm w-full rounded shadow-cyber relative text-center">
+            <button aria-label="Cerrar modal" data-action="close-module" data-target="delete"
+                class="absolute top-2 right-2 text-mole-red hover:text-mole-red/70 font-bold focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px] min-w-[44px]">[X]</button>
             <h2 class="text-xl font-bold tracking-widest text-mole-red mb-4 animate-pulse">¡ADVERTENCIA CRÍTICA!</h2>
-                <p class="text-xs text-mole-red/80 mb-4 font-sans">Esta acción purgará permanentemente sus datos biométricos y cultivos de la base central.</p>
-                <input type="text" id="confirm-delete-input" placeholder="Escriba 'PURGAR'" class="w-full bg-mole-bg border border-mole-red p-2 mb-4 text-mole-red text-center uppercase font-bold outline-none focus:border-mole-red">
-            <button class="w-full bg-mole-red/20 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base opacity-50 cursor-not-allowed transition-all font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]" id="btn-confirm-delete">CONFIRMAR DESTRUCCIÓN</button>
+            <p class="text-xs text-mole-red/80 mb-4 font-sans">Esta acción purgará permanentemente sus datos biométricos
+                y cultivos de la base central.</p>
+            <input type="text" id="confirm-delete-input" placeholder="Escriba 'PURGAR'"
+                class="w-full bg-mole-bg border border-mole-red p-2 mb-4 text-mole-red text-center uppercase font-bold outline-none focus:border-mole-red">
+            <button
+                class="w-full bg-mole-red/20 border border-mole-red text-mole-red py-2 hover:bg-mole-red hover:text-mole-base opacity-50 cursor-not-allowed transition-all font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-mole-red rounded min-h-[44px]"
+                id="btn-confirm-delete">CONFIRMAR DESTRUCCIÓN</button>
         </div>
     </div>
 
@@ -507,14 +715,15 @@
 
     <!-- Core API Service (classic script - must load before modules) -->
     <script type="module" src="/static/js/apiService.js"></script>
-    
 
-    
+
+
 
 
     </div>
 
 
-<script type="module" src="/src/js/main.js"></script>
+    <script type="module" src="/src/js/main.js"></script>
 </body>
+
 </html>
