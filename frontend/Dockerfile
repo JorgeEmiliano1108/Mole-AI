@@ -6,7 +6,7 @@
 FROM node:20-alpine AS builder
 
 # Activate pnpm via Corepack (SEC-01 / SEC-03)
-RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.1.3 --activate
 
 WORKDIR /app
 

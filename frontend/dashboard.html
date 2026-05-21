@@ -48,7 +48,7 @@
 </nav>
 
 <!-- Button lateral IoT -->
-<main id="main-dashboard" class="flex-1 flex flex-col pb-16 md:pb-0 md:ml-20 overflow-hidden">
+<main id="main-dashboard" class="flex-1 flex flex-col pb-24 md:pb-0 md:ml-20 overflow-hidden">
     <header class="flex items-center justify-between border-b border-mole-border p-4 md:px-6 bg-mole-surface">
         <h1 class="text-2xl font-bold text-mole-cyan">DASHBOARD OPERATIVO</h1>
         <div class="flex items-center gap-4">
@@ -119,7 +119,7 @@
                         <svg class="w-4 h-4 text-mole-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                         <span class="text-xs font-bold text-mole-text-dim uppercase tracking-widest">System Health</span>
                     </div>
-                    <div class="flex border border-mole-border rounded-lg overflow-hidden">
+                    <div class="flex flex-col sm:flex-row border border-mole-border rounded-lg overflow-hidden">
                         <button id="health-toggle-botanico" class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors min-h-[44px] min-w-[44px]">
                             🌱 BOTÁNICO
                         </button>
@@ -155,7 +155,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 mb-6 flex-1 min-h-0">
 
                 <!-- Camera / Image Monitor -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col h-72 lg:h-auto relative shadow-cyber">
+                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col min-h-[200px] h-auto relative shadow-cyber">
                     <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center">
                         <h3 class="font-bold text-mole-accent text-xs tracking-wider flex items-center gap-2">
                             <span class="w-1.5 h-1.5 rounded-full bg-mole-red animate-pulse"></span>
@@ -181,7 +181,7 @@
                 </div>
 
                 <!-- AI Diagnostics Panel -->
-                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col h-72 lg:h-auto shadow-cyber">
+                <div class="bg-mole-surface border border-mole-border rounded-lg overflow-hidden flex flex-col min-h-[200px] h-auto shadow-cyber">
                     <div class="px-4 py-3 border-b border-mole-border flex justify-between items-center bg-mole-green/5">
                         <h3 class="font-bold text-mole-green text-xs tracking-wider flex items-center gap-2">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
@@ -286,6 +286,7 @@
                 </h3>
                 <span class="text-[10px] text-mole-dim font-mono"><span id="bindings-count">0</span> REGISTROS</span>
             </div>
+            <div class="overflow-x-auto">
             <table class="w-full text-left">
                 <thead>
                     <tr class="border-b border-mole-border bg-mole-bg/50">
@@ -303,6 +304,7 @@
                     </tr>
                 </tbody>
             </table>
+            </div>
         </div>
 
         <!-- Assignment Form -->
@@ -392,7 +394,7 @@
         </div>
 
         <!-- Mobile FAB to open Chat -->
-        <button aria-label="Abrir chat" data-action="open-chat" class="fixed bottom-6 right-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-30 focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
+        <button aria-label="Abrir chat" data-action="open-chat" class="fixed bottom-20 right-6 md:bottom-6 w-12 h-12 bg-mole-accent rounded-full shadow-cyber-hover flex items-center justify-center hover:scale-105 transition-transform z-[80] focus:outline-none focus:ring-2 focus:ring-mole-accent focus:ring-offset-2 focus:ring-offset-mole-bg overflow-hidden border-2 border-mole-accent p-0.5 min-h-[48px] min-w-[48px]">
             <img src="/static/assets/topo.png" alt="Abrir Copiloto IA" class="w-full h-full object-cover rounded-full bg-mole-base">
         </button>
 
