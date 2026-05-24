@@ -249,8 +249,10 @@ def diagnostic_view(request):
     if not image_file:
         return Response({"error": "Imagen requerida"}, status=400)
     
+    from django.utils._os import safe_join
     temp_dir = tempfile.gettempdir()
-    temp_path = os.path.join(temp_dir, f"diagnostic_{request.user.id}_{image_file.name}")
+    # Use Django's safe_join to prevent path traversal
+    temp_path = safe_join(temp_dir, f"diagnostic_{request.user.id}_{image_file.name}")
     
     with open(temp_path, 'wb+') as f:
         for chunk in image_file.chunks():
