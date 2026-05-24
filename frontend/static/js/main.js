@@ -634,6 +634,34 @@ function registerNewPlant() {
 // ==========================================================
 // EVENT ROUTER CENTRALIZADO (PATRÓN DE DELEGACIÓN)
 // ==========================================================
+
+// ── Helpers para abrir/cerrar el panel de chat ──
+function openChat() {
+    const chatWin = document.getElementById('chat-window');
+    if (!chatWin) return;
+    chatWin.classList.remove('translate-x-full');
+    chatWin.classList.add('translate-x-0');
+    setTimeout(() => document.getElementById('chat-input')?.focus(), 350);
+}
+
+function closeChat() {
+    const chatWin = document.getElementById('chat-window');
+    if (!chatWin) return;
+    chatWin.classList.add('translate-x-full');
+    chatWin.classList.remove('translate-x-0');
+}
+
+function clearChatHistory() {
+    localStorage.removeItem('moleia_chat_history');
+    const chatBox = document.getElementById('chat-messages');
+    if (!chatBox) return;
+    chatBox.textContent = '';
+    // Mostrar acciones sugeridas de nuevo
+    const suggested = document.getElementById('chat-suggested-actions');
+    if (suggested) suggested.style.display = '';
+    if (typeof loadChatHistory === 'function') loadChatHistory();
+}
+
 const ActionMap = {
     'type:objetivo': () => typeContent('objetivo'),
     'type:vision': () => typeContent('vision'),
@@ -651,11 +679,45 @@ const ActionMap = {
     'modal:close-iot': () => closeModal('iot-wizard-modal'),
     'iot:finalize': () => closeIotAndShowPlantBtn(),
     'report:download': (target) => handleReportDownload(target),
-    'menu:toggle-cultivos': () => toggleCultivosMenu()
+    'menu:toggle-cultivos': () => toggleCultivosMenu(),
+    // ── Chat actions ──
+    'open-chat':   () => openChat(),
+    'close-chat':  () => closeChat(),
+    'chat:history': () => { /* historial ya está en el área de mensajes */ },
+    'chat:new':    () => clearChatHistory(),
+    // ── Navegación entre vistas del dashboard ──
+    'switch-field': (target) => {
+        const viewId = target.getAttribute('data-target');
+        if (!viewId) return;
+        document.querySelectorAll('.field-view').forEach(v => {
+            v.classList.add('hidden');
+            v.classList.remove('flex');
+        });
+        const view = document.getElementById(viewId);
+        if (view) {
+            view.classList.remove('hidden');
+            view.classList.add('flex');
+        }
+    },
+    'toggle-dropdown': (target) => {
+        const dropId = target.getAttribute('data-target');
+        if (!dropId) return;
+        const drop = document.getElementById(dropId);
+        if (!drop) return;
+        drop.classList.toggle('hidden');
+    },
+    'toggle-theme': () => typeof toggleTheme === 'function' && toggleTheme(),
+    'hide-panel': (target) => {
+        const panelId = target.getAttribute('data-target');
+        if (panelId) document.getElementById(panelId)?.classList.add('hidden');
+    },
+    'close-module': (target) => {
+        const mod = target.getAttribute('data-target');
+        if (mod) closeModule(mod);
+    }
 };
 
 document.body.addEventListener('click', (event) => {
-    // Buscamos si el elemento clickeado (o alguno de sus padres) tiene un data-action
     const target = event.target.closest('[data-action]');
     if (!target) return;
 
@@ -667,10 +729,9 @@ document.body.addEventListener('click', (event) => {
         } catch (error) {
             // Error ejecutando acción: silenciar en producción
         }
-    } else {
-        // Acción no registrada: silenciosamente ignorar
     }
 });
+
 
 // ==========================================================
 // HANDLER PARA DESCARGA DE REPORTES VÍA ROUTER
