@@ -117,7 +117,7 @@ async function startHardwareProvisioning() {
   try {
     if (!token) throw new Error('Autorización denegada. Token de seguridad faltante.');
     console.log('> Transmitiendo credenciales al servidor central de producción...');
-    const response = await fetch(`${window.AppConfig.API_BASE_URL}/api/iot/provisioning`, {
+    const response = await fetch(`${window.AppConfig.API_BASE_URL}api/iot/provisioning`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

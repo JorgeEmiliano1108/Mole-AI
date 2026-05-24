@@ -13,7 +13,7 @@ async function syncUserPlants() {
 
         if (!currentUser || !token) return;
 
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/users/${currentUser}/plantas`, {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}users/${currentUser}/plantas`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
