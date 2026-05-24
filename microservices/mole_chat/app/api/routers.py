@@ -106,6 +106,7 @@ async def chat_endpoint(
 # Este endpoint se mantiene como fallback para uploads manuales sin MinIO.
 @router.post("/api/v1/knowledge/ingest-pdf", response_model=IngestResponse)
 async def ingest_pdf_endpoint(
+    request: Request,
     file: UploadFile = File(...), 
     current_user_id: str = Depends(get_current_user)
 ):
@@ -125,7 +126,7 @@ async def ingest_pdf_endpoint(
         from app.core.config import settings
         import uuid
 
-        store = await _get_pgvector_store()
+        store = await _get_pgvector_store(request)
 
         with open(temp_path, "rb") as f:
             pdf_bytes = f.read()
@@ -159,10 +160,11 @@ async def ingest_pdf_endpoint(
 # 🗑️ Endpoint para borrar documentos selectivamente
 @router.delete("/api/v1/knowledge/pdf/{doc_id}", response_model=DeleteResponse)
 async def delete_pdf_endpoint(
+    request: Request,
     doc_id: str, 
     current_user_id: str = Depends(get_current_user)
 ):
-    store = await _get_pgvector_store()
+    store = await _get_pgvector_store(request)
     deleted = await store.delete_by_doc_id(doc_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Documento no encontrado o no pudo ser eliminado.")
