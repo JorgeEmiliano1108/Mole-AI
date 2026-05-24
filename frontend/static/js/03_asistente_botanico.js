@@ -9,8 +9,41 @@ const IA_ENGINES = {
     STATS: 'statistical-expert'      // IA para análisis de gráficas y sensores (Módulo 4)
 };
 
-const defaultChat = `<div class="text-[#00e5ff] opacity-80">> NÚCLEO IA EN LÍNEA...</div>
-<div class="text-[#FBBF24]">> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.</div>`;
+/**
+ * Crea una burbuja de bot con avatar (100% Anti-XSS)
+ */
+function _createBotBubble(text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-bubble-bot';
+
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'bot-avatar';
+    const avatarImg = document.createElement('img');
+    avatarImg.src = '/static/assets/mole_tech_fab.png';
+    avatarImg.alt = 'MOLE';
+    avatarImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    avatarDiv.appendChild(avatarImg);
+    wrapper.appendChild(avatarDiv);
+
+    const inner = document.createElement('div');
+    inner.className = 'bubble-inner';
+    inner.textContent = text;
+    wrapper.appendChild(inner);
+
+    return wrapper;
+}
+
+/**
+ * Crea el separador de fecha "HOY"
+ */
+function _createDateSeparator(label = 'HOY') {
+    const sep = document.createElement('div');
+    sep.className = 'chat-date-separator';
+    const span = document.createElement('span');
+    span.textContent = label;
+    sep.appendChild(span);
+    return sep;
+}
 
 /**
  * CARGA DE HISTORIAL: Recupera la conversación del almacenamiento local.
@@ -20,16 +53,12 @@ function loadChatHistory() {
     if (!chatBox) return;
 
     const savedChat = localStorage.getItem('moleia_chat_history');
-    // If saved HTML exists, restore it (legacy). Otherwise render default static chat safely.
     if (savedChat) {
         chatBox.innerHTML = savedChat;
     } else {
         chatBox.textContent = '';
-        // defaultChat contains markup; keep original small greeting using safe nodes
-        const first = createNode('div', 'text-[#00e5ff] opacity-80', '> NÚCLEO IA EN LÍNEA...');
-        const second = createNode('div', 'text-[#FBBF24]', '> MOLE-IA: Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.');
-        chatBox.appendChild(first);
-        chatBox.appendChild(second);
+        chatBox.appendChild(_createDateSeparator('HOY'));
+        chatBox.appendChild(_createBotBubble('¡Hola! Soy tu asistente MOLE-AI. ¿Cómo puedo ayudarte a optimizar tu cultivo hoy?'));
     }
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -59,6 +88,34 @@ function toggleChat() {
 }
 
 /**
+ * Crea el indicador de escritura (typing dots) con el nuevo estilo
+ */
+function _createTypingIndicator(id) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-bubble-bot typing-indicator';
+    wrapper.id = id;
+
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'bot-avatar';
+    const avatarImg = document.createElement('img');
+    avatarImg.src = '/static/assets/mole_tech_fab.png';
+    avatarImg.alt = 'MOLE';
+    avatarImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    avatarDiv.appendChild(avatarImg);
+    wrapper.appendChild(avatarDiv);
+
+    const inner = document.createElement('div');
+    inner.className = 'bubble-inner';
+    for (let i = 0; i < 3; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        inner.appendChild(dot);
+    }
+    wrapper.appendChild(inner);
+    return wrapper;
+}
+
+/**
  * FUNCIÓN MAESTRA: ENVÍO DE MENSAJES (Soporta los 3 modelos)
  * @param {string} customPrompt - Si se envía texto desde otro módulo (ej. análisis automático).
  * @param {string} forcedEngine - Fuerza el uso de VISION o STATS.
@@ -72,20 +129,31 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
 
     if (!query) return;
 
+    // Ocultar acciones sugeridas al empezar a chatear
+    const suggestedActions = document.getElementById('chat-suggested-actions');
+    if (suggestedActions) suggestedActions.style.display = 'none';
+
     if (!customPrompt) {
-        const userNode = createNode('div', 'text-white text-right opacity-80 mb-2', `> USUARIO: ${query}`);
-        chatMessages.appendChild(userNode);
+        // Burbuja del usuario (derecha, verde)
+        const userWrapper = document.createElement('div');
+        userWrapper.className = 'chat-bubble-user';
+        const userInner = document.createElement('div');
+        userInner.className = 'bubble-inner';
+        userInner.textContent = query;
+        userWrapper.appendChild(userInner);
+        chatMessages.appendChild(userWrapper);
         input.value = '';
     }
 
+    // Typing indicator (puntos animados)
     const typingId = 'typing-' + Date.now();
-    const typingNode = createNode('div', 'text-[#00e5ff] opacity-50 animate-pulse', `> [${engine.toUpperCase()}] PROCESANDO...`, { id: typingId });
-    chatMessages.appendChild(typingNode);
+    const typingEl = _createTypingIndicator(typingId);
+    chatMessages.appendChild(typingEl);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     saveChatHistory(); 
 
     try {
-        // 🚀 USO DE API SERVICE: Interceptamos 'chat_fallback/' o 'chat/' según tus URLs de backend
+        // 🚀 USO DE API SERVICE
         const data = await window.moleApi.post('chat/', {
             prompt: query,
             engine: engine,
@@ -93,12 +161,28 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
         });
         
         const typingElement = document.getElementById(typingId);
-        if(typingElement) typingElement.remove();
+        if (typingElement) typingElement.remove();
 
-        // Extraemos la respuesta mapeando las distintas formas en que tu backend puede contestar
-        const serverReply = data.answer || data.reply || data.response || "Análisis completado.";
-        const replyNode = createNode('div', 'text-[#FBBF24] mb-4', `> MOLE-IA: ${serverReply}`);
-        chatMessages.appendChild(replyNode);
+        const serverReply = data.answer || data.reply || data.response || 'Análisis completado.';
+        
+        // Burbuja de respuesta del bot (izquierda, gris)
+        const botWrapper = document.createElement('div');
+        botWrapper.className = 'chat-bubble-bot';
+
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'bot-avatar';
+        const avatarImg = document.createElement('img');
+        avatarImg.src = '/static/assets/mole_tech_fab.png';
+        avatarImg.alt = 'MOLE';
+        avatarImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        avatarDiv.appendChild(avatarImg);
+        botWrapper.appendChild(avatarDiv);
+
+        const inner = document.createElement('div');
+        inner.className = 'bubble-inner';
+        inner.textContent = serverReply;
+        botWrapper.appendChild(inner);
+        chatMessages.appendChild(botWrapper);
         
         // Disparamos evento si trae disclaimer médico (COFEPRIS Fase 3)
         if (data.disclaimer) {
@@ -107,8 +191,21 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
 
     } catch (error) {
         document.getElementById(typingId)?.remove();
-        const errNode = createNode('div', 'text-red-500', `> ERROR: Enlace neuronal con ${engine} interrumpido.`);
-        chatMessages.appendChild(errNode);
+        const errWrapper = document.createElement('div');
+        errWrapper.className = 'chat-bubble-bot';
+        const errAvatar = document.createElement('div');
+        errAvatar.className = 'bot-avatar';
+        const errImg = document.createElement('img');
+        errImg.src = '/static/assets/topo.png';
+        errImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        errAvatar.appendChild(errImg);
+        errWrapper.appendChild(errAvatar);
+        const errInner = document.createElement('div');
+        errInner.className = 'bubble-inner';
+        errInner.style.color = '#f87171';
+        errInner.textContent = `⚠ Enlace con ${engine} interrumpido. Intenta de nuevo.`;
+        errWrapper.appendChild(errInner);
+        chatMessages.appendChild(errWrapper);
     }
 
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -137,4 +234,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chat-input')?.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') sendChatMessage();
     });
-});
+});
