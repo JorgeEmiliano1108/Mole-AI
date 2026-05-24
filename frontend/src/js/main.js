@@ -815,8 +815,8 @@ const ActionMap = {
     'switch-field': (target) => handleSwitchField(target),
     'toggle-dropdown': (target) => handleToggleDropdown(target),
     'toggle-theme': () => typeof window.toggleTheme === 'function' && window.toggleTheme(),
-    'open-chat': () => typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null,
-    'close-chat': () => typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null,
+    'open-chat': () => typeof chat !== 'undefined' && chat.openChat ? chat.openChat() : (typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null),
+    'close-chat': () => typeof chat !== 'undefined' && chat.closeChat ? chat.closeChat() : (typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null),
     'close-module': (target) => handleCloseModule(target),
     'hide-panel': (target) => {
         const panelId = target.getAttribute('data-target');

@@ -120,15 +120,33 @@ export function saveChatHistory() {
 export function toggleChat() {
     const chatWindow = document.getElementById('chat-window');
     if (!chatWindow) return;
-    const isOpen = chatWindow.classList.contains('translate-x-0');
-    chatWindow.classList.toggle('translate-x-full', isOpen);
-    chatWindow.classList.toggle('translate-x-0', !isOpen);
-    if (!isOpen) {
+    // Detectar estado por style.transform (el panel usa inline styles)
+    const isOpen = chatWindow.style.transform === 'translateX(0px)' || chatWindow.style.transform === 'translateX(0)';
+    if (isOpen) {
+        chatWindow.style.transform = 'translateX(100%)';
+    } else {
+        chatWindow.style.transform = 'translateX(0)';
         const msgs = document.getElementById('chat-messages');
         if (msgs) msgs.scrollTop = msgs.scrollHeight;
-        document.getElementById('chat-input')?.focus();
+        setTimeout(() => document.getElementById('chat-input')?.focus(), 350);
     }
 }
+
+export function openChat() {
+    const chatWindow = document.getElementById('chat-window');
+    if (!chatWindow) return;
+    chatWindow.style.transform = 'translateX(0)';
+    const msgs = document.getElementById('chat-messages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    setTimeout(() => document.getElementById('chat-input')?.focus(), 350);
+}
+
+export function closeChat() {
+    const chatWindow = document.getElementById('chat-window');
+    if (!chatWindow) return;
+    chatWindow.style.transform = 'translateX(100%)';
+}
+
 
 async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     const input = document.getElementById('chat-input');

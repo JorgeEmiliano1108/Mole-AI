@@ -198,11 +198,29 @@
                                 class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-cyan text-mole-base transition-colors min-h-[44px] min-w-[44px]">
                                 🌱 BOTÁNICO
                             </button>
+                            <!-- Botón SRE: solo visible si hay dispositivo vinculado -->
                             <button id="health-toggle-sre"
+                                style="display:none;"
                                 class="px-3 py-1.5 text-[10px] font-bold tracking-widest bg-mole-surface text-mole-dim hover:text-mole-cyan transition-colors min-h-[44px] min-w-[44px]">
                                 ⚙️ SRE
                             </button>
                         </div>
+                        <script>
+                        (function(){
+                            // Mostrar SRE solo si hay un dispositivo IoT vinculado
+                            var deviceId = localStorage.getItem('moleia_device_id');
+                            if (deviceId) {
+                                var btn = document.getElementById('health-toggle-sre');
+                                if (btn) btn.style.display = '';
+                            }
+                            // Re-evaluar cuando se vincule un dispositivo en tiempo de ejecución
+                            window.addEventListener('deviceLinked', function() {
+                                var btn = document.getElementById('health-toggle-sre');
+                                if (btn) btn.style.display = '';
+                            });
+                        })();
+                        </script>
+
                     </div>
 
                     <!-- Health Panel: Botánico (visible by default) -->
@@ -517,60 +535,79 @@
         </div>
 
         <!-- Right / Chat Drawer (Estilo Mensajería Moderno) -->
-        <div id="chat-window" style="z-index: 60; box-shadow: -8px 0 40px rgba(0,255,136,0.15); background: #0d1117;"
-            class="fixed inset-y-0 right-0 w-full md:w-[380px] transform translate-x-full flex flex-col transition-transform duration-300 border-l border-[#1a2332]">
+        <div id="chat-window"
+            style="
+                position: fixed;
+                top: 0; right: 0; bottom: 0;
+                width: 100%;
+                max-width: 380px;
+                z-index: 200;
+                display: flex;
+                flex-direction: column;
+                background: #0d1117;
+                border-left: 1px solid #1a2332;
+                box-shadow: -8px 0 40px rgba(0,255,136,0.15);
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            ">
 
             <!-- ── HEADER ── -->
-            <div style="background: #161b22; border-bottom: 1px solid #1a2332;" class="flex items-center justify-between px-4 py-3 shrink-0">
-                <div class="flex items-center gap-3">
+            <div style="background: #161b22; border-bottom: 1px solid #1a2332; display:flex; align-items:center; justify-content:space-between; padding: 12px 16px; flex-shrink:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <!-- Botón volver -->
                     <button data-action="close-chat" aria-label="Volver"
-                        class="text-[#8b949e] hover:text-white transition-colors focus:outline-none p-1 rounded">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        style="background:none; border:none; cursor:pointer; color:#c9d1d9; padding:6px; border-radius:6px; display:flex; align-items:center; transition: color 0.2s, background 0.2s;"
+                        onmouseover="this.style.color='#00ff88'; this.style.background='rgba(0,255,136,0.1)'"
+                        onmouseout="this.style.color='#c9d1d9'; this.style.background='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
                         </svg>
                     </button>
                     <!-- Avatar circular con glow -->
-                    <div class="relative w-10 h-10 shrink-0">
-                        <div style="border: 2px solid #00ff88; box-shadow: 0 0 12px rgba(0,255,136,0.5);"
-                            class="w-10 h-10 rounded-full overflow-hidden bg-[#0d1117]">
+                    <div style="position:relative; width:40px; height:40px; flex-shrink:0;">
+                        <div style="border: 2px solid #00ff88; box-shadow: 0 0 12px rgba(0,255,136,0.5); width:40px; height:40px; border-radius:50%; overflow:hidden; background:#0d1117;">
                             <img src="/static/assets/mole_tech_fab.png" alt="MOLE-Assistant"
-                                class="w-full h-full object-cover">
+                                style="width:100%; height:100%; object-fit:cover;">
                         </div>
-                        <!-- Punto de estado online -->
-                        <span style="background:#00ff88; box-shadow: 0 0 6px #00ff88;"
-                            class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#161b22]"></span>
+                        <!-- Punto online -->
+                        <span style="background:#00ff88; box-shadow:0 0 6px #00ff88; position:absolute; bottom:0; right:0; width:12px; height:12px; border-radius:50%; border:2px solid #161b22; display:block;"></span>
                     </div>
-                    <div class="flex flex-col">
-                        <span class="font-bold text-white text-sm leading-tight">MOLE-Assistant</span>
-                        <span style="color: #00ff88;" class="text-[10px] font-bold tracking-widest uppercase">● Always Online</span>
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:700; color:#ffffff; font-size:14px; line-height:1.2;">MOLE-Assistant</span>
+                        <span style="color:#00ff88; font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;">● Always Online</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-1">
-                    <!-- Menú opciones -->
-                    <button data-action="chat:history"
-                        title="Ver historial"
-                        class="w-8 h-8 flex items-center justify-center text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded transition-colors focus:outline-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <!-- 3 puntos / historial -->
+                    <button data-action="chat:history" title="Ver historial"
+                        style="background:none; border:none; cursor:pointer; color:#c9d1d9; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:6px; transition: color 0.2s, background 0.2s;"
+                        onmouseover="this.style.color='#00ff88'; this.style.background='rgba(0,255,136,0.1)'"
+                        onmouseout="this.style.color='#c9d1d9'; this.style.background='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                         </svg>
                     </button>
-                    <!-- Nueva conversación -->
-                    <button data-action="chat:new"
-                        title="Nueva conversación"
-                        class="w-8 h-8 flex items-center justify-center text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded transition-colors focus:outline-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    <!-- Refrescar / nueva conversación -->
+                    <button data-action="chat:new" title="Nueva conversación"
+                        style="background:none; border:none; cursor:pointer; color:#c9d1d9; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:6px; transition: color 0.2s, background 0.2s;"
+                        onmouseover="this.style.color='#00ff88'; this.style.background='rgba(0,255,136,0.1)'"
+                        onmouseout="this.style.color='#c9d1d9'; this.style.background='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
                     </button>
-                    <!-- Cerrar -->
+                    <!-- Cerrar / X -->
                     <button aria-label="Cerrar chat" data-action="close-chat"
-                        class="w-8 h-8 flex items-center justify-center text-[#8b949e] hover:text-white hover:bg-[#21262d] rounded transition-colors focus:outline-none min-h-[44px] min-w-[44px]">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        style="background:none; border:none; cursor:pointer; color:#c9d1d9; width:34px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:6px; transition: color 0.2s, background 0.2s;"
+                        onmouseover="this.style.color='#f87171'; this.style.background='rgba(248,113,113,0.1)'"
+                        onmouseout="this.style.color='#c9d1d9'; this.style.background='none'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
             </div>
+
 
             <!-- ── MENSAJES ── -->
             <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3" style="background: #0d1117;" aria-live="polite">
@@ -647,7 +684,8 @@
                 cursor: pointer;
                 padding: 0;
                 outline: none;
-                transition: transform 0.2s ease;
+                opacity: 1;
+                transition: transform 0.2s ease, opacity 0.25s ease;
             "
             onmouseover="this.style.transform='scale(1.1)'"
             onmouseout="this.style.transform='scale(1)'">
@@ -926,14 +964,206 @@
     <!-- Core API Service (classic script - must load before modules) -->
     <script type="module" src="/static/js/apiService.js"></script>
 
-
-
-
-
-    </div>
-
-
     <script type="module" src="/src/js/main.js"></script>
-</body>
 
+    <!-- ── CHAT STANDALONE: funciona sin Vite/bundler ── -->
+    <script>
+    (function() {
+        function chatOpen() {
+            var w = document.getElementById('chat-window');
+            if (!w) return;
+            w.style.transform = 'translateX(0)';
+            w.style.transition = 'transform 0.3s ease';
+            // Ocultar el botón FAB del topo
+            var fab = document.getElementById('chat-fab-btn');
+            if (fab) { fab.style.opacity = '0'; fab.style.pointerEvents = 'none'; fab.style.transform = 'scale(0.7)'; }
+            var input = document.getElementById('chat-input');
+            if (input) setTimeout(function(){ input.focus(); }, 350);
+        }
+
+        function chatClose() {
+            var w = document.getElementById('chat-window');
+            if (!w) return;
+            w.style.transform = 'translateX(100%)';
+            w.style.transition = 'transform 0.3s ease';
+            // Mostrar el botón FAB del topo
+            var fab = document.getElementById('chat-fab-btn');
+            if (fab) { fab.style.opacity = '1'; fab.style.pointerEvents = 'auto'; fab.style.transform = 'scale(1)'; }
+        }
+
+        function chatNew() {
+            localStorage.removeItem('moleia_chat_history_data');
+            localStorage.removeItem('moleia_chat_history');
+            var box = document.getElementById('chat-messages');
+            if (box) {
+                box.textContent = '';
+                var sep = document.createElement('div');
+                sep.className = 'chat-date-separator';
+                var span = document.createElement('span');
+                span.textContent = 'HOY';
+                sep.appendChild(span);
+                box.appendChild(sep);
+                var bubble = document.createElement('div');
+                bubble.className = 'chat-bubble-bot';
+                var avatar = document.createElement('div');
+                avatar.className = 'bot-avatar';
+                var img = document.createElement('img');
+                img.src = '/static/assets/mole_tech_fab.png';
+                img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                avatar.appendChild(img);
+                bubble.appendChild(avatar);
+                var inner = document.createElement('div');
+                inner.className = 'bubble-inner';
+                inner.textContent = '¡Hola! Soy tu asistente MOLE-AI. ¿Cómo puedo ayudarte hoy?';
+                bubble.appendChild(inner);
+                box.appendChild(bubble);
+            }
+            var suggested = document.getElementById('chat-suggested-actions');
+            if (suggested) suggested.style.display = '';
+        }
+
+        function sendMsg(text) {
+            var input = document.getElementById('chat-input');
+            var box = document.getElementById('chat-messages');
+            if (!box) return;
+
+            var query = text || (input ? input.value.trim() : '');
+            if (!query) return;
+
+            // Ocultar acciones sugeridas
+            var suggested = document.getElementById('chat-suggested-actions');
+            if (suggested) suggested.style.display = 'none';
+
+            // Burbuja usuario
+            var userWrap = document.createElement('div');
+            userWrap.className = 'chat-bubble-user';
+            var userInner = document.createElement('div');
+            userInner.className = 'bubble-inner';
+            userInner.textContent = query;
+            userWrap.appendChild(userInner);
+            box.appendChild(userWrap);
+            if (input && !text) input.value = '';
+            box.scrollTop = box.scrollHeight;
+
+            // Typing indicator
+            var typingId = 'typing-' + Date.now();
+            var typing = document.createElement('div');
+            typing.className = 'chat-bubble-bot typing-indicator';
+            typing.id = typingId;
+            var tAvatar = document.createElement('div');
+            tAvatar.className = 'bot-avatar';
+            var tImg = document.createElement('img');
+            tImg.src = '/static/assets/mole_tech_fab.png';
+            tImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            tAvatar.appendChild(tImg);
+            typing.appendChild(tAvatar);
+            var tInner = document.createElement('div');
+            tInner.className = 'bubble-inner';
+            for (var i = 0; i < 3; i++) {
+                var dot = document.createElement('div');
+                dot.className = 'dot';
+                tInner.appendChild(dot);
+            }
+            typing.appendChild(tInner);
+            box.appendChild(typing);
+            box.scrollTop = box.scrollHeight;
+
+            // Llamada al API
+            var ApiService = window.ApiService || window.moleApi;
+            if (!ApiService) {
+                document.getElementById(typingId)?.remove();
+                var errWrap = document.createElement('div');
+                errWrap.className = 'chat-bubble-bot';
+                var errAvatar = document.createElement('div');
+                errAvatar.className = 'bot-avatar';
+                var errImg = document.createElement('img');
+                errImg.src = '/static/assets/mole_tech_fab.png';
+                errImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                errAvatar.appendChild(errImg);
+                errWrap.appendChild(errAvatar);
+                var errInner = document.createElement('div');
+                errInner.className = 'bubble-inner';
+                errInner.style.color = '#f87171';
+                errInner.textContent = '⚠ Backend no disponible en modo preview local.';
+                errWrap.appendChild(errInner);
+                box.appendChild(errWrap);
+                box.scrollTop = box.scrollHeight;
+                return;
+            }
+
+            var sessionId = localStorage.getItem('moleia_current_user') || 'anon';
+            ApiService.post('llm/chat/', { prompt: query, engine: 'conversational-botanist', sessionId: sessionId })
+                .then(function(data) {
+                    document.getElementById(typingId)?.remove();
+                    var reply = data.answer || data.reply || data.response || 'Análisis completado.';
+                    var botWrap = document.createElement('div');
+                    botWrap.className = 'chat-bubble-bot';
+                    var bAvatar = document.createElement('div');
+                    bAvatar.className = 'bot-avatar';
+                    var bImg = document.createElement('img');
+                    bImg.src = '/static/assets/mole_tech_fab.png';
+                    bImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    bAvatar.appendChild(bImg);
+                    botWrap.appendChild(bAvatar);
+                    var bInner = document.createElement('div');
+                    bInner.className = 'bubble-inner';
+                    bInner.textContent = reply;
+                    botWrap.appendChild(bInner);
+                    box.appendChild(botWrap);
+                    box.scrollTop = box.scrollHeight;
+                })
+                .catch(function() {
+                    document.getElementById(typingId)?.remove();
+                    var errWrap = document.createElement('div');
+                    errWrap.className = 'chat-bubble-bot';
+                    var eA = document.createElement('div'); eA.className = 'bot-avatar';
+                    var eI = document.createElement('img'); eI.src = '/static/assets/mole_tech_fab.png';
+                    eI.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                    eA.appendChild(eI); errWrap.appendChild(eA);
+                    var eT = document.createElement('div'); eT.className = 'bubble-inner';
+                    eT.style.color = '#f87171';
+                    eT.textContent = '⚠ Sin conexión con el servidor IA. Verifica que el backend esté activo.';
+                    errWrap.appendChild(eT); box.appendChild(errWrap);
+                    box.scrollTop = box.scrollHeight;
+                });
+        }
+
+        // ── Inicializar saludo ──
+        function initChat() {
+            var box = document.getElementById('chat-messages');
+            if (!box || box.children.length > 0) return;
+            chatNew();
+        }
+
+        // ── Delegación de eventos ──
+        document.addEventListener('click', function(e) {
+            var el = e.target.closest('[data-action]');
+            if (!el) return;
+            var action = el.getAttribute('data-action');
+            if (action === 'open-chat')  { e.preventDefault(); chatOpen(); }
+            if (action === 'close-chat') { e.preventDefault(); chatClose(); }
+            if (action === 'chat:new')   { e.preventDefault(); chatNew(); }
+        }, true); // useCapture=true para interceptar antes que otros listeners
+
+        // ── Enter en el input ──
+        document.addEventListener('DOMContentLoaded', function() {
+            initChat();
+            var input = document.getElementById('chat-input');
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') sendMsg();
+                });
+            }
+            var btn = document.getElementById('chat-send-btn');
+            if (btn) btn.addEventListener('click', function() { sendMsg(); });
+        });
+
+        // Exponer para los botones onclick inline (acciones sugeridas)
+        window.sendChatMessage = sendMsg;
+
+        // Si el DOM ya cargó
+        if (document.readyState !== 'loading') initChat();
+    })();
+    </script>
+</body>
 </html>
