@@ -2,6 +2,8 @@
  * Typewriter effect – minimal, auto‑init on DOMContentLoaded.
  * Usage: add `data-typewriter="Your text"` (optional `data-speed` in ms per char) to any element.
  */
+import { attachCursor, detachCursor } from './ui/cursor';
+
 export function typewriter(el: HTMLElement, options: { speed?: number } = {}): void {
   const text = el.getAttribute('data-typewriter') || '';
   const speed = Number(el.getAttribute('data-speed')) || options.speed || 50;
