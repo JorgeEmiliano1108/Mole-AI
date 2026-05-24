@@ -639,16 +639,14 @@ function registerNewPlant() {
 function openChat() {
     const chatWin = document.getElementById('chat-window');
     if (!chatWin) return;
-    chatWin.classList.remove('translate-x-full');
-    chatWin.classList.add('translate-x-0');
+    chatWin.style.transform = 'translateX(0)';
     setTimeout(() => document.getElementById('chat-input')?.focus(), 350);
 }
 
 function closeChat() {
     const chatWin = document.getElementById('chat-window');
     if (!chatWin) return;
-    chatWin.classList.add('translate-x-full');
-    chatWin.classList.remove('translate-x-0');
+    chatWin.style.transform = 'translateX(100%)';
 }
 
 function clearChatHistory() {
@@ -656,7 +654,6 @@ function clearChatHistory() {
     const chatBox = document.getElementById('chat-messages');
     if (!chatBox) return;
     chatBox.textContent = '';
-    // Mostrar acciones sugeridas de nuevo
     const suggested = document.getElementById('chat-suggested-actions');
     if (suggested) suggested.style.display = '';
     if (typeof loadChatHistory === 'function') loadChatHistory();
