@@ -118,6 +118,19 @@ class ApiService {
         if (token && typeof token === 'string' && token.trim() !== '') {
             headers['Authorization'] = (this.authPrefix || 'Bearer ') + token;
         }
+        // ---- CSRF handling ----
+        try {
+            // Look for the Django CSRF cookie (default name 'csrftoken')
+            var csrfMatch = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('csrftoken='));
+            if (csrfMatch) {
+                var csrfToken = csrfMatch.split('=')[1];
+                if (csrfToken) {
+                    headers['X-CSRFToken'] = csrfToken;
+                }
+            }
+        } catch (e) {
+            // Silently ignore cookie parsing errors – request will fail and be reported downstream
+        }
         if (extra) {
             for (var key in extra) {
                 if (extra.hasOwnProperty(key)) {

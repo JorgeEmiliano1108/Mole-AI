@@ -14,7 +14,7 @@
 
 <body class="bg-mole-base text-mole-cyan font-sans min-h-screen relative overflow-x-hidden">
 
-    <!-- Toast Container (OWASP: evita exponer errores crudos vía alert) -->
+    <!-- Toast Container (evita exponer errores crudos vía alert) -->
     <div id="toast-container" aria-live="polite" aria-atomic="false"
         class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -111,9 +111,8 @@
                 </div>
                 <div class="flex-1 flex items-start">
                     <div id="typewriter-output"
+                        data-typewriter="Seleccione una opción en el menú para conocer más sobre Mole.AI..."
                         class="text-base sm:text-lg leading-relaxed text-mole-cyan/80 font-mono whitespace-pre-wrap w-full">
-                        Seleccione una opción en el menú para conocer más sobre Mole.AI...<span
-                            class="animate-cursor-blink text-mole-cyan">█</span>
                     </div>
                 </div>
             </div>
