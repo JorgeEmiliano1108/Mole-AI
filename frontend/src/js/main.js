@@ -25,6 +25,7 @@ import * as supervisor from './modules/services/supervisor.js';
 import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
+import { attachCursor } from './modules/ui/cursor';
 import { loadWiki } from './modules/services/wiki.js';
 import { initHealthView, setDeviceId as setHealthDeviceId, pausePolling, resumePolling } from './modules/services/health.js';
 window.loadWiki = loadWiki;
@@ -914,14 +915,38 @@ function loadFloraSearch() {
 
     wrapper.appendChild(topBar);
 
+    // ---- Zero‑state helper -------------------------------------------------
+    function renderZeroState(container) {
+        const suggestions = ['Nopal', 'Agave Tequilana', 'Maíz', 'Cacao', 'Vainilla'];
+        container.innerHTML = '';
+        const chipContainer = document.createElement('div');
+        chipContainer.className = 'flex flex-wrap gap-2 p-2';
+        suggestions.forEach(text => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = text;
+            btn.className = 'inline-flex items-center px-3 py-1 text-xs font-medium text-[#00e5ff] bg-[#00e5ff]/10 rounded-full border border-[#00e5ff]/30 cursor-pointer hover:bg-[#00e5ff]/20';
+            btn.addEventListener('click', () => {
+                const input = document.getElementById('flora-search-input');
+                if (input) {
+                    input.value = text;
+                    // Trigger search programmatically (reuse existing searchPlant)
+                    searchPlant(text);
+                    input.focus();
+                }
+            });
+            chipContainer.appendChild(btn);
+        });
+        container.appendChild(chipContainer);
+    }
+
+
     const resultsDiv = document.createElement('div');
     resultsDiv.id = 'flora-search-results';
     resultsDiv.className = 'flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin';
 
-    const waitingText = document.createElement('p');
-    waitingText.className = 'text-[#00e5ff]/50 text-sm italic';
-    waitingText.textContent = 'Esperando consulta de base de datos...';
-    resultsDiv.appendChild(waitingText);
+    // Render suggested endemic‑plant chips when no query yet
+    renderZeroState(resultsDiv);
 
     wrapper.appendChild(resultsDiv);
     container.appendChild(wrapper);
@@ -943,11 +968,8 @@ function loadFloraSearch() {
         const resultsContainer = document.getElementById('flora-search-results');
 
         if (query.length < 2) {
-            resultsContainer.textContent = '';
-            const hint = document.createElement('p');
-            hint.className = 'text-[#00e5ff]/50 text-sm italic';
-            hint.textContent = 'Ingrese al menos 2 caracteres...';
-            resultsContainer.appendChild(hint);
+            // Show zero‑state chips again when the query is too short
+            renderZeroState(resultsContainer);
             return;
         }
 
@@ -1176,7 +1198,8 @@ function renderPlantResults(results) {
                 card.appendChild(snippet);
                 // Reattach the click to expand
                 card.addEventListener('click', onCardClick);
-            });
+    });
+    attachCursor(container);
 
             card.appendChild(closeBtn);
         };

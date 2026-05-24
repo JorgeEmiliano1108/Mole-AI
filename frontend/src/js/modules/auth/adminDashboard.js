@@ -1,7 +1,7 @@
 // ==========================================================
 // 4. FUNCIONES EXCLUSIVAS DEL ADMINISTRADOR Y ANÁLISIS [BACKEND READY]
 // ==========================================================
-import Chart from 'chart.js/auto';
+// Chart.js is dynamically imported inside initAdminCharts to enable code‑splitting
 
 let adminChart1, adminChart2, adminChart3;
 let hChart, tChart; // Variables para las gráficas de usuario normal
@@ -20,6 +20,16 @@ async function initAdminCharts() {
     if(adminChart1) adminChart1.destroy();
     if(adminChart2) adminChart2.destroy();
     if(adminChart3) adminChart3.destroy();
+
+        // Dynamically import Chart.js only when needed (code‑splitting)
+        let Chart;
+        try {
+            const mod = await import('chart.js/auto');
+            Chart = mod.default || mod;
+        } catch (e) {
+            console.error('Failed to load Chart.js dynamically', e);
+            return;
+        }
 
     const chartStyle = { color: '#00e5ff', font: { family: 'Share Tech Mono' } };
 
