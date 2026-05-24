@@ -15,6 +15,13 @@ export default defineConfig({
         login: resolve(__dirname, 'login.html'),
         dashboard: resolve(__dirname, 'dashboard.html'),
         admin: resolve(__dirname, 'admin.html')
+      },
+      output: {
+        // Split heavy libraries into separate chunks for lazy loading
+        manualChunks: {
+          chart: ['chart.js'],
+          leaflet: ['leaflet']
+        }
       }
     }
   }

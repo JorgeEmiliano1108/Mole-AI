@@ -273,9 +273,11 @@ class ApiService {
     // ─── REQUEST WITH RETRY + TIMEOUT ───────────────────────────────────
 
     _buildUrl(endpoint) {
-        var rawUrl = this.baseUrl + endpoint;
-        // Escudo Regex: Limpiar dobles barras excepto el protocolo (http://)
-        return rawUrl.replace(/([^:]\/)\/+/g, "$1");
+        // Build a clean URL without duplicate slashes.
+        // Mirrors the logic of src/js/modules/api/urlBuilder.ts.
+        const base = this.baseUrl.replace(/\/+$/g, '');
+        const cleanPath = endpoint.replace(/^\/+/, '');
+        return `${base}/${cleanPath}`;
     }
 
     request(endpoint, method, body, customHeaders, options = {}) {

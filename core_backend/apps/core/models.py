@@ -14,6 +14,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from pgvector.django import VectorField
+from .fields import EncryptedCharField
 
 User = get_user_model()
 
