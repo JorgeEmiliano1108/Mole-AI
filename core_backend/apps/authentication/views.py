@@ -257,7 +257,7 @@ def login_view(request):
         "email": user.email,
         "role": role,
         "aud": "authenticated",
-        "exp": datetime.now(timezone.utc) + timedelta(days=1),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=getattr(settings, 'JWT_TTL_MINUTES', 20)),
         "iat": datetime.now(timezone.utc),
     }
     

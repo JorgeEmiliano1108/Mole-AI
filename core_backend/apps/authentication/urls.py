@@ -12,6 +12,7 @@
 # =============================================================================
 from django.urls import path
 from . import views
+from .refresh import refresh_view
 
 app_name = 'authentication'
 
@@ -40,6 +41,7 @@ urlpatterns = [
     
     # Logout endpoint
     path('logout/', views.logout_view, name='logout'),
+    path('refresh/', refresh_view, name='refresh'),
     
     # Health Check endpoint
     path('health/', views.AuthHealthCheckView.as_view(), name='auth_health_check'),
