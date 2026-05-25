@@ -27,6 +27,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_event.h"
@@ -50,8 +51,12 @@
 #include "sensor_dht20.h"
 #include "sensor_ltr390.h"
 #include "sensor_soil.h"
+#include "ble_provisioning.h"
 
 static const char *TAG = "MOLE_MAIN";
+
+/* Semaphore to signal provisioning completion (BLE or Captive Portal) */
+SemaphoreHandle_t g_provision_sem = NULL;
 
 /* ── FreeRTOS Event Group ────────────────────────────────────────────────── */
 static EventGroupHandle_t wifi_event_group;
@@ -321,7 +326,11 @@ static esp_err_t captive_get_handler(httpd_req_t *req)
         "b.disabled=false;b.textContent='\\u1F504 Escanear Redes';"
         "s.innerHTML='<option value=\\'\\'>Error. Reintente.</option>';});"
         "}"
-        "</script>"
+        "</script><script>
+        // Placeholder: In production, use window.crypto.subtle to derive a shared secret via ECDH
+        // then encrypt the JSON payload with AES‑GCM before POSTing.
+        // For demo, we simply submit the form normally.
+        </script>"
         "</body></html>"
     );
 
@@ -435,10 +444,10 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "text/html");
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
 
-    /* Restart after a short delay to let HTTP response flush */
-    vTaskDelay(pdMS_TO_TICKS(1500));
-    esp_restart();
-
+    /* Signal provisioning completion – start_captive_portal will restart */
+    if (g_provision_sem) {
+        xSemaphoreGive(g_provision_sem);
+    }
     return ESP_OK;
 }
 
@@ -506,10 +515,14 @@ static void start_captive_portal(void)
     ESP_LOGI(TAG, "HTTP server listening on http://192.168.4.1/");
     ESP_LOGI(TAG, "Waiting for provisioning via Captive Portal...");
 
-    /* Block forever — the POST handler will restart the chip */
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(10000));
-    }
+    /* Wait for provisioning completion (BLE or Captive Portal) */
+    if (g_provision_sem) {
+        /* The semaphore is given by BLE write callback or by the POST handler
++         * (after storing token and credentials). */
++        xSemaphoreTake(g_provision_sem, portMAX_DELAY);
++    }
++    ESP_LOGI(TAG, "Provisioning completed – restarting…");
++    esp_restart();
 }
 
 /* ==========================================================================
@@ -734,6 +747,11 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
     ESP_LOGI(TAG, "[1/6] NVS initialized");
+    /* Create binary semaphore for provisioning synchronization */
+    g_provision_sem = xSemaphoreCreateBinary();
+    if (g_provision_sem == NULL) {
+        ESP_LOGE(TAG, "Failed to create provisioning semaphore");
+    }
 
     /* ── Step 2: Network stack ───────────────────────────────────────── */
     ESP_ERROR_CHECK(esp_netif_init());
@@ -745,11 +763,12 @@ void app_main(void)
     if (!has_token) {
         /*
          * FIRST BOOT / FACTORY RESET:
-         * No token in NVS → enter Captive Portal AP mode.
-         * This function NEVER returns (blocks until form POST → restart).
+         * No token in NVS → start both BLE provisioning and Captive Portal.
+         * Both paths will signal the semaphore when they have stored credentials.
          */
+        ble_provisioning_start();
         start_captive_portal();
-        /* Unreachable — start_captive_portal calls esp_restart() */
+        /* Unreachable — start_captive_portal restarts after semaphore */
     }
 
     /* ── Step 4: WiFi STA (token exists, connect to saved AP) ────────── */

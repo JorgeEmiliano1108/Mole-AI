@@ -180,6 +180,9 @@ JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256')
 JWT_AUDIENCE = 'authenticated'
 JWT_LEEWAY = 30
 
+# Token lifetime in minutes (default 20)
+JWT_TTL_MINUTES = int(os.getenv('JWT_TTL_MINUTES', '20'))
+
 # 8. CORS & CSRF
 # NOTE: Nginx handles CORS completely. This section is kept for reference only.
 # All CORS headers are added in nginx.conf for /api/* endpoints.
