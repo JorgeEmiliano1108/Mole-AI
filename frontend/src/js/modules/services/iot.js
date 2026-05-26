@@ -19,13 +19,12 @@ export function initIoTView() {
     console.info('[DIAG] Current protocol:', location.protocol);
     // -------------------------
     const tabWifi  = document.getElementById('tab-wifi');
-    const tabBle   = document.getElementById('tab-ble');
+    // BLE UI disabled for production
+    const tabBle   = null;
     const panelW   = document.getElementById('panel-wifi');
-    const panelB   = document.getElementById('panel-ble');
+    const panelB   = null;
 
-    if (!tabWifi || !tabBle) return;
-
-    // Prevent double-init
+    // Prevent double‑init for Wi‑Fi tab only
     if (tabWifi.dataset.iotInit) return;
     tabWifi.dataset.iotInit = '1';
 
@@ -33,27 +32,25 @@ export function initIoTView() {
     const inactiveTab = 'bg-mole-surface text-mole-dim hover:text-mole-cyan';
     const baseTab     = 'flex-1 py-2.5 text-xs font-bold tracking-widest transition-colors';
 
+    // Wi‑Fi tab – show Wi‑Fi panel, hide BLE panel (BLE disabled)
     tabWifi.addEventListener('click', () => {
-        tabWifi.className  = `${baseTab} ${activeTab}`;
-        tabBle.className   = `${baseTab} ${inactiveTab}`;
+        tabWifi.className = `${baseTab} ${activeTab}`;
+        // BLE tab hidden – no class change needed
         panelW.classList.remove('hidden');
-        panelB.classList.add('hidden');
+        if (panelB) panelB.classList.add('hidden');
     });
 
-    tabBle.addEventListener('click', () => {
-        tabBle.className   = `${baseTab} ${activeTab}`;
-        tabWifi.className  = `${baseTab} ${inactiveTab}`;
-        panelB.classList.remove('hidden');
-        panelW.classList.add('hidden');
-    });
+    // No BLE tab handlers – BLE UI is disabled
 
-    // ── BLE Scan Button ─────────────────────────────────────
+    // Ensure BLE‑related buttons are hidden/disabled if they exist
     const btnScan = document.getElementById('btn-ble-scan');
-    if (btnScan) btnScan.addEventListener('click', startBleScan);
-
-    // ── BLE Bind Button ─────────────────────────────────────
+    if (btnScan) btnScan.classList.add('hidden');
     const btnProvBle = document.getElementById('btn-prov-ble');
-    if (btnProvBle) btnProvBle.addEventListener('click', provisionViaBle);
+    if (btnProvBle) btnProvBle.classList.add('hidden');
+
+    // ── Wi‑Fi Bind Button ───────────────────────────────────
+    const btnProvWifi = document.getElementById('btn-prov-wifi');
+    if (btnProvWifi) btnProvWifi.addEventListener('click', provisionViaWifi);
 
     // ── Wi-Fi Bind Button ───────────────────────────────────
     const btnProvWifi = document.getElementById('btn-prov-wifi');
