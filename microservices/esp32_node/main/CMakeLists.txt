@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c"
+    SRCS "main.c" "ble_provisioning.cpp"
     INCLUDE_DIRS "include"
     REQUIRES
         nvs_flash
@@ -16,4 +16,5 @@ idf_component_register(
         sensor_ltr390
         sensor_soil
         mole_ntp
+        bt
 )

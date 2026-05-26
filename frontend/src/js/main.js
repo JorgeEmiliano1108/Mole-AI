@@ -25,6 +25,7 @@ import * as supervisor from './modules/services/supervisor.js';
 import * as crops from './modules/services/crops.js';
 import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
+import './modules/sessionManager.js';
 import { attachCursor } from './modules/ui/cursor';
 import { loadWiki } from './modules/services/wiki.js';
 import { initHealthView, setDeviceId as setHealthDeviceId, pausePolling, resumePolling } from './modules/services/health.js';

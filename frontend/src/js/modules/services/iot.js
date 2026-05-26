@@ -3,7 +3,7 @@
 // ==========================================================
 
 // ── BLE GATT UUIDs (must match ESP32 firmware) ──────────────
-const BLE_SERVICE_UUID    = '0000abcd-0000-1000-8000-00805f9b34fb';
+const BLE_SERVICE_UUID    = '0000fee0-0000-1000-8000-00805f9b34fb';
 const CHAR_SSID_UUID      = '0000abce-0000-1000-8000-00805f9b34fb';
 const CHAR_PASS_UUID      = '0000abcf-0000-1000-8000-00805f9b34fb';
 const CHAR_TOKEN_UUID     = '0000abd0-0000-1000-8000-00805f9b34fb';
@@ -14,6 +14,10 @@ let _bleServer         = null;
 
 // ── Tab Switching ───────────────────────────────────────────
 export function initIoTView() {
+    // ---- DIAGNOSTIC LOGS ----
+    console.info('[DIAG] initIoTView called. navigator.bluetooth?', !!navigator.bluetooth);
+    console.info('[DIAG] Current protocol:', location.protocol);
+    // -------------------------
     const tabWifi  = document.getElementById('tab-wifi');
     const tabBle   = document.getElementById('tab-ble');
     const panelW   = document.getElementById('panel-wifi');
@@ -76,6 +80,14 @@ function setStatus(msg, type = 'info') {
 
 // ── Web Bluetooth Scan ──────────────────────────────────────
 async function startBleScan() {
+    // ---- DIAGNOSTIC LOGS ----
+    console.info('[DIAG] navigator.bluetooth available:', !!navigator.bluetooth);
+    console.info('[DIAG] page protocol:', location.protocol);
+    if (location.protocol !== 'https:') {
+        console.warn('[DIAG] Insecure context: Web Bluetooth requires HTTPS or localhost.');
+        setStatus('ADVERTENCIA: Esta página no está en HTTPS; Web Bluetooth puede estar bloqueado.', 'error');
+    }
+    // -------------------------
     const list = document.getElementById('ble-device-list');
     const btnBind = document.getElementById('btn-prov-ble');
     if (!list) return;
