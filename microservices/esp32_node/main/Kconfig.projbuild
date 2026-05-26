@@ -1,0 +1,41 @@
+menu "Mole.AI Node Configuration"
+
+    config MOLE_WS_URI
+        string "Edge Node WebSocket URI"
+        default "ws://107.23.238.115:18789"
+        help
+            WebSocket endpoint of the Edge Node gateway.
+            Format: ws://<edge_node_ip>:<port>
+
+    config MOLE_I2C_SDA
+        int "I2C SDA GPIO"
+        default 21
+        help
+            GPIO pin for I2C data line (DHT20 + LTR390).
+
+    config MOLE_I2C_SCL
+        int "I2C SCL GPIO"
+        default 22
+        help
+            GPIO pin for I2C clock line (DHT20 + LTR390).
+
+    config MOLE_TELEMETRY_INTERVAL_MS
+        int "Telemetry interval (ms)"
+        default 300000
+        help
+            Interval between telemetry reports in milliseconds.
+            Default: 300000 (5 minutes).
+
+    config MOLE_NTP_SERVER_PRIMARY
+        string "Primary NTP server"
+        default "pool.ntp.org"
+
+    config MOLE_NTP_SERVER_SECONDARY
+        string "Secondary NTP server"
+        default "time.google.com"
+
+    config MOLE_NTP_SERVER_TERTIARY
+        string "Tertiary NTP server"
+        default "time.cloudflare.com"
+
+endmenu

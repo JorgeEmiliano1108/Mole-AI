@@ -1,0 +1,56 @@
+# Git & Version Control
+.git
+.gitignore
+.dockerignore
+.github
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache & Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Project Data & Logs (Do not bake into image)
+**/data/
+**/log/
+**/logs/
+**/storage/
+**/vectors/
+**/checkpoints/
+infrastructure/mosquitto/data/
+infrastructure/mosquitto/log/
+
+# Frontend (Only needed for frontend build, handled by multi-stage or separate builds)
+frontend/node_modules/
+frontend/dist/
+frontend/.pnpm-store/
+
+# Documentation
+docs/
+README.md
+skills-main/
+skills-doc.md
+correr_esp32.md
+
+# Scripts & Misc
+scripts/
+infrastructure/render.yaml
+infrastructure/docker-compose*.yml

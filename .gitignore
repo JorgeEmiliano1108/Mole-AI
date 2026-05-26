@@ -1,0 +1,90 @@
+# Environments & VirtualEnvs
+.env
+.env.*
+!.env.production.template
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# Python Cache & Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.pyre/
+.pytype/
+cython_debug/
+
+# IDEs & System
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker & Infrastructure 
+infrastructure/mosquitto/data/
+infrastructure/mosquitto/log/
+infrastructure/mosquitto/certs/*.pem
+infrastructure/mosquitto/certs/*.key
+!infrastructure/mosquitto/certs/.gitkeep
+
+# Named volumes / Local data mounts
+**/data/
+**/logs/
+**/storage/
+**/vectors/
+**/checkpoints/
+**/models/*.tflite
+**/models/*.h5
+**/models/*.pb
+!**/models/.gitkeep
+
+# Frontend Artifacts
+frontend/dist/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.pnpm-store/
+
+# Prohibited Package Managers (SEC-01: pnpm is the only authorized manager)
+package-lock.json
+yarn.lock
+
+# Databases
+*.sqlite3
+*.sqlite3-journal
+*.db
+pg_data/
+redis_data/
+
+# Secrets
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pub
+
+# Celery
+celerybeat-schedule
+celerybeat-schedule.db
+
+# ESP32 / Arduino
+microservices/esp32_node/build/
+microservices/esp32_node/managed_components/
+microservices/esp32_node/sdkconfig
+
+# Django Assets & Redis
+staticfiles/
+media/
+dump.rdb
+

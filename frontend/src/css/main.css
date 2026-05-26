@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme Architecture: Pip-Boy (Dark) vs Solar (Light) ────────── */
+:root {
+  /* Default: Pip-Boy (Dark Mode) - Improved Contrast */
+  --mole-bg: #0B0F19;
+  --mole-surface: #111827;
+  --mole-border: #1E293B;
+  --mole-text: #00FFCC;      /* WCAG AA compliant: 5.5:1 contrast on #0B0F19 */
+  --mole-text-dim: #94A3B8;
+  --mole-accent: #00FFCC;    /* Brighter cyan for better readability */
+  --mole-green: #34D399;
+  --mole-amber: #FBBF24;
+  --mole-red: #F87171;
+  /* ── CMD CENTER Industrial Theme ── */
+  --mole-bg-alt: #05080A;
+  --mole-surface-industrial: #111820;
+  --mole-border-industrial: #1A2E26;
+  --mole-critical: #FF4D4D;
+  --mole-warning: #FFCC00;
+}
+
+body.light-mode {
+  /* Solar Mode: Light theme for direct sunlight (azoteas/campo) */
+  --mole-bg: #F9FAFB;
+  --mole-surface: #FFFFFF;
+  --mole-border: #E5E7EB;
+  --mole-text: #111827;        /* Dark text on light background */
+  --mole-text-dim: #6B7280;
+  --mole-accent: #059669;     /* Emerald 600 */
+  --mole-green: #10B981;
+  --mole-amber: #D97706;
+  --mole-red: #DC2626;
+}
+
+/* Apply semantic colors via Tailwind arbitrary values */
+body {
+  font-family: 'Inter', system-ui, sans-serif; /* DEFAULT: Sans-serif for readability */
+}
+
+/* ── WCAG 2.1 AA Touch Targets (44×44px minimum) ── */
+button, [role="button"], input[type="button"], input[type="submit"], a[href], label[for] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Compact buttons can use padding instead */
+button.px-2, button.px-1, .btn-compact {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+/* Reserve monospace ONLY for terminal/chat/telemetry */
+.terminal-text, .crt-chat, code, pre {
+  font-family: 'VT323', 'JetBrains Mono', monospace !important;
+}
+
+/* Custom animations */
+@keyframes biometric-scan {
+  0% { top: -5%; opacity: 0; }
+  5% { opacity: 0.8; }
+  95% { opacity: 0.8; }
+  100% { top: 105%; opacity: 0; }
+}
+
+.animate-biometric-scan {
+  animation: biometric-scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes tvOn {
+  0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); }
+  50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); }
+  100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); }
+}
+
+.tv-on {
+  animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+  transform-origin: center;
+}
+
+/* Scanline effect */
+.scanline {
+  width: 100%;
+  height: 100px;
+  z-index: 9999;
+  position: absolute;
+  pointer-events: none;
+  background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0, 255, 170, 0.04) 50%, rgba(0,0,0,0) 100%);
+  animation: scanline 6s linear infinite;
+}
+
+@keyframes scanline {
+  0% { top: -10%; }
+  100% { top: 110%; }
+}
+
+/* ── Toast Container ──────────────────────────────────── */
+#toast-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 380px;
+  z-index: 9999;
+}
+
+/* ── CMD CENTER Custom Classes ───────────────────────────── */
+/* Glow effect for active elements */
+.glow-effect {
+  box-shadow: 0 0 10px rgba(0, 255, 204, 0.2);
+}
+
+/* Chart containers (ready for Chart.js/ECharts) */
+.chart-container {
+  position: relative;
+  height: 300px !important;
+  max-height: 300px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Data cards with industrial density */
+.data-card {
+  background: var(--mole-surface-industrial, #111820);
+  border: 1px solid var(--mole-border-industrial, #1A2E26);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Limit sparkline canvas growth - only for data-card canvases, NOT chart-container */
+.data-card canvas {
+  height: 40px !important;
+  max-height: 40px !important;
+  width: 100% !important;
+}
+
+/* Offline node opacity */
+.node-offline {
+  opacity: 0.4;
+}
+
+/* --- Custom Mole OS overrides (Wiki) --- */
+.wiki-card {
+    background-color: var(--mole-surface);
+    border-color: var(--mole-border);
+}
+.image-wrapper {
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 0.25rem;
+}
+
+/* Inline extracted CSS */
+@keyframes biometric-scan { 0% { top: -5%; opacity: 0; } 5% { opacity: 0.8; } 95% { opacity: 0.8; } 100% { top: 105%; opacity: 0; } }
+.animate-biometric-scan { animation: biometric-scan 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+/* Efecto de TV del Frontend */
+@keyframes tvOn { 0% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10) contrast(5); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3) contrast(2); } 100% { transform: scale(1, 1); opacity: 1; filter: brightness(1) contrast(1); } }
+@keyframes tvOff { 0% { transform: scale(1, 1); opacity: 1; filter: brightness(1); } 50% { transform: scale(1, 0.005); opacity: 1; filter: brightness(3); } 100% { transform: scale(0.5, 0.005); opacity: 0; filter: brightness(10); } }
+.tv-on { animation: tvOn 0.35s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+.tv-off { animation: tvOff 0.25s cubic-bezier(0.23, 1, 0.32, 1) forwards; transform-origin: center; }
+/* HTML5 Validation — Retro-styled feedback */
+input:focus { border-color: rgba(0, 229, 255, 0.5); box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.1); }
+input:valid:not(:placeholder-shown) { border-color: rgba(52, 211, 153, 0.5); }
+input:invalid:not(:placeholder-shown):not(:focus) { border-color: rgba(248, 113, 113, 0.5); }

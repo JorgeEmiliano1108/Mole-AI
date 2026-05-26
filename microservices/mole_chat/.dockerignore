@@ -1,0 +1,41 @@
+# Git y Pycache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.git/
+
+# Entornos virtuales y locales
+.env
+.venv/
+venv/
+env/
+
+# IDE y Editores
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Archivos de Build y Logs
+build/
+dist/
+*.egg-info/
+*.log
+
+# Archivos de la infraestructura Docker
+Dockerfile*
+docker-compose*.yml
+
+# Vectores y Modelos Pesados (esto se monta por volumen, NO debe ir en la imagen constructora)
+storage/vectors/
+models/
+*.onnx
+*.tflite
+*.pt
+*.pth
+*.bin
+
+# Documentación o archivos innecesarios
+*.md
+tests/

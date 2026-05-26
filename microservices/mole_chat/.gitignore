@@ -1,0 +1,126 @@
+# =============================================================================
+# Mole.AI - .gitignore
+# Proyecto: Python/FastAPI/ML con Arquitectura Hexagonal
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SEGURIDAD - Credenciales y Secrets
+# -----------------------------------------------------------------------------
+# NUNCA hacer commit de archivos con claves, tokens o passwords
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+secrets.yaml
+secrets.yml
+/secrets
+
+# -----------------------------------------------------------------------------
+# BASES DE DATOS - Datos sensibles
+# -----------------------------------------------------------------------------
+# Bases de datos PostgreSQL
+*.sql
+*.sqlite
+*.sqlite3
+db.sqlite3
+
+# -----------------------------------------------------------------------------
+# VECTORES FAISS - Base de conocimiento ML
+# -----------------------------------------------------------------------------
+# Index vectors - generados dinámicamente, no versionables
+/storage/vectors/
+/storage/vectors/*
+*.faiss
+*.index
+*.pkl
+pickle/
+
+# -----------------------------------------------------------------------------
+# CACHÉS - Archivos temporales de runtime
+# -----------------------------------------------------------------------------
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+.venv
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# mypy / type checking
+.mypy_cache/
+.pytype/
+
+# -----------------------------------------------------------------------------
+# DOCKER - Archivos de contenedor
+# -----------------------------------------------------------------------------
+# Volumes de Docker (datos persistentes)
+docker-compose.override.yml
+
+# -----------------------------------------------------------------------------
+# CI/CD - GitHub Actions
+# -----------------------------------------------------------------------------
+.github/workflows/*.yml
+!.github/workflows/README.md
+
+# -----------------------------------------------------------------------------
+# FRONTEND - Build outputs
+# -----------------------------------------------------------------------------
+node_modules/
+dist/
+build/
+*.egg-info/
+
+# -----------------------------------------------------------------------------
+# IDEs - Configuraciones de editor
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# -----------------------------------------------------------------------------
+# REPORTES - PDFs temporales de testing
+# -----------------------------------------------------------------------------
+# Archivos PDF generados manualmente para testing
+manual_*.pdf
+test_*.pdf
+*_test.pdf
+
+# -----------------------------------------------------------------------------
+# LOGS - Archivos de logging
+# -----------------------------------------------------------------------------
+*.log
+logs/
+
+# -----------------------------------------------------------------------------
+# MODELOS ML - Pesos de modelos (si no están en .dockerignore)
+# -----------------------------------------------------------------------------
+*.h5
+*.pb
+*.onnx
+models/*.tflite
+!models/.gitkeep
+
+# -----------------------------------------------------------------------------
+# TEMP - Archivos temporales varios
+# -----------------------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache

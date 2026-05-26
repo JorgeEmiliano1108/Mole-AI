@@ -1,0 +1,1246 @@
+import '../css/themes/pip-boy.css';
+import '../css/main.css';
+import './auth.js';
+import './modules/ui/theme.js';
+import './modules/ui/navigation.js';
+import './typewriter.ts'; // Typewriter effect – auto‑init on DOMContentLoaded
+import * as userDashboard from './modules/auth/userDashboard.js';
+import * as adminDashboard from './modules/auth/adminDashboard.js';
+import * as i18n from './modules/ui/i18n.js';
+import * as dom from './modules/ui/dom.js';
+import * as history from './modules/ui/history.js';
+import * as menus from './modules/ui/menus.js';
+import * as security from './modules/ui/security.js';
+import * as memory from './modules/ui/memory.js';
+import * as iot from './modules/ui/iot.js';
+import { initIoTView } from './modules/services/iot.js';
+import { initBindingsPanel, deleteBinding } from './modules/services/bindings.js';
+import * as config from './modules/api/config.js';
+import * as mlops from './modules/services/mlops.js';
+import * as vision from './modules/services/vision.js';
+import * as privacy from './modules/ui/privacy.js';
+import * as reports from './modules/services/reports.js';
+import * as chat from './modules/services/chat.js';
+import * as supervisor from './modules/services/supervisor.js';
+import * as crops from './modules/services/crops.js';
+import * as map from './modules/services/map.js';
+import * as tactical from './modules/ui/tactical.js';
+import './modules/sessionManager.js';
+import { attachCursor } from './modules/ui/cursor';
+import { loadWiki } from './modules/services/wiki.js';
+import { initHealthView, setDeviceId as setHealthDeviceId, pausePolling, resumePolling } from './modules/services/health.js';
+window.loadWiki = loadWiki;
+window.initIoTView = initIoTView;
+window.setHealthDeviceId = setHealthDeviceId;
+
+// -- FE-02: Global State Singleton (session-scoped cache) --
+window.MoleState = window.MoleState || {
+    speciesCatalog: [],       // Populated once on login, read locally by wiki/health
+    speciesCatalogLoaded: false,
+    currentDeviceId: localStorage.getItem('moleia_device_id') || null,
+    _speciesPromise: null,    // PATCH-01: Promise guard against race conditions
+};
+
+async function _fetchSpeciesCatalog() {
+    try {
+        const data = await window.ApiService.get('plants/species/');
+        window.MoleState.speciesCatalog = Array.isArray(data) ? data : (data.results || []);
+        window.MoleState.speciesCatalogLoaded = true;
+    } catch (e) {
+        console.warn('[MoleState] Failed to load species catalog:', e.message);
+    }
+}
+
+function loadSpeciesCatalog() {
+    if (window.MoleState.speciesCatalogLoaded) return Promise.resolve();
+    if (!window.MoleState._speciesPromise) {
+        window.MoleState._speciesPromise = _fetchSpeciesCatalog();
+    }
+    return window.MoleState._speciesPromise;
+}
+
+// Public API: consumers await this before reading speciesCatalog
+window.MoleState.ensureSpeciesLoaded = function() {
+    return loadSpeciesCatalog();
+};
+
+// Trigger on DOMContentLoaded (after auth token is available)
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('moleia_token') || localStorage.getItem('mole_jwt');
+    if (token) loadSpeciesCatalog();
+});
+
+// Safety check: Wait for global apiService to be loaded
+if (!window.moleApi) {
+    console.warn("[Main] Waiting for apiService.js to load...");
+}
+
+// --- ROUTE GUARD: Protect against BFCache and unauthorized access ---
+function checkAuthGuard() {
+    // 1. Check if we are in a protected page
+    const protectedPages = ['/dashboard.html', '/admin.html'];
+    const currentPath = window.location.pathname;
+
+    if (!protectedPages.some(p => currentPath.includes(p))) {
+        return; // Not a protected page, allow
+    }
+
+    // 2. Check for token and role
+    const token = window.getAuthToken ? window.getAuthToken() : null;
+    const role = localStorage.getItem('moleia_user_role');
+
+    if (!token && !role) {
+        // No credentials - force redirect to index
+        console.warn('[Route Guard] No credentials found, redirecting to index...');
+        window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
+        window.location.replace('/index.html'); // replace() prevents history entry
+        return;
+    }
+
+    // 2.5 ADR-0002 Fase 3: Validate JWT expiration to prevent phantom permissions
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.exp && (Date.now() / 1000) > payload.exp) {
+                console.warn('[Route Guard] Token expired, clearing session...');
+                if (window.clearAuthToken) window.clearAuthToken();
+                localStorage.removeItem('moleia_user_role');
+                window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
+                window.location.replace('/index.html');
+                return;
+            }
+        } catch (e) {
+            console.warn('[Route Guard] Failed to decode token, treating as invalid:', e.message);
+            if (window.clearAuthToken) window.clearAuthToken();
+            localStorage.removeItem('moleia_user_role');
+            window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
+            window.location.replace('/index.html');
+            return;
+        }
+    }
+
+    // 3. Role-based validation for admin pages
+    if (currentPath.includes('/admin.html') && role !== 'superuser' && role !== 'admin') {
+        console.warn('[Route Guard] Insufficient privileges, redirecting...');
+        window.location.replace('/dashboard.html');
+        return;
+    }
+
+    // FE-10: Emit role ready for downstream scripts (health.js)
+    window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: role } }));
+}
+
+// Add event listeners for BFCache scenarios
+window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+        console.warn('[Route Guard] Page restored from BFCache, re-validating...');
+        checkAuthGuard();
+    }
+});
+
+// Run guard on initial load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAuthGuard);
+} else {
+    checkAuthGuard();
+}
+
+// ==========================================================
+// 0. EXPOSE GLOBAL FUNCTIONS TO WINDOW (for inline HTML handlers)
+// ==========================================================
+// Import JWT helpers from config and expose to window
+import { getAuthToken, setAuthToken, clearAuthToken } from './modules/api/config.js';
+window.getAuthToken = getAuthToken;
+window.setAuthToken = setAuthToken;
+window.clearAuthToken = clearAuthToken;
+
+// Import updatePlant from crops and expose to window
+import { updatePlant as doUpdatePlant } from './modules/services/crops.js';
+window.updatePlant = doUpdatePlant;
+
+// ==========================================================
+// 0. CONFIGURACIÓN ESTRUCTURAL (MÓDULOS E IDIOMAS)
+// ==========================================================
+// MODULES: Solo para modales (pantallas completas ahora navegan físicamente)
+const MODULES = {
+    intro: 'intro-screen',
+    login: 'login-screen',
+    register: 'register-screen',
+    dashboard: 'main-dashboard',
+    admin: 'admin-dashboard',
+    analysis: 'analysis-modal',
+    contact: 'contact-modal',
+    addPlant: 'add-plant-modal',
+    loading: 'loading-scan-modal',
+    diagnosis: 'diagnosis-result-modal',
+    history: 'history-modal',
+    map: 'map-modal',
+    iot: 'iot-wizard-modal',
+    profile: 'user-profile-modal',
+    delete: 'delete-account-modal'
+};
+
+const translations = {
+    es: {
+        intro_subtitle: "M O N I T O R I N G  T O O L",
+        btn_start: "[ INICIAR SISTEMA ]",
+        nav_obj: "OBJETIVO", nav_vis: "VISIÓN", nav_flora: "FLORA MEXICANA", nav_about: "ACERCA DE LA WEB",
+        st_hum: "HUMEDAD AMBIENTE", st_temp: "TEMPERATURA", st_ph: "pH DEL SUELO", st_uv: "ÍNDICE UV"
+    },
+    en: {
+        intro_subtitle: "M O N I T O R I N G  S Y S T E M",
+        btn_start: "[ START SYSTEM ]",
+        nav_obj: "OBJECTIVE", nav_vis: "VISION", nav_flora: "MEXICAN FLORA", nav_about: "ABOUT WEB",
+        st_hum: "AMBIENT HUMIDITY", st_temp: "TEMPERATURE", st_ph: "SOIL pH", st_uv: "UV INDEX"
+    }
+};
+
+// Helper: create a DOM node with optional classes, textContent and attributes
+function createNode(tag = 'div', className = '', text = '', attrs = {}) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined && text !== null) el.textContent = text;
+    Object.keys(attrs || {}).forEach(k => {
+        if (k === 'id') el.id = attrs[k];
+        else if (k.startsWith('data-')) el.setAttribute(k, attrs[k]);
+        else el.setAttribute(k, attrs[k]);
+    });
+    return el;
+}
+
+// Función para mostrar modales (no pantallas completas - esas navegan físicamente)
+function showModule(moduleKey) {
+    // Solo modales - pantallas completas navegan con window.location.href
+    const modalScreens = ['analysis', 'contact', 'addPlant', 'loading', 'diagnosis', 'history', 'map', 'iot', 'profile', 'delete'];
+
+    if (modalScreens.includes(moduleKey)) {
+        // Ocultar otros modales primero
+        modalScreens.forEach(key => {
+            const el = document.getElementById(MODULES[key]);
+            if (el) el.classList.add('hidden');
+        });
+
+        const target = document.getElementById(MODULES[moduleKey]);
+        if (target) {
+            target.classList.remove('hidden');
+            target.classList.add('flex');
+        }
+
+        // Inicializaciones específicas por modal
+        switch (moduleKey) {
+            case 'map':
+                if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
+                if (typeof fetchMapData === 'function') fetchMapData();
+                break;
+        }
+    }
+}
+
+function closeModule(moduleKey) {
+    const target = document.getElementById(MODULES[moduleKey]);
+    if (target) target.classList.add('hidden');
+}
+
+function changeLanguage(lang) {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[lang] && translations[lang][key]) {
+            el.innerText = translations[lang][key];
+        }
+    });
+}
+
+// ==========================================================
+// 1. SISTEMA DE LOGIN Y REGISTRO
+// ==========================================================
+
+const introData = {
+    'objetivo': "> OBJETIVO:\n\nEstablecer un sistema de monitoreo biométrico continuo para la preservación de especies vegetales.",
+    'vision': "> VISIÓN:\n\nCrear el banco de datos botánico más resistente del yermo.",
+    'flora': "> FLORA MEXICANA:\n\nCatálogo de especímenes recuperados en cuarentena hidro-botánica.",
+    'acerca': "> ACERCA DE LA WEB:\n\nTerminal MOLE-IA versión 1.0.5\nSistema Seguro, Encriptado y Multi-Rol."
+};
+
+let typeInterval;
+
+function initUsers() {
+    if (!localStorage.getItem('moleia_users')) {
+        const defaultUsers = { 'admin': 'admin' };
+        localStorage.setItem('moleia_users', JSON.stringify(defaultUsers));
+    }
+}
+initUsers();
+
+function typeContent(section) {
+    const output = document.getElementById('typewriter-output');
+    const text = introData[section];
+    output.textContent = '';
+    clearInterval(typeInterval);
+    let currentText = "", i = 0;
+
+    typeInterval = setInterval(() => {
+        currentText += text.charAt(i);
+        output.textContent = currentText;
+        const cursor = document.createElement('span');
+        cursor.className = 'animate-pulse';
+        cursor.textContent = '_';
+        output.appendChild(cursor);
+        i++;
+        if (i === text.length) clearInterval(typeInterval);
+    }, 20);
+}
+
+// Ensure typeContent is accessible from inline handlers
+window.typeContent = typeContent;
+
+// Small compatibility shims for UI buttons - now using physical navigation
+function openUserCreationModal() {
+    window.location.replace('/login.html?view=register');
+}
+
+function openAdminAddPlantModal() {
+    window.location.replace('/admin.html');
+}
+
+function returnToOverride() {
+    window.location.replace('/admin.html');
+}
+
+function startSystem() {
+    window.location.replace('/login.html');
+}
+
+// ==========================================================
+// NUEVO: TOGGLE LOGIN/REGISTER EN LA VISTA DE AUTENTICACIÓN
+// ==========================================================
+function toggleAuthForm(targetForm) {
+    const formLogin = document.getElementById('login-form');
+    const formRegister = document.getElementById('register-form');
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+
+    if (targetForm === 'register') {
+        formLogin.classList.add('hidden');
+        formRegister.classList.remove('hidden');
+        title.innerText = "NUEVO INGRESO";
+        subtitle.innerText = "Generación de Expediente";
+    } else {
+        formRegister.classList.add('hidden');
+        formLogin.classList.remove('hidden');
+        title.innerText = "AUTENTICACIÓN";
+        subtitle.innerText = "Ingrese credenciales de operador";
+    }
+}
+
+
+// --- REGISTRO ---
+async function submitRegistration() {
+    const user = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-password').value.trim();
+    const passConfirm = document.getElementById('reg-pass-confirm').value.trim();
+    const errorMsg = document.getElementById('reg-error');
+    const successMsg = document.getElementById('reg-success');
+
+    errorMsg.classList.add('hidden');
+    successMsg.classList.add('hidden');
+
+    // Validaciones Locales
+    if (user.length < 3 || pass.length < 6 || email.length < 5) {
+        errorMsg.innerText = "ERROR: CAMPOS INCOMPLETOS O MUY CORTOS.";
+        errorMsg.classList.remove('hidden');
+        return;
+    }
+    if (pass !== passConfirm) {
+        errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
+        errorMsg.classList.remove('hidden');
+        return;
+    }
+    if (user.toLowerCase() === 'admin') {
+        errorMsg.innerText = "ERROR: NOMBRE RESERVADO POR EL SISTEMA.";
+        errorMsg.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const response = await window.moleApi.post('auth/register/', {
+            username: user,
+            email: email,
+            password: pass
+        });
+
+        successMsg.innerText = `[OK] OPERADOR "${user.toUpperCase()}" REGISTRADO.`;
+        successMsg.classList.remove('hidden');
+
+        setTimeout(() => {
+            document.getElementById('register-form').reset();
+            toggleAuthForm('login');
+        }, 2000);
+
+    } catch (error) {
+        errorMsg.innerText = `ERROR: ${error.message || "NO SE PUDO CREAR EL REGISTRO."}`;
+        errorMsg.classList.remove('hidden');
+    }
+}
+
+// --- LOGIN REAL ---
+async function attemptLogin() {
+    const user = document.getElementById('user-input').value.trim();
+    const pass = document.getElementById('pass-input').value.trim();
+    const errorMsg = document.getElementById('login-error');
+
+    errorMsg.classList.add('hidden');
+
+    try {
+        const userData = await window.moleApi.post('auth/login/', {
+            username: user,
+            password: pass
+        });
+
+        const token = userData.token || userData.access || userData.access_token;
+        const role = userData.role; // 1. Extract role from response
+        const username = userData.username || user; // 2. Get username
+
+        if (token) {
+            await window.moleApi.setToken(token);
+
+            // 3. Save data to localStorage for UI consistency
+            if (role) {
+                localStorage.setItem('moleia_user_role', role);
+                window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: role } }));
+            }
+            localStorage.setItem('moleia_current_user', username);
+
+            // 4. Role-based redirect
+            if (role === 'superuser' || role === 'admin') {
+                window.location.replace('/admin.html'); // Admin panel
+            } else {
+                window.location.replace('/dashboard.html'); // Regular user dashboard
+            }
+        } else {
+            throw new Error("Token no recibido desde el servidor.");
+        }
+
+    } catch (error) {
+        console.warn("> Servidor rechazó credenciales o está offline.", error);
+        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        errorMsg.classList.remove('hidden');
+    }
+}
+
+// --- CIERRE DE SESIÓN ---
+function logout() {
+    // 1. Limpiar tokens (backend + cliente)
+    try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
+
+    // 2. Limpiar TODAS las llaves de sesión (Zero-Trust)
+    localStorage.removeItem('moleia_current_user');
+    localStorage.removeItem('moleia_user_role');
+    localStorage.removeItem('moleia_chat_history_data');
+    localStorage.removeItem('moleia_current_session_id');
+    sessionStorage.clear(); // ← Limpieza total de sessionStorage
+
+    // 3. Limpiar intervalos y listeners
+    if (typeof detachChatListener === 'function') detachChatListener();
+    if (window.monitorInterval) clearInterval(window.monitorInterval);
+    if (window.clockInterval) clearInterval(window.clockInterval);
+    if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
+
+    console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
+
+    // 4. Redirección SIN rastro en historial
+    window.location.replace('/index.html'); // replace() instead of href prevents "back" to protected pages
+}
+
+function backToDashboard() {
+    window.location.replace('/dashboard.html'); // Prevent back-button to login
+}
+
+// ==========================================================
+// ANIMACIÓN EFECTO TV PARA MODALES
+// ==========================================================
+function openModalWithTV(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    // Mostramos el contenedor oscuro de fondo
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    // Buscamos la caja interior para animar esa
+    const modalContent = modal.querySelector('.border-2');
+    if (modalContent) {
+        modalContent.classList.remove('tv-off');
+        modalContent.classList.add('tv-on');
+    }
+}
+
+function closeModalWithTV(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    const modalContent = modal.querySelector('.border-2');
+    if (modalContent) {
+        modalContent.classList.remove('tv-on');
+        modalContent.classList.add('tv-off');
+
+        // Esperamos a que acabe la animación (250ms) antes de ocultar el modal completo
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 250);
+    } else {
+        modal.classList.add('hidden');
+    }
+}
+
+// ==========================================================
+// TOGGLE VENTANA DE PERFIL (DROPDOWN EN HEADER)
+// ==========================================================
+function toggleProfileDropdown() {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (!dropdown) return;
+
+    const currentUser = localStorage.getItem('moleia_current_user') || 'AGENTE MOLE';
+    const dropdownUserName = document.getElementById('dropdown-user-name');
+    if (dropdownUserName) dropdownUserName.innerText = currentUser.toUpperCase();
+
+    if (dropdown.classList.contains('hidden')) {
+        dropdown.classList.remove('hidden');
+        dropdown.classList.add('flex', 'tv-on');
+        dropdown.classList.remove('tv-off');
+    } else {
+        dropdown.classList.add('tv-off');
+        dropdown.classList.remove('tv-on');
+        setTimeout(() => {
+            dropdown.classList.add('hidden');
+            dropdown.classList.remove('flex');
+        }, 200);
+    }
+}
+
+// ==========================================================
+// RELOJ EN VIVO (TIEMPO REAL)
+// ==========================================================
+function updateClock() {
+    // Busca todos los elementos con el ID 'clock' (por si hay en admin y user)
+    const clockElements = document.querySelectorAll('#clock');
+    if (clockElements.length === 0) return;
+
+    const now = new Date();
+    // Formatea la hora para que siempre tenga 2 dígitos (ej. 09:05:02)
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    const timeString = `${hours}:${minutes}:${seconds}`;
+
+    // Actualiza todos los relojes que encuentre en la pantalla
+    clockElements.forEach(clock => {
+        clock.innerText = timeString;
+    });
+}
+
+// Inicia el reloj de inmediato para no esperar el primer segundo
+updateClock();
+// Configura el intervalo para que se actualice cada 1000 milisegundos (1 segundo)
+window.clockInterval = setInterval(updateClock, 1000);
+
+// ── ISSUE-04 / FE-10: Health Polling now orchestrated by userRoleReady event in health.js ──
+// Removed direct call to initHealthView() from main.js to avoid Race Conditions.
+
+//Simulacion para ver pruebas//
+
+// ==========================================================
+// SISTEMA DE VINCULACIÓN ESP32 (IOT WIZARD)
+// ==========================================================
+function advanceIotStep(step) {
+    const wizardContainer = document.getElementById('iot-wizard-modal');
+    const wizardContent = wizardContainer?.querySelector('.border-2');
+    if (!wizardContainer || !wizardContent) return;
+
+    wizardContent.textContent = '';
+
+    const h2 = document.createElement('h2');
+    h2.className = 'text-xl font-bold tracking-widest uppercase text-[#00e5ff] border-b border-[#00e5ff]/30 pb-2 mb-4';
+    h2.textContent = '> ENLACE DE HARDWARE: ESP32_NODE';
+    wizardContent.appendChild(h2);
+
+    if (step === 2) {
+        const stepDiv = document.createElement('div');
+        stepDiv.id = 'iot-step-2';
+        stepDiv.className = 'iot-step block';
+
+        const p1 = document.createElement('p');
+        p1.className = 'text-white/80 text-sm mb-4';
+        p1.textContent = '> Estableciendo protocolo de enlace Handshake con ESP32...';
+        stepDiv.appendChild(p1);
+
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'w-full bg-black border border-[#00e5ff]/30 h-4 mb-4 mt-8 relative overflow-hidden';
+        const progressFill = document.createElement('div');
+        progressFill.id = 'iot-progress';
+        progressFill.className = 'bg-[#00e5ff] h-full w-0 transition-all duration-1000 ease-out';
+        progressContainer.appendChild(progressFill);
+        stepDiv.appendChild(progressContainer);
+
+        const pStatus = document.createElement('p');
+        pStatus.id = 'iot-status-text';
+        pStatus.className = 'text-center text-xs text-[#00e5ff] animate-pulse';
+        pStatus.textContent = 'Sincronizando claves de telemetría...';
+        stepDiv.appendChild(pStatus);
+
+        wizardContent.appendChild(stepDiv);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.setAttribute('data-action', 'modal:close-iot');
+        closeBtn.className = 'absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold';
+        closeBtn.textContent = '[X]';
+        wizardContent.appendChild(closeBtn);
+
+        setTimeout(() => {
+            const iotProgress = document.getElementById('iot-progress');
+            if (iotProgress) iotProgress.style.width = '35%';
+        }, 500);
+        setTimeout(() => {
+            const iotProgress = document.getElementById('iot-progress');
+            const iotStatusText = document.getElementById('iot-status-text');
+            if (iotProgress) iotProgress.style.width = '75%';
+            if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores analógicos...';
+        }, 2000);
+
+        setTimeout(() => advanceIotStep(3), 4000);
+
+    } else if (step === 3) {
+        const stepDiv = document.createElement('div');
+        stepDiv.id = 'iot-step-3';
+        stepDiv.className = 'iot-step block text-center';
+
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'w-16 h-16 rounded-full border-4 border-[#00e5ff] flex items-center justify-center mx-auto mb-4 bg-[#00e5ff]/20 shadow-[0_0_20px_rgba(0,255,170,0.5)]';
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('class', 'w-8 h-8 text-[#00e5ff]');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        const path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('d', 'M5 13l4 4L19 7');
+        svg.appendChild(path);
+        iconContainer.appendChild(svg);
+        stepDiv.appendChild(iconContainer);
+
+        const pTitle = document.createElement('p');
+        pTitle.className = 'text-[#00e5ff] font-bold text-lg mb-2';
+        pTitle.textContent = '¡CONEXIÓN ESTABLECIDA!';
+        stepDiv.appendChild(pTitle);
+
+        const pDesc = document.createElement('p');
+        pDesc.className = 'text-white/70 text-xs mb-6';
+        pDesc.textContent = 'El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.';
+        stepDiv.appendChild(pDesc);
+
+        const finalBtn = document.createElement('button');
+        finalBtn.setAttribute('data-action', 'iot:finalize');
+        finalBtn.className = 'w-full border border-[#00e5ff] bg-[#00e5ff]/10 text-[#00e5ff] py-2 hover:bg-[#00e5ff] hover:text-black transition-colors font-bold text-sm';
+        finalBtn.textContent = '> FINALIZAR PROTOCOLO';
+        stepDiv.appendChild(finalBtn);
+
+        wizardContainer.appendChild(stepDiv);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.setAttribute('data-action', 'iot:finalize');
+        closeBtn.className = 'absolute top-4 right-4 text-red-500 hover:text-red-400 font-bold';
+        closeBtn.textContent = '[X]';
+        wizardContainer.appendChild(closeBtn);
+    }
+}
+
+// Función especial para cerrar el modal de IOT y mostrar el botón de "+ VINCULAR CULTIVO"
+function closeIotAndShowPlantBtn() {
+    closeModalWithTV('iot-wizard-modal');
+    const btnCultivo = document.getElementById('new-user-plants');
+    if (btnCultivo) {
+        btnCultivo.classList.remove('hidden');
+        btnCultivo.classList.add('flex'); // Lo mostramos para que ahora pueda agregar la planta
+    }
+}
+
+// ==========================================================
+// SISTEMA DE CULTIVOS Y SIMULACIÓN DE SENSORES
+// ==========================================================
+
+// Variable para guardar el intervalo del monitor y poder detenerlo después
+window.monitorInterval = null;
+
+function registerNewPlant() {
+    const plantNameInput = document.getElementById('new-plant-name').value.trim();
+    const finalName = plantNameInput !== '' ? plantNameInput.toUpperCase() : 'ESPÉCIMEN DESCONOCIDO';
+
+    // 1. Cerramos la ventana de agregar planta
+    closeModalWithTV('add-plant-modal');
+
+    // 2. Ocultamos el botón de agregar planta (porque ya agregamos una)
+    const newUserPlants = document.getElementById('new-user-plants');
+    if (newUserPlants) {
+        newUserPlants.classList.add('hidden');
+        newUserPlants.classList.remove('flex');
+    }
+
+    // 3. Transformamos el Dashboard Central
+    const videoPlaceholder = document.getElementById('video-placeholder');
+    const mainImg = document.getElementById('main-img');
+    const plantTag = document.getElementById('plant-tag');
+
+    if (videoPlaceholder) videoPlaceholder.classList.add('hidden'); // Quitamos el texto de espera
+    if (mainImg) mainImg.classList.remove('hidden'); // Mostramos la imagen de la planta
+    if (plantTag) plantTag.innerText = finalName; // Ponemos el nombre que eligió el usuario
+
+}
+
+// ==========================================================
+// EVENT ROUTER CENTRALIZADO (PATRON DE DELEGACION)
+// ==========================================================
+
+// Modal ID map for close-module data-target resolution
+const MODAL_IDS = {
+    'analysis': 'analysis-modal',
+    'contact': 'contact-modal',
+    'addPlant': 'add-plant-modal',
+    'history': 'history-modal',
+    'profile': 'user-profile-modal',
+    'delete': 'delete-account-modal',
+};
+
+function handleSwitchField(target) {
+    const viewId = target.getAttribute('data-target');
+    if (!viewId) return;
+
+    // Pause health polling when leaving monitoreo view
+    if (typeof pausePolling === 'function') pausePolling();
+
+    // Delegate to navigation.js
+    if (typeof window.switchFieldView === 'function') {
+        window.switchFieldView(viewId);
+    }
+
+    // Resume health polling only when monitoreo is active
+    if (viewId === 'view-monitoreo' && typeof resumePolling === 'function') {
+        resumePolling();
+    }
+
+    // Initialize bindings panel when IoT view is activated
+    if (viewId === 'view-iot') {
+        initBindingsPanel();
+    }
+
+    // Update sidebar button highlight (data-action based, not onclick)
+    document.querySelectorAll('nav button[data-action="switch-field"]').forEach(btn => {
+        if (btn.getAttribute('data-target') === viewId) {
+            btn.classList.remove('text-mole-dim');
+            btn.classList.add('text-mole-cyan');
+        } else {
+            btn.classList.remove('text-mole-cyan');
+            btn.classList.add('text-mole-dim');
+        }
+    });
+}
+
+function handleToggleDropdown(target) {
+    const dropdownId = target.getAttribute('data-target');
+    if (!dropdownId) return;
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+    dropdown.classList.toggle('hidden');
+
+    // Close on outside click (one-shot)
+    if (!dropdown.classList.contains('hidden')) {
+        const closeOnOutside = (e) => {
+            if (!dropdown.contains(e.target) && !target.contains(e.target)) {
+                dropdown.classList.add('hidden');
+                document.removeEventListener('click', closeOnOutside);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeOnOutside), 0);
+    }
+}
+
+function handleCloseModule(target) {
+    const key = target.getAttribute('data-target');
+    const modalId = MODAL_IDS[key] || key;
+    if (typeof closeModalWithTV === 'function') {
+        closeModalWithTV(modalId);
+    } else {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+}
+
+const ActionMap = {
+    'type:objetivo': () => typeContent('objetivo'),
+    'type:vision': () => typeContent('vision'),
+    'type:flora': () => loadFloraSearch(),
+    'system:start': () => startSystem(),
+
+    // Auth Router Updates
+    'auth:login': () => attemptLogin(),
+    'auth:register': () => submitRegistration(),
+    'nav:toggle-register': () => toggleAuthForm('register'),
+    'nav:toggle-login': () => toggleAuthForm('login'),
+    'auth:forgot': () => typeof forgotPassword === 'function' && forgotPassword(),
+
+    'mlops:train-rag': () => typeof trainRagModel === 'function' && trainRagModel(),
+    'admin:create-operator': () => openUserCreationModal(),
+    'admin:add-plant': () => openAdminAddPlantModal(),
+    'nav:logout': () => logout(),
+    'nav:return-override': () => returnToOverride(),
+    'modal:close-iot': () => closeModalWithTV('iot-wizard-modal'),
+    'iot:finalize': () => closeIotAndShowPlantBtn(),
+    'report:download': (target) => handleReportDownload(target),
+    'menu:toggle-cultivos': () => toggleCultivosMenu(),
+    'chat:new': () => typeof chat !== 'undefined' && chat.clearChatHistory ? chat.clearChatHistory() : console.warn("Modulo de chat no cargado."),
+    'chat:history': () => {
+        const toast = document.getElementById('toast-container');
+        if (toast) {
+            toast.innerHTML = `<div class="bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse"><p class="text-mole-cyan font-mono text-[11px] uppercase tracking-widest">&gt; HISTORIAL (EN CONSTRUCCION)</p></div>`;
+            setTimeout(() => toast.innerHTML = '', 3000);
+        }
+    },
+
+    // -- FE-01: Orphan action handlers --
+    'switch-field': (target) => handleSwitchField(target),
+    'toggle-dropdown': (target) => handleToggleDropdown(target),
+    'toggle-theme': () => typeof window.toggleTheme === 'function' && window.toggleTheme(),
+    'open-chat': () => typeof chat !== 'undefined' && chat.openChat ? chat.openChat() : (typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null),
+    'close-chat': () => typeof chat !== 'undefined' && chat.closeChat ? chat.closeChat() : (typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null),
+    'close-module': (target) => handleCloseModule(target),
+    'hide-panel': (target) => {
+        const panelId = target.getAttribute('data-target');
+        const panel = panelId ? document.getElementById(panelId) : null;
+        if (panel) { panel.classList.add('hidden'); panel.classList.remove('flex'); }
+    },
+    'open-delete-modal': () => {
+        const modal = document.getElementById('delete-account-modal');
+        if (modal) { modal.classList.remove('hidden'); modal.classList.add('flex'); }
+    },
+    'update-plant': () => typeof updatePlantFromModal === 'function' && updatePlantFromModal(),
+    'next-iot-step': (target) => {
+        const step = target.getAttribute('data-target');
+        if (typeof advanceIotStep === 'function') advanceIotStep(step);
+    },
+
+    // -- FE-03: Binding CRUD actions --
+    'binding:delete': (target) => {
+        const bindingId = target.getAttribute('data-binding-id');
+        const deviceId  = target.getAttribute('data-device-id');
+        if (bindingId && deviceId) deleteBinding(bindingId, deviceId);
+    },
+};
+
+document.body.addEventListener('click', (event) => {
+    // Buscamos si el elemento clickeado (o alguno de sus padres) tiene un data-action
+    const target = event.target.closest('[data-action]');
+    if (!target) return;
+
+    const action = target.getAttribute('data-action');
+    if (ActionMap[action]) {
+        event.preventDefault();
+        try {
+            ActionMap[action](target);
+        } catch (error) {
+            console.error(`[Router] Fallo al ejecutar acción: ${action}`, error);
+        }
+    } else {
+        console.warn(`[Router] Acción no registrada: ${action}`);
+    }
+});
+
+// ==========================================================
+// HANDLER PARA DESCARGA DE REPORTES VÍA ROUTER
+// ==========================================================
+async function handleReportDownload(btnElement) {
+    if (!btnElement) return;
+
+    const reportId = btnElement.getAttribute('data-report-id');
+    if (!reportId) {
+        console.error('[Router] Missing data-report-id attribute');
+        return;
+    }
+
+    // Reutilizamos la función existente downloadReportPDF con el elemento button
+    await menus.downloadReportPDF(reportId, btnElement);
+}
+
+// ==========================================================
+// BUSCADOR DE FLORA MEXICANA (INTEGRACIÓN REAL CON API)
+// ==========================================================
+let searchTimeout = null;
+// AbortController for the active flora search request (ensures cancellation of previous requests)
+let floraSearchAbortController = null;
+
+function loadFloraSearch() {
+    console.debug('[Router] loadFloraSearch invoked');
+    const container = document.getElementById('typewriter-output');
+    if (!container) return;
+
+    // 1. Detener cualquier animación de tipeo zombi que esté corriendo
+    if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
+
+    // 2. Inyectar la interfaz del buscador estilo Terminal
+    container.textContent = '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex flex-col h-full w-full min-h-[200px]';
+
+    const topBar = document.createElement('div');
+    topBar.className = 'flex items-center border-b border-[#00e5ff]/50 pb-2 mb-4';
+
+    const promptSpan = document.createElement('span');
+    promptSpan.className = 'mr-2 animate-pulse';
+    promptSpan.textContent = '>_';
+    topBar.appendChild(promptSpan);
+
+    const inputField = document.createElement('input');
+    inputField.type = 'text';
+    inputField.id = 'flora-search-input';
+    inputField.className = 'bg-transparent border-none outline-none text-[#00e5ff] font-mono w-full placeholder-[#00e5ff]/30';
+    inputField.placeholder = 'Buscar espécimen (ej. Agave, Cempasúchil)...';
+    inputField.autocomplete = 'off';
+    topBar.appendChild(inputField);
+
+    wrapper.appendChild(topBar);
+
+    // ---- Zero‑state helper -------------------------------------------------
+    function renderZeroState(container) {
+        const suggestions = ['Nopal', 'Agave Tequilana', 'Maíz', 'Cacao', 'Vainilla'];
+        container.innerHTML = '';
+        const chipContainer = document.createElement('div');
+        chipContainer.className = 'flex flex-wrap gap-2 p-2';
+        suggestions.forEach(text => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = text;
+            btn.className = 'inline-flex items-center px-3 py-1 text-xs font-medium text-[#00e5ff] bg-[#00e5ff]/10 rounded-full border border-[#00e5ff]/30 cursor-pointer hover:bg-[#00e5ff]/20';
+            btn.addEventListener('click', () => {
+                const input = document.getElementById('flora-search-input');
+                if (input) {
+                    input.value = text;
+                    // Trigger search programmatically (reuse existing searchPlant)
+                    searchPlant(text);
+                    input.focus();
+                }
+            });
+            chipContainer.appendChild(btn);
+        });
+        container.appendChild(chipContainer);
+    }
+
+
+    const resultsDiv = document.createElement('div');
+    resultsDiv.id = 'flora-search-results';
+    resultsDiv.className = 'flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin';
+
+    // Render suggested endemic‑plant chips when no query yet
+    renderZeroState(resultsDiv);
+
+    wrapper.appendChild(resultsDiv);
+    container.appendChild(wrapper);
+
+    // 3. Activar el campo de texto y el listener con Debounce (300ms)
+    const input = document.getElementById('flora-search-input');
+    input.focus();
+
+    // Ensure any previous pending abort controller is canceled (defensive)
+    if (floraSearchAbortController) {
+        try { floraSearchAbortController.abort(); } catch (err) { /* ignore */ }
+        floraSearchAbortController = null;
+    }
+
+    // Input listener uses debounce; responses are tied to an AbortController in searchPlant
+    const onInput = (e) => {
+        clearTimeout(searchTimeout);
+        const query = e.target.value.trim();
+        const resultsContainer = document.getElementById('flora-search-results');
+
+        if (query.length < 2) {
+            // Show zero‑state chips again when the query is too short
+            renderZeroState(resultsContainer);
+            return;
+        }
+
+        resultsContainer.textContent = '';
+        const loading = document.createElement('p');
+        loading.className = 'text-[#00e5ff] text-sm animate-pulse';
+        loading.textContent = 'Consultando servidor central...';
+        resultsContainer.appendChild(loading);
+
+        searchTimeout = setTimeout(() => {
+            searchPlant(query);
+        }, 300);
+    };
+
+    // Remove any previous identical listener to avoid duplicates
+    input.removeEventListener('input', input._floraListener || (() => { }));
+    input.addEventListener('input', onInput);
+    input._floraListener = onInput;
+}
+
+async function searchPlant(query) {
+    const resultsContainer = document.getElementById('flora-search-results');
+
+    // Cancel any previous inflight request for flora search
+    if (floraSearchAbortController) {
+        try { floraSearchAbortController.abort(); } catch (err) { /* ignore */ }
+        floraSearchAbortController = null;
+    }
+
+    try {
+        floraSearchAbortController = new AbortController();
+        const data = await window.moleApi.get('plants/search/?q=' + encodeURIComponent(query), {}, { signal: floraSearchAbortController.signal });
+        const results = Array.isArray(data) ? data : (data.results || []);
+
+        renderPlantResults(results);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            // Request was intentionally aborted; ignore silently
+            return;
+        }
+        console.error('[Flora Search] Falla de enlace:', error);
+        resultsContainer.textContent = '';
+        const alertEl = document.createElement('p');
+        alertEl.className = 'text-red-500 text-sm bg-red-500/10 p-2 border border-red-500/30';
+        alertEl.textContent = 'ERROR: Falla de enlace con la base de datos botánica.';
+        resultsContainer.appendChild(alertEl);
+    } finally {
+        // Clear controller reference so future searches can create a new one
+        floraSearchAbortController = null;
+    }
+}
+
+function renderPlantResults(results) {
+    const container = document.getElementById('flora-search-results');
+    container.textContent = '';
+
+    if (!results || results.length === 0) {
+        const none = document.createElement('p');
+        none.className = 'text-[#00e5ff]/70 text-sm border border-[#00e5ff]/20 p-2';
+        none.textContent = 'Ningún espécimen coincide con los parámetros.';
+        container.appendChild(none);
+        return;
+    }
+
+    // Helper to safely extract fields
+    const safe = (plant, ...keys) => {
+        for (const k of keys) {
+            if (plant[k]) return String(plant[k]);
+        }
+        return '';
+    };
+
+    results.forEach(plant => {
+        const name = safe(plant, 'name', 'nombre', 'common_name') || 'Desconocida';
+        const scientific = safe(plant, 'scientific_name', 'nombre_cientifico') || '';
+        const desc = safe(plant, 'description', 'descripcion') || 'Sin registro en la base de datos.';
+        // Backend sends formatted strings: "humedad", "temperatura", "ph"
+        const humidity = plant.humedad || '';
+        const temperature = plant.temperatura || '';
+        const ph = plant.ph || '';
+        const isProtected = plant.is_protected_nom059 === true || plant.is_protected_nom059 === 'true';
+        const warning = isProtected ?
+            `ATENCIÓN: Especie protegida por NOM-059 (Categoría: ${plant.protection_category || 'Especial'}). Extracción ilegal sancionada.` : '';
+
+        const card = document.createElement('div');
+        card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
+
+        const title = document.createElement('h3');
+        title.className = 'font-bold text-[#00e5ff] text-sm tracking-widest';
+        title.textContent = name.toUpperCase();
+        card.appendChild(title);
+
+        if (scientific) {
+            const sci = document.createElement('p');
+            sci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
+            sci.textContent = scientific;
+            card.appendChild(sci);
+        }
+
+        const snippet = document.createElement('p');
+        snippet.className = 'text-xs text-[#00e5ff]/90 opacity-80';
+        snippet.style.display = '-webkit-box';
+        snippet.style.webkitLineClamp = '2';
+        snippet.style.webkitBoxOrient = 'vertical';
+        snippet.style.overflow = 'hidden';
+        snippet.textContent = desc;
+        card.appendChild(snippet);
+
+        // Agronomic parameters (humidity, temperature, pH)
+        if (humidity || temperature || ph) {
+            const params = document.createElement('div');
+            params.className = 'mt-2 flex flex-wrap gap-2';
+
+            if (humidity) {
+                const hum = document.createElement('span');
+                hum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                hum.textContent = `💧 ${humidity}`;
+                params.appendChild(hum);
+            }
+            if (temperature) {
+                const temp = document.createElement('span');
+                temp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                temp.textContent = `🌡️ ${temperature}`;
+                params.appendChild(temp);
+            }
+            if (ph) {
+                const phSpan = document.createElement('span');
+                phSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                phSpan.textContent = `⚗️ pH: ${ph}`;
+                params.appendChild(phSpan);
+            }
+            card.appendChild(params);
+        }
+
+        // NOM-059 Warning (if protected)
+        if (isProtected && warning) {
+            const alert = document.createElement('div');
+            alert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] leading-relaxed';
+            alert.textContent = warning;
+            card.appendChild(alert);
+        }
+
+        // Build expanded view on demand and restore original when closed
+        const buildExpanded = () => {
+            // Clear card
+            while (card.firstChild) card.removeChild(card.firstChild);
+
+            const eTitle = document.createElement('h3');
+            eTitle.className = 'font-bold text-[#00e5ff] text-sm tracking-widest border-b border-[#00e5ff]/30 pb-1 mb-2';
+            eTitle.textContent = name.toUpperCase();
+            card.appendChild(eTitle);
+
+            // Add species image if available
+            if (plant.image_url) {
+                const eImage = document.createElement('img');
+                eImage.className = 'w-full h-48 object-cover rounded border border-[#00e5ff]/30 my-2';
+                eImage.src = plant.image_url;
+                eImage.alt = name + ' - imagen botánica';
+                eImage.onerror = function () {
+                    this.onerror = null; // evitar loop infinito
+                    this.src = '/static/assets/topo.png';
+                    this.alt = 'Sin imagen disponible';
+                };
+                card.appendChild(eImage);
+            }
+
+            if (scientific) {
+                const eSci = document.createElement('p');
+                eSci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
+                eSci.textContent = scientific;
+                card.appendChild(eSci);
+            }
+
+            const eDesc = document.createElement('p');
+            eDesc.className = 'text-xs text-[#00e5ff] leading-relaxed';
+            eDesc.textContent = desc;
+            card.appendChild(eDesc);
+
+            // Agronomic parameters in expanded view (backend sends formatted strings)
+            const eHumidity = plant.humedad || '';
+            const eTemperature = plant.temperatura || '';
+            const ePh = plant.ph || '';
+
+            if (eHumidity || eTemperature || ePh) {
+                const eParams = document.createElement('div');
+                eParams.className = 'mt-2 flex flex-wrap gap-2';
+
+                if (eHumidity) {
+                    const eHum = document.createElement('span');
+                    eHum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    eHum.textContent = `💧 ${eHumidity}`;
+                    eParams.appendChild(eHum);
+                }
+                if (eTemperature) {
+                    const eTemp = document.createElement('span');
+                    eTemp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    eTemp.textContent = `🌡️ ${eTemperature}`;
+                    eParams.appendChild(eTemp);
+                }
+                if (ePh) {
+                    const ePhSpan = document.createElement('span');
+                    ePhSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    ePhSpan.textContent = `⚗️ pH: ${ePh}`;
+                    eParams.appendChild(ePhSpan);
+                }
+                card.appendChild(eParams);
+            }
+
+            // NOM-059 Warning in expanded view
+            if (isProtected && warning) {
+                const eAlert = document.createElement('div');
+                eAlert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] leading-relaxed';
+                eAlert.textContent = warning;
+                card.appendChild(eAlert);
+            }
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'mt-3 text-xs text-[#00e5ff] bg-transparent border border-[#00e5ff] px-2 py-1 hover:bg-[#00e5ff] hover:text-black w-full font-bold tracking-widest transition-all';
+            closeBtn.textContent = '[ CERRAR FICHA ]';
+            closeBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                // Rebuild original summary view
+                while (card.firstChild) card.removeChild(card.firstChild);
+                card.appendChild(title);
+                if (scientific) card.appendChild(document.createElement('p'));
+                card.appendChild(snippet);
+                // Reattach the click to expand
+                card.addEventListener('click', onCardClick);
+    });
+    attachCursor(container);
+
+            card.appendChild(closeBtn);
+        };
+
+        const onCardClick = () => {
+            // Prevent multiple attached listeners
+            card.removeEventListener('click', onCardClick);
+            buildExpanded();
+        };
+
+        card.addEventListener('click', onCardClick);
+        container.appendChild(card);
+    });
+}
+
+// Make modules globally available temporarily for smooth transition
+Object.assign(window, userDashboard);
+Object.assign(window, adminDashboard);
+Object.assign(window, i18n);
+Object.assign(window, dom);
+Object.assign(window, history);
+Object.assign(window, menus);
+Object.assign(window, security);
+Object.assign(window, memory);
+Object.assign(window, iot);
+Object.assign(window, config);
+Object.assign(window, mlops);
+Object.assign(window, vision);
+Object.assign(window, reports);
+Object.assign(window, chat);
+Object.assign(window, supervisor);
+Object.assign(window, crops);
+Object.assign(window, map);
+Object.assign(window, tactical);
+
+// ── Wire ApiService.showToast to Tactical Toast ──────────────────────────
+// This replaces the legacy CSS-dependent toast with our design-system-native one.
+if (window.ApiService) {
+    window.ApiService.showToast = function (message, type) {
+        const typeMap = { error: 'error', warn: 'warn', info: 'info', success: 'success' };
+        window.showTacticalToast(message, typeMap[type] || 'info');
+    };
+}
