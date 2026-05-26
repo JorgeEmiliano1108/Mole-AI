@@ -1,6 +1,6 @@
-// Session manager – tracks real user activity and enforces JWT expiry / inactivity
+// Session manager - tracks real user activity and enforces JWT expiry / inactivity
 // ---------------------------------------------------------------------------
-// This module is imported once (in main.js) so its side‑effects run globally.
+// This module is imported once (in main.js) so its side-effects run globally.
 
 import { getAuthToken, clearAuthToken } from './api/config.js';
 
@@ -18,7 +18,7 @@ function decodeJwtPayload(token) {
     }
 }
 
-// Simple debounce – execute fn after wait ms of no further calls
+// Simple debounce - execute fn after wait ms of no further calls
 function debounce(fn, wait) {
     let timeout;
     return function (...args) {
@@ -30,7 +30,7 @@ function debounce(fn, wait) {
 // Timestamp of the last user interaction (ms since epoch)
 let lastActivityTime = Date.now();
 
-// Update activity timestamp – debounced to avoid flooding on fast events
+// Update activity timestamp - debounced to avoid flooding on fast events
 const recordActivity = debounce(() => {
     lastActivityTime = Date.now();
 }, 300);
@@ -41,15 +41,15 @@ const recordActivity = debounce(() => {
 });
 
 // Configuration (in ms)
-const INACTIVITY_LIMIT = 20 * 60 * 1000; // 20 minutes
-const REFRESH_THRESHOLD = 15 * 60 * 1000; // 15 minutes token age
-const CHECK_INTERVAL = 60 * 1000; // 1 minute
+const INACTIVITY_LIMIT = 20 * 60 * 1000; // 20 minutes
+const REFRESH_THRESHOLD = 15 * 60 * 1000; // 15 minutes token age
+const CHECK_INTERVAL = 60 * 1000; // 1 minute
 
-// Periodic check – runs even if the user is not interacting
+// Periodic check - runs even if the user is not interacting
 const intervalId = setInterval(() => {
     const now = Date.now();
 
-    // 1️⃣ Inactivity timeout → log out immediately
+    // 1. Inactivity timeout -> log out immediately
     if (now - lastActivityTime >= INACTIVITY_LIMIT) {
         clearAuthToken();
         // Also clear ApiService token if present
@@ -61,19 +61,19 @@ const intervalId = setInterval(() => {
         return;
     }
 
-    // 2️⃣ Token refresh – only if we have a token and it is >15 min old
+    // 2. Token refresh - only if we have a token and it is >15 min old
     const token = getAuthToken();
     if (token) {
         const payload = decodeJwtPayload(token);
         if (payload && payload.iat) {
             const tokenAge = now - payload.iat * 1000;
             if (tokenAge >= REFRESH_THRESHOLD) {
-                // Refresh silently – keep UI responsive
+                // Refresh silently - keep UI responsive
                 if (window.ApiService && typeof window.ApiService.post === 'function') {
                     window.ApiService.post('auth/refresh/', {}, {})
                         .then(resp => {
                             if (resp && resp.token) {
-                                // Store the fresh token – ApiService.setToken returns a promise
+                                // Store the fresh token - ApiService.setToken returns a promise
                                 window.ApiService.setToken(resp.token);
                             }
                         })

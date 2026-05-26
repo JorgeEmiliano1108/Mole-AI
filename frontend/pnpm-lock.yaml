@@ -15,6 +15,9 @@ importers:
         specifier: ^1.9.4
         version: 1.9.4
     devDependencies:
+      '@rollup/rollup-linux-x64-musl':
+        specifier: ^4.60.4
+        version: 4.60.4
       autoprefixer:
         specifier: ^10.4.16
         version: 10.5.0(postcss@8.5.15)
@@ -306,7 +309,6 @@ packages:
     resolution: {integrity: sha512-+qfSY27qIrFfI/Hom04KYFw3GKZSGU4lXus51wsb5EuySfFlWRwjkKWoE9emgRw/ukoT4Udsj4W/+xxG8VbPKg==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rollup/rollup-openbsd-x64@4.60.4':
     resolution: {integrity: sha512-VpTfOPHgVXEBeeR8hZ2O0F3aSso+JDWqTWmTmzcQKted54IAdUVbxE+j/MVxUsKa8L20HJhv3vUezVPoquqWjA==}
@@ -857,8 +859,7 @@ snapshots:
   '@rollup/rollup-linux-x64-gnu@4.60.4':
     optional: true
 
-  '@rollup/rollup-linux-x64-musl@4.60.4':
-    optional: true
+  '@rollup/rollup-linux-x64-musl@4.60.4': {}
 
   '@rollup/rollup-openbsd-x64@4.60.4':
     optional: true
