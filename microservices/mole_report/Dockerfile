@@ -1,7 +1,7 @@
 # ==========================================
 # ETAPA 1: BUILDER (Dependencias compiladas para WeasyPrint)
 # ==========================================
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PYTHONDONTWRITEBYTECODE=1
@@ -24,7 +24,7 @@ RUN pip install --upgrade pip && \
 # ==========================================
 # ETAPA 2: DESARROLLO (WeasyPrint Runtime + Hot-reload)
 # ==========================================
-FROM python:3.11-slim as development
+FROM python:3.11-slim AS development
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -52,7 +52,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload
 # ==========================================
 # ETAPA 3: PRODUCCIÓN (Servicio final)
 # ==========================================
-FROM development as production
+FROM development AS production
 
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /srv/ms3_reports

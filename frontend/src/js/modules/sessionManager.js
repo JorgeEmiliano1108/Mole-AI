@@ -81,6 +81,7 @@ const intervalId = setInterval(() => {
                             console.warn('[SessionManager] token refresh failed', err);
                             // If refresh fails the next request will receive a 401 and the UI will handle it.
                         });
+                }
             }
         }
     }

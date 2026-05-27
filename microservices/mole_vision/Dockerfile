@@ -1,7 +1,7 @@
 # ==========================================
 # BASE: Dependencias de OS compartidas
 # ==========================================
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ==========================================
 # BUILDER: Compilación y dependencias
 # ==========================================
-FROM base as builder
+FROM base AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -42,7 +42,7 @@ RUN pip install --upgrade pip setuptools wheel && \
 # ==========================================
 # DESARROLLO (Hot-reload)
 # ==========================================
-FROM base as development
+FROM base AS development
 
 # Copiamos solo el entorno virtual ya compilado
 COPY --from=builder /opt/venv /opt/venv
@@ -54,7 +54,7 @@ CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8001", "--re
 # ==========================================
 # 4. PRODUCCIÓN (Estática, Segura, Optimizada)
 # ==========================================
-FROM base as production
+FROM base AS production
 
 RUN useradd --create-home --shell /bin/bash appuser
 

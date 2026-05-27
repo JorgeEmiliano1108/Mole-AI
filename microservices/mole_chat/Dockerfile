@@ -1,7 +1,7 @@
 # ==========================================
 # ETAPA 1: BUILDER (Descarga y Compilación)
 # ==========================================
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PYTHONDONTWRITEBYTECODE=1
@@ -24,7 +24,7 @@ RUN pip install --upgrade pip setuptools wheel && \
 # ==========================================
 # ETAPA 2: DESARROLLO (Hot-reload y dep. ejecución)
 # ==========================================
-FROM python:3.11-slim as development
+FROM python:3.11-slim AS development
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -48,7 +48,7 @@ CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8002", "--re
 # ==========================================
 # ETAPA 3: PRODUCCIÓN (Runtime Ligero)
 # ==========================================
-FROM development as production
+FROM development AS production
 
 RUN groupadd -r app && useradd -r -g app -m -d /home/app app
 
