@@ -241,19 +241,20 @@ function setupPlantRegistration() {
             btnSubmit.disabled = true;
 
             try {
-                // 1. Create plant
-                const plantRes = await window.ApiService.post('plants/', { nickname });
+                // 1. Create plant mapped by name and physical hardware pin
+                const plantRes = await window.ApiService.post('plants/', { 
+                    nickname: nickname,
+                    hardware_pin: pin 
+                });
                 if (!plantRes || !plantRes.id) throw new Error("Fallo al crear la planta");
 
-                // 2. If device is selected, bind it
+                // 2. If device is selected, also create the relational binding
                 if (currentDeviceId) {
                     await window.ApiService.post(`devices/${currentDeviceId}/bindings/`, {
                         hardware_pin: pin,
                         plant_id: plantRes.id
                     });
                     console.log("Hardware binding exitoso para dispositivo " + currentDeviceId);
-                } else {
-                    console.warn("Planta creada pero no hay deviceId para bindear.");
                 }
 
                 formReg.reset();

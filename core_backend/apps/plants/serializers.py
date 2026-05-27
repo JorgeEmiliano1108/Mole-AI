@@ -16,6 +16,7 @@ from rest_framework import serializers
 
 class PlantCreateSerializer(serializers.Serializer):
     nickname = serializers.CharField(max_length=150, required=False, allow_blank=True, allow_null=True)
+    hardware_pin = serializers.CharField(max_length=10, required=False, allow_blank=True, allow_null=True)
     species_id = serializers.UUIDField(required=False, allow_null=True)
 
 

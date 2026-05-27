@@ -96,6 +96,7 @@ class UserPlant(models.Model):
         db_column="species_id",
     )
     nickname = models.TextField(null=True, blank=True)
+    hardware_pin = models.CharField(max_length=10, null=True, blank=True, help_text="Pin físico del sensor en el nodo ESP32")
 
     created_at = models.DateTimeField(auto_now_add=True)
 

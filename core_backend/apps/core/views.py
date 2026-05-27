@@ -479,8 +479,16 @@ def llm_chat_view(request):
             "disclaimer": data.get("disclaimer", "")
         })
 
+    except requests.exceptions.HTTPError as e:
+        status_code = e.response.status_code
+        try:
+            err_detail = e.response.json()
+        except Exception:
+            err_detail = e.response.text
+        logger.error(f"Error HTTP {status_code} desde MS2 Chat: {err_detail}")
+        return Response({"error": "Error en motor de IA", "details": err_detail}, status=status_code)
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error en proxy a MS2 Chat: {e}")
+        logger.error(f"Fallo de red al contactar MS2 Chat: {e}")
         return Response({"error": "No se pudo comunicar con el motor de IA.", "details": str(e)}, status=503)
 
 # --- POLLING GENÉRICO DE TAREAS ---
