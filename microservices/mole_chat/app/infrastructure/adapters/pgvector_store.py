@@ -133,13 +133,14 @@ class PgVectorStore:
             )
         return self._embed_client
 
-    async def _encode_async(self, texts: List[str]) -> List[List[float]]:
+    async def _encode_async(self, texts: List[str], input_type: str = "query") -> List[List[float]]:
         """Generate embeddings via NVIDIA NIM embeddings endpoint (async, non-blocking)."""
         client = self._get_embed_client()
         response = await client.embeddings.create(
             model=self._embed_model,
             input=texts,
             encoding_format="float",
+            extra_body={"input_type": input_type}
         )
         return [item.embedding for item in response.data]
 
@@ -177,7 +178,7 @@ class PgVectorStore:
             return 0
 
         # Encode all chunks in one batch (offloaded to thread pool)
-        embeddings = await self._encode_async(chunks)
+        embeddings = await self._encode_async(chunks, input_type="passage")
 
         # Prepare batch data
         import json as json_module
@@ -210,7 +211,7 @@ class PgVectorStore:
             await self.initialize()
 
         # Encode query
-        query_embedding = await self._encode_async([query])
+        query_embedding = await self._encode_async([query], input_type="query")
         emb_str = "[" + ",".join(str(v) for v in query_embedding[0]) + "]"
 
         async with self._pool.acquire() as conn:
