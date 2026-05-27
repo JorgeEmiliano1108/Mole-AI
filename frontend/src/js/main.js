@@ -844,20 +844,38 @@ const ActionMap = {
 };
 
 document.body.addEventListener('click', (event) => {
-    // Buscamos si el elemento clickeado (o alguno de sus padres) tiene un data-action
     const target = event.target.closest('[data-action]');
     if (!target) return;
 
     const action = target.getAttribute('data-action');
     if (ActionMap[action]) {
         event.preventDefault();
+        const t0 = performance.now();
+        console.time(`[ROUTER] Action: ${action}`);
         try {
-            ActionMap[action](target);
+            const res = ActionMap[action](target);
+            
+            // Check async (H2/H3)
+            if (res instanceof Promise) {
+                res.finally(() => {
+                    const t_net = performance.now();
+                    console.log(`[PERF-NET] Async total for ${action}: ${(t_net - t0).toFixed(2)}ms`);
+                });
+            }
         } catch (error) {
-            console.error(`[Router] Fallo al ejecutar acci\u00f3n: ${action}`, error);
+            console.error(`[Router] Fallo al ejecutar acción: ${action}`, error);
         }
+        
+        // Check UI block (H1)
+        requestAnimationFrame(() => {
+            const t_ui = performance.now();
+            const delay = t_ui - t0;
+            console.log(`[PERF-UI] Sync thread block for ${action}: ${delay.toFixed(2)}ms`);
+            console.timeEnd(`[ROUTER] Action: ${action}`);
+            if (delay > 50) console.warn(`🚨 [H1] JS Main thread block in ${action}! (>50ms)`);
+        });
     } else {
-        console.warn(`[Router] Acci\u00f3n no registrada: ${action}`);
+        console.warn(`[Router] Acción no registrada: ${action}`);
     }
 });
 
