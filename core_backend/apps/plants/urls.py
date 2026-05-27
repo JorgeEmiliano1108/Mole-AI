@@ -17,6 +17,7 @@ from . import views
 app_name = "plants"
 
 urlpatterns = [
+    path("", views.plant_list_view, name="plant_list"),  # GET/POST /api/v1/plants/
     path("search/", views.species_search_view, name="species_search"),
     path("flora/", views.flora_create_view, name="flora_create"),
 ]
