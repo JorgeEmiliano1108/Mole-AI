@@ -1,4 +1,4 @@
-// 1. Guardián de Sesión Inicial (Inmediato)
+// 1. Guardi n de Sesi n Inicial (Inmediato)
 (function checkInitialSession() {
     const token = localStorage.getItem('mole_jwt') || localStorage.getItem('moleia_token');
     if (token && window.location.pathname.includes('login.html')) {
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// 3. BFCache Guard (Restauración desde historial)
+// 3. BFCache Guard (Restauraci n desde historial)
 window.addEventListener('pageshow', (event) => {
     if (event.persisted && window.location.pathname.includes('login.html')) {
         ['user-input', 'pass-input', 'reg-username', 'reg-email', 'reg-password', 'reg-pass-confirm'].forEach(id => {

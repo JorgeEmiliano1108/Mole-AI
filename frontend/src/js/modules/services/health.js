@@ -1,5 +1,5 @@
 // ==========================================================
-// ISSUE-04: Device Health — Polling + Dual View (Botánico / SRE)
+// ISSUE-04: Device Health - Polling + Dual View (Bot nico / SRE)
 // ==========================================================
 import { getAuthToken } from '../api/config.js';
 
@@ -9,7 +9,7 @@ const LS_VIEW_MODE_KEY = 'moleia_health_view_mode';
 let pollTimer = null;
 let currentDeviceId = null;
 
-// ── Public API ──────────────────────────────────────────────
+//    Public API                                               
 
 let _healthInitialized = false;
 
@@ -35,7 +35,7 @@ window.addEventListener('userRoleReady', (e) => {
 });
 
 export function initHealthView(isSre = false) {
-    // Enforce botánico view if not SRE
+    // Enforce bot nico view if not SRE
     const saved = isSre ? (localStorage.getItem(LS_VIEW_MODE_KEY) || 'botanico') : 'botanico';
     setViewMode(saved);
 
@@ -61,7 +61,7 @@ export function initHealthView(isSre = false) {
     const toggleContainer = document.getElementById('health-toggle-container');
     if (!currentDeviceId) {
         if (sectionContainer) sectionContainer.classList.add('hidden');
-        if (toggleContainer) toggleContainer.classList.add('hidden'); // hide toggles in zero‑state
+        if (toggleContainer) toggleContainer.classList.add('hidden'); // hide toggles in zero state
     } else {
         if (sectionContainer) sectionContainer.classList.remove('hidden');
         if (toggleContainer) toggleContainer.classList.remove('hidden');
@@ -85,7 +85,7 @@ export function setDeviceId(id) {
     }
 }
 
-// ── Internals ───────────────────────────────────────────────
+//    Internals                                                
 
 function startPolling() {
     stopPolling();
@@ -191,7 +191,7 @@ async function fetchHealth() {
     }
 }
 
-// ── Renderers ───────────────────────────────────────────────
+//    Renderers                                                
 
 function renderPlaceholder() {
     const emptyState = document.getElementById('monitoreo-empty-state');
@@ -279,7 +279,7 @@ function renderBotanico(d) {
     if (!panel) return;
 
     const statusColor = { online: '#22c55e', warning: '#f59e0b', offline: '#ef4444' }[d.status] || '#6b7280';
-    const statusLabel = { online: 'SALUDABLE', warning: 'ATENCION', offline: 'SIN SEÑAL' }[d.status] || 'DESCONOCIDO';
+    const statusLabel = { online: 'SALUDABLE', warning: 'ATENCION', offline: 'SIN SE\u00d1AL' }[d.status] || 'DESCONOCIDO';
 
     let lastSeenStr = 'Sin datos';
     if (d.last_seen_delta_seconds !== null && d.last_seen_delta_seconds !== undefined) {

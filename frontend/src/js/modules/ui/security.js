@@ -4,7 +4,7 @@
 
 /**
  * 1. RENDERIZADO SEGURO: Inyecta mensajes del usuario o del sistema al chat.
- * Emplea textContent estrictamente para evitar inyección de código (XSS).
+ * Emplea textContent estrictamente para evitar inyecci n de c digo (XSS).
  */
 export function appendChatMessage(containerId, role, text, opts = {}) {
     // Acepta tanto el ID en string como el elemento HTML directo
@@ -34,7 +34,7 @@ export function appendChatMessage(containerId, role, text, opts = {}) {
         ? 'bg-[#00e5ff]/10 border border-[#00e5ff]/30 p-2 self-end max-w-[85%]' 
         : 'p-2 max-w-[95%] self-start';
 
-    // Inyectamos el texto de forma segura (NUNCA innerHTML aquí)
+    // Inyectamos el texto de forma segura (NUNCA innerHTML aqu )
     const textNode = document.createElement('div');
     textNode.className = `chat-text text-xs md:text-sm font-mono break-words ${role === 'user' ? 'text-white text-right' : 'text-white/80'}`;
     textNode.textContent = text || '';
@@ -43,14 +43,14 @@ export function appendChatMessage(containerId, role, text, opts = {}) {
     msg.appendChild(wrapper);
     container.appendChild(msg);
     
-    // Auto-scroll táctico hacia el fondo
+    // Auto-scroll t ctico hacia el fondo
     container.scrollTop = container.scrollHeight;
     return msg;
 }
 
 /**
- * 2. RENDERIZADO MULTILÍNEA DEL MOTOR LLM: 
- * Procesa la respuesta de la IA línea por línea manteniendo el formato y la seguridad.
+ * 2. RENDERIZADO MULTIL NEA DEL MOTOR LLM: 
+ * Procesa la respuesta de la IA l nea por l nea manteniendo el formato y la seguridad.
  */
 export function appendMultilineBotMessage(containerId, answer, tacticalCount = 0) {
     const container = typeof containerId === 'string' ? document.getElementById(containerId) : containerId;
@@ -59,11 +59,11 @@ export function appendMultilineBotMessage(containerId, answer, tacticalCount = 0
     const wrapper = document.createElement('div');
     wrapper.className = 'ai-message bot border-l-2 border-[#00e5ff] pl-3 mb-6 flex flex-col gap-1 max-w-[95%]';
 
-    // Alerta táctica (si el backend detectó anomalías críticas)
+    // Alerta t ctica (si el backend detect  anomal as cr ticas)
     if (tacticalCount > 0) {
         const badge = document.createElement('div');
         badge.className = 'text-red-500 font-bold border border-red-500 bg-red-500/10 px-2 py-1 text-[10px] tracking-widest mb-2 self-start uppercase animate-pulse';
-        badge.textContent = `> ALERTA TÁCTICA: ${tacticalCount} ANOMALÍA(S) DETECTADA(S)`;
+        badge.textContent = `> ALERTA T\u00c1CTICA: ${tacticalCount} ANOMAL\u00cdA(S) DETECTADA(S)`;
         wrapper.appendChild(badge);
     }
 
@@ -71,7 +71,7 @@ export function appendMultilineBotMessage(containerId, answer, tacticalCount = 0
     const lines = String(answer || '').split('\n');
     
     lines.forEach(line => {
-        // Manejo de saltos de línea vacíos (doble enter de la IA)
+        // Manejo de saltos de l nea vac os (doble enter de la IA)
         if (line.trim() === '') {
             const spacer = document.createElement('div');
             spacer.className = "h-2"; 

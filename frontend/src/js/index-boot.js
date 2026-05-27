@@ -1,7 +1,7 @@
 // =============================================================================
-// Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+// Copyright (C) 2024-2026 Mole.AI - All Rights Reserved.
 // =============================================================================
-// index-boot.js — Bootstrap configuration for index.html (Landing Page)
+// index-boot.js - Bootstrap configuration for index.html (Landing Page)
 // Extracted from inline <script> for CSP/SoC compliance.
 // =============================================================================
 
@@ -30,7 +30,7 @@ window.toggleTheme = toggleTheme;
 // BFCache Guard for index.html
 window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
-        console.warn('[Index] Página restaurada de BFCache, re-validando...');
+        console.warn('[Index] P\u00e1gina restaurada de BFCache, re-validando...');
         // El index no requiere auth, pero limpiamos cualquier estado residual
     }
 });

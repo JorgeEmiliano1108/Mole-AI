@@ -1,6 +1,6 @@
 /**
- * Módulo de Privacidad (LFPDPPP)
- * Controla la visualización del Aviso de Privacidad la primera vez que se accede a la app.
+ * M dulo de Privacidad (LFPDPPP)
+ * Controla la visualizaci n del Aviso de Privacidad la primera vez que se accede a la app.
  */
 
 export class PrivacyBanner {
@@ -34,7 +34,7 @@ export class PrivacyBanner {
         strong.textContent = 'AVISO DE PRIVACIDAD (LFPDPPP):';
         contentDiv.appendChild(strong);
         
-        const textNode = document.createTextNode(' Mole.AI recopila y procesa datos telemétricos e imágenes exclusivamente con fines de diagnóstico y monitoreo agrícola. Sus datos están protegidos bajo estándares de cifrado (Zero-Trust) y no serán compartidos con terceros sin consentimiento explícito. Al continuar usando esta plataforma, acepta nuestras políticas de privacidad y manejo de datos.');
+        const textNode = document.createTextNode(' Mole.AI recopila y procesa datos telem\u00e9tricos e im\u00e1genes exclusivamente con fines de diagn\u00f3stico y monitoreo agr\u00edcola. Sus datos est\u00e1n protegidos bajo est\u00e1ndares de cifrado (Zero-Trust) y no ser\u00e1n compartidos con terceros sin consentimiento expl\u00edcito. Al continuar usando esta plataforma, acepta nuestras pol\u00edticas de privacidad y manejo de datos.');
         contentDiv.appendChild(textNode);
         
         const btn = document.createElement('button');
@@ -60,5 +60,5 @@ export class PrivacyBanner {
     }
 }
 
-// Inicializar automáticamente al cargar el script
+// Inicializar autom ticamente al cargar el script
 export const privacyBanner = new PrivacyBanner();

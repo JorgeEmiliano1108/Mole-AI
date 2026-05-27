@@ -3,24 +3,24 @@
 // ==========================================================
 
 /**
- * ESTADO VACÍO: Limpia el dashboard para usuarios sin cultivos.
+ * ESTADO VAC O: Limpia el dashboard para usuarios sin cultivos.
  */
 export function setEmptyDashboardState() {
     // Ponemos los sensores en espera
     document.getElementById('txt-hum').innerText = '--%';
-    document.getElementById('txt-temp').innerText = '--°C';
+    document.getElementById('txt-temp').innerText = '--\u00b0C';
     document.getElementById('txt-ph').innerText = '--';
     document.getElementById('txt-uv').innerText = 'N/A';
     
-    // Alerta de sin señal en el tag superior
+    // Alerta de sin se al en el tag superior
     const plantTag = document.getElementById('plant-tag');
     if (plantTag) {
-        plantTag.innerText = 'SIN SEÑAL';
+        plantTag.innerText = 'SIN SE\u00d1AL';
         plantTag.classList.add('text-red-500', 'animate-pulse');
         plantTag.classList.remove('text-[#00e5ff]');
     }
     
-    // Deshabilitar botón de análisis
+    // Deshabilitar bot n de an lisis
     const btnAnalysis = document.getElementById('btn-analysis');
     if(btnAnalysis) {
         btnAnalysis.innerText = 'ESPERANDO DATOS...';
@@ -28,7 +28,7 @@ export function setEmptyDashboardState() {
         btnAnalysis.classList.add('opacity-50', 'cursor-not-allowed');
     }
     
-    // Manejo visual de la cámara (Imagen vs No Señal)
+    // Manejo visual de la c mara (Imagen vs No Se al)
     const mainImgContainer = document.getElementById('main-img');
     if (mainImgContainer) {
         const parentContainer = mainImgContainer.parentElement;
@@ -81,7 +81,7 @@ export function closeAddPlantModal() {
 }
 
 /**
- * REGISTRO: Envía el nuevo cultivo al backend estrictamente.
+ * REGISTRO: Env a el nuevo cultivo al backend estrictamente.
  */
 async function registerNewPlant() {
     const plantNameInput = document.getElementById('new-plant-name');
@@ -92,7 +92,7 @@ async function registerNewPlant() {
     const currentUser = localStorage.getItem('moleia_current_user');
 
     if(!plantName) {
-        alert("ERROR: El espécimen requiere un identificador.");
+        alert("ERROR: El esp\u00e9cimen requiere un identificador.");
         return;
     }
 
@@ -116,31 +116,31 @@ async function registerNewPlant() {
         });
 
         if (response.ok) {
-            console.log(`> [ OK ] ${safePlantName.toUpperCase()} añadido a la base de datos central.`);
+            console.log(`> [ OK ] ${safePlantName.toUpperCase()} a\u00f1adido a la base de datos central.`);
             closeAddPlantModal();
             
-            // Forzamos la sincronización con el backend para descargar el inventario actualizado
+            // Forzamos la sincronizaci n con el backend para descargar el inventario actualizado
             if (typeof syncUserPlants === 'function') {
                 await syncUserPlants();
             }
             
-            // Recargamos o actualizamos la interfaz con los datos que mandó el servidor
+            // Recargamos o actualizamos la interfaz con los datos que mand  el servidor
             if (typeof updatePlant === 'function') {
                 updatePlant(safePlantName);
             } else {
                 location.reload(); 
             }
         } else {
-            throw new Error("El servidor rechazó el nuevo espécimen. Código de error: " + response.status);
+            throw new Error("El servidor rechaz\u00f3 el nuevo esp\u00e9cimen. C\u00f3digo de error: " + response.status);
         }
     } catch (error) {
-        console.error("> [ ERROR CRÍTICO ] Fallo de comunicación con el backend:", error);
+        console.error("> [ ERROR CR\u00cdTICO ] Fallo de comunicaci\u00f3n con el backend:", error);
         alert("ERROR: No se pudo conectar con el servidor central. El registro fue abortado.");
     }
 }
 
 /**
- * PARCHE DE ACTUALIZACIÓN: Restaura la UI cuando hay datos.
+ * PARCHE DE ACTUALIZACI N: Restaura la UI cuando hay datos.
  */
 export const originalUpdatePlant = typeof updatePlant !== 'undefined' ? updatePlant : () => {};
 
@@ -157,7 +157,7 @@ export function updatePlant(name) {
     
     const btnAnalysis = document.getElementById('btn-analysis');
     if(btnAnalysis) {
-        btnAnalysis.innerText = '[ ANÁLISIS DETALLADO ]';
+        btnAnalysis.innerText = '[ AN\u00c1LISIS DETALLADO ]';
         btnAnalysis.disabled = false;
         btnAnalysis.classList.remove('opacity-50', 'cursor-not-allowed');
     }
@@ -168,6 +168,6 @@ export function updatePlant(name) {
         plantTag.classList.add('text-[#00e5ff]');
     }
 
-    // Ejecutamos la lógica original
+    // Ejecutamos la l gica original
     originalUpdatePlant(name);
 }

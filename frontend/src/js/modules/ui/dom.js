@@ -1,5 +1,5 @@
 /**
- * Utilidades seguras de manipulación del DOM
+ * Utilidades seguras de manipulaci n del DOM
  * Reemplaza usos inseguros de innerHTML para prevenir XSS (OWASP A03)
  */
 
@@ -27,7 +27,7 @@ export function createSafeElement(tag, attributes = {}, text = '') {
     
     for (const [key, value] of Object.entries(attributes)) {
         if (key.startsWith('on')) {
-            // Prevenir inserción de handlers inline (e.g., onclick)
+            // Prevenir inserci n de handlers inline (e.g., onclick)
             console.warn(`Intento de inyectar atributo bloqueado: ${key}`);
             continue;
         }
@@ -42,7 +42,7 @@ export function createSafeElement(tag, attributes = {}, text = '') {
 }
 
 /**
- * Vacía el contenido de un elemento de forma segura
+ * Vac a el contenido de un elemento de forma segura
  * @param {HTMLElement | string} element 
  */
 export function safeEmpty(element) {

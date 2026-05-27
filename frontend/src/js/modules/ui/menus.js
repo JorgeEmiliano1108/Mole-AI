@@ -1,11 +1,11 @@
 // ==========================================================
-// 11. FLUJO DE DESCARGA DE REPORTES Y MENÚS [BACKEND ESTRICTO]
+// 11. FLUJO DE DESCARGA DE REPORTES Y MEN S [BACKEND ESTRICTO]
 // ==========================================================
 
 export async function downloadReportPDF(reportId, btnElement) {
     if (!btnElement) return;
 
-    // 1. Cambiamos el estado del botón a "descargando" y lo bloqueamos
+    // 1. Cambiamos el estado del bot n a "descargando" y lo bloqueamos
     const originalText = btnElement.innerText;
     btnElement.innerText = "[ DESCARGANDO... ]";
     btnElement.classList.add('animate-pulse', 'bg-[#00e5ff]/20', 'cursor-not-allowed');
@@ -15,10 +15,10 @@ export async function downloadReportPDF(reportId, btnElement) {
     const token = window.getAuthToken();
 
     try {
-        if (!token) throw new Error("Acceso denegado: Se requiere Token de Autenticación para descargas.");
+        if (!token) throw new Error("Acceso denegado: Se requiere Token de Autenticaci\u00f3n para descargas.");
 
         // ========================================================
-        // 🚀 CONEXIÓN AL BACKEND: Pedir el PDF generado por la IA
+        //   CONEXI N AL BACKEND: Pedir el PDF generado por la IA
         // ========================================================
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/diagnostics/${reportId}/download/`, {
             method: 'GET',
@@ -27,7 +27,7 @@ export async function downloadReportPDF(reportId, btnElement) {
             }
         });
         
-        if (!response.ok) throw new Error(`El servidor rechazó la solicitud. Código: ${response.status}`);
+        if (!response.ok) throw new Error(`El servidor rechaz\u00f3 la solicitud. C\u00f3digo: ${response.status}`);
         
         // Recibimos el archivo binario real (Blob) desde tu servidor
         const blob = await response.blob();
@@ -46,21 +46,21 @@ export async function downloadReportPDF(reportId, btnElement) {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        // Feedback visual de éxito (Se pone verde)
-        btnElement.innerText = "[ ÉXITO ]";
+        // Feedback visual de  xito (Se pone verde)
+        btnElement.innerText = "[ \u00c9XITO ]";
         btnElement.classList.replace('text-[#00e5ff]', 'text-[#00e5ff]');
         btnElement.classList.replace('border-[#00e5ff]', 'border-[#00e5ff]');
 
     } catch (error) {
-        console.error("> [ ERROR CRÍTICO ] Fallo en descarga de reporte:", error);
-        alert(`[!] ERROR: No se pudo verificar la autorización o establecer conexión para el reporte ${reportId}.`);
+        console.error("> [ ERROR CR\u00cdTICO ] Fallo en descarga de reporte:", error);
+        alert(`[!] ERROR: No se pudo verificar la autorizaci\u00f3n o establecer conexi\u00f3n para el reporte ${reportId}.`);
         
         // Feedback visual de error (Se pone rojo)
         btnElement.innerText = "[ FALLO ]";
         btnElement.classList.replace('text-[#00e5ff]', 'text-red-500');
         btnElement.classList.replace('border-[#00e5ff]', 'border-red-500');
     } finally {
-        // 4. Regresamos el botón a la normalidad después de 2 segundos
+        // 4. Regresamos el bot n a la normalidad despu s de 2 segundos
         setTimeout(() => {
             btnElement.innerText = originalText;
             btnElement.classList.remove('animate-pulse', 'bg-[#00e5ff]/20', 'cursor-not-allowed');
@@ -77,7 +77,7 @@ export async function downloadReportPDF(reportId, btnElement) {
 }
 
 // ==========================================================
-// MENÚ DESPLEGABLE DE CULTIVOS (DROPDOWN)
+// MEN  DESPLEGABLE DE CULTIVOS (DROPDOWN)
 // ==========================================================
 export function toggleCultivosMenu() {
     const dropdown = document.getElementById('dropdown-cultivos');
@@ -86,20 +86,20 @@ export function toggleCultivosMenu() {
     }
 }
 
-// Cierra el menú si das clic en cualquier otro lado de la pantalla
+// Cierra el men  si das clic en cualquier otro lado de la pantalla
 window.addEventListener('click', function(e) {
     const dropdown = document.getElementById('dropdown-cultivos');
     
-    // Si el menú no existe o ya está oculto, no hacemos nada
+    // Si el men  no existe o ya est  oculto, no hacemos nada
     if (!dropdown || dropdown.classList.contains('hidden')) return;
 
-    // ¿El usuario hizo clic en el botón que abre el menú?
+    //  El usuario hizo clic en el bot n que abre el men ?
     const isClickInsideBtn = e.target.closest('button[data-action="menu:toggle-cultivos"]');
     
-    // MEJORA: ¿El usuario hizo clic ADENTRO del menú? (Para que no se cierre mientras lo usa)
+    // MEJORA:  El usuario hizo clic ADENTRO del men ? (Para que no se cierre mientras lo usa)
     const isClickInsideMenu = e.target.closest('#dropdown-cultivos');
     
-    // Si no hizo clic ni en el botón ni dentro del menú, lo cerramos
+    // Si no hizo clic ni en el bot n ni dentro del men , lo cerramos
     if (!isClickInsideBtn && !isClickInsideMenu) {
         dropdown.classList.add('hidden');
     }

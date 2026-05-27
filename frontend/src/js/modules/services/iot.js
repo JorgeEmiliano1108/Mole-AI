@@ -1,8 +1,8 @@
 // ==========================================================
-// IoT Provisioning — Tabs, Web Bluetooth & Wi-Fi binding
+// IoT Provisioning - Tabs, Web Bluetooth & Wi-Fi binding
 // ==========================================================
 
-// ── BLE GATT UUIDs (must match ESP32 firmware) ──────────────
+//    BLE GATT UUIDs (must match ESP32 firmware)               
 const BLE_SERVICE_UUID    = '0000fee0-0000-1000-8000-00805f9b34fb';
 const CHAR_SSID_UUID      = '0000abce-0000-1000-8000-00805f9b34fb';
 const CHAR_PASS_UUID      = '0000abcf-0000-1000-8000-00805f9b34fb';
@@ -12,7 +12,7 @@ const CHAR_STATUS_UUID    = '0000abd1-0000-1000-8000-00805f9b34fb';
 let _selectedBleDevice = null;
 let _bleServer         = null;
 
-// ── Tab Switching ───────────────────────────────────────────
+//    Tab Switching                                            
 export function initIoTView() {
     // ---- DIAGNOSTIC LOGS ----
     console.info('[DIAG] initIoTView called. navigator.bluetooth?', !!navigator.bluetooth);
@@ -47,20 +47,20 @@ export function initIoTView() {
         panelW.classList.add('hidden');
     });
 
-    // ── BLE Scan Button ─────────────────────────────────────
+    //    BLE Scan Button                                      
     const btnScan = document.getElementById('btn-ble-scan');
     if (btnScan) btnScan.addEventListener('click', startBleScan);
 
-    // ── BLE Bind Button ─────────────────────────────────────
+    //    BLE Bind Button                                      
     const btnProvBle = document.getElementById('btn-prov-ble');
     if (btnProvBle) btnProvBle.addEventListener('click', provisionViaBle);
 
-    // ── Wi-Fi Bind Button ───────────────────────────────────
+    //    Wi-Fi Bind Button                                    
     const btnProvWifi = document.getElementById('btn-prov-wifi');
     if (btnProvWifi) btnProvWifi.addEventListener('click', provisionViaWifi);
 }
 
-// ── Status Helper ───────────────────────────────────────────
+//    Status Helper                                            
 function setStatus(msg, type = 'info') {
     const container = document.getElementById('prov-status');
     const text      = document.getElementById('prov-status-text');
@@ -78,14 +78,14 @@ function setStatus(msg, type = 'info') {
     text.className = `${colorMap[type] || colorMap.info} text-xs font-mono`;
 }
 
-// ── Web Bluetooth Scan ──────────────────────────────────────
+//    Web Bluetooth Scan                                       
 async function startBleScan() {
     // ---- DIAGNOSTIC LOGS ----
     console.info('[DIAG] navigator.bluetooth available:', !!navigator.bluetooth);
     console.info('[DIAG] page protocol:', location.protocol);
     if (location.protocol !== 'https:') {
         console.warn('[DIAG] Insecure context: Web Bluetooth requires HTTPS or localhost.');
-        setStatus('ADVERTENCIA: Esta página no está en HTTPS; Web Bluetooth puede estar bloqueado.', 'error');
+        setStatus('ADVERTENCIA: Esta p\u00e1gina no est\u00e1 en HTTPS; Web Bluetooth puede estar bloqueado.', 'error');
     }
     // -------------------------
     const list = document.getElementById('ble-device-list');
@@ -126,7 +126,7 @@ async function startBleScan() {
 
     } catch (err) {
         if (err.name === 'NotFoundError') {
-            list.innerHTML = '<p class="text-mole-dim text-[10px] font-mono text-center py-4">[ Ningún dispositivo seleccionado ]</p>';
+            list.innerHTML = '<p class="text-mole-dim text-[10px] font-mono text-center py-4">[ Ning\u00fan dispositivo seleccionado ]</p>';
             setStatus('Escaneo cancelado por el usuario.', 'info');
         } else {
             setStatus('Error BLE: ' + err.message, 'error');
@@ -134,10 +134,10 @@ async function startBleScan() {
     }
 }
 
-// ── BLE Provisioning (GATT Write) ───────────────────────────
+//    BLE Provisioning (GATT Write)                            
 async function provisionViaBle() {
     if (!_selectedBleDevice) {
-        setStatus('ERROR: Ningún dispositivo seleccionado.', 'error');
+        setStatus('ERROR: Ning\u00fan dispositivo seleccionado.', 'error');
         return;
     }
 
@@ -146,7 +146,7 @@ async function provisionViaBle() {
     const token = window.getAuthToken ? window.getAuthToken() : '';
 
     if (!ssid || !pass) {
-        setStatus('ERROR: Ingrese SSID y contraseña en la pestaña Wi-Fi primero.', 'error');
+        setStatus('ERROR: Ingrese SSID y contrase\u00f1a en la pesta\u00f1a Wi-Fi primero.', 'error');
         return;
     }
 
@@ -190,14 +190,14 @@ async function provisionViaBle() {
     }
 }
 
-// ── Wi-Fi Provisioning (API Backend) ────────────────────────
+//    Wi-Fi Provisioning (API Backend)                         
 async function provisionViaWifi() {
     const ssid     = (document.getElementById('prov-ssid')?.value || '').trim();
     const pass     = (document.getElementById('prov-pass')?.value || '').trim();
     const nodeName = (document.getElementById('prov-node-name')?.value || '').trim();
 
     if (!ssid || !pass) {
-        setStatus('ERROR: SSID y contraseña son obligatorios.', 'error');
+        setStatus('ERROR: SSID y contrase\u00f1a son obligatorios.', 'error');
         return;
     }
 

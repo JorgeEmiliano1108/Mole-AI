@@ -1,5 +1,5 @@
 // ==========================================================
-// MÓDULO DE MACHINE LEARNING OPERATIONS (MLOps) & SEGURIDAD
+// M DULO DE MACHINE LEARNING OPERATIONS (MLOps) & SEGURIDAD
 // ==========================================================
 
 // Helper para Exponential Backoff en caso de Error 429 (Too Many Requests)
@@ -20,7 +20,7 @@ async function withBackoff(fn, maxRetries = 3) {
             }
         }
     }
-    throw new Error("Límite de reintentos superado.");
+    throw new Error("L\u00edmite de reintentos superado.");
 }
 
 async function trainRagModel() {
@@ -109,11 +109,11 @@ async function forgotPassword() {
         });
 
         if (response.ok) {
-            alert("> PROTOCOLO DE RECUPERACIÓN INICIADO. Revise su terminal (correo).");
+            alert("> PROTOCOLO DE RECUPERACI\u00d3N INICIADO. Revise su terminal (correo).");
         } else {
             alert("> [ ERROR ] Credencial no encontrada o sistema bloqueado.");
         }
     } catch (e) {
-        alert("> [ ERROR CRÍTICO ] No se pudo contactar al servidor central.");
+        alert("> [ ERROR CR\u00cdTICO ] No se pudo contactar al servidor central.");
     }
 }

@@ -1,12 +1,12 @@
 // ==========================================================
-// 3. ASISTENTE BOTÁNICO (SISTEMA MULTI-MODELO) - 100% FUNCIONAL
+// 3. ASISTENTE BOT NICO (SISTEMA MULTI-MODELO) - 100% FUNCIONAL
 // ==========================================================
 
-// Definición de los 3 Motores de IA (Cerebros)
+// Definici n de los 3 Motores de IA (Cerebros)
 export const IA_ENGINES = {
     CHAT: 'conversational-botanist', // IA de texto y consejos
-    VISION: 'vision-analyzer',       // IA para diagnóstico por foto (Módulo 8)
-    STATS: 'statistical-expert'      // IA para análisis de gráficas y sensores (Módulo 4)
+    VISION: 'vision-analyzer',       // IA para diagn stico por foto (M dulo 8)
+    STATS: 'statistical-expert'      // IA para an lisis de gr ficas y sensores (M dulo 4)
 };
 
 export let chatMessagesData = [];
@@ -26,8 +26,8 @@ export function loadChatHistory() {
     }
     
     if (chatMessagesData.length === 0) {
-        chatMessagesData.push({ type: 'sys', text: '> NÚCLEO IA EN LÍNEA...' });
-        chatMessagesData.push({ type: 'bot', text: 'Saludos, Operador. Mis 3 motores (Chat, Visión y Estadística) están listos.' });
+        chatMessagesData.push({ type: 'sys', text: '> N\u00daCLEO IA EN L\u00cdNEA...' });
+        chatMessagesData.push({ type: 'bot', text: 'Saludos, Operador. Mis 3 motores (Chat, Visi\u00f3n y Estad\u00edstica) est\u00e1n listos.' });
     }
 
     chatMessagesData.forEach(appendMessage);
@@ -57,18 +57,18 @@ export function appendMessage(msg, isTyping = false) {
             
             const typeInterval = setInterval(() => {
                 if (i < textToType.length) {
-                    textDiv.textContent = textToType.substring(0, i + 1) + '█';
+                    textDiv.textContent = textToType.substring(0, i + 1) + '\u2588';
                     i++;
                     chatBox.scrollTop = chatBox.scrollHeight;
                 } else {
                     clearInterval(typeInterval);
-                    textDiv.innerHTML = textToType + '<span class="animate-pulse">█</span>';
+                    textDiv.innerHTML = textToType + '<span class="animate-pulse">\u2588</span>';
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             }, 20);
             return;
         } else {
-            textDiv.innerHTML = '> ' + msg.text.replace('> MOLE-IA: ', '') + '<span class="animate-pulse">█</span>';
+            textDiv.innerHTML = '> ' + msg.text.replace('> MOLE-IA: ', '') + '<span class="animate-pulse">\u2588</span>';
             msgDiv.appendChild(textDiv);
         }
     } else if (msg.type === 'user') {
@@ -95,7 +95,7 @@ export function appendMessage(msg, isTyping = false) {
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Limpiar y crear nueva conversación
+// Limpiar y crear nueva conversaci n
 export function clearChatHistory() {
     chatMessagesData = [];
     localStorage.removeItem('moleia_chat_history_data');
@@ -106,8 +106,8 @@ export function clearChatHistory() {
     const chatBox = document.getElementById('chat-messages');
     if (chatBox) chatBox.textContent = '';
     
-    chatMessagesData.push({ type: 'sys', text: '> NUEVA CONVERSACIÓN INICIADA...' });
-    chatMessagesData.push({ type: 'bot', text: 'He limpiado mi contexto temporal. ¿En qué te ayudo?' });
+    chatMessagesData.push({ type: 'sys', text: '> NUEVA CONVERSACI\u00d3N INICIADA...' });
+    chatMessagesData.push({ type: 'bot', text: 'He limpiado mi contexto temporal. \u00bfEn qu\u00e9 te ayudo?' });
     
     saveChatHistory();
     loadChatHistory();
@@ -186,7 +186,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
         const typingElement = document.getElementById(typingId);
         if(typingElement) typingElement.remove();
 
-        const serverReply = data.answer || data.reply || data.response || "Análisis completado.";
+        const serverReply = data.answer || data.reply || data.response || "An\u00e1lisis completado.";
         chatMessagesData.push({ type: 'bot', text: serverReply });
         appendMessage(chatMessagesData[chatMessagesData.length - 1], true);
         
@@ -216,22 +216,22 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
 }
 
 /**
- * PROTOCOLO DE CONEXIÓN CON OTROS MÓDULOS
+ * PROTOCOLO DE CONEXI N CON OTROS M DULOS
  */
 
-// Se llama desde el Módulo 8 (Cámara)
+// Se llama desde el M dulo 8 (C mara)
 export function requestVisionAnalysis(species) {
     toggleChat();
-    sendChatMessage(`Analiza la salud de mi ${species} basándote en la captura actual.`, IA_ENGINES.VISION);
+    sendChatMessage(`Analiza la salud de mi ${species} bas\u00e1ndote en la captura actual.`, IA_ENGINES.VISION);
 }
 
-// Se llama desde el Módulo 4 (Gráficas)
+// Se llama desde el M dulo 4 (Gr ficas)
 export function requestStatsAnalysis() {
     toggleChat();
-    sendChatMessage(`Genera un reporte analítico de los sensores de la última semana.`, IA_ENGINES.STATS);
+    sendChatMessage(`Genera un reporte anal\u00edtico de los sensores de la \u00faltima semana.`, IA_ENGINES.STATS);
 }
 
-// Listener para el teclado y botón
+// Listener para el teclado y bot n
 document.addEventListener('DOMContentLoaded', () => {
     loadChatHistory();
     document.getElementById('chat-input')?.addEventListener('keypress', function (e) {

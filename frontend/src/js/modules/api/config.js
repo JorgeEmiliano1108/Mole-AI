@@ -1,5 +1,5 @@
 // ==========================================================
-// CONFIGURACIÓN GLOBAL
+// CONFIGURACI N GLOBAL
 // ==========================================================
 window.AppConfig = {
     API_BASE_URL: window.location.origin + '/api/v1/',

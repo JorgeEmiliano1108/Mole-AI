@@ -1,5 +1,5 @@
 // ==========================================================
-// 10. FLUJO DE GEOLOCALIZACIÓN (MAPA Y PERMISOS) [BACKEND ESTRICTO]
+// 10. FLUJO DE GEOLOCALIZACI N (MAPA Y PERMISOS) [BACKEND ESTRICTO]
 // ==========================================================
 // Leaflet loaded via CDN in dashboard.html - uses global L
 
@@ -14,14 +14,14 @@ export let layers = {
     plagas: null
 };
 
-// 1. Pedir permiso de ubicación EXACTA
+// 1. Pedir permiso de ubicaci n EXACTA
 export function requestLocation() {
     if ("geolocation" in navigator) {
         const opcionesGPS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
-                console.log("> UBICACIÓN EXACTA CAPTURADA:", userLocation);
+                console.log("> UBICACI\u00d3N EXACTA CAPTURADA:", userLocation);
                 if (mapInstance) {
                     mapInstance.setView([userLocation.lat, userLocation.lng], 16);
                 }
@@ -47,7 +47,7 @@ export function initMapView() {
             attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 20
         }).addTo(mapInstance);
 
-        // Capas Climáticas (Proxy Local)
+        // Capas Clim ticas (Proxy Local)
         const baseUrl = window.AppConfig?.API_BASE_URL || '/api/v1/';
         
         layers.temp = L.tileLayer(`${baseUrl}weather/tile/temp_new/{z}/{x}/{y}.png`, {
@@ -114,7 +114,7 @@ function setupLayerControls() {
 }
 
 function setupMapInteractivity() {
-    // 1. Clic en espacio vacío: Consultar clima actual
+    // 1. Clic en espacio vac o: Consultar clima actual
     mapInstance.on('click', async (e) => {
         const { lat, lng } = e.latlng;
         const panel = document.getElementById('map-info-panel');
@@ -126,7 +126,7 @@ function setupMapInteractivity() {
         // Estado Loading
         panel.classList.remove('hidden');
         title.innerText = "CLIMA ACTUAL";
-        content.innerHTML = `<div class="text-mole-cyan animate-pulse">Obteniendo telemetría orbital...</div>`;
+        content.innerHTML = `<div class="text-mole-cyan animate-pulse">Obteniendo telemetr\u00eda orbital...</div>`;
 
         try {
             const res = await window.ApiService.get(`weather/current/?lat=${lat}&lon=${lng}`);
@@ -139,12 +139,12 @@ function setupMapInteractivity() {
                 title.innerText = city.toUpperCase();
                 content.innerHTML = `
                     <div class="flex justify-between border-b border-mole-border pb-1">
-                        <span class="text-mole-text-dim">Condición:</span>
+                        <span class="text-mole-text-dim">Condici\u00f3n:</span>
                         <span class="font-bold text-mole-cyan capitalize">${desc}</span>
                     </div>
                     <div class="flex justify-between border-b border-mole-border pb-1">
                         <span class="text-mole-text-dim">Temperatura:</span>
-                        <span class="text-orange-400 font-mono">${temp}°C</span>
+                        <span class="text-orange-400 font-mono">${temp}\u00b0C</span>
                     </div>
                     <div class="flex justify-between border-b border-mole-border pb-1">
                         <span class="text-mole-text-dim">Humedad:</span>
@@ -156,16 +156,16 @@ function setupMapInteractivity() {
                     </div>
                 `;
             } else {
-                throw new Error("Respuesta inválida");
+                throw new Error("Respuesta inv\u00e1lida");
             }
         } catch (error) {
-            title.innerText = "ERROR DE CONEXIÓN";
-            content.innerHTML = `<div class="text-mole-red">Fallo al contactar satélite meteorológico.</div>`;
+            title.innerText = "ERROR DE CONEXI\u00d3N";
+            content.innerHTML = `<div class="text-mole-red">Fallo al contactar sat\u00e9lite meteorol\u00f3gico.</div>`;
         }
     });
 }
 
-// 4. Dibujar los puntos de infección
+// 4. Dibujar los puntos de infecci n
 async function loadMapPins() {
     if (!mapInstance || !layers.plagas) return;
 
@@ -179,7 +179,7 @@ async function loadMapPins() {
         if (!token) throw new Error("Acceso denegado: Se requiere Token.");
         geoData = await window.ApiService.get(`map/hotspots/?user=${currentUser}`);
     } catch (error) {
-        console.error("> [ ERROR CRÍTICO ] Fallo al sincronizar radar táctico:", error);
+        console.error("> [ ERROR CR\u00cdTICO ] Fallo al sincronizar radar t\u00e1ctico:", error);
         return;
     }
 
@@ -194,9 +194,9 @@ async function loadMapPins() {
                 radius: 8, fillColor: color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.8
             });
 
-            // Reemplazo de bindPopup por inyección al Right Panel
+            // Reemplazo de bindPopup por inyecci n al Right Panel
             marker.on('click', (e) => {
-                L.DomEvent.stopPropagation(e); // Evita que se dispare el evento del mapa vacío (clima)
+                L.DomEvent.stopPropagation(e); // Evita que se dispare el evento del mapa vac o (clima)
                 
                 const panel = document.getElementById('map-info-panel');
                 const title = document.getElementById('info-title');

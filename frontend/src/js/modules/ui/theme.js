@@ -15,7 +15,7 @@ export function toggleTheme() {
     }
 }
 
-// Apply saved theme on load (self‑invoking)
+// Apply saved theme on load (self invoking)
 (function() {
     const savedTheme = localStorage.getItem('mole_theme');
     if (savedTheme === 'solar') {

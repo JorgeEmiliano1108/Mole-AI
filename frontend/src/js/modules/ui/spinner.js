@@ -1,6 +1,6 @@
 /**
- * Sistema de Bloqueo y Feedback Visual (Spinner) para operaciones asíncronas.
- * Previene el doble-envío de formularios y brinda feedback claro al operador.
+ * Sistema de Bloqueo y Feedback Visual (Spinner) para operaciones as ncronas.
+ * Previene el doble-env o de formularios y brinda feedback claro al operador.
  * CUMPLE REQ-NF-SEC-02: Cero innerHTML - usa DOM API exclusivamente.
  */
 
@@ -10,15 +10,15 @@ export class SpinnerService {
     }
 
     /**
-     * Muestra un spinner o texto de carga en un botón y lo deshabilita.
-     * @param {HTMLElement|string} button - Elemento DOM o ID del botón.
+     * Muestra un spinner o texto de carga en un bot n y lo deshabilita.
+     * @param {HTMLElement|string} button - Elemento DOM o ID del bot n.
      * @param {string} loadingText - Texto opcional a mostrar durante la carga.
      */
     show(button, loadingText = '[ PROCESANDO... ]') {
         const btn = typeof button === 'string' ? document.getElementById(button) : button;
         if (!btn) return;
 
-        // Guardar el estado original del botón (sin innerHTML)
+        // Guardar el estado original del bot n (sin innerHTML)
         if (!this.activeButtons.has(btn)) {
             this.activeButtons.set(btn, {
                 originalChildren: Array.from(btn.childNodes),
@@ -45,8 +45,8 @@ export class SpinnerService {
     }
 
     /**
-     * Restaura el botón a su estado original.
-     * @param {HTMLElement|string} button - Elemento DOM o ID del botón.
+     * Restaura el bot n a su estado original.
+     * @param {HTMLElement|string} button - Elemento DOM o ID del bot n.
      */
     hide(button) {
         const btn = typeof button === 'string' ? document.getElementById(button) : button;

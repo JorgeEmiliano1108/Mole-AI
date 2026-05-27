@@ -1,27 +1,27 @@
 // ==========================================================
-// 4. FUNCIONES EXCLUSIVAS DEL ADMINISTRADOR Y ANÁLISIS [BACKEND READY]
+// 4. FUNCIONES EXCLUSIVAS DEL ADMINISTRADOR Y AN LISIS [BACKEND READY]
 // ==========================================================
-// Chart.js is dynamically imported inside initAdminCharts to enable code‑splitting
+// Chart.js is dynamically imported inside initAdminCharts to enable code splitting
 
 let adminChart1, adminChart2, adminChart3;
-let hChart, tChart; // Variables para las gráficas de usuario normal
+let hChart, tChart; // Variables para las gr ficas de usuario normal
 
 // ----------------------------------------------------
 // 1. PANEL DE CONTROL GLOBAL (SOLO ADMIN)
 // ----------------------------------------------------
 async function initAdminCharts() {
-    // Verificación de seguridad en el Frontend
+    // Verificaci n de seguridad en el Frontend
     if (localStorage.getItem('moleia_user_role') !== 'admin') {
-        console.error("> ACCESO DENEGADO: Nivel de autorización insuficiente.");
+        console.error("> ACCESO DENEGADO: Nivel de autorizaci\u00f3n insuficiente.");
         return;
     }
 
-    // Limpiamos gráficas anteriores para evitar fugas de memoria (Canvas Overlap)
+    // Limpiamos gr ficas anteriores para evitar fugas de memoria (Canvas Overlap)
     if(adminChart1) adminChart1.destroy();
     if(adminChart2) adminChart2.destroy();
     if(adminChart3) adminChart3.destroy();
 
-        // Dynamically import Chart.js only when needed (code‑splitting)
+        // Dynamically import Chart.js only when needed (code splitting)
         let Chart;
         try {
             const mod = await import('chart.js/auto');
@@ -35,7 +35,7 @@ async function initAdminCharts() {
 
     try {
         // ====================================================================
-        // 🚀 CONEXIÓN AL BACKEND: Petición segura de estadísticas globales
+        //   CONEXI N AL BACKEND: Petici n segura de estad sticas globales
         // ====================================================================
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/admin/statistics`, {
             method: 'GET',
@@ -49,12 +49,12 @@ async function initAdminCharts() {
 
         const data = await response.json();
 
-        // Extracción de datos con Fallback (Por si el backend manda datos vacíos)
+        // Extracci n de datos con Fallback (Por si el backend manda datos vac os)
         const usuariosStats = data.usuarios || [1, 0, 0]; // [Activos, Inactivos, Suspendidos]
         const registrosStats = data.registros_semana || [0, 0, 0, 0, 0, 0, 0]; 
         const plantasStats = data.salud_plantas || [0, 0, 0, 0, 0]; 
 
-        // GRÁFICA 1: USUARIOS (Doughnut)
+        // GR FICA 1: USUARIOS (Doughnut)
         const ctx1 = document.getElementById('admin-chart-users').getContext('2d');
         adminChart1 = new Chart(ctx1, {
             type: 'doughnut',
@@ -70,7 +70,7 @@ async function initAdminCharts() {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: chartStyle } } }
         });
 
-        // GRÁFICA 2: REGISTROS (Line)
+        // GR FICA 2: REGISTROS (Line)
         const ctx2 = document.getElementById('admin-chart-regs').getContext('2d');
         adminChart2 = new Chart(ctx2, {
             type: 'line',
@@ -92,12 +92,12 @@ async function initAdminCharts() {
             }
         });
 
-        // GRÁFICA 3: SALUD DEL ECOSISTEMA (Radar)
+        // GR FICA 3: SALUD DEL ECOSISTEMA (Radar)
         const ctx3 = document.getElementById('admin-chart-plants').getContext('2d');
         adminChart3 = new Chart(ctx3, {
             type: 'radar',
             data: {
-                labels: ['Humedad', 'Temp.', 'Nutrientes', 'Radiación UV', 'pH'],
+                labels: ['Humedad', 'Temp.', 'Nutrientes', 'Radiaci\u00f3n UV', 'pH'],
                 datasets: [{
                     label: 'Nivel Global',
                     data: plantasStats,
@@ -114,12 +114,12 @@ async function initAdminCharts() {
         });
 
     } catch (error) {
-        console.error("> Alerta de Supervisor: Fallo en telemetría global.", error);
-        // Aquí podrías mostrar un mensaje de error visual en el dashboard de admin
+        console.error("> Alerta de Supervisor: Fallo en telemetr\u00eda global.", error);
+        // Aqu  podr as mostrar un mensaje de error visual en el dashboard de admin
     }
 }
 
-// Generación de Reporte TXT (Descarga con datos Reales del Backend)
+// Generaci n de Reporte TXT (Descarga con datos Reales del Backend)
 async function downloadAdminReport() {
     try {
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/admin/report-text`, {
@@ -135,10 +135,10 @@ async function downloadAdminReport() {
 ====================================================
       REPORTE DEL SISTEMA MOLE-IA - MODO ADMIN
 ====================================================
-FECHA DE EXTRACCIÓN: ${date}
+FECHA DE EXTRACCI\u00d3N: ${date}
 SUPERVISOR A CARGO: ${localStorage.getItem('moleia_current_user').toUpperCase()}
 
---- ESTADÍSTICAS GLOBALES ---
+--- ESTAD\u00cdSTICAS GLOBALES ---
 TOTAL DE USUARIOS REGISTRADOS: ${data.total_usuarios || 'N/A'}
 PLANTAS EN CUARENTENA: ${data.plantas_criticas || 'N/A'}
 ESTADO DEL SERVIDOR: ONLINE
@@ -157,12 +157,12 @@ ESTADO DEL SERVIDOR: ONLINE
         window.URL.revokeObjectURL(url);
     } catch (error) {
         console.error("> Error al descargar reporte de admin:", error);
-        alert("> ERROR: Fallo de conexión con la base de datos central.");
+        alert("> ERROR: Fallo de conexi\u00f3n con la base de datos central.");
     }
 }
 
 // ----------------------------------------------------
-// 2. UI Y GRÁFICAS DEL MODAL DE ANÁLISIS (USUARIO NORMAL)
+// 2. UI Y GR FICAS DEL MODAL DE AN LISIS (USUARIO NORMAL)
 // ----------------------------------------------------
 
 async function renderLogList(plantName) {
@@ -172,7 +172,7 @@ async function renderLogList(plantName) {
     logContainer.textContent = '';
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'text-[#00e5ff] animate-pulse';
-    loadingDiv.textContent = '> Extrayendo bitácora de la red...';
+    loadingDiv.textContent = '> Extrayendo bit\u00e1cora de la red...';
     logContainer.appendChild(loadingDiv);
 
     try {
@@ -235,7 +235,7 @@ async function renderLogList(plantName) {
         logContainer.textContent = '';
         const errorDiv = document.createElement('div');
         errorDiv.className = 'text-red-500';
-        errorDiv.textContent = '> Error al cargar la bitácora.';
+        errorDiv.textContent = '> Error al cargar la bit\u00e1cora.';
         logContainer.appendChild(errorDiv);
     }
 }
@@ -245,7 +245,7 @@ async function openModal() {
     document.getElementById('analysis-modal').classList.remove('hidden');
     document.getElementById('analysis-modal').classList.add('flex');
     
-    // Saber qué planta está viendo el usuario actualmente
+    // Saber qu  planta est  viendo el usuario actualmente
     const currentPlantName = document.getElementById('plant-tag').innerText.toLowerCase();
 
     const ctxH = document.getElementById('chart-hum').getContext('2d');
@@ -273,7 +273,7 @@ async function openModal() {
     if (hChart) hChart.destroy(); if (tChart) tChart.destroy();
 
     try {
-        // Pedimos los datos históricos (ej. últimas 7 horas) de ESA planta específica
+        // Pedimos los datos hist ricos (ej.  ltimas 7 horas) de ESA planta espec fica
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/plants/${currentPlantName}/history`, {
             headers: { 'Authorization': `Bearer ${window.getAuthToken()}` }
         });

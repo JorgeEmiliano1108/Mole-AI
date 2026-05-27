@@ -1,5 +1,5 @@
 // ==========================================================
-// 14. MÓDULO IOT (ESP32) – NUEVO FLUJO DE WIZARD
+// 14. M DULO IOT (ESP32) - NUEVO FLUJO DE WIZARD
 // ==========================================================
 
 /**
@@ -19,7 +19,7 @@ export function openIotWizard() {
     btnStart.dataset.wired = '1';
     btnStart.addEventListener('click', async () => {
       showIotStep(2);
-      await pingEsp32(); // non‑blocking async ping
+      await pingEsp32(); // non blocking async ping
     });
   }
 
@@ -38,7 +38,7 @@ export function openIotWizard() {
     });
   }
 
-  console.log('> IoT Wizard abierto – paso 1 listo');
+  console.log('> IoT Wizard abierto \u2013 paso 1 listo');
 }
 
 /** Helper: display only the requested step */
@@ -48,17 +48,17 @@ function showIotStep(stepNumber) {
   if (target) target.classList.remove('hidden');
 }
 
-/** Async ping to the ESP32 captive‑portal (192.168.4.1) */
+/** Async ping to the ESP32 captive portal (192.168.4.1) */
 async function pingEsp32() {
   const statusSpan = document.getElementById('ping-status');
   const btnPing    = document.getElementById('btn-ping');
 
-  if (statusSpan) statusSpan.textContent = '🔄 Enviando ping…';
+  if (statusSpan) statusSpan.textContent = '\ud83d\udd04 Enviando ping\u2026';
   if (btnPing) btnPing.disabled = true;
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 s timeout
 
     const response = await fetch('http://192.168.4.1/status', {
       method: 'GET',
@@ -71,12 +71,12 @@ async function pingEsp32() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json(); // does not block UI thread
 
-    if (statusSpan) statusSpan.textContent = '✅ ESP32 encontrado';
+    if (statusSpan) statusSpan.textContent = '\u2705 ESP32 encontrado';
     // Advance to credentials step
     showIotStep(3);
   } catch (err) {
-    console.warn('[IoT Wizard] Ping falló:', err);
-    if (statusSpan) statusSpan.textContent = '❌ No se detectó ESP32. Verifique la red.';
+    console.warn('[IoT Wizard] Ping fall\u00f3:', err);
+    if (statusSpan) statusSpan.textContent = '\u274c No se detect\u00f3 ESP32. Verifique la red.';
     if (btnPing) btnPing.disabled = false; // allow retry
   }
 }
@@ -96,7 +96,7 @@ export function closeIotWizard() {
   console.log('> Wizard cerrado y credenciales purgadas');
 }
 
-/** Toggle password visibility – retained for UI */
+/** Toggle password visibility - retained for UI */
 export function toggleWifiPassword() {
   const passInput = document.getElementById('wifi-pass');
   if (!passInput) return;
@@ -104,19 +104,19 @@ export function toggleWifiPassword() {
 }
 
 /**
- * APROVISIONAMIENTO DE HARDWARE (Conexión a Producción)
- * This function is unchanged apart from being called from the new step‑3 button.
+ * APROVISIONAMIENTO DE HARDWARE (Conexi n a Producci n)
+ * This function is unchanged apart from being called from the new step 3 button.
  */
 async function startHardwareProvisioning() {
-  // Re‑use the existing provisioning implementation from the original file
+  // Re use the existing provisioning implementation from the original file
   const ssid = document.getElementById('wifi-ssid')?.value;
   const password = document.getElementById('wifi-pass')?.value;
   const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
   const token = window.getAuthToken();
 
   try {
-    if (!token) throw new Error('Autorización denegada. Token de seguridad faltante.');
-    console.log('> Transmitiendo credenciales al servidor central de producción...');
+    if (!token) throw new Error('Autorizaci\u00f3n denegada. Token de seguridad faltante.');
+    console.log('> Transmitiendo credenciales al servidor central de producci\u00f3n...');
     const response = await fetch(`${window.AppConfig.API_BASE_URL}api/iot/provisioning`, {
       method: 'POST',
       headers: {
@@ -125,19 +125,19 @@ async function startHardwareProvisioning() {
       },
       body: JSON.stringify({ ssid, pass: password, operator: currentUser }),
     });
-    if (!response.ok) throw new Error(`Fallo en el enlace de hardware. Código: ${response.status}`);
+    if (!response.ok) throw new Error(`Fallo en el enlace de hardware. C\u00f3digo: ${response.status}`);
     await new Promise(r => setTimeout(r, 1500));
-    console.log('> [ OK ] Módulo ESP32 enlazado exitosamente.');
+    console.log('> [ OK ] M\u00f3dulo ESP32 enlazado exitosamente.');
     // Optionally advance to a success view or close the wizard here
     closeIotWizard();
   } catch (e) {
     console.error('> [ ERROR ] Provisionamiento fallido:', e);
-    alert('[!] PROTOCOLO ABORTADO: No se pudo enlazar con el módulo de hardware. Verifique conexión.');
+    alert('[!] PROTOCOLO ABORTADO: No se pudo enlazar con el m\u00f3dulo de hardware. Verifique conexi\u00f3n.');
   }
 }
 
 // ==========================================================
-// GESTIÓN DEL PERFIL DE OPERADOR
+// GESTI N DEL PERFIL DE OPERADOR
 // ==========================================================
 
 export function closeUserProfile() {

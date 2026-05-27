@@ -2,7 +2,7 @@
 // 6. SISTEMA DE REPORTES DUALES (ADMIN) [BACKEND READY]
 // ==========================================================
 
-// --- LÓGICA DEL MODAL DE CONTACTO (OPERADORES) ---
+// --- L GICA DEL MODAL DE CONTACTO (OPERADORES) ---
 export function openContactModal() {
     const modal = document.getElementById('contact-modal');
     if (!modal) return;
@@ -18,14 +18,14 @@ export function closeContactModal() {
     document.getElementById('contact-msg').value = ''; 
 }
 
-// --- ENVÍO DE REPORTE MANUAL (BANDEJA 1) ---
+// --- ENV O DE REPORTE MANUAL (BANDEJA 1) ---
 export function sendReport() {
     const btnStatus = document.getElementById('contact-status');
     const msgInput = document.getElementById('contact-msg');
     const msg = msgInput.value;
     
     if(msg.trim() === '') {
-        btnStatus.innerText = "ERROR: LA BITÁCORA ESTÁ VACÍA.";
+        btnStatus.innerText = "ERROR: LA BIT\u00c1CORA EST\u00c1 VAC\u00cdA.";
         btnStatus.className = "text-center mt-4 text-xs font-bold text-red-500 animate-pulse tracking-widest";
         btnStatus.classList.remove('hidden');
         return;
@@ -53,18 +53,18 @@ export function sendReport() {
             });
 
             if (response.ok) {
-                btnStatus.innerText = "TRANSMISIÓN EXITOSA. CENTRAL NOTIFICADA.";
+                btnStatus.innerText = "TRANSMISI\u00d3N EXITOSA. CENTRAL NOTIFICADA.";
                 btnStatus.className = "text-center mt-4 text-xs font-bold text-[#00e5ff] tracking-widest";
                 msgInput.value = '';
                 setTimeout(() => { closeContactModal(); }, 2000);
-            } else throw new Error("Central rechazó la transmisión.");
+            } else throw new Error("Central rechaz\u00f3 la transmisi\u00f3n.");
         } catch (error) {
             console.warn("> [ MODO OFFLINE ] Guardando reporte de usuario en memoria local.");
             let localReports = JSON.parse(localStorage.getItem('moleia_user_reports')) || [];
             localReports.push(reportData);
             localStorage.setItem('moleia_user_reports', JSON.stringify(localReports));
 
-            btnStatus.innerText = "RED CAÍDA: REPORTE GUARDADO EN MEMORIA LOCAL.";
+            btnStatus.innerText = "RED CA\u00cdDA: REPORTE GUARDADO EN MEMORIA LOCAL.";
             btnStatus.className = "text-center mt-4 text-xs font-bold text-[#eab308] tracking-widest";
             msgInput.value = '';
             setTimeout(() => { closeContactModal(); }, 2500);
@@ -72,8 +72,8 @@ export function sendReport() {
     }, 1500);
 }
 
-// --- REGISTRO AUTOMÁTICO DE ANOMALÍAS EN PLANTAS (BANDEJA 2) ---
-// (Puedes llamar esta función desde el Módulo 5 cuando una planta entra en estado Crítico)
+// --- REGISTRO AUTOM TICO DE ANOMAL AS EN PLANTAS (BANDEJA 2) ---
+// (Puedes llamar esta funci n desde el M dulo 5 cuando una planta entra en estado Cr tico)
 async function logPlantIssue(plantName, issueDetails) {
     const currentUser = localStorage.getItem('moleia_current_user') || "SISTEMA";
     const reportData = {
@@ -109,7 +109,7 @@ async function renderAdminReports() {
     }
     if(plantContainer) {
         plantContainer.textContent = '';
-        plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8 animate-pulse', '> DESCARGANDO BITÁCORA BOTÁNICA...'));
+        plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8 animate-pulse', '> DESCARGANDO BIT\u00c1CORA BOT\u00c1NICA...'));
     }
 
     const token = window.getAuthToken();
@@ -155,13 +155,13 @@ async function renderAdminReports() {
     if(plantContainer) {
         plantContainer.textContent = '';
         if(plantReports.length === 0) {
-            plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8', '> NO HAY ANOMALÍAS BOTÁNICAS...'));
+            plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8', '> NO HAY ANOMAL\u00cdAS BOT\u00c1NICAS...'));
         } else {
             [...plantReports].reverse().forEach(rep => {
                 const row = createNode('div', 'grid grid-cols-12 gap-4 text-xs border-b border-red-500/10 py-3 px-2 hover:bg-red-500/10 transition-colors');
                 row.appendChild(createNode('div', 'col-span-2 text-red-400/70 font-bold', rep.time));
                 row.appendChild(createNode('div', 'col-span-3 text-white', rep.user));
-                row.appendChild(createNode('div', 'col-span-3 text-[#00e5ff] font-bold', `NÚCLEO: ${rep.plant}`));
+                row.appendChild(createNode('div', 'col-span-3 text-[#00e5ff] font-bold', `N\u00daCLEO: ${rep.plant}`));
                 row.appendChild(createNode('div', 'col-span-4 opacity-80 text-red-300 break-words', rep.issue));
                 plantContainer.appendChild(row);
             });
@@ -169,7 +169,7 @@ async function renderAdminReports() {
     }
 }
 
-// --- EXPORTACIÓN INTELIGENTE (PDF) ---
+// --- EXPORTACI N INTELIGENTE (PDF) ---
 export function generateMasterReport(type) {
     let targetData = [];
     let title = "";
@@ -179,7 +179,7 @@ export function generateMasterReport(type) {
         title = "REPORTE MAESTRO DE OPERADORES";
     } else if (type === 'plantas') {
         targetData = window.systemPlantReports || [];
-        title = "BITÁCORA DE ANOMALÍAS BOTÁNICAS";
+        title = "BIT\u00c1CORA DE ANOMAL\u00cdAS BOT\u00c1NICAS";
     }
 
     if(targetData.length === 0) {
@@ -231,7 +231,7 @@ export function generateMasterReport(type) {
             doc.text(`OPERADOR: ${r.user}`, 60, y);
             doc.setFont('courier', 'normal');
             doc.setTextColor(100);
-            doc.text(`ESPECÍMEN: ${r.plant}`, 15, y + 5);
+            doc.text(`ESPEC\u00cdMEN: ${r.plant}`, 15, y + 5);
             doc.text(`FALLO: ${r.issue}`, 15, y + 10);
             y += 18;
         }

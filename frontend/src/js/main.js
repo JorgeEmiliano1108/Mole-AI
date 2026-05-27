@@ -3,7 +3,7 @@ import '../css/main.css';
 import './auth.js';
 import './modules/ui/theme.js';
 import './modules/ui/navigation.js';
-import './typewriter.ts'; // Typewriter effect – auto‑init on DOMContentLoaded
+import './typewriter.ts'; // Typewriter effect - auto init on DOMContentLoaded
 import * as userDashboard from './modules/auth/userDashboard.js';
 import * as adminDashboard from './modules/auth/adminDashboard.js';
 import * as i18n from './modules/ui/i18n.js';
@@ -159,9 +159,9 @@ import { updatePlant as doUpdatePlant } from './modules/services/crops.js';
 window.updatePlant = doUpdatePlant;
 
 // ==========================================================
-// 0. CONFIGURACIÓN ESTRUCTURAL (MÓDULOS E IDIOMAS)
+// 0. CONFIGURACI N ESTRUCTURAL (M DULOS E IDIOMAS)
 // ==========================================================
-// MODULES: Solo para modales (pantallas completas ahora navegan físicamente)
+// MODULES: Solo para modales (pantallas completas ahora navegan f sicamente)
 const MODULES = {
     intro: 'intro-screen',
     login: 'login-screen',
@@ -184,8 +184,8 @@ const translations = {
     es: {
         intro_subtitle: "M O N I T O R I N G  T O O L",
         btn_start: "[ INICIAR SISTEMA ]",
-        nav_obj: "OBJETIVO", nav_vis: "VISIÓN", nav_flora: "FLORA MEXICANA", nav_about: "ACERCA DE LA WEB",
-        st_hum: "HUMEDAD AMBIENTE", st_temp: "TEMPERATURA", st_ph: "pH DEL SUELO", st_uv: "ÍNDICE UV"
+        nav_obj: "OBJETIVO", nav_vis: "VISI\u00d3N", nav_flora: "FLORA MEXICANA", nav_about: "ACERCA DE LA WEB",
+        st_hum: "HUMEDAD AMBIENTE", st_temp: "TEMPERATURA", st_ph: "pH DEL SUELO", st_uv: "\u00cdNDICE UV"
     },
     en: {
         intro_subtitle: "M O N I T O R I N G  S Y S T E M",
@@ -208,7 +208,7 @@ function createNode(tag = 'div', className = '', text = '', attrs = {}) {
     return el;
 }
 
-// Función para mostrar modales (no pantallas completas - esas navegan físicamente)
+// Funci n para mostrar modales (no pantallas completas - esas navegan f sicamente)
 function showModule(moduleKey) {
     // Solo modales - pantallas completas navegan con window.location.href
     const modalScreens = ['analysis', 'contact', 'addPlant', 'loading', 'diagnosis', 'history', 'map', 'iot', 'profile', 'delete'];
@@ -226,7 +226,7 @@ function showModule(moduleKey) {
             target.classList.add('flex');
         }
 
-        // Inicializaciones específicas por modal
+        // Inicializaciones espec ficas por modal
         switch (moduleKey) {
             case 'map':
                 if (typeof mapInstance !== "undefined" && mapInstance) setTimeout(() => mapInstance.invalidateSize(), 250);
@@ -255,10 +255,10 @@ function changeLanguage(lang) {
 // ==========================================================
 
 const introData = {
-    'objetivo': "> OBJETIVO:\n\nEstablecer un sistema de monitoreo biométrico continuo para la preservación de especies vegetales.",
-    'vision': "> VISIÓN:\n\nCrear el banco de datos botánico más resistente del yermo.",
-    'flora': "> FLORA MEXICANA:\n\nCatálogo de especímenes recuperados en cuarentena hidro-botánica.",
-    'acerca': "> ACERCA DE LA WEB:\n\nTerminal MOLE-IA versión 1.0.5\nSistema Seguro, Encriptado y Multi-Rol."
+    'objetivo': "> OBJETIVO:\n\nEstablecer un sistema de monitoreo biom\u00e9trico continuo para la preservaci\u00f3n de especies vegetales.",
+    'vision': "> VISI\u00d3N:\n\nCrear el banco de datos bot\u00e1nico m\u00e1s resistente del yermo.",
+    'flora': "> FLORA MEXICANA:\n\nCat\u00e1logo de espec\u00edmenes recuperados en cuarentena hidro-bot\u00e1nica.",
+    'acerca': "> ACERCA DE LA WEB:\n\nTerminal MOLE-IA versi\u00f3n 1.0.5\nSistema Seguro, Encriptado y Multi-Rol."
 };
 
 let typeInterval;
@@ -311,7 +311,7 @@ function startSystem() {
 }
 
 // ==========================================================
-// NUEVO: TOGGLE LOGIN/REGISTER EN LA VISTA DE AUTENTICACIÓN
+// NUEVO: TOGGLE LOGIN/REGISTER EN LA VISTA DE AUTENTICACI N
 // ==========================================================
 function toggleAuthForm(targetForm) {
     const formLogin = document.getElementById('login-form');
@@ -323,11 +323,11 @@ function toggleAuthForm(targetForm) {
         formLogin.classList.add('hidden');
         formRegister.classList.remove('hidden');
         title.innerText = "NUEVO INGRESO";
-        subtitle.innerText = "Generación de Expediente";
+        subtitle.innerText = "Generaci\u00f3n de Expediente";
     } else {
         formRegister.classList.add('hidden');
         formLogin.classList.remove('hidden');
-        title.innerText = "AUTENTICACIÓN";
+        title.innerText = "AUTENTICACI\u00d3N";
         subtitle.innerText = "Ingrese credenciales de operador";
     }
 }
@@ -352,7 +352,7 @@ async function submitRegistration() {
         return;
     }
     if (pass !== passConfirm) {
-        errorMsg.innerText = "ERROR: LAS CONTRASEÑAS NO COINCIDEN.";
+        errorMsg.innerText = "ERROR: LAS CONTRASE\u00d1AS NO COINCIDEN.";
         errorMsg.classList.remove('hidden');
         return;
     }
@@ -422,23 +422,23 @@ async function attemptLogin() {
         }
 
     } catch (error) {
-        console.warn("> Servidor rechazó credenciales o está offline.", error);
-        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INVÁLIDAS.";
+        console.warn("> Servidor rechaz\u00f3 credenciales o est\u00e1 offline.", error);
+        errorMsg.innerText = "ACCESO DENEGADO. CREDENCIALES INV\u00c1LIDAS.";
         errorMsg.classList.remove('hidden');
     }
 }
 
-// --- CIERRE DE SESIÓN ---
+// --- CIERRE DE SESI N ---
 function logout() {
     // 1. Limpiar tokens (backend + cliente)
     try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
 
-    // 2. Limpiar TODAS las llaves de sesión (Zero-Trust)
+    // 2. Limpiar TODAS las llaves de sesi n (Zero-Trust)
     localStorage.removeItem('moleia_current_user');
     localStorage.removeItem('moleia_user_role');
     localStorage.removeItem('moleia_chat_history_data');
     localStorage.removeItem('moleia_current_session_id');
-    sessionStorage.clear(); // ← Limpieza total de sessionStorage
+    sessionStorage.clear(); // <- Limpieza total de sessionStorage
 
     // 3. Limpiar intervalos y listeners
     if (typeof detachChatListener === 'function') detachChatListener();
@@ -446,9 +446,9 @@ function logout() {
     if (window.clockInterval) clearInterval(window.clockInterval);
     if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
 
-    console.log("> SESIÓN CERRADA: Memoria purgada y procesos detenidos.");
+    console.log("> SESI\u00d3N CERRADA: Memoria purgada y procesos detenidos.");
 
-    // 4. Redirección SIN rastro en historial
+    // 4. Redirecci n SIN rastro en historial
     window.location.replace('/index.html'); // replace() instead of href prevents "back" to protected pages
 }
 
@@ -457,7 +457,7 @@ function backToDashboard() {
 }
 
 // ==========================================================
-// ANIMACIÓN EFECTO TV PARA MODALES
+// ANIMACI N EFECTO TV PARA MODALES
 // ==========================================================
 function openModalWithTV(modalId) {
     const modal = document.getElementById(modalId);
@@ -484,7 +484,7 @@ function closeModalWithTV(modalId) {
         modalContent.classList.remove('tv-on');
         modalContent.classList.add('tv-off');
 
-        // Esperamos a que acabe la animación (250ms) antes de ocultar el modal completo
+        // Esperamos a que acabe la animaci n (250ms) antes de ocultar el modal completo
         setTimeout(() => {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
@@ -528,7 +528,7 @@ function updateClock() {
     if (clockElements.length === 0) return;
 
     const now = new Date();
-    // Formatea la hora para que siempre tenga 2 dígitos (ej. 09:05:02)
+    // Formatea la hora para que siempre tenga 2 d gitos (ej. 09:05:02)
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
@@ -546,13 +546,13 @@ updateClock();
 // Configura el intervalo para que se actualice cada 1000 milisegundos (1 segundo)
 window.clockInterval = setInterval(updateClock, 1000);
 
-// ── ISSUE-04 / FE-10: Health Polling now orchestrated by userRoleReady event in health.js ──
+//    ISSUE-04 / FE-10: Health Polling now orchestrated by userRoleReady event in health.js   
 // Removed direct call to initHealthView() from main.js to avoid Race Conditions.
 
 //Simulacion para ver pruebas//
 
 // ==========================================================
-// SISTEMA DE VINCULACIÓN ESP32 (IOT WIZARD)
+// SISTEMA DE VINCULACI N ESP32 (IOT WIZARD)
 // ==========================================================
 function advanceIotStep(step) {
     const wizardContainer = document.getElementById('iot-wizard-modal');
@@ -587,7 +587,7 @@ function advanceIotStep(step) {
         const pStatus = document.createElement('p');
         pStatus.id = 'iot-status-text';
         pStatus.className = 'text-center text-xs text-[#00e5ff] animate-pulse';
-        pStatus.textContent = 'Sincronizando claves de telemetría...';
+        pStatus.textContent = 'Sincronizando claves de telemetr\u00eda...';
         stepDiv.appendChild(pStatus);
 
         wizardContent.appendChild(stepDiv);
@@ -606,7 +606,7 @@ function advanceIotStep(step) {
             const iotProgress = document.getElementById('iot-progress');
             const iotStatusText = document.getElementById('iot-status-text');
             if (iotProgress) iotProgress.style.width = '75%';
-            if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores analógicos...';
+            if (iotStatusText) iotStatusText.textContent = 'Calibrando sensores anal\u00f3gicos...';
         }, 2000);
 
         setTimeout(() => advanceIotStep(3), 4000);
@@ -635,12 +635,12 @@ function advanceIotStep(step) {
 
         const pTitle = document.createElement('p');
         pTitle.className = 'text-[#00e5ff] font-bold text-lg mb-2';
-        pTitle.textContent = '¡CONEXIÓN ESTABLECIDA!';
+        pTitle.textContent = '\u00a1CONEXI\u00d3N ESTABLECIDA!';
         stepDiv.appendChild(pTitle);
 
         const pDesc = document.createElement('p');
         pDesc.className = 'text-white/70 text-xs mb-6';
-        pDesc.textContent = 'El hardware AgroGuard ESP32 ahora está emparejado y listo para transmitir.';
+        pDesc.textContent = 'El hardware AgroGuard ESP32 ahora est\u00e1 emparejado y listo para transmitir.';
         stepDiv.appendChild(pDesc);
 
         const finalBtn = document.createElement('button');
@@ -659,7 +659,7 @@ function advanceIotStep(step) {
     }
 }
 
-// Función especial para cerrar el modal de IOT y mostrar el botón de "+ VINCULAR CULTIVO"
+// Funci n especial para cerrar el modal de IOT y mostrar el bot n de "+ VINCULAR CULTIVO"
 function closeIotAndShowPlantBtn() {
     closeModalWithTV('iot-wizard-modal');
     const btnCultivo = document.getElementById('new-user-plants');
@@ -670,20 +670,20 @@ function closeIotAndShowPlantBtn() {
 }
 
 // ==========================================================
-// SISTEMA DE CULTIVOS Y SIMULACIÓN DE SENSORES
+// SISTEMA DE CULTIVOS Y SIMULACI N DE SENSORES
 // ==========================================================
 
-// Variable para guardar el intervalo del monitor y poder detenerlo después
+// Variable para guardar el intervalo del monitor y poder detenerlo despu s
 window.monitorInterval = null;
 
 function registerNewPlant() {
     const plantNameInput = document.getElementById('new-plant-name').value.trim();
-    const finalName = plantNameInput !== '' ? plantNameInput.toUpperCase() : 'ESPÉCIMEN DESCONOCIDO';
+    const finalName = plantNameInput !== '' ? plantNameInput.toUpperCase() : 'ESP\u00c9CIMEN DESCONOCIDO';
 
     // 1. Cerramos la ventana de agregar planta
     closeModalWithTV('add-plant-modal');
 
-    // 2. Ocultamos el botón de agregar planta (porque ya agregamos una)
+    // 2. Ocultamos el bot n de agregar planta (porque ya agregamos una)
     const newUserPlants = document.getElementById('new-user-plants');
     if (newUserPlants) {
         newUserPlants.classList.add('hidden');
@@ -697,7 +697,7 @@ function registerNewPlant() {
 
     if (videoPlaceholder) videoPlaceholder.classList.add('hidden'); // Quitamos el texto de espera
     if (mainImg) mainImg.classList.remove('hidden'); // Mostramos la imagen de la planta
-    if (plantTag) plantTag.innerText = finalName; // Ponemos el nombre que eligió el usuario
+    if (plantTag) plantTag.innerText = finalName; // Ponemos el nombre que eligi  el usuario
 
 }
 
@@ -854,15 +854,15 @@ document.body.addEventListener('click', (event) => {
         try {
             ActionMap[action](target);
         } catch (error) {
-            console.error(`[Router] Fallo al ejecutar acción: ${action}`, error);
+            console.error(`[Router] Fallo al ejecutar acci\u00f3n: ${action}`, error);
         }
     } else {
-        console.warn(`[Router] Acción no registrada: ${action}`);
+        console.warn(`[Router] Acci\u00f3n no registrada: ${action}`);
     }
 });
 
 // ==========================================================
-// HANDLER PARA DESCARGA DE REPORTES VÍA ROUTER
+// HANDLER PARA DESCARGA DE REPORTES V A ROUTER
 // ==========================================================
 async function handleReportDownload(btnElement) {
     if (!btnElement) return;
@@ -873,12 +873,12 @@ async function handleReportDownload(btnElement) {
         return;
     }
 
-    // Reutilizamos la función existente downloadReportPDF con el elemento button
+    // Reutilizamos la funci n existente downloadReportPDF con el elemento button
     await menus.downloadReportPDF(reportId, btnElement);
 }
 
 // ==========================================================
-// BUSCADOR DE FLORA MEXICANA (INTEGRACIÓN REAL CON API)
+// BUSCADOR DE FLORA MEXICANA (INTEGRACI N REAL CON API)
 // ==========================================================
 let searchTimeout = null;
 // AbortController for the active flora search request (ensures cancellation of previous requests)
@@ -889,7 +889,7 @@ function loadFloraSearch() {
     const container = document.getElementById('typewriter-output');
     if (!container) return;
 
-    // 1. Detener cualquier animación de tipeo zombi que esté corriendo
+    // 1. Detener cualquier animaci n de tipeo zombi que est  corriendo
     if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
 
     // 2. Inyectar la interfaz del buscador estilo Terminal
@@ -910,15 +910,15 @@ function loadFloraSearch() {
     inputField.type = 'text';
     inputField.id = 'flora-search-input';
     inputField.className = 'bg-transparent border-none outline-none text-[#00e5ff] font-mono w-full placeholder-[#00e5ff]/30';
-    inputField.placeholder = 'Buscar espécimen (ej. Agave, Cempasúchil)...';
+    inputField.placeholder = 'Buscar esp\u00e9cimen (ej. Agave, Cempas\u00fachil)...';
     inputField.autocomplete = 'off';
     topBar.appendChild(inputField);
 
     wrapper.appendChild(topBar);
 
-    // ---- Zero‑state helper -------------------------------------------------
+    // ---- Zero state helper -------------------------------------------------
     function renderZeroState(container) {
-        const suggestions = ['Nopal', 'Agave Tequilana', 'Maíz', 'Cacao', 'Vainilla'];
+        const suggestions = ['Nopal', 'Agave Tequilana', 'Ma\u00edz', 'Cacao', 'Vainilla'];
         container.innerHTML = '';
         const chipContainer = document.createElement('div');
         chipContainer.className = 'flex flex-wrap gap-2 p-2';
@@ -946,7 +946,7 @@ function loadFloraSearch() {
     resultsDiv.id = 'flora-search-results';
     resultsDiv.className = 'flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin';
 
-    // Render suggested endemic‑plant chips when no query yet
+    // Render suggested endemic plant chips when no query yet
     renderZeroState(resultsDiv);
 
     wrapper.appendChild(resultsDiv);
@@ -969,7 +969,7 @@ function loadFloraSearch() {
         const resultsContainer = document.getElementById('flora-search-results');
 
         if (query.length < 2) {
-            // Show zero‑state chips again when the query is too short
+            // Show zero state chips again when the query is too short
             renderZeroState(resultsContainer);
             return;
         }
@@ -1015,7 +1015,7 @@ async function searchPlant(query) {
         resultsContainer.textContent = '';
         const alertEl = document.createElement('p');
         alertEl.className = 'text-red-500 text-sm bg-red-500/10 p-2 border border-red-500/30';
-        alertEl.textContent = 'ERROR: Falla de enlace con la base de datos botánica.';
+        alertEl.textContent = 'ERROR: Falla de enlace con la base de datos bot\u00e1nica.';
         resultsContainer.appendChild(alertEl);
     } finally {
         // Clear controller reference so future searches can create a new one
@@ -1030,7 +1030,7 @@ function renderPlantResults(results) {
     if (!results || results.length === 0) {
         const none = document.createElement('p');
         none.className = 'text-[#00e5ff]/70 text-sm border border-[#00e5ff]/20 p-2';
-        none.textContent = 'Ningún espécimen coincide con los parámetros.';
+        none.textContent = 'Ning\u00fan esp\u00e9cimen coincide con los par\u00e1metros.';
         container.appendChild(none);
         return;
     }
@@ -1053,7 +1053,7 @@ function renderPlantResults(results) {
         const ph = plant.ph || '';
         const isProtected = plant.is_protected_nom059 === true || plant.is_protected_nom059 === 'true';
         const warning = isProtected ?
-            `ATENCIÓN: Especie protegida por NOM-059 (Categoría: ${plant.protection_category || 'Especial'}). Extracción ilegal sancionada.` : '';
+            `ATENCI\u00d3N: Especie protegida por NOM-059 (Categor\u00eda: ${plant.protection_category || 'Especial'}). Extracci\u00f3n ilegal sancionada.` : '';
 
         const card = document.createElement('div');
         card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
@@ -1087,19 +1087,19 @@ function renderPlantResults(results) {
             if (humidity) {
                 const hum = document.createElement('span');
                 hum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
-                hum.textContent = `💧 ${humidity}`;
+                hum.textContent = `\ud83d\udca7 ${humidity}`;
                 params.appendChild(hum);
             }
             if (temperature) {
                 const temp = document.createElement('span');
                 temp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
-                temp.textContent = `🌡️ ${temperature}`;
+                temp.textContent = `\ud83c\udf21\ufe0f ${temperature}`;
                 params.appendChild(temp);
             }
             if (ph) {
                 const phSpan = document.createElement('span');
                 phSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
-                phSpan.textContent = `⚗️ pH: ${ph}`;
+                phSpan.textContent = `\u2697\ufe0f pH: ${ph}`;
                 params.appendChild(phSpan);
             }
             card.appendChild(params);
@@ -1128,7 +1128,7 @@ function renderPlantResults(results) {
                 const eImage = document.createElement('img');
                 eImage.className = 'w-full h-48 object-cover rounded border border-[#00e5ff]/30 my-2';
                 eImage.src = plant.image_url;
-                eImage.alt = name + ' - imagen botánica';
+                eImage.alt = name + ' - imagen bot\u00e1nica';
                 eImage.onerror = function () {
                     this.onerror = null; // evitar loop infinito
                     this.src = '/static/assets/topo.png';
@@ -1161,19 +1161,19 @@ function renderPlantResults(results) {
                 if (eHumidity) {
                     const eHum = document.createElement('span');
                     eHum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
-                    eHum.textContent = `💧 ${eHumidity}`;
+                    eHum.textContent = `\ud83d\udca7 ${eHumidity}`;
                     eParams.appendChild(eHum);
                 }
                 if (eTemperature) {
                     const eTemp = document.createElement('span');
                     eTemp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
-                    eTemp.textContent = `🌡️ ${eTemperature}`;
+                    eTemp.textContent = `\ud83c\udf21\ufe0f ${eTemperature}`;
                     eParams.appendChild(eTemp);
                 }
                 if (ePh) {
                     const ePhSpan = document.createElement('span');
                     ePhSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
-                    ePhSpan.textContent = `⚗️ pH: ${ePh}`;
+                    ePhSpan.textContent = `\u2697\ufe0f pH: ${ePh}`;
                     eParams.appendChild(ePhSpan);
                 }
                 card.appendChild(eParams);
@@ -1236,7 +1236,7 @@ Object.assign(window, crops);
 Object.assign(window, map);
 Object.assign(window, tactical);
 
-// ── Wire ApiService.showToast to Tactical Toast ──────────────────────────
+//    Wire ApiService.showToast to Tactical Toast                           
 // This replaces the legacy CSS-dependent toast with our design-system-native one.
 if (window.ApiService) {
     window.ApiService.showToast = function (message, type) {

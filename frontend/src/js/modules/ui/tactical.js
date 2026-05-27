@@ -1,15 +1,15 @@
 /**
- * tactical.js — Mole.AI Frontend Resilience Layer
- * ═══════════════════════════════════════════════════
+ * tactical.js - Mole.AI Frontend Resilience Layer
+ *                                                    
  * Provides:
- *   1. showTacticalToast(msg, type) — styled error/warning/success toasts
- *   2. setConnectionStatus(state) — live WebSocket indicator management
- *   3. showInferenceState(targetId, label) / clearInferenceState(targetId) — loading states
+ *   1. showTacticalToast(msg, type) - styled error/warning/success toasts
+ *   2. setConnectionStatus(state) - live WebSocket indicator management
+ *   3. showInferenceState(targetId, label) / clearInferenceState(targetId) - loading states
  *
- * All UI follows the Cyber-Agrícola design system tokens.
+ * All UI follows the Cyber-Agr cola design system tokens.
  */
 
-// ─── 1. TACTICAL TOAST NOTIFICATIONS ────────────────────────────────────────
+//     1. TACTICAL TOAST NOTIFICATIONS                                         
 
 const TOAST_COLORS = {
     error:   { border: '#F87171', bg: 'rgba(248,113,113,0.08)', text: '#F87171', prefix: '[ERROR]' },
@@ -82,7 +82,7 @@ export function showTacticalToast(message, type = 'error', duration = 6000) {
     }, duration);
 }
 
-// ─── 2. WEBSOCKET CONNECTION INDICATOR ──────────────────────────────────────
+//     2. WEBSOCKET CONNECTION INDICATOR                                       
 
 const CONNECTION_STATES = {
     connected:    { color: '#34D399', label: 'LINK UP',          pulseClass: '' },
@@ -110,7 +110,7 @@ export function setConnectionStatus(state) {
  * Attach WebSocket lifecycle hooks to the connection indicator.
  * Call this once after creating a WebSocket instance.
  *
- * @param {WebSocket} ws — The active WebSocket connection
+ * @param {WebSocket} ws - The active WebSocket connection
  */
 export function bindWebSocket(ws) {
     if (!ws) return;
@@ -131,14 +131,14 @@ export function bindWebSocket(ws) {
     });
 }
 
-// ─── 3. INFERENCE / LOADING STATE MANAGEMENT ────────────────────────────────
+//     3. INFERENCE / LOADING STATE MANAGEMENT                                 
 
 /**
  * Show a pulsing "[INFERRING...]" or custom label inside a target DOM element.
  * Preserves existing content by storing it in a data attribute.
  *
- * @param {string} targetId — ID of the DOM element to show loading in
- * @param {string} label — Text to display (default: 'PROCESANDO...')
+ * @param {string} targetId - ID of the DOM element to show loading in
+ * @param {string} label - Text to display (default: 'PROCESANDO...')
  */
 export function showInferenceState(targetId, label = 'PROCESANDO...') {
     const el = document.getElementById(targetId);
@@ -164,8 +164,8 @@ export function showInferenceState(targetId, label = 'PROCESANDO...') {
 /**
  * Clear the inference/loading state and restore original content.
  *
- * @param {string} targetId — ID of the DOM element to restore
- * @param {string|null} newContent — Optional new HTML to set instead of original
+ * @param {string} targetId - ID of the DOM element to restore
+ * @param {string|null} newContent - Optional new HTML to set instead of original
  */
 export function clearInferenceState(targetId, newContent = null) {
     const el = document.getElementById(targetId);
@@ -179,7 +179,7 @@ export function clearInferenceState(targetId, newContent = null) {
     delete el.dataset.originalContent;
 }
 
-// ─── GLOBAL EXPOSURE ────────────────────────────────────────────────────────
+//     GLOBAL EXPOSURE                                                         
 // Make available on window for non-module scripts (legacy compat)
 window.showTacticalToast = showTacticalToast;
 window.setConnectionStatus = setConnectionStatus;

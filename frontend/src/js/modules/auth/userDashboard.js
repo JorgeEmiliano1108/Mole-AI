@@ -3,19 +3,19 @@
 // ==========================================================
 
 // ==========================================================
-// 2.2 MOTOR DE DATOS OFFLINE-FIRST (REEMPLAZA A LA SIMULACIÓN)//
+// 2.2 MOTOR DE DATOS OFFLINE-FIRST (REEMPLAZA A LA SIMULACI N)//
 
 /**
  * 1. OBTENER INVENTARIO REAL
- * Siempre lee de la memoria local, que es la única fuente de verdad para la UI.
+ * Siempre lee de la memoria local, que es la  nica fuente de verdad para la UI.
  */
 export function getUserPlants() {
     return JSON.parse(localStorage.getItem('moleia_plants')) || {};
 }
 
 /**
- * 2. COLA DE SINCRONIZACIÓN (OFFLINE QUEUE)
- * Si el usuario hace cambios sin internet, se guardan aquí.
+ * 2. COLA DE SINCRONIZACI N (OFFLINE QUEUE)
+ * Si el usuario hace cambios sin internet, se guardan aqu .
  */
 export function queueOfflineAction(actionType, payload) {
     let queue = JSON.parse(localStorage.getItem('moleia_sync_queue')) || [];
@@ -27,11 +27,11 @@ export function queueOfflineAction(actionType, payload) {
     localStorage.setItem('moleia_sync_queue', JSON.stringify(queue));
     
     // Alerta visual en consola para el Operador
-    console.warn(`> [ RED CAÍDA ] Acción [${actionType}] guardada en memoria local. Se enviará al reconectar.`);
+    console.warn(`> [ RED CA\u00cdDA ] Acci\u00f3n [${actionType}] guardada en memoria local. Se enviar\u00e1 al reconectar.`);
 }
 
 /**
- * 3. GUARDAR / MODIFICAR PLANTA (ESCRITURA HÍBRIDA)
+ * 3. GUARDAR / MODIFICAR PLANTA (ESCRITURA H BRIDA)
  * Se usa cuando el usuario agrega o edita un cultivo.
  */
 async function savePlantData(plantName, plantData) {
@@ -43,13 +43,13 @@ async function savePlantData(plantName, plantData) {
     // B. Intento de subida al Servidor
     if (navigator.onLine) {
         try {
-            // Extraer valores numéricos de los datos simulados
+            // Extraer valores num ricos de los datos simulados
             const valH = parseInt(String(plantData.h).replace(/[^0-9.-]/g, '')) || 0;
             const valT = parseInt(String(plantData.t).replace(/[^0-9.-]/g, '')) || 0;
             const valPH = parseFloat(plantData.ph) || 7.0;
             
             const sensorPayload = {
-                plant_id: plantName, // El backend deberá resolver el nombre o recibir el UUID real
+                plant_id: plantName, // El backend deber  resolver el nombre o recibir el UUID real
                 recorded_at: new Date().toISOString(),
                 soil_humidity: valH,
                 air_temperature: valT,
@@ -69,7 +69,7 @@ async function savePlantData(plantName, plantData) {
             console.log(`> [ ONLINE ] Especie ${plantName} respaldada en el servidor central.`);
             
         } catch (error) {
-            // Si el servidor está caído (Error 500) aunque haya internet
+            // Si el servidor est  ca do (Error 500) aunque haya internet
             queueOfflineAction('SAVE_PLANT', { name: plantName, data: plantData });
         }
     } else {
@@ -79,20 +79,20 @@ async function savePlantData(plantName, plantData) {
 }
 
 /**
- * 4. ESCUCHADOR DE RECONEXIÓN (AUTO-SYNC)
- * El navegador dispara este evento mágicamente cuando vuelve el Wi-Fi o los Datos.
+ * 4. ESCUCHADOR DE RECONEXI N (AUTO-SYNC)
+ * El navegador dispara este evento m gicamente cuando vuelve el Wi-Fi o los Datos.
  */
 window.addEventListener('online', async () => {
-    console.log("> [ SISTEMA ] Enlace neuronal restablecido. Iniciando sincronización...");
+    console.log("> [ SISTEMA ] Enlace neuronal restablecido. Iniciando sincronizaci\u00f3n...");
     
     let queue = JSON.parse(localStorage.getItem('moleia_sync_queue')) || [];
     if (queue.length === 0) return console.log("> [ SISTEMA ] Memoria sincronizada. No hay datos pendientes.");
 
-    // Procesamos cada acción pendiente
+    // Procesamos cada acci n pendiente
     for (let task of queue) {
         if (task.type === 'SAVE_PLANT') {
             try {
-                // Extraer numéricos
+                // Extraer num ricos
                 const valH = parseInt(String(task.data.data.h).replace(/[^0-9.-]/g, '')) || 0;
                 const valT = parseInt(String(task.data.data.t).replace(/[^0-9.-]/g, '')) || 0;
                 const valPH = parseFloat(task.data.data.ph) || 7.0;
@@ -116,16 +116,16 @@ window.addEventListener('online', async () => {
                 return; // Rompemos el ciclo para no borrar la cola si el server sigue fallando
             }
         }
-        // Aquí podrías agregar más tipos de tareas (DELETE_PLANT, UPDATE_SETTINGS, etc.)
+        // Aqu  podr as agregar m s tipos de tareas (DELETE_PLANT, UPDATE_SETTINGS, etc.)
     }
 
-    // Si todo salió bien, limpiamos la cola
+    // Si todo sali  bien, limpiamos la cola
     localStorage.removeItem('moleia_sync_queue');
-    console.log("> [ SISTEMA ] Sincronización completada al 100%.");
+    console.log("> [ SISTEMA ] Sincronizaci\u00f3n completada al 100%.");
 });
 
 /**
- * MOTOR DE ANIMACIÓN: Estilo terminal cyberpunk.
+ * MOTOR DE ANIMACI N: Estilo terminal cyberpunk.
  */
 export function animateValue(obj, start, end, duration, suffix = "") {
     if (!obj) return;
@@ -143,7 +143,7 @@ export function animateValue(obj, start, end, duration, suffix = "") {
 }
 
 /**
- * FUNCIÓN MAESTRA: Actualiza la telemetría de la planta seleccionada.
+ * FUNCI N MAESTRA: Actualiza la telemetr a de la planta seleccionada.
  * Ahora prioriza los datos sincronizados desde el Backend.
  */
 export function updatePlant(name) {
@@ -163,11 +163,11 @@ export function updatePlant(name) {
     const uvEl = document.getElementById('txt-uv');
     const tagEl = document.getElementById('plant-tag');
 
-    // 2. Efecto visual de transición (Fade out)
+    // 2. Efecto visual de transici n (Fade out)
     img.style.opacity = '0';
 
     setTimeout(() => {
-        // 3. Renderizado de Información Principal
+        // 3. Renderizado de Informaci n Principal
         img.src = data.img; 
         if (tagEl) tagEl.innerText = name.toUpperCase();
         
@@ -177,12 +177,12 @@ export function updatePlant(name) {
 
         // 5. Disparo de Animaciones
         animateValue(humEl, 0, valH, 800, '%');
-        animateValue(tempEl, 0, valT, 800, '°C');
+        animateValue(tempEl, 0, valT, 800, '\u00b0C');
         
         if (phEl) phEl.innerText = data.ph || '--';
         if (uvEl) uvEl.innerText = data.uv || 'N/A';
 
-        // 6. LÓGICA DE ALERTA CRÍTICA
+        // 6. L GICA DE ALERTA CR TICA
         // Si la humedad baja del 20%, activamos modo visual de error
         if (valH < 20) {
             humEl.classList.add('text-red-500', 'animate-pulse');
@@ -196,7 +196,7 @@ export function updatePlant(name) {
         img.style.opacity = '1';
     }, 200);
     
-    // Actualizar estado visual de los botones de navegación
+    // Actualizar estado visual de los botones de navegaci n
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.innerText === name.toUpperCase());
     });
@@ -213,10 +213,10 @@ export function initUserDashboard() {
         const firstPlant = Object.keys(localData)[0];
         updatePlant(firstPlant);
         
-        // Si el Módulo 07 (Gestión) está presente, aseguramos que la UI esté en modo "Datos"
+        // Si el M dulo 07 (Gesti n) est  presente, aseguramos que la UI est  en modo "Datos"
         if (typeof restoreDashboardUI === 'function') restoreDashboardUI();
     } else {
-        // Si no hay plantas, activamos el estado de "Sin Señal" del Módulo 07
+        // Si no hay plantas, activamos el estado de "Sin Se al" del M dulo 07
         if (typeof setEmptyDashboardState === 'function') {
             setEmptyDashboardState();
         }

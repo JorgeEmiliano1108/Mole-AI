@@ -1,7 +1,7 @@
 // =============================================================================
-// Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
+// Copyright (C) 2024-2026 Mole.AI - All Rights Reserved.
 // =============================================================================
-// admin.js — CMD Center logic extracted from inline <script> for SoC compliance.
+// admin.js - CMD Center logic extracted from inline <script> for SoC compliance.
 // Handles: view switching, data loading, chart initialization, and button handlers.
 // =============================================================================
 
@@ -104,12 +104,12 @@ function updateBreadcrumb(viewKey) {
     if (!breadcrumb) return;
 
     const labels = {
-        dashboard: 'Dashboard — Vista General',
-        'iot-fleet': 'Flota IoT — Monitoreo ESP32',
-        mlops: 'MLOps — Entrenamiento y Fine-Tuning',
-        alerts: 'Centro de Alertas — Gestión'
+        dashboard: 'Dashboard \u2014 Vista General',
+        'iot-fleet': 'Flota IoT \u2014 Monitoreo ESP32',
+        mlops: 'MLOps \u2014 Entrenamiento y Fine-Tuning',
+        alerts: 'Centro de Alertas \u2014 Gesti\u00f3n'
     };
-    breadcrumb.textContent = labels[viewKey] || 'Dashboard — Vista General';
+    breadcrumb.textContent = labels[viewKey] || 'Dashboard \u2014 Vista General';
 }
 
 function updateActiveSidebar(viewKey) {
@@ -310,8 +310,8 @@ function initRadarChart() {
         chart.setOption({
             radar: {
                 indicator: [
-                    { name: 'Batería', max: 100 },
-                    { name: 'Señal', max: 100 },
+                    { name: 'Bater\u00eda', max: 100 },
+                    { name: 'Se\u00f1al', max: 100 },
                     { name: 'Temp', max: 80 },
                     { name: 'Uptime', max: 100 },
                     { name: 'Latencia', max: 500 }
@@ -375,7 +375,7 @@ window.handleExport = function() {
 
 // Start new training
 window.handleNewTraining = function() {
-    if (!window.confirm('¿Iniciar nuevo entrenamiento ML?')) return;
+    if (!window.confirm('\u00bfIniciar nuevo entrenamiento ML?')) return;
 
     if (window.ApiService && typeof window.ApiService.triggerTraining === 'function') {
         window.ApiService.triggerTraining({
@@ -393,7 +393,7 @@ window.handleNewTraining = function() {
 
 // Deploy model
 window.handleDeploy = function(modelId) {
-    if (!window.confirm('¿Desplegar modelo ' + modelId + ' a producción?')) return;
+    if (!window.confirm('\u00bfDesplegar modelo ' + modelId + ' a producci\u00f3n?')) return;
 
     if (window.ApiService && typeof window.ApiService.deployModel === 'function') {
         window.ApiService.deployModel({
@@ -421,7 +421,7 @@ window.handleAcknowledge = function(alertId) {
 
 // Delete alert
 window.handleDelete = function(alertId) {
-    if (!window.confirm('¿Eliminar alerta ' + alertId + '?')) return;
+    if (!window.confirm('\u00bfEliminar alerta ' + alertId + '?')) return;
 
     if (window.ApiService && typeof window.ApiService.deleteAlert === 'function') {
         window.ApiService.deleteAlert(alertId).catch(e => {

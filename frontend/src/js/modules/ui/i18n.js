@@ -1,21 +1,21 @@
 // ==========================================================
-// 15. MÓDULO I18N: TRADUCCIÓN DINÁMICA [BACKEND ESTRICTO]
+// 15. M DULO I18N: TRADUCCI N DIN MICA [BACKEND ESTRICTO]
 // ==========================================================
 
 // Use centralized AppConfig for API base URL (see static/js/config.js)
 // Avoid redeclaring API_BASE_URL in multiple modules.
 // Access via: window.AppConfig.API_BASE_URL
 
-// Memoria volátil para no descargar el mismo idioma dos veces en la misma sesión (ahorra red)
+// Memoria vol til para no descargar el mismo idioma dos veces en la misma sesi n (ahorra red)
 export let loadedTranslations = {};
 
-// 1. INICIALIZACIÓN AL CARGAR EL DOM
+// 1. INICIALIZACI N AL CARGAR EL DOM
 document.addEventListener("DOMContentLoaded", () => {
     initLanguageProtocol();
 });
 
 async function initLanguageProtocol() {
-    // Revisamos si el usuario ya tenía un idioma asignado localmente
+    // Revisamos si el usuario ya ten a un idioma asignado localmente
     let savedLang = localStorage.getItem('moleia_system_lang');
 
     if (!savedLang) {
@@ -24,36 +24,36 @@ async function initLanguageProtocol() {
         savedLang = browserLang.split('-')[0]; // Extrae 'es' de 'es-MX'
     }
 
-    // Iniciamos la descarga y aplicación del idioma desde el servidor
+    // Iniciamos la descarga y aplicaci n del idioma desde el servidor
     await applyLanguage(savedLang);
 }
 
-// 2. MOTOR DE DESCARGA Y TRADUCCIÓN (100% DEPENDIENTE DEL BACKEND)
+// 2. MOTOR DE DESCARGA Y TRADUCCI N (100% DEPENDIENTE DEL BACKEND)
 async function applyLanguage(lang) {
     console.log(`> Solicitando paquete de idioma [${lang.toUpperCase()}] al servidor central...`);
 
     // Si no tenemos el idioma en la memoria temporal, lo descargamos del Backend
     if (!loadedTranslations[lang]) {
         try {
-            // Petición GET al servidor para traer el diccionario JSON de ese idioma
+            // Petici n GET al servidor para traer el diccionario JSON de ese idioma
             // Vite serves static/ files from root, so use /lang/
             const response = await fetch(`/lang/${lang}.json`);
             
-            if (!response.ok) throw new Error(`El servidor no encontró el idioma: ${lang}`);
+            if (!response.ok) throw new Error(`El servidor no encontr\u00f3 el idioma: ${lang}`);
             
             // Guardamos el diccionario descargado en la memoria RAM
             loadedTranslations[lang] = await response.json();
-            console.log(`> [ OK ] Paquete [${lang.toUpperCase()}] descargado con éxito.`);
+            console.log(`> [ OK ] Paquete [${lang.toUpperCase()}] descargado con \u00e9xito.`);
 
         } catch (error) {
-            console.error("> [ ERROR CRÍTICO ] Fallo al descargar idioma desde el backend:", error);
+            console.error("> [ ERROR CR\u00cdTICO ] Fallo al descargar idioma desde el backend:", error);
             
-            // Si el backend falla y no hay nada en memoria, abortamos la traducción
+            // Si el backend falla y no hay nada en memoria, abortamos la traducci n
             if (!loadedTranslations['es']) {
-                console.warn("> La interfaz quedará con los textos por defecto del HTML.");
+                console.warn("> La interfaz quedar\u00e1 con los textos por defecto del HTML.");
                 return;
             } else {
-                // Fallback al español si ya estaba descargado
+                // Fallback al espa ol si ya estaba descargado
                 lang = 'es'; 
             }
         }
@@ -61,7 +61,7 @@ async function applyLanguage(lang) {
 
     const dict = loadedTranslations[lang];
     
-    // Guardamos la configuración activa
+    // Guardamos la configuraci n activa
     localStorage.setItem('moleia_system_lang', lang);
 
     // Escaneamos el DOM buscando nodos con la etiqueta data-i18n
@@ -70,7 +70,7 @@ async function applyLanguage(lang) {
     elementsToTranslate.forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (dict[key]) {
-            // Efecto visual de transición (Glitch/Fade)
+            // Efecto visual de transici n (Glitch/Fade)
             el.style.transition = "opacity 0.15s ease-in-out";
             el.style.opacity = 0;
             
@@ -86,7 +86,7 @@ async function applyLanguage(lang) {
     if (langSelector) langSelector.innerText = lang.toUpperCase();
 }
 
-// 3. CAMBIO MANUAL Y SINCRONIZACIÓN ESTRICTA CON BACKEND
+// 3. CAMBIO MANUAL Y SINCRONIZACI N ESTRICTA CON BACKEND
 async function switchLanguage(newLang) {
     // 1. Descargamos y aplicamos el nuevo idioma desde la base de datos
     await applyLanguage(newLang);
@@ -114,7 +114,7 @@ async function switchLanguage(newLang) {
             
             console.log("> [ OK ] Preferencia de idioma sincronizada con el servidor central.");
         } catch (error) {
-            console.error("> [ ERROR CRÍTICO ] No se pudo guardar el idioma en el perfil del Operador:", error);
+            console.error("> [ ERROR CR\u00cdTICO ] No se pudo guardar el idioma en el perfil del Operador:", error);
         }
     }
 }   

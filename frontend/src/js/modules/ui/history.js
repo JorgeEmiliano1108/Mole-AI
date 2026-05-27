@@ -2,7 +2,7 @@
 // 9. FLUJO DE MI HUERTO (HISTORIAL Y FAVORITOS) [BACKEND ESTRICTO]
 // ==========================================================
 
-// Variable para recordar qué pestaña estamos viendo
+// Variable para recordar qu  pesta a estamos viendo
 export let currentTab = 'history'; 
 
 export function openHistoryModal() {
@@ -20,7 +20,7 @@ export function closeHistoryModal() {
 export function switchHistoryTab(tab) {
     currentTab = tab;
     
-    // Estilos visuales de las pestañas
+    // Estilos visuales de las pesta as
     const btnHist = document.getElementById('tab-history');
     const btnFav = document.getElementById('tab-favorites');
     
@@ -54,7 +54,7 @@ async function fetchAndRenderHuerto(tab) {
         if (!token) throw new Error("Acceso denegado: Se requiere Token.");
 
         // ========================================================
-        // 🚀 PETICIÓN AL SERVIDOR (HISTORIAL O FAVORITOS)
+        //   PETICI N AL SERVIDOR (HISTORIAL O FAVORITOS)
         // ========================================================
         const endpoint = tab === 'history' 
             ? `${window.AppConfig.API_BASE_URL}/users/${currentUser}/history/`
@@ -68,12 +68,12 @@ async function fetchAndRenderHuerto(tab) {
             }
         });
         
-        if (!response.ok) throw new Error("El servidor rechazó la conexión o no hay datos.");
+        if (!response.ok) throw new Error("El servidor rechaz\u00f3 la conexi\u00f3n o no hay datos.");
         
         dataToRender = await response.json();
 
     } catch (error) {
-        console.error("> [ ERROR CRÍTICO ] Fallo al obtener base de datos:", error);
+        console.error("> [ ERROR CR\u00cdTICO ] Fallo al obtener base de datos:", error);
         // Mostrar error en pantalla en lugar de usar datos locales
         container.textContent = '';
         const err = createNode('div', 'text-center text-red-500 mt-10 text-xs font-bold tracking-widest', '> ERROR DE RED: NO SE PUDO CONECTAR AL SERVIDOR CENTRAL.');
@@ -84,7 +84,7 @@ async function fetchAndRenderHuerto(tab) {
     // 2. RENDERIZADO DE LAS CARDS
     if (!dataToRender || dataToRender.length === 0) {
         container.textContent = '';
-        const none = createNode('div', 'text-center text-white/50 mt-10 text-xs tracking-widest', '> NO HAY REGISTROS EN ESTA CATEGORÍA.');
+        const none = createNode('div', 'text-center text-white/50 mt-10 text-xs tracking-widest', '> NO HAY REGISTROS EN ESTA CATEGOR\u00cdA.');
         container.appendChild(none);
         return;
     }
@@ -105,7 +105,7 @@ async function fetchAndRenderHuerto(tab) {
         const title = createNode('h3', `${themeClasses.text} font-bold mt-1 text-sm md:text-base uppercase`, item.species || 'Sin nombre');
         left.appendChild(title);
 
-        const statusClass = (item.status && item.status.toLowerCase().includes('óptimo')) ? 'text-[#00e5ff]' : 'text-red-400';
+        const statusClass = (item.status && item.status.toLowerCase().includes('\u00f3ptimo')) ? 'text-[#00e5ff]' : 'text-red-400';
         const statusP = createNode('p', 'text-xs text-white/80', `Estado: `);
         const statusSpan = createNode('span', statusClass, item.status || 'Desconocido');
         statusP.appendChild(statusSpan);
@@ -136,7 +136,7 @@ async function saveToFavorites(event) {
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
     const token = window.getAuthToken();
 
-    // Tomamos los datos de la UI del diagnóstico. El backend deberá asignar el ID real.
+    // Tomamos los datos de la UI del diagn stico. El backend deber  asignar el ID real.
     const newFavorite = {
         usuario: currentUser,
         date: new Date().toLocaleDateString('en-GB'),
@@ -149,7 +149,7 @@ async function saveToFavorites(event) {
         if (!token) throw new Error("Acceso denegado: Se requiere Token.");
 
         // ========================================================
-        // 🚀 ENVIAR FAVORITO AL SERVIDOR
+        //   ENVIAR FAVORITO AL SERVIDOR
         // ========================================================
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/favorites/save/`, {
             method: 'POST',
@@ -168,14 +168,14 @@ async function saveToFavorites(event) {
         btn.disabled = true; // Evitar multiples clicks
         
     } catch (error) {
-        console.error("> [ ERROR CRÍTICO ] Error al guardar favorito:", error);
-        btn.innerText = "[ ERROR DE CONEXIÓN ]";
+        console.error("> [ ERROR CR\u00cdTICO ] Error al guardar favorito:", error);
+        btn.innerText = "[ ERROR DE CONEXI\u00d3N ]";
         btn.classList.remove('animate-pulse');
         btn.classList.add('text-red-500', 'border-red-500');
         
         // Permitimos intentar de nuevo tras 2 segundos
         setTimeout(() => {
-            btn.innerText = "[ GUARDAR DIAGNÓSTICO ]";
+            btn.innerText = "[ GUARDAR DIAGN\u00d3STICO ]";
             btn.classList.remove('text-red-500', 'border-red-500');
         }, 2000);
     }

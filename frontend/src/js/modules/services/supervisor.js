@@ -1,10 +1,10 @@
 // ==========================================================
-// 5. SISTEMAS DE SUPERVISOR (DINÁMICO Y BACKEND READY)
+// 5. SISTEMAS DE SUPERVISOR (DIN MICO Y BACKEND READY)
 // ==========================================================
 
 /**
- * 1. SINCRONIZACIÓN DE INVENTARIO (OFFLINE-FRIENDLY)
- * Trae las plantas específicas del usuario desde el servidor.
+ * 1. SINCRONIZACI N DE INVENTARIO (OFFLINE-FRIENDLY)
+ * Trae las plantas espec ficas del usuario desde el servidor.
  */
 async function syncUserPlants() {
     try {
@@ -23,9 +23,9 @@ async function syncUserPlants() {
         
         if (response.ok) {
             const userPlants = await response.json();
-            // Guardamos el inventario real en la memoria local (Única fuente de verdad)
+            // Guardamos el inventario real en la memoria local ( nica fuente de verdad)
             localStorage.setItem('moleia_plants', JSON.stringify(userPlants));
-            console.log("> [ RED ] Banco de datos botánico sincronizado.");
+            console.log("> [ RED ] Banco de datos bot\u00e1nico sincronizado.");
         } else {
             throw new Error("Token expirado o acceso denegado.");
         }
@@ -35,8 +35,8 @@ async function syncUserPlants() {
 }
 
 /**
- * 2. OVERRIDE DINÁMICO (ESTRÉS Y RESTAURACIÓN)
- * Conectado a la UI actual y con soporte para caídas de red.
+ * 2. OVERRIDE DIN MICO (ESTR S Y RESTAURACI N)
+ * Conectado a la UI actual y con soporte para ca das de red.
  */
 async function triggerOverride(type, plantName = null) {
     const db = JSON.parse(localStorage.getItem('moleia_plants')) || {};
@@ -55,26 +55,26 @@ async function triggerOverride(type, plantName = null) {
 
     if (type === 'sequia') {
         db[targetPlant].h = '5%';
-        db[targetPlant].t = '48°C';
-        console.warn(`> [ ALERTA ] Protocolo de sequía activado en núcleo: ${targetPlant.toUpperCase()}`);
+        db[targetPlant].t = '48\u00b0C';
+        console.warn(`> [ ALERTA ] Protocolo de sequ\u00eda activado en n\u00facleo: ${targetPlant.toUpperCase()}`);
     } 
     else if (type === 'restaurar') {
-        // Restauración total: Pedimos datos frescos al servidor
-        console.log("> [ SISTEMA ] Forzando restauración de telemetría...");
+        // Restauraci n total: Pedimos datos frescos al servidor
+        console.log("> [ SISTEMA ] Forzando restauraci\u00f3n de telemetr\u00eda...");
         await syncUserPlants();
         
-        // Actualizamos la UI si el usuario está viendo la misma planta
+        // Actualizamos la UI si el usuario est  viendo la misma planta
         if (typeof updatePlant === 'function') updatePlant(targetPlant);
         return;
     }
 
-    // 1. Guardamos el daño en la memoria local inmediatamente
+    // 1. Guardamos el da o en la memoria local inmediatamente
     localStorage.setItem('moleia_plants', JSON.stringify(db));
     
-    // 2. Reflejamos el daño en la pantalla si esa planta está activa
+    // 2. Reflejamos el da o en la pantalla si esa planta est  activa
     if (typeof updatePlant === 'function') updatePlant(targetPlant);
 
-    // 3. Informamos al servidor (Usando la cola offline del Módulo 2 si falla)
+    // 3. Informamos al servidor (Usando la cola offline del M dulo 2 si falla)
     try {
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/sistema/override`, {
             method: 'POST',
@@ -85,9 +85,9 @@ async function triggerOverride(type, plantName = null) {
             body: JSON.stringify({ plant: targetPlant, action: type, data: db[targetPlant] })
         });
         
-        if (!response.ok) throw new Error("Servidor no respondió al Override.");
+        if (!response.ok) throw new Error("Servidor no respondi\u00f3 al Override.");
     } catch (e) { 
-        console.warn("> [ RED CAÍDA ] Override guardado en caché. Se enviará al reconectar.");
+        console.warn("> [ RED CA\u00cdDA ] Override guardado en cach\u00e9. Se enviar\u00e1 al reconectar.");
         if (typeof queueOfflineAction === 'function') {
             queueOfflineAction('OVERRIDE', { plant: targetPlant, action: type, data: db[targetPlant] });
         }
@@ -95,7 +95,7 @@ async function triggerOverride(type, plantName = null) {
 }
 
 /**
- * 3. DIAGNÓSTICO TOTAL (ESCÁNER TERMINAL)
+ * 3. DIAGN STICO TOTAL (ESC NER TERMINAL)
  * Lee el inventario real y muestra el reporte con estilo Cyberpunk.
  */
 async function runDiagnostic() {
@@ -105,7 +105,7 @@ async function runDiagnostic() {
     term.textContent = '';
     const loadingSpan = document.createElement('span');
     loadingSpan.className = 'text-[#00e5ff] animate-pulse';
-    loadingSpan.textContent = 'Iniciando enlace con satélite...';
+    loadingSpan.textContent = 'Iniciando enlace con sat\u00e9lite...';
     term.appendChild(loadingSpan);
     
     await syncUserPlants();
@@ -115,26 +115,26 @@ async function runDiagnostic() {
     term.textContent = ''; // Limpiamos "cargando"
 
     let lines = [
-        { text: "> INICIANDO PROTOCOLO DE DIAGNÓSTICO...", className: 'text-white font-bold' },
-        { text: `> DETECTADOS ${plantKeys.length} ESPECÍMENES EN EL SECTOR...`, className: '' },
+        { text: "> INICIANDO PROTOCOLO DE DIAGN\u00d3STICO...", className: 'text-white font-bold' },
+        { text: `> DETECTADOS ${plantKeys.length} ESPEC\u00cdMENES EN EL SECTOR...`, className: '' },
         { text: "----------------------------------------", className: 'text-[#00e5ff]/50' }
     ];
 
     if (plantKeys.length === 0) {
-        lines.push({ text: "> ADVERTENCIA: SECTOR VACÍO.", className: 'text-red-500 font-bold' });
+        lines.push({ text: "> ADVERTENCIA: SECTOR VAC\u00cdO.", className: 'text-red-500 font-bold' });
         lines.push({ text: "> REGISTRE NUEVAS ESPECIES PARA MONITOREO.", className: '' });
     } else {
         plantKeys.forEach(name => {
             const p = db[name];
             const hVal = parseInt(p.h.replace('%', '')) || 0; 
             
-            lines.push({ text: `> NÚCLEO: ${name.toUpperCase()}`, className: 'text-white' });
+            lines.push({ text: `> N\u00daCLEO: ${name.toUpperCase()}`, className: 'text-white' });
             
             const statusLine = document.createElement('div');
             statusLine.appendChild(document.createTextNode("  ESTADO: "));
             const statusSpan = document.createElement('span');
             statusSpan.className = hVal < 20 ? 'text-red-500 font-bold animate-pulse' : 'text-[#00e5ff]';
-            statusSpan.textContent = hVal < 20 ? '[ CRÍTICO ]' : '[ ÓPTIMO ]';
+            statusSpan.textContent = hVal < 20 ? '[ CR\u00cdTICO ]' : '[ \u00d3PTIMO ]';
             statusLine.appendChild(statusSpan);
             statusLine.appendChild(document.createTextNode(` | HUMEDAD: ${p.h} | TEMP: ${p.t}`));
             lines.push({ element: statusLine });
@@ -144,7 +144,7 @@ async function runDiagnostic() {
             const intSpan = document.createElement('span');
             if (hVal < 20) {
                 intSpan.className = 'text-red-500';
-                intSpan.textContent = 'FALLO DE CÁMARA';
+                intSpan.textContent = 'FALLO DE C\u00c1MARA';
             } else {
                 intSpan.textContent = 'ESTABLE';
             }
