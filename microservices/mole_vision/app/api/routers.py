@@ -39,7 +39,7 @@ def get_analyze_use_case(
 
 
 # Vision Analysis — 5 requests/minute per client IP (guards NVIDIA token budget)
-@router.post("/analyze", response_model=DiagnosticResponseSchema)
+@router.post("/analyze/", response_model=DiagnosticResponseSchema)
 @limiter.limit("5/minute")
 async def analyze_vision(
     request: Request,
@@ -84,7 +84,7 @@ async def analyze_vision(
         )
 
 
-@router.post("/analyze-ph-strip", response_model=PhStripResponseSchema)
+@router.post("/analyze-ph-strip/", response_model=PhStripResponseSchema)
 async def analyze_ph_strip(
     user: AuthenticatedUser, 
     image_bytes: bytes = Depends(get_image_file),
@@ -108,13 +108,13 @@ async def analyze_ph_strip(
         )
 
 
-@router.get("/health", response_model=HealthCheckSchema)
+@router.get("/health/", response_model=HealthCheckSchema)
 async def health() -> HealthCheckSchema:
     """Health check básico."""
     return HealthCheckSchema(status="ok")
 
 
-@router.get("/healthz")
+@router.get("/healthz/")
 async def healthz() -> dict:
     """Health check completo con verificación de componentes."""
     from app.infrastructure.adapters.nvidia_vision_adapter import NvidiaVisionAdapter
