@@ -255,6 +255,13 @@ function setupPlantRegistration() {
                         plant_id: plantRes.id
                     });
                     console.log("Hardware binding exitoso para dispositivo " + currentDeviceId);
+                } else {
+                    console.warn("Planta creada pero no hay deviceId para bindear.");
+                    if (window.ApiService && window.ApiService.showToast) {
+                        window.ApiService.showToast("Planta registrada exitosamente. Ahora vincula tu nodo ESP32 desde el menú Wi-Fi.", "success");
+                    } else {
+                        alert("Planta registrada exitosamente. Recuerda vincular tu nodo ESP32 para iniciar el monitoreo.");
+                    }
                 }
 
                 formReg.reset();

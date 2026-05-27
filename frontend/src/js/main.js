@@ -1077,19 +1077,19 @@ function renderPlantResults(results) {
         card.className = 'border border-[#00e5ff]/30 p-3 bg-[#00e5ff]/5 hover:bg-[#00e5ff]/20 transition-all cursor-pointer';
 
         const title = document.createElement('h3');
-        title.className = 'font-bold text-[#00e5ff] text-sm tracking-widest';
+        title.className = 'font-bold text-[#00e5ff] text-base tracking-widest';
         title.textContent = name.toUpperCase();
         card.appendChild(title);
 
         if (scientific) {
             const sci = document.createElement('p');
-            sci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
+            sci.className = 'text-sm text-[#00e5ff]/70 italic mb-2';
             sci.textContent = scientific;
             card.appendChild(sci);
         }
 
         const snippet = document.createElement('p');
-        snippet.className = 'text-xs text-[#00e5ff]/90 opacity-80';
+        snippet.className = 'text-sm text-[#00e5ff]/90 opacity-80';
         snippet.style.display = '-webkit-box';
         snippet.style.webkitLineClamp = '2';
         snippet.style.webkitBoxOrient = 'vertical';
@@ -1104,19 +1104,19 @@ function renderPlantResults(results) {
 
             if (humidity) {
                 const hum = document.createElement('span');
-                hum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                hum.className = 'text-xs bg-[#00e5ff]/10 text-[#00e5ff] px-1.5 py-0.5 border border-[#00e5ff]/20';
                 hum.textContent = `\ud83d\udca7 ${humidity}`;
                 params.appendChild(hum);
             }
             if (temperature) {
                 const temp = document.createElement('span');
-                temp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                temp.className = 'text-xs bg-[#00e5ff]/10 text-[#00e5ff] px-1.5 py-0.5 border border-[#00e5ff]/20';
                 temp.textContent = `\ud83c\udf21\ufe0f ${temperature}`;
                 params.appendChild(temp);
             }
             if (ph) {
                 const phSpan = document.createElement('span');
-                phSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                phSpan.className = 'text-xs bg-[#00e5ff]/10 text-[#00e5ff] px-1.5 py-0.5 border border-[#00e5ff]/20';
                 phSpan.textContent = `\u2697\ufe0f pH: ${ph}`;
                 params.appendChild(phSpan);
             }
@@ -1126,7 +1126,7 @@ function renderPlantResults(results) {
         // NOM-059 Warning (if protected)
         if (isProtected && warning) {
             const alert = document.createElement('div');
-            alert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] leading-relaxed';
+            alert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-xs leading-relaxed';
             alert.textContent = warning;
             card.appendChild(alert);
         }
@@ -1137,7 +1137,7 @@ function renderPlantResults(results) {
             while (card.firstChild) card.removeChild(card.firstChild);
 
             const eTitle = document.createElement('h3');
-            eTitle.className = 'font-bold text-[#00e5ff] text-sm tracking-widest border-b border-[#00e5ff]/30 pb-1 mb-2';
+            eTitle.className = 'font-bold text-[#00e5ff] text-lg tracking-widest border-b border-[#00e5ff]/30 pb-2 mb-3';
             eTitle.textContent = name.toUpperCase();
             card.appendChild(eTitle);
 
@@ -1157,13 +1157,13 @@ function renderPlantResults(results) {
 
             if (scientific) {
                 const eSci = document.createElement('p');
-                eSci.className = 'text-xs text-[#00e5ff]/70 italic mb-2';
+                eSci.className = 'text-sm text-[#00e5ff]/70 italic mb-3';
                 eSci.textContent = scientific;
                 card.appendChild(eSci);
             }
 
             const eDesc = document.createElement('p');
-            eDesc.className = 'text-xs text-[#00e5ff] leading-relaxed';
+            eDesc.className = 'text-base text-[#00e5ff] leading-relaxed mb-3';
             eDesc.textContent = desc;
             card.appendChild(eDesc);
 
@@ -1178,19 +1178,19 @@ function renderPlantResults(results) {
 
                 if (eHumidity) {
                     const eHum = document.createElement('span');
-                    eHum.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    eHum.className = 'text-sm bg-[#00e5ff]/10 text-[#00e5ff] px-2 py-1 border border-[#00e5ff]/20';
                     eHum.textContent = `\ud83d\udca7 ${eHumidity}`;
                     eParams.appendChild(eHum);
                 }
                 if (eTemperature) {
                     const eTemp = document.createElement('span');
-                    eTemp.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    eTemp.className = 'text-sm bg-[#00e5ff]/10 text-[#00e5ff] px-2 py-1 border border-[#00e5ff]/20';
                     eTemp.textContent = `\ud83c\udf21\ufe0f ${eTemperature}`;
                     eParams.appendChild(eTemp);
                 }
                 if (ePh) {
                     const ePhSpan = document.createElement('span');
-                    ePhSpan.className = 'text-[10px] bg-[#00e5ff]/10 text-[#00e5ff] px-1 py-0.5 border border-[#00e5ff]/20';
+                    ePhSpan.className = 'text-sm bg-[#00e5ff]/10 text-[#00e5ff] px-2 py-1 border border-[#00e5ff]/20';
                     ePhSpan.textContent = `\u2697\ufe0f pH: ${ePh}`;
                     eParams.appendChild(ePhSpan);
                 }
@@ -1200,13 +1200,13 @@ function renderPlantResults(results) {
             // NOM-059 Warning in expanded view
             if (isProtected && warning) {
                 const eAlert = document.createElement('div');
-                eAlert.className = 'mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] leading-relaxed';
+                eAlert.className = 'mt-3 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm leading-relaxed';
                 eAlert.textContent = warning;
                 card.appendChild(eAlert);
             }
 
             const closeBtn = document.createElement('button');
-            closeBtn.className = 'mt-3 text-xs text-[#00e5ff] bg-transparent border border-[#00e5ff] px-2 py-1 hover:bg-[#00e5ff] hover:text-black w-full font-bold tracking-widest transition-all';
+            closeBtn.className = 'mt-4 text-sm text-[#00e5ff] bg-transparent border border-[#00e5ff] px-3 py-2 hover:bg-[#00e5ff] hover:text-black w-full font-bold tracking-widest transition-all';
             closeBtn.textContent = '[ CERRAR FICHA ]';
             closeBtn.addEventListener('click', (ev) => {
                 ev.stopPropagation();
