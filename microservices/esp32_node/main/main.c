@@ -326,11 +326,8 @@ static esp_err_t captive_get_handler(httpd_req_t *req)
         "b.disabled=false;b.textContent='\\u1F504 Escanear Redes';"
         "s.innerHTML='<option value=\\'\\'>Error. Reintente.</option>';});"
         "}"
-        "</script><script>
-        // Placeholder: In production, use window.crypto.subtle to derive a shared secret via ECDH
-        // then encrypt the JSON payload with AES‑GCM before POSTing.
-        // For demo, we simply submit the form normally.
-        </script>"
+        "</script>"
+        /* Placeholder: In production, encrypt JSON payload with AES-GCM via Web Crypto API */
         "</body></html>"
     );
 
@@ -518,11 +515,11 @@ static void start_captive_portal(void)
     /* Wait for provisioning completion (BLE or Captive Portal) */
     if (g_provision_sem) {
         /* The semaphore is given by BLE write callback or by the POST handler
-+         * (after storing token and credentials). */
-+        xSemaphoreTake(g_provision_sem, portMAX_DELAY);
-+    }
-+    ESP_LOGI(TAG, "Provisioning completed – restarting…");
-+    esp_restart();
+         * (after storing token and credentials). */
+        xSemaphoreTake(g_provision_sem, portMAX_DELAY);
+    }
+    ESP_LOGI(TAG, "Provisioning completed – restarting…");
+    esp_restart();
 }
 
 /* ==========================================================================

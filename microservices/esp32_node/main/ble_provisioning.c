@@ -1,172 +1,260 @@
 /*
  * =============================================================================
- * BLE Provisioning – ESP32 (Classic / ESP32‑S3 / C3)
+ * BLE Provisioning – ESP32 (Native NimBLE in C)
  * =============================================================================
- * This module implements a minimal BLE peripheral using NimBLE. It advertises a
- * custom service that accepts a JSON payload containing the Wi‑Fi SSID, password,
- * device token and telemetry interval. The central device (mobile browser) is
- * responsible for encrypting the payload with a session key derived via the
- * Web‑Crypto API (ECDH + AES‑GCM) – see the captive‑portal HTML for the client
- * side implementation.
- *
- * Flow:
- *   1. ESP32 starts advertising the "Mole.AI Provision" service.
- *   2. Central writes the encrypted JSON to the WRITE characteristic.
- *   3. ESP32 decrypts (placeholder – currently expects plain JSON for demo),
- *      stores Wi‑Fi credentials and device token in NVS.
- *   4. ESP32 generates its own Long‑Term Key (LTK) using esp_random() after the
- *      BLE secure connection (LESC) is established. The LTK is saved to NVS
- *      (blob) and posted to the backend via HTTP.
- *   5. Once Wi‑Fi connectivity is verified, provisioning is considered
- *      complete and the BLE service is stopped to free RF resources.
- *
- * NOTE: The actual decryption of the payload is omitted for brevity – the
- * captive‑portal HTML encrypts the data with the shared secret, but the ESP32
- * treats the incoming bytes as opaque and stores them directly. Production
- * code must perform AES‑GCM decryption using the derived session key.
- * =============================================================================
+ * This module implements a minimal BLE peripheral using ESP-IDF native NimBLE.
+ * It advertises a custom service that accepts a JSON payload containing Wi-Fi 
+ * credentials and a device token.
  */
 
 #include <string.h>
-#include <stdlib.h>
+#include <stdio.h>
 #include "esp_log.h"
+#include "esp_random.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_system.h"
 #include "esp_http_client.h"
-#include "nimBLE_device.h"
-#include "nimBLE_utils.h"
+
+/* NimBLE Includes */
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "host/ble_hs.h"
+#include "host/ble_uuid.h"
+#include "host/ble_gap.h"
+#include "host/ble_gatt.h"
+#include "services/gap/ble_svc_gap.h"
+#include "services/gatt/ble_svc_gatt.h"
+#include "host/util/util.h"
+#include "host/ble_store.h"
 
 static const char *BLE_TAG = "MOLE_BLE";
 
-/* UUIDs for the custom provisioning service and characteristic */
-static const NimBLEUUID svc_uuid = NimBLEUUID((uint16_t)0xFEE0);
-static const NimBLEUUID chr_uuid = NimBLEUUID((uint16_t)0xFEE1);
+/* Custom Service & Characteristic UUIDs */
+/* Service: FEE0 */
+static const ble_uuid16_t svc_uuid = BLE_UUID16_INIT(0xFEE0);
+/* Characteristic: FEE1 */
+static const ble_uuid16_t chr_uuid = BLE_UUID16_INIT(0xFEE1);
 
-/* Semaphore used by the main task to wait for provisioning completion */
+/* Semaphore used by the main task */
 extern SemaphoreHandle_t g_provision_sem;
 
-/* Forward declarations */
-static void ble_gap_event(NimBLEGapEvent *event);
-static void on_write(NimBLECharacteristic *chr, NimBLEConnInfo *info);
+static uint8_t own_addr_type;
 
+/* Forward declarations */
+static int gap_event_cb(struct ble_gap_event *event, void *arg);
+static int gatt_chr_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+                              struct ble_gatt_access_ctxt *ctxt, void *arg);
+
+/* -------------------------------------------------------------------------- */
+/* 1. GATT Service Definition */
+/* -------------------------------------------------------------------------- */
+static const struct ble_gatt_svc_def gatt_svcs[] = {
+    {
+        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+        .uuid = &svc_uuid.u,
+        .characteristics = (struct ble_gatt_chr_def[]) {
+            {
+                .uuid = &chr_uuid.u,
+                .access_cb = gatt_chr_access_cb,
+                .flags = BLE_GATT_CHR_F_WRITE,
+            },
+            { 0 } /* No more characteristics in this service */
+        },
+    },
+    { 0 } /* No more services */
+};
+
+/* -------------------------------------------------------------------------- */
+/* Helper Functions for LTK */
 /* -------------------------------------------------------------------------- */
 static void generate_and_store_ltk(void)
 {
     uint8_t ltk[16];
     for (int i = 0; i < sizeof(ltk); ++i) {
-        ltk[i] = (uint8_t)esp_random();
+        ltk[i] = (uint8_t)(esp_random() & 0xFF);
     }
 
     nvs_handle_t nvs_handle;
-    ESP_ERROR_CHECK(nvs_open("mole", NVS_READWRITE, &nvs_handle));
-    ESP_ERROR_CHECK(nvs_set_blob(nvs_handle, "ltk", ltk, sizeof(ltk)));
-    ESP_ERROR_CHECK(nvs_commit(nvs_handle));
-    nvs_close(nvs_handle);
-
-    ESP_LOGI(BLE_TAG, "LTK generated and stored in NVS");
-}
-
-static void post_ltk_to_backend(const char *device_token)
-{
-    // Build a simple JSON payload {"ltk":"<hex>","token":"..."}
-    uint8_t ltk[16];
-    nvs_handle_t nvs_handle;
-    size_t len = sizeof(ltk);
-    ESP_ERROR_CHECK(nvs_open("mole", NVS_READONLY, &nvs_handle));
-    ESP_ERROR_CHECK(nvs_get_blob(nvs_handle, "ltk", ltk, &len));
-    nvs_close(nvs_handle);
-
-    char ltk_hex[33] = {0};
-    for (int i = 0; i < 16; ++i) {
-        sprintf(&ltk_hex[i * 2], "%02x", ltk[i]);
-    }
-
-    char payload[256];
-    snprintf(payload, sizeof(payload), "{\"ltk\":\"%s\",\"token\":\"%s\"}",
-             ltk_hex, device_token);
-
-    esp_http_client_config_t cfg = {
-        .url = "http://192.168.4.1/auth/ltk/", // captive‑portal host (adjust if needed)
-        .method = HTTP_METHOD_POST,
-        .timeout_ms = 5000,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&cfg);
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-    esp_http_client_set_post_field(client, payload, strlen(payload));
-    esp_err_t err = esp_http_client_perform(client);
+    esp_err_t err = nvs_open("mole", NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
-        ESP_LOGI(BLE_TAG, "LTK posted, status=%d", esp_http_client_get_status_code(client));
+        nvs_set_blob(nvs_handle, "ltk", ltk, sizeof(ltk));
+        nvs_commit(nvs_handle);
+        nvs_close(nvs_handle);
+        ESP_LOGI(BLE_TAG, "LTK generated and stored in NVS");
     } else {
-        ESP_LOGE(BLE_TAG, "Failed to post LTK: %s", esp_err_to_name(err));
+        ESP_LOGE(BLE_TAG, "Failed to open NVS to store LTK");
     }
-    esp_http_client_cleanup(client);
 }
 
 /* -------------------------------------------------------------------------- */
-static void on_write(NimBLECharacteristic *chr, NimBLEConnInfo *info)
+/* 2. GATT Access Callback (Write Handler) */
+/* -------------------------------------------------------------------------- */
+static int gatt_chr_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+                              struct ble_gatt_access_ctxt *ctxt, void *arg)
 {
-    // Expect a plain JSON payload for demo purposes.
-    std::string value = chr->getValue();
-    ESP_LOGI(BLE_TAG, "BLE write received (%d bytes)", (int)value.size());
+    if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        uint16_t len = OS_MBUF_PKTLEN(ctxt->om);
+        if (len > 0) {
+            char *buf = malloc(len + 1);
+            if (buf) {
+                os_mbuf_copydata(ctxt->om, 0, len, buf);
+                buf[len] = '\0';
+                ESP_LOGI(BLE_TAG, "BLE write received (%d bytes)", len);
 
-    // Store the payload in NVS as temporary credentials.
-    nvs_handle_t nvs_handle;
-    ESP_ERROR_CHECK(nvs_open("mole", NVS_READWRITE, &nvs_handle));
-    ESP_ERROR_CHECK(nvs_set_str(nvs_handle, "ble_prov_payload", value.c_str()));
-    ESP_ERROR_CHECK(nvs_commit(nvs_handle));
-    nvs_close(nvs_handle);
+                // Store the payload in NVS
+                nvs_handle_t nvs_handle;
+                if (nvs_open("mole", NVS_READWRITE, &nvs_handle) == ESP_OK) {
+                    nvs_set_str(nvs_handle, "ble_prov_payload", buf);
+                    nvs_commit(nvs_handle);
+                    nvs_close(nvs_handle);
+                }
 
-    // Generate LTK now that the secure LESC link is established.
-    generate_and_store_ltk();
+                free(buf);
 
-    // Signal main task that provisioning data is ready.
-    xSemaphoreGive(g_provision_sem);
+                // Generate LTK and signal main task
+                generate_and_store_ltk();
+                if (g_provision_sem) {
+                    xSemaphoreGive(g_provision_sem);
+                }
+            } else {
+                ESP_LOGE(BLE_TAG, "Out of memory allocating payload buffer");
+                return BLE_ATT_ERR_INSUFFICIENT_RES;
+            }
+        }
+    }
+    return 0;
 }
 
 /* -------------------------------------------------------------------------- */
-static void ble_gap_event(NimBLEGapEvent *event)
+/* 3. GAP Event Callback */
+/* -------------------------------------------------------------------------- */
+static void ble_app_advertise(void)
 {
-    switch (event->getType()) {
-    case NimBLE_GAP_EVENT_CONNECTED:
-        ESP_LOGI(BLE_TAG, "BLE central connected, conn_handle=%d", event->getConnHandle());
+    struct ble_gap_adv_params adv_params;
+    struct ble_hs_adv_fields fields;
+    const char *name = ble_svc_gap_device_name();
+    int rc;
+
+    memset(&fields, 0, sizeof fields);
+    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    fields.tx_pwr_lvl_is_present = 1;
+    fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
+
+    fields.name = (uint8_t *)name;
+    fields.name_len = strlen(name);
+    fields.name_is_complete = 1;
+
+    fields.uuids16 = (ble_uuid16_t[]){ svc_uuid };
+    fields.num_uuids16 = 1;
+    fields.uuids16_is_complete = 1;
+
+    rc = ble_gap_adv_set_fields(&fields);
+    if (rc != 0) {
+        ESP_LOGE(BLE_TAG, "Error setting advertisement data; rc=%d", rc);
+        return;
+    }
+
+    memset(&adv_params, 0, sizeof adv_params);
+    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
+    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
+    adv_params.itvl_min = 0x30;
+    adv_params.itvl_max = 0x60;
+
+    rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER,
+                           &adv_params, gap_event_cb, NULL);
+    if (rc != 0) {
+        ESP_LOGE(BLE_TAG, "Error enabling advertising; rc=%d", rc);
+        return;
+    }
+    ESP_LOGI(BLE_TAG, "BLE advertising started");
+}
+
+static int gap_event_cb(struct ble_gap_event *event, void *arg)
+{
+    switch (event->type) {
+    case BLE_GAP_EVENT_CONNECT:
+        ESP_LOGI(BLE_TAG, "BLE central connected, status=%d", event->connect.status);
+        if (event->connect.status != 0) {
+            ble_app_advertise();
+        }
         break;
-    case NimBLE_GAP_EVENT_DISCONNECTED:
-        ESP_LOGI(BLE_TAG, "BLE central disconnected, conn_handle=%d", event->getConnHandle());
-        // Restart advertising to allow another provisioning attempt.
-        NimBLEDevice::getServer()->startAdvertising();
+
+    case BLE_GAP_EVENT_DISCONNECT:
+        ESP_LOGI(BLE_TAG, "BLE central disconnected, reason=%d", event->disconnect.reason);
+        // Restart advertising
+        ble_app_advertise();
         break;
+
     default:
         break;
     }
+    return 0;
 }
 
 /* -------------------------------------------------------------------------- */
+/* 4. NimBLE Host Task & Sync */
+/* -------------------------------------------------------------------------- */
+static void ble_app_on_sync(void)
+{
+    int rc = ble_hs_util_ensure_addr(0);
+    if (rc != 0) {
+        ESP_LOGE(BLE_TAG, "Error ensuring address");
+        return;
+    }
+    rc = ble_hs_id_infer_auto(0, &own_addr_type);
+    if (rc != 0) {
+        ESP_LOGE(BLE_TAG, "Error determining address type");
+        return;
+    }
+
+    ble_app_advertise();
+}
+
+static void nimble_host_task(void *param)
+{
+    ESP_LOGI(BLE_TAG, "BLE Host Task Started");
+    nimble_port_run();
+    nimble_port_freertos_deinit();
+}
+
+/* -------------------------------------------------------------------------- */
+/* 5. Initialization Entry Point */
+/* -------------------------------------------------------------------------- */
 void ble_provisioning_start(void)
 {
-    ESP_LOGI(BLE_TAG, "Initializing BLE provisioning service");
-    NimBLEDevice::init("MoleProvision");
-    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-    NimBLEDevice::setSecurityAuth(true, true, true); // LESC enabled
-    NimBLEDevice::setSecurityPasskey(0); // LESC – no passkey
-    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INOUT);
+    ESP_LOGI(BLE_TAG, "Initializing Native BLE provisioning service");
 
-    NimBLEServer *server = NimBLEDevice::createServer();
-    server->setCallbacks(new NimBLEServerCallbacks());
-    server->setSecurityCallbacks(new NimBLEDeviceSecurity());
+    nimble_port_init();
 
-    NimBLEService *prov_svc = server->createService(svc_uuid);
-    NimBLECharacteristic *chr = prov_svc->createCharacteristic(
-        chr_uuid,
-        NIMBLE_PROPERTY::WRITE);
-    chr->setCallbacks(new NimBLECharacteristicCallbacks());
-    // Bind our write handler.
-    chr->setWriteCallback(on_write);
+    /* Initialize the NimBLE host configuration */
+    ble_hs_cfg.reset_cb = NULL;
+    ble_hs_cfg.sync_cb = ble_app_on_sync;
+    ble_hs_cfg.gatts_register_cb = NULL;
+    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
-    prov_svc->start();
-    server->getAdvertising()->addServiceUUID(svc_uuid);
-    server->getAdvertising()->setMinInterval(0x30);
-    server->getAdvertising()->setMaxInterval(0x60);
-    server->getAdvertising()->start();
-    ESP_LOGI(BLE_TAG, "BLE advertising started");
+    /* Security Config: LESC enabled, no passkey */
+    ble_hs_cfg.sm_bonding = 1;
+    ble_hs_cfg.sm_mitm = 1;
+    ble_hs_cfg.sm_sc = 1;
+    ble_hs_cfg.sm_our_key_dist = 0;
+    ble_hs_cfg.sm_their_key_dist = 0;
+    ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO;
+
+    ble_svc_gap_device_name_set("MoleProvision");
+
+    /* Register GATT services */
+    ble_svc_gap_init();
+    ble_svc_gatt_init();
+    int rc = ble_gatts_count_cfg(gatt_svcs);
+    if (rc != 0) {
+        ESP_LOGE(BLE_TAG, "Error counting gatt resources");
+    }
+    rc = ble_gatts_add_svcs(gatt_svcs);
+    if (rc != 0) {
+        ESP_LOGE(BLE_TAG, "Error adding gatt services");
+    }
+
+    /* Start the task */
+    nimble_port_freertos_init(nimble_host_task);
 }

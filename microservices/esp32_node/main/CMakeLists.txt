@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "ble_provisioning.cpp"
+    SRCS "main.c" "ble_provisioning.c"
     INCLUDE_DIRS "include"
     REQUIRES
         nvs_flash
@@ -7,6 +7,7 @@ idf_component_register(
         esp_netif
         esp_event
         esp_http_server
+        esp_http_client
         esp_timer
         driver
         esp_adc

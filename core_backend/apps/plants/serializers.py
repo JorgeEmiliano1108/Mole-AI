@@ -64,6 +64,9 @@ class SpeciesSerializer(serializers.ModelSerializer):
             'soil_humidity_min',
             'soil_humidity_max',
             'image_url',
+            'category',
+            'is_protected_nom059',
+            'protection_category',
         ]
         read_only_fields = ['id']
 
