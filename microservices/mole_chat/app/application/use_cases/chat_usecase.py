@@ -124,7 +124,12 @@ class MoleAIChatUseCase:
             if not has_context:
                 response.sources = []
             elif not response.sources:
-                response.sources = await self.citation_manager.extract_sources(rag_context) or []
+                context_dict = {
+                    "telemetria_sensores": sensor_data if sensor_data else "",
+                    "base_conocimiento_local": rag_context,
+                    "base_conocimiento_externa": trefle_context
+                }
+                response.sources = await self.citation_manager.extract_sources(context_dict) or []
 
             return response
 
