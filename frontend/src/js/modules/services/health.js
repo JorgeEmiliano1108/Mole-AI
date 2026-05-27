@@ -142,6 +142,56 @@ function setViewMode(mode) {
 async function fetchHealth() {
     // FE-05: Guard
     if (!currentDeviceId) {
+        const fallbackToken = window.getAuthToken ? window.getAuthToken() : null;
+        if (fallbackToken) {
+            try {
+                const plantRes = await fetch(`${window.AppConfig.API_BASE_URL}plants/`, { 
+                    headers: { 'Authorization': `Bearer ${fallbackToken}` } 
+                });
+                if (plantRes.ok) {
+                    const plantData = await plantRes.json();
+                    if (plantData.count > 0 && plantData.results) {
+                        const mockData = {
+                            status: 'offline',
+                            device_id: 'NO VINCULADO',
+                            device_name: 'REQUIERE BINDING',
+                            last_seen_delta_seconds: null,
+                            ambient: {},
+                            soil: plantData.results.map(p => ({
+                                plant_nickname: p.nickname || p.nombre || 'Planta',
+                                pin: p.hardware_pin || '--',
+                                species: p.species_id || 'Sin clasificar',
+                                soil_humidity: null,
+                                ideal_humidity_min: null,
+                                ideal_humidity_max: null
+                            }))
+                        };
+                        const toggleContainer = document.getElementById('health-toggle-container');
+                        const role = localStorage.getItem('moleia_user_role');
+                        const isSre = role === 'admin' || role === 'superuser';
+                        if (toggleContainer) {
+                            toggleContainer.classList.toggle('hidden', !isSre);
+                            if (!isSre) toggleContainer.style.display = 'none';
+                        }
+                        
+                        renderBotanico(mockData);
+                        renderSre(mockData);
+                        renderStatusOverlay(mockData);
+
+                        const emptyState = document.getElementById('monitoreo-empty-state');
+                        const kpiCards = document.getElementById('monitoreo-kpi-cards');
+                        const panels = document.getElementById('monitoreo-panels');
+                        if (emptyState) emptyState.classList.add('hidden');
+                        if (kpiCards) kpiCards.classList.remove('hidden');
+                        if (panels) panels.classList.remove('hidden');
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn('[Health] Fallback fetch failed:', err);
+            }
+        }
+
         renderPlaceholder();
         return;
     }
