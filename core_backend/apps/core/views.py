@@ -452,7 +452,6 @@ def llm_chat_view(request):
     payload = {
         "user_id": str(request.user.id),
         "message": question,
-        "session_id": request.session.session_key or "anon"
     }
 
     try:

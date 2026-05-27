@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     model_config = ConfigDict()
     user_id: str
     message: str
+    session_id: Optional[str] = None
 
 
 # Pydantic v2 model: requires `respuesta`, `sources` and `disclaimer` (bool or text)

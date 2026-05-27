@@ -126,7 +126,7 @@ def plant_list_view(request):
     return Response(
         {
             "status": "created",
-            "plant_id": str(plant.id),
+            "id": str(plant.id),
             "nickname": plant.nickname,
             "message": "Configura este plant_id en tu ESP32 para iniciar la telemetría.",
         },
