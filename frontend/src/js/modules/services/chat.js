@@ -238,4 +238,78 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') sendChatMessage();
     });
     document.getElementById('chat-send-btn')?.addEventListener('click', () => sendChatMessage());
+    
+    // Listener para el input de visión desde el chat
+    const chatVisionInput = document.getElementById('chat-vision-input');
+    if (chatVisionInput) {
+        chatVisionInput.addEventListener('change', handleChatVisionUpload);
+    }
 });
+
+async function handleChatVisionUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Reset input
+    event.target.value = '';
+
+    const text = `> [VISIÓN] Analizando imagen: ${file.name}...`;
+    chatMessagesData.push({ type: 'user', text: text });
+    appendMessage(chatMessagesData[chatMessagesData.length - 1]);
+
+    const typingId = 'typing-' + Date.now();
+    appendMessage({ type: 'sys', text: `> [VISION-ANALYZER] PROCESANDO FOTOGRAFÍA...`, id: typingId });
+    saveChatHistory();
+
+    try {
+        if (!window.ApiService || !window.ApiService.isTokenPresent()) {
+            throw new Error("Acceso denegado: Se requiere autenticación para usar el Motor de Visión.");
+        }
+
+        const formData = new FormData();
+        formData.append('image', file);
+        const currentOp = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
+        formData.append('operator', currentOp);
+
+        const data = await window.ApiService.upload('vision/analyze/', formData);
+
+        const typingElement = document.getElementById(typingId);
+        if (typingElement) typingElement.remove();
+
+        const serverReply = `
+**DIAGNÓSTICO VISUAL CNN:**
+- **ESPECIE:** ${data.species || 'DESCONOCIDA'}
+- **CONDICIÓN:** ${data.condition || 'NO DETECTADA'}
+- **SEVERIDAD:** ${data.severity ? data.severity.toUpperCase() : 'N/A'}
+- **PH ESTIMADO:** ${data.ph_predicted !== null && data.ph_predicted !== undefined ? data.ph_predicted : 'N/A'}
+- **CONFIANZA:** ${data.confidence ? (data.confidence * 100).toFixed(1) + '%' : 'N/A'}
+        `.trim();
+
+        chatMessagesData.push({ type: 'bot', text: serverReply });
+        appendMessage(chatMessagesData[chatMessagesData.length - 1]);
+
+        if (data.severity && data.severity.toLowerCase() === 'high' && typeof window.logPlantIssue === 'function') {
+            window.logPlantIssue(data.species || "ESPECIE", data.condition);
+        }
+
+    } catch (error) {
+        console.error("Error en motor de visión del chat:", error);
+        if (error && error.status === 401) {
+            window.ApiService.clearToken();
+            window.location.href = '/login.html';
+            return;
+        }
+
+        const typingElement = document.getElementById(typingId);
+        if (typingElement) typingElement.remove();
+        
+        const errorMsg = error.data?.detail?.title || error.message || "Motor de Visión Inaccesible";
+        const errorText = `> ERROR: ${errorMsg}`;
+        chatMessagesData.push({ type: 'error', text: errorText });
+        appendMessage(chatMessagesData[chatMessagesData.length - 1]);
+    }
+
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+    saveChatHistory();
+}

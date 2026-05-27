@@ -639,12 +639,14 @@
 
             <!-- ── INPUT ── -->
             <div style="background: #161b22; border-top: 1px solid #1a2332; padding: 12px 16px;" class="flex items-center gap-3 shrink-0">
-                <!-- Botón adjunto -->
-                <button class="w-9 h-9 flex items-center justify-center rounded-full text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors focus:outline-none shrink-0" title="Adjuntar">
+                <!-- Botón adjunto visión -->
+                <button id="chat-vision-btn" onclick="document.getElementById('chat-vision-input').click()" class="w-9 h-9 flex items-center justify-center rounded-full text-[#8b949e] hover:text-[#00ff88] hover:bg-[#21262d] transition-colors focus:outline-none shrink-0" title="Diagnóstico por Visión">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
                 </button>
+                <input type="file" id="chat-vision-input" accept="image/*" class="hidden">
                 <!-- Input -->
                 <input type="text" id="chat-input"
                     style="background: #21262d; border: 1px solid #30363d; border-radius: 24px; color: #e6edf3; padding: 10px 16px; font-size: 14px; outline: none;"
