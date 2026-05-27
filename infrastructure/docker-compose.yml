@@ -23,12 +23,8 @@ services:
     depends_on:
       django-backend:
         condition: service_healthy
-      ms1_vision:
-        condition: service_started
-      ms2_chat:
-        condition: service_started
-      ms3_reports:
-        condition: service_started
+      # Microservices removed: Nginx uses lazy DNS (resolver 127.0.0.11)
+      # so it boots independently of ms1/ms2/ms3 availability.
     # volumes removed — frontend assets baked into image via multi-stage build (Cloud-Native immutable)
     networks:
       - mole_public
