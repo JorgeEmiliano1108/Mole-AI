@@ -79,10 +79,10 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 - Actualización: `PATCH /api/v1/auth/profile/`.
 - Eliminación: `DELETE /api/v1/auth/profile/`.
 **Flujos alternos / excepciones:** Intento de eliminar superuser → rechazo `403`.
-**Postcondiciones:** Cambios reflejados en tabla `auth_user` y registro en `audit_logs`.
+**Postcondiciones:** Cambios de usuario reflejados en el sistema; acción registrada en el sistema de auditoría.
 **Requisitos relacionados:** RF-02, RF-03.
 **Endpoint / UI involucrada:** `/api/v1/auth/*`.
-**Evidencia de verificación:** `test_user_admin.py` (Automatizado).
+**Evidencia de verificación:** Pendiente
 
 ### UC-05 Gestionar colección de plantas
 **Objetivo:** Listar, crear, actualizar o eliminar plantas asociadas al usuario.
@@ -99,7 +99,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 **Postcondiciones:** Plantas persistidas y vinculadas al usuario.
 **Requisitos relacionados:** RF-04.
 **Endpoint / UI involucrada:** `/api/v1/plants/*`.
-**Evidencia de verificación:** `test_plant_crud.py` (Automatizado).
+**Evidencia de verificación:** Pendiente
 
 ### UC-06 Enviar telemetría IoT
 **Objetivo:** Registrar datos de sensores en tiempo real.
@@ -164,7 +164,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 2. El sistema genera el PDF y lo almacena en un repositorio temporal.
 3. El usuario recibe un enlace temporal de descarga para obtener el reporte.
 **Flujos alternos / excepciones:** Fallo en generación → `500 Internal Server Error`.
-**Postcondiciones:** PDF disponible en S3 durante periodo configurado.
+**Postcondiciones:** PDF disponible en repositorio temporal durante el periodo de retención configurado.
 **Requisitos relacionados:** RF-10.
 **Endpoint / UI involucrada:** `/api/v1/reports/generate`.
 **Evidencia de verificación:** `test_report_generation.py` (Automatizado).
@@ -179,7 +179,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 **Flujos alternos / excepciones:** Fallo al escribir log → `500 Internal Server Error`.
 **Postcondiciones:** Evento registrado y disponible para consultas.
 **Requisitos relacionados:** RF-11.
-**Endpoint / UI involucrada:** `INSERT en audit_logs` (interno).
+**Endpoint / UI involucrada:** Proceso interno del sistema (sin endpoint público).
 **Evidencia de verificación:** `test_audit.py` (Automatizado).
 
 ### UC-12 Gestionar configuración global (Futuro)
@@ -261,7 +261,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 - **Precondiciones:** Usuario autenticado en vista de telemetría.
 - **Flujo principal:** UI permite captura manual; envío al endpoint de telemetría no está permitido para usuarios autenticados (pendiente de definición).
 - **Flujos alternos / excepciones:** Datos fuera de rango → error de validación.
-- **Postcondiciones:** Lectura almacenada.
+- **Postcondiciones:** Pendiente de definición: el almacenamiento de telemetría manual desde usuario autenticado no está especificado.
 - **Requisitos relacionados:** RF-F-06.
 - **Endpoint / UI involucrada:** UI telemetría (frontend).
 - **Evidencia de verificación:** `test_ui_telemetry.py` (Pendiente).
@@ -279,7 +279,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 | UC-08 | Usuario autenticado | RF-08 | POST /api/v1/mole-ai/chat | Implementado | test_chat_e2e.py |
 | UC-09 | Usuario autenticado | RF-09 | POST /api/v1/vision/analyze/ | Implementado | test_vision_api.py |
 | UC-10 | Usuario autenticado | RF-10 | POST /api/v1/reports/generate | Implementado | test_report_generation.py |
-| UC-11 | Sistema | RF-11 | INSERT en audit_logs | Implementado | test_audit.py |
+| UC-11 | Sistema | RF-11 | Proceso interno (sin endpoint público) | Implementado | test_audit.py |
 | UC-12 | Administrador | RF-12 (Futuro) | *Pendiente* | Futuro | Pendiente |
 | UC-F-01 | Usuario autenticado | RF-F-01 | UI login (frontend) | Implementado | Pendiente |
 | UC-F-02 | Usuario autenticado | RF-F-02 | UI navegación (frontend) | Parcial | Pendiente |
