@@ -46,7 +46,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Edge Node** | Docker (custom), WebSocket → HTTP | Gateway que recibe datos de los ESP32 vía WebSocket y los envía en lote al endpoint `/api/v1/sensor-data/batch/`. |
 
 ## Vista de componentes (C4 – Nivel 3) – Core Django
-- **Authentication Module** – `apps.authentication` (views, models, backends, JWT middleware).  Provee login, registro, verificación de email y gestión de tokens.
+- **Autenticación** – Gestiona login, registro, verificación de email y emisión de tokens JWT.
 - **Authentication** – Gestión de login, registro y emisión de tokens JWT.
 - **User Management** – Operaciones CRUD sobre usuarios y registro de auditoría.
 - **Device Management** – Asociación de dispositivos IoT a usuarios/plantas.
@@ -82,7 +82,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 |----------|--------|-------|
 | **Motor de visión activo** | Reemplazo de TFLite por un modelo de visión externo (NVIDIA Vision). | Implementado.
 | **Almacenamiento de objetos** | Descarte de MinIO por lentitud; adopción de **AWS S3** como backend definitivo. | Implementado.
-| **Variables NVIDIA unificadas** | Centralizar la selección de modelos mediante variables de entorno (p.ej. `NVIDIA_VISION_MODEL`, `NVIDIA_CHAT_MODEL`, `NVIDIA_REPORT_MODEL`, `NVIDIA_EMBEDDING_MODEL`). | Evolución futura.
+| **Variables NVIDIA unificadas** | Centralizar la selección de modelos mediante variables de entorno (p.ej. `NVIDIA_VISION_MODEL`, `NVIDIA_CHAT_MODEL`, `NVIDIA_REPORT_MODEL`, `NVIDIA_EMBEDDING_MODEL`). | Implementado.
 | **Rol Admin con amplio control** | Admin tiene privilegios sobre usuarios, plantas y auditoría, pero **no** puede modificar variables NVIDIA_* (RF‑12 fuera de alcance). | Parcialmente implementado.
 | **Microservicios independientes** | Facilita escalado horizontal y aislamiento de fallos. | Implementado.
 | **Uso de pgvector** | Permite búsqueda semántica de documentos de conocimiento. | Implementado.
