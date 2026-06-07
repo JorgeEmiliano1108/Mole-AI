@@ -47,12 +47,13 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 
 ## Vista de componentes (C4 – Nivel 3) – Core Django
 - **Authentication Module** – `apps.authentication` (views, models, backends, JWT middleware).  Provee login, registro, verificación de email y gestión de tokens.
-- **User Management** – `User` (custom model) y `AuditLog`.  Registro inmutable de acciones críticas.
-- **Device Management** – `Device`, `HardwareBinding`.  Relaciona dispositivos hardware con plantas.
-- **Telemetry Module** – `AmbientReading`, `SoilReading`, `Hourly*Aggregate`.  Guarda lecturas y agrega datos horarios.
-- **RAG Listener** – Servicio asíncrono (`apps.infrastructure.adapters.rag_listener`) que suscribe a Redis `mole:training:new_asset`, descarga PDFs desde **AWS S3**, extrae texto, genera embeddings con `NVIDIA_EMBEDDING_MODEL` y persiste en `botanical_knowledge`.
-- **API Layer** – Routers bajo `apps.core.urls`, `apps.plants.urls`, `apps.authentication.urls`.  Cada endpoint declara permisos y throttling.
-- **Background Workers** – Celery tasks (`apps.core.tasks`, `apps.report.tasks`).
+- **Authentication** – Gestión de login, registro y emisión de tokens JWT.
+- **User Management** – Operaciones CRUD sobre usuarios y registro de auditoría.
+- **Device Management** – Asociación de dispositivos IoT a usuarios/plantas.
+- **Telemetry** – Ingesta, almacenamiento y agregación de lecturas de sensores.
+- **RAG Processing** – Ingesta de documentos PDF y generación de embeddings para búsqueda semántica (sin detallar implementación interna).
+- **API Layer** – Exposición de endpoints REST que aplican permisos y throttling.
+- **Background Workers** – Ejecución de tareas asíncronas y procesamiento de datos en segundo plano.
 
 ## Vista de componentes (C4 – Nivel 3) – ms1_vision
 - **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo y expone el endpoint `/api/v1/vision/analyze/`.
@@ -65,11 +66,11 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 
 ## Vista de despliegue (C4 – Nivel 4)
 - Todos los contenedores se ejecutan sobre una red Docker (`mole_public`, `mole_internal`).
-- **NGINX** actúa como terminador TLS y router; los puertos expuestos se configuran en `docker‑compose.yml` (p. ej. 80/443). 
+- **NGINX** actúa como terminador TLS y router; los puertos expuestos se configuran en `docker‑compose.yml`. 
 - **Redis** y **PostgreSQL** se despliegan como servicios stateful con volúmenes persistentes (`backend_logs`, `postgres_data`).
 - **AWS S3** es un recurso externo; las credenciales se suministran mediante variables de entorno (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
 - **Celery workers** se escalan de forma independiente (configurable mediante `docker‑compose scale`).
-- **MQTT broker** y **edge_node** operan en la red interna; el broker está expuesto en los puertos configurados en `docker‑compose.yml` (p. ej. 1883/8883).
+- **MQTT broker** y **edge_node** operan en la red interna; el broker está expuesto en los puertos configurados en `docker‑compose.yml`.
 
 ## Cross‑cutting Concepts (arc42 Sección 7)
 - **Seguridad** – TLS en NGINX, JWT con expiración < 30 min, permission classes, anti‑replay y rate‑limit.
@@ -79,10 +80,10 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 ## Decisiones arquitectónicas confirmadas
 | Decisión | Motivo | Estado |
 |----------|--------|-------|
-| **Motor de visión activo** | Reemplazo de TFLite por **NVIDIA Vision** (Llama 3.2‑vision‑instruct) mediante `NvidiaVisionAdapter`. | Implementado.
+| **Motor de visión activo** | Reemplazo de TFLite por un modelo de visión externo (NVIDIA Vision). | Implementado.
 | **Almacenamiento de objetos** | Descarte de MinIO por lentitud; adopción de **AWS S3** como backend definitivo. | Implementado.
-| **Variables NVIDIA unificadas** | Centralizar la selección de modelos mediante `NVIDIA_VISION_MODEL`, `NVIDIA_CHAT_MODEL`, `NVIDIA_REPORT_MODEL`, `NVIDIA_EMBEDDING_MODEL`. | Implementado.
-| **Rol Admin con amplio control** | Admin tiene privilegios sobre usuarios, plantas y auditoría, pero **no** puede modificar variables NVIDIA_* (RF‑12 fuera de alcance). | Implementado.
+| **Variables NVIDIA unificadas** | Centralizar la selección de modelos mediante variables de entorno (p.ej. `NVIDIA_VISION_MODEL`, `NVIDIA_CHAT_MODEL`, `NVIDIA_REPORT_MODEL`, `NVIDIA_EMBEDDING_MODEL`). | Evolución futura.
+| **Rol Admin con amplio control** | Admin tiene privilegios sobre usuarios, plantas y auditoría, pero **no** puede modificar variables NVIDIA_* (RF‑12 fuera de alcance). | Parcialmente implementado.
 | **Microservicios independientes** | Facilita escalado horizontal y aislamiento de fallos. | Implementado.
 | **Uso de pgvector** | Permite búsqueda semántica de documentos de conocimiento. | Implementado.
 | **Celery + Redis** | Desacopla procesos intensivos del ciclo de petición‑respuesta. | Implementado.
@@ -96,7 +97,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | Goal | Metric | Threshold |
 |------|--------|-----------|
 | Disponibilidad | % uptime del API | ≥ 99.5 % |
-| Seguridad | Expiración del JWT | < 30 min |
+| Seguridad | Expiración del JWT | ≤ 30 min |
 | Performance | Latencia para endpoints críticos (login, telemetría, chat) | ≤ 200 ms |
 | Observabilidad | Cobertura de métricas con Prometheus | 100 % de servicios instrumentados |
 | Maintainability | Cobertura de pruebas unitarias + integración | ≥ 80 % |
@@ -104,12 +105,12 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 ## Riesgos y trade‑offs
 | Riesgo | Impacto | Mitigación |
 |--------|----------|------------|
-| **Dependencia de APIs externas de NVIDIA** | Si el endpoint NIM deja de estar disponible, los servicios de visión, chat y embeddings fallarán. | Monitorizar disponibilidad vía health‑checks; fallback local con ONNX está previsto como evolución futura. |
+| **Dependencia de APIs externas de NVIDIA** | Si el endpoint NIM deja de estar disponible, los servicios de visión, chat y embeddings fallarán. | Monitorizar disponibilidad vía health‑checks; el fallback local será una evolución futura. |
 | **Latencia de S3** | Acceso a PDFs y reportes depende de la red hacia AWS, pudiendo afectar tiempos de respuesta. | Cachear metadatos críticos en Redis y usar multipart upload para reducir sobrecarga. |
 | **Escalado de Celery** | Un solo worker podría convertirse en cuello de botella bajo alta carga de ingestión. | Configurar número de workers y colas (`celery -Q reports_queue,training_queue`). |
 | **Gestión de credenciales** | Exposición accidental de `JWT_SECRET_KEY` o credenciales AWS compromete la seguridad. | Usar Docker secrets / AWS Parameter Store y habilitar rotación periódica. |
 | **Complejidad de microservicios** | Aumenta la superficie de ataque y el coste operativo. | Mantener documentación actualizada, aplicar pruebas de integración y usar herramientas de orquestación (Docker‑Compose, Kubernetes). |
-| **Modelo de visión estático** | Cambiar el modelo requiere redeploy del contenedor `ms1_vision`. | Variables `NVIDIA_VISION_MODEL` permiten cambiar modelo sin modificar código; solo es necesario reiniciar el contenedor. |
+| **Modelo de visión estático** | Cambiar el modelo requiere redeploy del servicio de visión. | Variables `NVIDIA_VISION_MODEL` permiten cambiar modelo sin modificar código; solo es necesario reiniciar el servicio. |
 | **Tamaño de la tabla pgvector** | Crecimiento ilimitado de embeddings puede degradar performance. | Implementar políticas de retención (p. ej., eliminar chunks > 2 años) y crear índices GIN eficientes. |
 
 ## Evolución futura (no confirmada)
