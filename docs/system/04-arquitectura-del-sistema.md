@@ -46,20 +46,20 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Edge Node** | Docker (custom), WebSocket → HTTP | Gateway que recibe datos de los ESP32 vía WebSocket y los envía en lote al endpoint `/api/v1/sensor-data/batch/`. |
 
 ## Vista de componentes (C4 – Nivel 3) – Core Django
-- **Gestión de identidad y usuarios** – Login, registro, verificación de email, emisión de tokens JWT y operaciones CRUD de usuarios con auditoría.
-- **Device Management** – Asociación de dispositivos IoT a usuarios/plantas.
-- **Telemetry** – Ingesta, almacenamiento y agregación de lecturas de sensores.
-- **RAG Processing** – Ingesta de documentos PDF y generación de embeddings para búsqueda semántica (sin detallar implementación interna).
-- **API Layer** – Exposición de endpoints REST que aplican permisos y throttling.
-- **Background Workers** – Ejecución de tareas asíncronas y procesamiento de datos en segundo plano.
+- **Gestión de identidad y usuarios** (Autenticación + CRUD + Auditoría) – Login, registro, verificación de email, emisión de tokens JWT y operaciones CRUD de usuarios con registro de auditoría.
+- **Gestión de dispositivos** – Asociación y administración de dispositivos IoT vinculados a usuarios y plantas.
+- **Telemetría** – Ingesta, almacenamiento y agregación de lecturas de sensores IoT.
+- **Procesamiento RAG** – Ingesta de PDFs y generación de embeddings para búsqueda semántica (detalles de implementación abstractos).
+- **Capa API** – Exposición de endpoints REST con autorización (JWT) y throttling.
+- **Trabajadores en segundo plano** – Ejecución de tareas asíncronas (e.g., embeddings, visión, generación de PDFs).
 
 ## Vista de componentes (C4 – Nivel 3) – ms1_vision
 - **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo y expone el endpoint `/api/v1/vision/analyze/`.
-  - **Dependencias**: modelo de visión externo (API NVIDIA), almacenamiento temporal en AWS S3 para resultados intermedios, Redis para caché de diagnóstico.
+  - **Dependencias**: modelo de visión externo (API NVIDIA), almacenamiento temporal en AWS S3, Redis para caché, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad y usuarios**.
 
 ## Vista de componentes (C4 – Nivel 3) – ms2_chat
 - **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo y expone el endpoint `/api/v1/mole-ai/chat`.
-  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs y Redis para coordinación de tareas RAG.
+  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs, Redis para coordinación de tareas RAG, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad y usuarios**.
 
 ## Vista de componentes (C4 – Nivel 3) – ms3_reports
 - **Servicio de generación de reportes** – Crea PDFs a partir de datos de sensores bajo demanda, gestiona trabajos asíncronos y provee URLs pre‑firmadas para descarga; expone el endpoint `/api/v1/reports/generate`.
@@ -112,6 +112,8 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Complejidad de microservicios** | Aumenta la superficie de ataque y el coste operativo. | Mantener documentación actualizada, aplicar pruebas de integración y usar herramientas de orquestación (Docker‑Compose, Kubernetes). |
 | **Modelo de visión estático** | Cambiar el modelo requiere redeploy del servicio de visión. | Variables `NVIDIA_VISION_MODEL` permiten cambiar modelo sin modificar código; solo es necesario reiniciar el servicio. |
 | **Tamaño de la tabla pgvector** | Crecimiento ilimitado de embeddings puede degradar performance. | Implementar políticas de retención (p. ej., eliminar chunks > 2 años) y crear índices GIN eficientes. |
+
+> **Nota:** el fallback con modelos ONNX es exclusivamente una **evolución futura** y no constituye una mitigación actual.
 
 ## Evolución futura (no confirmada)
 - Migración a orquestador Kubernetes para gestión automática de escalado y despliegues.
