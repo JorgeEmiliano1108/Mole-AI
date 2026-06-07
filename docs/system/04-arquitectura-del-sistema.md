@@ -46,8 +46,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Edge Node** | Docker (custom), WebSocket → HTTP | Gateway que recibe datos de los ESP32 vía WebSocket y los envía en lote al endpoint `/api/v1/sensor-data/batch/`. |
 
 ## Vista de componentes (C4 – Nivel 3) – Core Django
-- **Autenticación** – Gestiona login, registro, verificación de email y emisión de tokens JWT.
-- **User Management** – Operaciones CRUD sobre usuarios y registro de auditoría.
+- **Gestión de identidad y usuarios** – Login, registro, verificación de email, emisión de tokens JWT y operaciones CRUD de usuarios con auditoría.
 - **Device Management** – Asociación de dispositivos IoT a usuarios/plantas.
 - **Telemetry** – Ingesta, almacenamiento y agregación de lecturas de sensores.
 - **RAG Processing** – Ingesta de documentos PDF y generación de embeddings para búsqueda semántica (sin detallar implementación interna).
@@ -56,9 +55,11 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 
 ## Vista de componentes (C4 – Nivel 3) – ms1_vision
 - **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo y expone el endpoint `/api/v1/vision/analyze/`.
+  - **Dependencias**: modelo de visión externo (API NVIDIA), almacenamiento temporal en AWS S3 para resultados intermedios, Redis para caché de diagnóstico.
 
 ## Vista de componentes (C4 – Nivel 3) – ms2_chat
 - **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo y expone el endpoint `/api/v1/mole-ai/chat`.
+  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs y Redis para coordinación de tareas RAG.
 
 ## Vista de componentes (C4 – Nivel 3) – ms3_reports
 - **Servicio de generación de reportes** – Crea PDFs a partir de datos de sensores bajo demanda, gestiona trabajos asíncronos y provee URLs pre‑firmadas para descarga; expone el endpoint `/api/v1/reports/generate`.
