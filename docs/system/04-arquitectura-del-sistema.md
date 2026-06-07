@@ -46,7 +46,8 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Edge Node** | Docker (custom), WebSocket → HTTP | Gateway que recibe datos de los ESP32 vía WebSocket y los envía en lote al endpoint `/api/v1/sensor-data/batch/`. |
 
 ## Vista de componentes (C4 – Nivel 3) – Core Django
-- **Gestión de identidad y usuarios** (Autenticación + CRUD + Auditoría) – Login, registro, verificación de email, emisión de tokens JWT y operaciones CRUD de usuarios con registro de auditoría.
+- **Gestión de identidad** – Autenticación (login, registro, verificación de email) y emisión de tokens JWT.
+- **Gestión de usuarios** – Operaciones CRUD de usuarios con registro de auditoría.
 - **Gestión de dispositivos** – Asociación y administración de dispositivos IoT vinculados a usuarios y plantas.
 - **Telemetría** – Ingesta, almacenamiento y agregación de lecturas de sensores IoT.
 - **Procesamiento RAG** – Ingesta de PDFs y generación de embeddings para búsqueda semántica (detalles de implementación abstractos).
@@ -55,11 +56,11 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 
 ## Vista de componentes (C4 – Nivel 3) – ms1_vision
 - **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo y expone el endpoint `/api/v1/vision/analyze/`.
-  - **Dependencias**: modelo de visión externo (API NVIDIA), almacenamiento temporal en AWS S3, Redis para caché, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad y usuarios**.
+  - **Dependencias**: modelo de visión externo (API NVIDIA), almacenamiento temporal en AWS S3, Redis para caché, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad**.
 
 ## Vista de componentes (C4 – Nivel 3) – ms2_chat
 - **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo y expone el endpoint `/api/v1/mole-ai/chat`.
-  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs, Redis para coordinación de tareas RAG, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad y usuarios**.
+  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs, Redis para coordinación de tareas RAG, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad**.
 
 ## Vista de componentes (C4 – Nivel 3) – ms3_reports
 - **Servicio de generación de reportes** – Crea PDFs a partir de datos de sensores bajo demanda, gestiona trabajos asíncronos y provee URLs pre‑firmadas para descarga; expone el endpoint `/api/v1/reports/generate`.
