@@ -55,28 +55,21 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 - **Background Workers** – Celery tasks (`apps.core.tasks`, `apps.report.tasks`).
 
 ## Vista de componentes (C4 – Nivel 3) – ms1_vision
-- **Vision Service** – `NvidiaVisionAdapter` implementa la interfaz `VisionClientPort`.
-- **NvidiaBaseClient** – Wrapper que llama a la API de NVIDIA NIM (`generate_vision`).
-- **Domain Entities** – `DiagnosticResult`, `SeverityLevel`, `ConditionCategory` para normalizar la respuesta.
+- **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo y expone el endpoint `/api/v1/vision/analyze/`.
 
 ## Vista de componentes (C4 – Nivel 3) – ms2_chat
-- **Chat Service** – `MoleAIClient` que envía prompts al modelo `NVIDIA_CHAT_MODEL`.
-- **Embedding Service** – `NvidiaEmbeddingAdapter` (no expuesto como endpoint, usado por RAG listener) que genera vectores con `NVIDIA_EMBEDDING_MODEL`.
-- **RAG Store** – `PgVectorStore` encapsula operaciones CRUD sobre `botanical_knowledge`.
-- **Citation Manager** – `CitationManager` agrupa referencias de documentos en respuestas.
+- **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo y expone el endpoint `/api/v1/mole-ai/chat`.
 
 ## Vista de componentes (C4 – Nivel 3) – ms3_reports
-- **Report Generator** – `ReportBuilder` que recopila datos de sensores, los formatea y produce PDF mediante WeasyPrint.
-- **Job Metadata Store** – `JobMetadataStore` (Redis) persiste estado de generación y URLs.
-- **Celery Task** – `generate_report_task` que orquesta la creación del PDF y su subida a S3.
+- **Servicio de generación de reportes** – Crea PDFs a partir de datos de sensores bajo demanda, gestiona trabajos asíncronos y provee URLs pre‑firmadas para descarga; expone el endpoint `/api/v1/reports/generate`.
 
 ## Vista de despliegue (C4 – Nivel 4)
 - Todos los contenedores se ejecutan sobre una red Docker (`mole_public`, `mole_internal`).
-- **NGINX** expone los puertos 80 (interno) y 8080 (exterior) y enruta los sub‑paths `/api/v1/*` a los contenedores correspondientes.
+- **NGINX** actúa como terminador TLS y router; los puertos expuestos se configuran en `docker‑compose.yml` (p. ej. 80/443). 
 - **Redis** y **PostgreSQL** se despliegan como servicios stateful con volúmenes persistentes (`backend_logs`, `postgres_data`).
 - **AWS S3** es un recurso externo; las credenciales se suministran mediante variables de entorno (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
 - **Celery workers** se escalan de forma independiente (configurable mediante `docker‑compose scale`).
-- **MQTT broker** y **edge_node** operan en la red interna; el broker está expuesto en puertos 1883 (inseguro, para migración) y 8883 (TLS) para los dispositivos.
+- **MQTT broker** y **edge_node** operan en la red interna; el broker está expuesto en los puertos configurados en `docker‑compose.yml` (p. ej. 1883/8883).
 
 ## Cross‑cutting Concepts (arc42 Sección 7)
 - **Seguridad** – TLS en NGINX, JWT con expiración < 30 min, permission classes, anti‑replay y rate‑limit.
@@ -89,7 +82,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Motor de visión activo** | Reemplazo de TFLite por **NVIDIA Vision** (Llama 3.2‑vision‑instruct) mediante `NvidiaVisionAdapter`. | Implementado.
 | **Almacenamiento de objetos** | Descarte de MinIO por lentitud; adopción de **AWS S3** como backend definitivo. | Implementado.
 | **Variables NVIDIA unificadas** | Centralizar la selección de modelos mediante `NVIDIA_VISION_MODEL`, `NVIDIA_CHAT_MODEL`, `NVIDIA_REPORT_MODEL`, `NVIDIA_EMBEDDING_MODEL`. | Implementado.
-| **Rol Admin con control total** | Ampliación del alcance de admin para incluir gestión de modelos, agentes, analítica y configuración global. | Implementado.
+| **Rol Admin con amplio control** | Admin tiene privilegios sobre usuarios, plantas y auditoría, pero **no** puede modificar variables NVIDIA_* (RF‑12 fuera de alcance). | Implementado.
 | **Microservicios independientes** | Facilita escalado horizontal y aislamiento de fallos. | Implementado.
 | **Uso de pgvector** | Permite búsqueda semántica de documentos de conocimiento. | Implementado.
 | **Celery + Redis** | Desacopla procesos intensivos del ciclo de petición‑respuesta. | Implementado.
@@ -111,7 +104,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 ## Riesgos y trade‑offs
 | Riesgo | Impacto | Mitigación |
 |--------|----------|------------|
-| **Dependencia de APIs externas de NVIDIA** | Si el endpoint NIM deja de estar disponible, los servicios de visión, chat y embeddings fallarán. | Implementar fallback a modelos locales (p. ej., ONNX) y monitorizar disponibilidad vía health‑checks. |
+| **Dependencia de APIs externas de NVIDIA** | Si el endpoint NIM deja de estar disponible, los servicios de visión, chat y embeddings fallarán. | Monitorizar disponibilidad vía health‑checks; fallback local con ONNX está previsto como evolución futura. |
 | **Latencia de S3** | Acceso a PDFs y reportes depende de la red hacia AWS, pudiendo afectar tiempos de respuesta. | Cachear metadatos críticos en Redis y usar multipart upload para reducir sobrecarga. |
 | **Escalado de Celery** | Un solo worker podría convertirse en cuello de botella bajo alta carga de ingestión. | Configurar número de workers y colas (`celery -Q reports_queue,training_queue`). |
 | **Gestión de credenciales** | Exposición accidental de `JWT_SECRET_KEY` o credenciales AWS compromete la seguridad. | Usar Docker secrets / AWS Parameter Store y habilitar rotación periódica. |
