@@ -79,7 +79,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 - Actualización: `PATCH /api/v1/auth/profile/`.
 - Eliminación: `DELETE /api/v1/auth/profile/`.
 **Flujos alternos / excepciones:** Intento de eliminar superuser → rechazo `403`.
-**Postcondiciones:** Cambios de usuario reflejados en el sistema; acción registrada en el sistema de auditoría.
+**Postcondiciones:** Cambios de usuario reflejados en el sistema; registro de trazabilidad.
 **Requisitos relacionados:** RF-02, RF-03.
 **Endpoint / UI involucrada:** `/api/v1/auth/*`.
 **Evidencia de verificación:** Pendiente
@@ -164,7 +164,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 2. El sistema genera el PDF y lo almacena en un repositorio temporal.
 3. El usuario recibe un enlace temporal de descarga para obtener el reporte.
 **Flujos alternos / excepciones:** Fallo en generación → `500 Internal Server Error`.
-**Postcondiciones:** PDF disponible en repositorio temporal durante el periodo de retención configurado.
+**Postcondiciones:** PDF disponible para descarga dentro del periodo de retención configurado.
 **Requisitos relacionados:** RF-10.
 **Endpoint / UI involucrada:** `/api/v1/reports/generate`.
 **Evidencia de verificación:** `test_report_generation.py` (Automatizado).
@@ -279,7 +279,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 | UC-08 | Usuario autenticado | RF-08 | POST /api/v1/mole-ai/chat | Implementado | test_chat_e2e.py |
 | UC-09 | Usuario autenticado | RF-09 | POST /api/v1/vision/analyze/ | Implementado | test_vision_api.py |
 | UC-10 | Usuario autenticado | RF-10 | POST /api/v1/reports/generate | Implementado | test_report_generation.py |
-| UC-11 | Sistema | RF-11 | Proceso interno (sin endpoint público) | Implementado | test_audit.py |
+| UC-11 | Sistema | RF-11 | Proceso interno del sistema (sin endpoint público) | Implementado | test_audit.py |
 | UC-12 | Administrador | RF-12 (Futuro) | *Pendiente* | Futuro | Pendiente |
 | UC-F-01 | Usuario autenticado | RF-F-01 | UI login (frontend) | Implementado | Pendiente |
 | UC-F-02 | Usuario autenticado | RF-F-02 | UI navegación (frontend) | Parcial | Pendiente |
