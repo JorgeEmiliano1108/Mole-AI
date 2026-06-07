@@ -3,6 +3,8 @@
 ## Propósito
 Definir de forma estructurada el modelo de datos utilizado por MOLE‑AI, describiendo los conceptos conceptuales, lógicos y físicos, así como las relaciones, índices y políticas de integridad que garantizan la consistencia y la trazabilidad del sistema.
 
+*En este documento usamos nombres lógicos canónicos (p. ej. `users`). La tabla física correspondiente en PostgreSQL se llama `auth_users`; todas las referencias a `users` deben mapearse a esa tabla.*
+
 ## Modelo conceptual
 - **Usuario**: actor que interactúa con la plataforma (agricultor, técnico o administrador).
 - **Planta**: entidad que representa una planta cultivada por un usuario.
@@ -37,14 +39,7 @@ Definir de forma estructurada el modelo de datos utilizado por MOLE‑AI, descri
 | **telemetry_archives** | `id (PK)`, `device_id (FK)`, `period_start`, `period_end`, `s3_key (unique)`, `rows_archived`, `created_at` | `device_id` → `devices` | `unique(s3_key)`, `index(period_start, period_end)` |
 
 
-*Nota: la tabla **users** corresponde a la tabla física **auth_users** en la base de datos PostgreSQL.*
-
-## Deuda técnica / Legacy
-
-| Tabla | Descripción | Comentario |
-|------|------------|------------|
-| **sensor_logs** (legacy) | Registros históricos de sensores sin FK, solo lectura. | Conservado por migraciones históricas; no forma parte del modelo lógico activo. |
-| **iot_nodes** (legacy) | Información de nodos de borde vinculados a usuarios. | No usado en la lógica actual; se mantiene solo como referencia histórica. |
+*En el modelo lógico se utilizan nombres canónicos (p. ej. `users`). En la sección *Modelo físico* aparecen los nombres reales de las tablas en PostgreSQL (p. ej. `auth_users`).*
 
 ## Modelo físico
 Todos los modelos se materializan en PostgreSQL 13+ con la extensión **pgvector** habilitada.  Los tipos de datos críticos son:
@@ -55,7 +50,14 @@ Todos los modelos se materializan en PostgreSQL 13+ con la extensión **pgvector
 - `BOOLEAN` para flags de consentimiento y verificación de correo.
 
 
-*Este diccionario está intencionalmente parcial; incluye solo los campos críticos para la comprensión del modelo.*
+
+
+
+## Deuda técnica / Legacy
+
+- **sensor_logs** (legacy) – tabla histórica de sensores sin FK; no forma parte del modelo activo.
+- **iot_nodes** (legacy) – tabla histórica de nodos de borde; sin uso operativo actual.
+
 
 ## Índices críticos
 - GIN index sobre `botanical_knowledge.embedding` (vector_cosine_ops) para búsquedas semánticas.
