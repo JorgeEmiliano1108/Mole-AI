@@ -55,8 +55,7 @@ Todos los modelos se materializan en PostgreSQL 13+ con la extensión **pgvector
 
 ## Deuda técnica / Legacy
 
-- **sensor_logs** (legacy) – tabla histórica de sensores sin FK; no forma parte del modelo activo.
-- **iot_nodes** (legacy) – tabla histórica de nodos de borde; sin uso operativo actual.
+- **sensor_logs**, **iot_nodes** – tablas legacy sin uso activo.
 
 
 ## Índices críticos
