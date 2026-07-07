@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 
 export default defineConfig({
-  publicDir: 'static',
+  publicDir: 'public',
   server: {
     port: 5173,
     host: '0.0.0.0',
@@ -19,8 +19,8 @@ export default defineConfig({
       output: {
         // Split heavy libraries into separate chunks for lazy loading
         manualChunks: {
-          chart: ['chart.js'],
-          leaflet: ['leaflet']
+          leaflet: ['leaflet/dist/leaflet.js'],
+          echarts: ['echarts']
         }
       }
     }

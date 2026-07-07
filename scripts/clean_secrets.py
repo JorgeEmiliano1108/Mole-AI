@@ -43,8 +43,6 @@ SENSITIVE_VARS = [
     
     # Hardware / IoT
     "HARDWARE_API_KEY",
-    "ADMIN_API_KEY",
-    "FARMER_API_KEY",
     
     # MinIO / S3
     "MINIO_ROOT_USER",
@@ -71,7 +69,6 @@ PUBLIC_VARS = [
     "ALLOWED_HOSTS",
     "CSRF_TRUSTED_ORIGINS",
     "PORT",
-    "HOST",
     "API_PORT",
     "SUPABASE_DB_NAME",
     "SUPABASE_DB_USER",
@@ -84,16 +81,12 @@ PUBLIC_VARS = [
     "MQTT_BROKER_HOST",
     "MQTT_BROKER_PORT",
     "S3_ENDPOINT",
-    "MS3_S3_ENDPOINT",
-    "MS3_S3_BUCKET",
     "VISION_BACKEND",
-    "VECTOR_DB_PATH",
     "CNN_MODEL_PATH",
     "CNN_LABELS_PATH",
     "OOD_MODEL_PATH",
     "OOD_THRESHOLD",
     "FASTAPI_URL",
-    "FASTAPI_EXTERNAL_PORT",
     "MOLE_AI_TIMEOUT",
     "EDGE_DB_PATH",
     "SYNC_INTERVAL",

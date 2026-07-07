@@ -1,19 +1,33 @@
 // View switching logic extracted from dashboard.html
+// Lazy loaders registered by main.js to avoid layer violations (ui -> services)
+
+import { loadWiki } from '../services/wiki.js';
+import { initIoTView } from '../services/iot.js';
+
+const _lazyLoaders = {};
+
+export function registerLazyLoader(viewId, loaderFn) {
+    _lazyLoaders[viewId] = loaderFn;
+}
+
 export function switchFieldView(viewId) {
     document.querySelectorAll('.field-view').forEach(v => v.classList.add('hidden'));
     const target = document.getElementById(viewId);
     if (target) target.classList.remove('hidden');
     // Trigger wiki load when wiki view activated
-    if (viewId === 'view-wiki' && typeof window.loadWiki === 'function') {
-        window.loadWiki();
+    if (viewId === 'view-wiki') {
+        loadWiki();
     }
-    // Trigger map init when mapa view activated
-    if (viewId === 'view-mapa' && typeof window.initMapView === 'function') {
-        setTimeout(() => window.initMapView(), 100);
+    // Trigger lazy-loaded modules via registry (set by main.js)
+    if (_lazyLoaders[viewId]) {
+        setTimeout(async () => {
+            const mod = await _lazyLoaders[viewId]();
+            if (mod && typeof mod.initMapView === 'function') mod.initMapView();
+        }, 100);
     }
     // Trigger IoT init when iot view activated
-    if (viewId === 'view-iot' && typeof window.initIoTView === 'function') {
-        window.initIoTView();
+    if (viewId === 'view-iot') {
+        initIoTView();
     }
     // Update nav button styles
     document.querySelectorAll('nav button').forEach(btn => {
@@ -27,6 +41,3 @@ export function switchFieldView(viewId) {
         }
     });
 }
-
-// Expose globally for inline onclick handlers
-window.switchFieldView = switchFieldView;

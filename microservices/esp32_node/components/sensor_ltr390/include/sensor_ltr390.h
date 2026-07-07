@@ -27,13 +27,16 @@ esp_err_t sensor_ltr390_init(i2c_master_bus_handle_t bus,
                              sensor_ltr390_handle_t *out_handle);
 
 /**
- * @brief Read ambient light (ALS) and UV index from the LTR390.
+ * @brief Read ambient light (lux) and UV index from the LTR390.
  *
  * Switches mode internally: ALS read → UVS read, each with ~100ms settling.
+ * Conversion factors (gain=3x, 16-bit):
+ *   lux = raw_als * 0.06
+ *   uv_index = raw_uvs * 0.23
  *
- * @param handle  Sensor handle
- * @param lux     Pointer to receive ambient light in raw ALS counts
- * @param uv_index Pointer to receive raw UV sensor counts
+ * @param handle   Sensor handle
+ * @param lux      Pointer to receive ambient light in lux
+ * @param uv_index Pointer to receive UV index
  */
 esp_err_t sensor_ltr390_read(sensor_ltr390_handle_t handle,
                              float *lux, float *uv_index);

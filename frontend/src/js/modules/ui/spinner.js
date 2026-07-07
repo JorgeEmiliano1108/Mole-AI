@@ -107,4 +107,3 @@ export class SpinnerService {
 }
 
 export const spinner = new SpinnerService();
-window.Spinner = spinner;

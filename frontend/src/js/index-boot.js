@@ -5,7 +5,7 @@
 // Extracted from inline <script> for CSP/SoC compliance.
 // =============================================================================
 
-// API Base URL configuration (must load before apiService.js)
+// API Base URL configuration (must load before ApiService.js)
 window.AppConfig = {
     API_BASE_URL: '/api/v1/'  // Trailing slash required: baseUrl + endpoint concatenation in apiService._buildUrl
 };

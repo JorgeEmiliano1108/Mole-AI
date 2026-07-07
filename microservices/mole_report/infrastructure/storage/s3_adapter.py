@@ -22,10 +22,10 @@ class S3Adapter:
         from app.config import settings
 
         return cls(
-            settings.S3_ENDPOINT,
-            settings.S3_ACCESS_KEY,
-            settings.S3_SECRET_KEY,
-            settings.S3_BUCKET,
+            settings.ms3_s3_endpoint,
+            settings.ms3_s3_access_key,
+            settings.ms3_s3_secret_key,
+            settings.ms3_s3_bucket,
         )
 
     @retry(

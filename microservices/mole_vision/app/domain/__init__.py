@@ -4,16 +4,20 @@ Skill 01: Capa pura sin dependencias externas.
 """
 from app.domain.entities import (
     DiagnosticResult,
-    PhEstimation,
     DiagnosticEvent,
     SeverityLevel,
     ConditionCategory,
+    PlantDiagnosis,
+    GrowthStage,
+    AfflictionType,
+    ProgressionStage,
 )
 from app.domain.schemas import (
     VisionInputSchema,
     VisionOutputSchema,
     DiagnosticResponseSchema,
-    PhStripResponseSchema,
+    DiagnosticResponseV2Schema,
+    PlantDiagnosisSchema,
     EventPayloadSchema,
     HealthCheckSchema,
 )
@@ -21,15 +25,19 @@ from app.domain.schemas import (
 __all__ = [
     # Entities
     "DiagnosticResult",
-    "PhEstimation",
     "DiagnosticEvent",
     "SeverityLevel",
     "ConditionCategory",
+    "PlantDiagnosis",
+    "GrowthStage",
+    "AfflictionType",
+    "ProgressionStage",
     # Schemas
     "VisionInputSchema",
     "VisionOutputSchema",
     "DiagnosticResponseSchema",
-    "PhStripResponseSchema",
+    "DiagnosticResponseV2Schema",
+    "PlantDiagnosisSchema",
     "EventPayloadSchema",
     "HealthCheckSchema",
 ]

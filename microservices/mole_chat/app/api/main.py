@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import _rate_limit_exceeded_handler
@@ -8,9 +7,9 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 from app.api.limiter import limiter
 from app.api.routers import router
+from app.core.config import settings
 import asyncio
 import logging
-import os
 
 
 
@@ -23,11 +22,10 @@ async def lifespan(app: FastAPI):
     # ── Startup: Initialize singletons (cold start ONCE) ─────────
     
     # 1. LLM Client
-    from app.infrastructure.adapters.llm_client import LLMClient
-    model_name = os.getenv("NVIDIA_CHAT_MODEL", "meta/llama-3.3-70b-instruct")
-    llm_client = LLMClient(model_name=model_name)
+    from app.infrastructure.adapters.nvidia_client import LLMClient
+    llm_client = LLMClient(model_name=settings.NVIDIA_CHAT_MODEL)
     app.state.llm_client = llm_client
-    logging.info(f"LLM Client initialized: {model_name}")
+    logging.info(f"LLM Client initialized: {settings.NVIDIA_CHAT_MODEL}")
 
     # 2. PgVectorStore (connection + indexes ONCE)
     from app.infrastructure.adapters.pgvector_store import PgVectorStore
@@ -40,7 +38,7 @@ async def lifespan(app: FastAPI):
     # 3. Redis + Citation Manager
     from app.infrastructure.adapters.redis_sensor_cache_adapter import RedisSensorCacheAdapter
     from app.infrastructure.adapters.citation_manager import CitationManager
-    redis_adapter = RedisSensorCacheAdapter(os.getenv("REDIS_URL", "redis://redis:6379/0"))
+    redis_adapter = RedisSensorCacheAdapter(settings.REDIS_URL)
     app.state.redis_adapter = redis_adapter
     app.state.citation_manager = CitationManager()
     logging.info("Redis + CitationManager initialized")
@@ -82,13 +80,13 @@ instrumentator.instrument(app).expose(app)
 
 app.include_router(router)
 
-_origen = os.getenv('ORIGEN_PERMITIDO', '')
+_origen = settings.ORIGEN_PERMITIDO
 if _origen:
     _allow_origins = [o.strip() for o in _origen.split(',') if o.strip()]
 else:
     _allow_origins = []
-    
-_allow_credentials = os.getenv('CORS_ALLOW_CREDENTIALS', 'False').lower() in ('true', '1')
+
+_allow_credentials = settings.CORS_ALLOW_CREDENTIALS
 
 app.add_middleware(
     CORSMiddleware,
@@ -100,7 +98,7 @@ app.add_middleware(
 
 @app.get('/config')
 def _config() -> dict:
-    status = "Running in Staging" if os.getenv('DEBUG', 'False').lower() == 'false' else 'Running in Development'
-    port = os.getenv('PORT') or os.getenv('API_PORT') or None
-    db_connected = bool(os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_NAME'))
+    status = "Running in Staging" if not settings.DEBUG else "Running in Development"
+    port = settings.API_PORT
+    db_connected = bool(settings.DATABASE_URL or settings.SUPABASE_URL)
     return {"status": status, "port": port, "db_connected": db_connected}

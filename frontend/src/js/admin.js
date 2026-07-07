@@ -5,6 +5,9 @@
 // Handles: view switching, data loading, chart initialization, and button handlers.
 // =============================================================================
 
+import * as echarts from 'echarts';
+import { apiService } from './modules/api/ApiService.js';
+
 // ============ VIEW SWITCHING LOGIC ===========
 const VIEWS = {
     dashboard: 'view-dashboard',
@@ -42,12 +45,12 @@ async function switchView(viewKey) {
         console.error('Error loading ' + viewKey + ' data:', error);
     }
 }
-window.switchView = switchView;
+
 
 // ============ DATA LOADING FUNCTIONS ============
 async function loadDashboardData() {
     try {
-        const data = await window.ApiService.getKPIData();
+        const data = await apiService.getKPIData();
         if (data && data.kpis) {
             const kpis = data.kpis;
             const plantasEl = document.querySelector('#view-dashboard .data-card:nth-child(1) .text-2xl');
@@ -67,7 +70,7 @@ async function loadDashboardData() {
 
 async function loadIoTData() {
     try {
-        const data = await window.ApiService.getIoTFleet();
+        const data = await apiService.getIoTFleet();
         if (data && data.nodes) {
             console.log('IoT Fleet data loaded:', data.nodes.length, 'nodes');
         }
@@ -78,7 +81,7 @@ async function loadIoTData() {
 
 async function loadMLOpsData() {
     try {
-        const data = await window.ApiService.getMLMetrics();
+        const data = await apiService.getMLMetrics();
         if (data && data.metrics) {
             console.log('MLOps data loaded:', data.metrics);
         }
@@ -89,7 +92,7 @@ async function loadMLOpsData() {
 
 async function loadAlertsData() {
     try {
-        const data = await window.ApiService.getAlerts();
+        const data = await apiService.getAlerts();
         if (data && data.alerts) {
             console.log('Alerts data loaded:', data.alerts.length, 'alerts');
         }
@@ -305,7 +308,7 @@ function initDashboardCharts() {
 // IoT Fleet Radar Chart (ECharts)
 function initRadarChart() {
     const radarEl = document.getElementById('chart-radar-health');
-    if (radarEl && typeof echarts !== 'undefined') {
+    if (radarEl) {
         const chart = echarts.init(radarEl);
         chart.setOption({
             radar: {
@@ -335,7 +338,7 @@ function initRadarChart() {
 // MLOps Training Chart (ECharts)
 function initTrainingChart() {
     const trainingEl = document.getElementById('chart-line-training');
-    if (trainingEl && typeof echarts !== 'undefined') {
+    if (trainingEl) {
         const chart = echarts.init(trainingEl);
         chart.setOption({
             xAxis: {
@@ -362,23 +365,23 @@ function initTrainingChart() {
 // ============ BUTTON HANDLER FUNCTIONS (CLEAN) ============
 
 // Export data
-window.handleExport = function() {
-    if (window.ApiService && typeof window.ApiService.exportData === 'function') {
-        window.ApiService.exportData().catch(e => {
+function handleExport() {
+    if (apiService && typeof apiService.exportData === 'function') {
+        apiService.exportData().catch(e => {
             console.error('Export failed:', e);
             alert('Error al exportar datos: ' + (e.message || e));
         });
     } else {
         console.warn('ApiService.exportData not available');
     }
-};
+}
 
 // Start new training
-window.handleNewTraining = function() {
+function handleNewTraining() {
     if (!window.confirm('\u00bfIniciar nuevo entrenamiento ML?')) return;
 
-    if (window.ApiService && typeof window.ApiService.triggerTraining === 'function') {
-        window.ApiService.triggerTraining({
+    if (apiService && typeof apiService.triggerTraining === 'function') {
+        apiService.triggerTraining({
             model_type: 'MS1',
             epochs: 50,
             learning_rate: 0.001
@@ -389,14 +392,14 @@ window.handleNewTraining = function() {
     } else {
         console.warn('ApiService.triggerTraining not available');
     }
-};
+}
 
 // Deploy model
-window.handleDeploy = function(modelId) {
+function handleDeploy(modelId) {
     if (!window.confirm('\u00bfDesplegar modelo ' + modelId + ' a producci\u00f3n?')) return;
 
-    if (window.ApiService && typeof window.ApiService.deployModel === 'function') {
-        window.ApiService.deployModel({
+    if (apiService && typeof apiService.deployModel === 'function') {
+        apiService.deployModel({
             model_id: modelId
         }).catch(e => {
             console.error('Deploy failed:', e);
@@ -405,33 +408,33 @@ window.handleDeploy = function(modelId) {
     } else {
         console.warn('ApiService.deployModel not available');
     }
-};
+}
 
 // Acknowledge alert
-window.handleAcknowledge = function(alertId) {
-    if (window.ApiService && typeof window.ApiService.acknowledgeAlert === 'function') {
-        window.ApiService.acknowledgeAlert(alertId).catch(e => {
+function handleAcknowledge(alertId) {
+    if (apiService && typeof apiService.acknowledgeAlert === 'function') {
+        apiService.acknowledgeAlert(alertId).catch(e => {
             console.error('Acknowledge failed:', e);
             alert('Error al reconocer alerta: ' + (e.message || e));
         });
     } else {
         console.warn('ApiService.acknowledgeAlert not available');
     }
-};
+}
 
 // Delete alert
-window.handleDelete = function(alertId) {
+function handleDelete(alertId) {
     if (!window.confirm('\u00bfEliminar alerta ' + alertId + '?')) return;
 
-    if (window.ApiService && typeof window.ApiService.deleteAlert === 'function') {
-        window.ApiService.deleteAlert(alertId).catch(e => {
+    if (apiService && typeof apiService.deleteAlert === 'function') {
+        apiService.deleteAlert(alertId).catch(e => {
             console.error('Delete failed:', e);
             alert('Error al eliminar alerta: ' + (e.message || e));
         });
     } else {
         console.warn('ApiService.deleteAlert not available');
     }
-};
+}
 
 // ============ EVENT DELEGATION (CSP-Compliant) ============
 document.addEventListener('click', (e) => {
@@ -447,19 +450,19 @@ document.addEventListener('click', (e) => {
             switchView(target);
             break;
         case 'export':
-            window.handleExport();
+            handleExport();
             break;
         case 'new-training':
-            window.handleNewTraining();
+            handleNewTraining();
             break;
         case 'deploy':
-            window.handleDeploy(target);
+            handleDeploy(target);
             break;
         case 'acknowledge':
-            window.handleAcknowledge(id);
+            handleAcknowledge(id);
             break;
         case 'delete-alert':
-            window.handleDelete(id);
+            handleDelete(id);
             break;
         case 'navigate':
             window.location.replace(target);

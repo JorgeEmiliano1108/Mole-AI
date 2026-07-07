@@ -1,19 +1,20 @@
-import os
 import httpx
 from datetime import datetime, timedelta
 from typing import List, Optional
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
+from app.config import settings
+
 
 class SupabaseClient:
     def __init__(self, url: Optional[str] = None, key: Optional[str] = None):
-        self.url = url or os.getenv("MS3_SUPABASE_URL")
-        self.key = key or os.getenv("MS3_SUPABASE_KEY")
+        self.url = url or settings.ms3_supabase_url
+        self.key = key or settings.ms3_supabase_key
         self._client = httpx.Client(timeout=30.0)
 
     @classmethod
     def from_env(cls):
-        return cls(os.getenv("MS3_SUPABASE_URL"), os.getenv("MS3_SUPABASE_KEY"))
+        return cls(settings.ms3_supabase_url, settings.ms3_supabase_key)
 
     def _headers(self) -> dict:
         return {

@@ -1,0 +1,57 @@
+name: MS1 Vision CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "microservices/mole_vision/**"
+  pull_request:
+    paths:
+      - "microservices/mole_vision/**"
+
+defaults:
+  run:
+    working-directory: microservices/mole_vision
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check app/ tests/
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt pytest pytest-cov pytest-asyncio
+      - run: pytest tests/ --cov=app --cov-fail-under=60
+        env:
+          JWT_SECRET_KEY: test-secret-key-ci
+          NVIDIA_API_KEY: ""
+
+  license-check:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt pip-licenses
+      - run: pip-licenses --fail-on="GPL;LGPL;AGPL;GPLv2;GPLv3;LGPLv2;LGPLv3"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f microservices/mole_vision/Dockerfile --target production -t mole-vision:latest microservices/mole_vision

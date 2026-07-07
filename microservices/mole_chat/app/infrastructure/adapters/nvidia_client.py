@@ -1,62 +1,86 @@
 import os
-import logging
 from typing import Optional, List, Dict, Any
 from openai import AsyncOpenAI
+import yaml
 
-logger = logging.getLogger(__name__)
+from app.domain.schemas import ChatResponse, COFEPRIS_DISCLAIMER
+from app.core.logger import logger
+from app.core.config import settings
+from app.core.circuit_breaker import AsyncCircuitBreaker, CircuitBreakerOpenError
 
-class NvidiaBaseClient:
+class LLMClient:
+    """Cliente LLM único con circuit‑breaker y fallback.
+
+    Se basa en la API OpenAI‑compatible de NVIDIA NIM.
     """
-    Cliente nativo asíncrono OpenAI-compatible para NVIDIA NIM.
-    """
-    def __init__(self, model_name: Optional[str] = None):
-        self.api_key = os.getenv("NVIDIA_API_KEY")
+
+    def __init__(self, model_name: Optional[str] = None, client: Optional[AsyncOpenAI] = None):
+        self.api_key = settings.NVIDIA_API_KEY
         if not self.api_key:
-            logger.warning("NVIDIA_API_KEY no detectado. Inferencia fallará.")
-            
-        self.base_url = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
-        self.model_name = model_name or os.getenv("NVIDIA_CHAT_MODEL", "meta/llama-3.3-70b-instruct")
-        
-        self.client = AsyncOpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url,
-            timeout=120.0,
-            max_retries=3,
-        )
-
-    async def generate_chat(self, messages: List[Dict[str, Any]], temperature: float = 0.2, max_tokens: int = 1024) -> str:
-        """
-        Llamada genérica al endpoint de chat/completions.
-        """
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                top_p=0.7,
+            logger.warning("NVIDIA_API_KEY not detected – inference will fail.")
+        self.base_url = settings.NVIDIA_BASE_URL
+        self.model_name = model_name or settings.NVIDIA_CHAT_MODEL
+        # Use provided client for testing or fallback to real client if credentials available
+        if client is not None:
+            self.client = client
+        elif self.api_key:
+            self.client = AsyncOpenAI(
+                api_key=self.api_key,
+                base_url=self.base_url,
+                timeout=settings.LLM_TIMEOUT,
+                max_retries=settings.LLM_MAX_RETRIES,
             )
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"Fallo en inferencia NVIDIA NIM: {e}", exc_info=True)
-            raise
+        else:
+            self.client = None  # No credentials; client actions will be mocked in tests
+        self.breaker = AsyncCircuitBreaker(name="nvidia_llm", fail_max=settings.CB_FAIL_MAX, reset_timeout=settings.CB_RESET_TIMEOUT)
 
-    async def generate_vision(self, prompt: str, image_b64: str, max_tokens: int = 1024) -> str:
+        # Load configurable disclaimer (versioned) from YAML
+        disclaimer_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "prompts", "disclaimer.yaml"))
+        try:
+            with open(disclaimer_path, "r") as f:
+                self.disclaimer = yaml.safe_load(f).get("disclaimer", COFEPRIS_DISCLAIMER)
+        except Exception:
+            self.disclaimer = COFEPRIS_DISCLAIMER
+
+    async def _raw_generate(self, messages: List[Dict[str, Any]]) -> str:
+        """Llamada directa a la API – sin circuit‑breaker.
         """
-        Llamada especializada para modelos multimodales (ej. llama-3.2-11b-vision-instruct).
+        if not self.client:
+            raise RuntimeError("OpenAI client not configured – missing API key.")
+        response = await self.client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            temperature=settings.LLM_TEMPERATURE,
+            max_tokens=settings.LLM_MAX_TOKENS,
+            top_p=settings.LLM_TOP_P,
+        )
+        return response.choices[0].message.content or ""
+
+    async def generate(self, system_prompt: str, user_message: str) -> ChatResponse:
+        """Genera la respuesta del LLM respetando el circuit‑breaker.
+        En caso de *CircuitBreakerOpenError* se devuelve un fallback amigable.
         """
         messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{image_b64}"
-                        }
-                    }
-                ]
-            }
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
         ]
-        return await self.generate_chat(messages, temperature=0.1, max_tokens=max_tokens)
+        try:
+            text = await self.breaker.call(lambda: self._raw_generate(messages))
+            text = text.strip() or "Lo siento, no pude procesar esa solicitud correctamente."
+            return ChatResponse(respuesta=text, disclaimer=COFEPRIS_DISCLAIMER)
+        except CircuitBreakerOpenError:
+            # Fallback cuando el breaker está abierto
+            logger.error("LLM service unavailable – circuit breaker open")
+            return ChatResponse(
+                respuesta="El servidor de Inteligencia Artificial está en congestión. Intenta en unos minutos.",
+                sources=[],
+                disclaimer=COFEPRIS_DISCLAIMER,
+            )
+        except Exception as e:
+            # Cualquier otro error – se propaga como fallback genérico
+            logger.error("Error al invocar LLM: %s", e, exc_info=True)
+            return ChatResponse(
+                respuesta="El servidor de Inteligencia Artificial está en congestión. Intenta en unos minutos.",
+                sources=[],
+                disclaimer=COFEPRIS_DISCLAIMER,
+            )

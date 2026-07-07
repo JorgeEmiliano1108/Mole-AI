@@ -1,4 +1,39 @@
 import { spinner } from '../ui/spinner.js';
+import { el, safeRender } from '../ui/dom.js';
+import { apiService } from '../api/ApiService.js';
+
+function renderDiagnosisRow(label, value, valueClass) {
+    return el('p', { className: 'text-xs' },
+        el('span', { className: 'text-mole-text-dim' }, label),
+        el('span', { className: `font-bold ${valueClass}` }, value)
+    );
+}
+
+function renderDiagnosisResult(data) {
+    return el('div', { className: 'space-y-2' },
+        renderDiagnosisRow('ESPECIE: ', data.species || 'DESCONOCIDA', 'text-mole-accent'),
+        renderDiagnosisRow('CONDICIÓN: ', data.condition || 'NO DETECTADA', 'text-mole-cyan'),
+        renderDiagnosisRow('SEVERIDAD: ', data.severity ? data.severity.toUpperCase() : 'N/A', 'text-mole-amber'),
+        renderDiagnosisRow('PH ESTIMADO: ',
+            data.ph_predicted != null ? String(data.ph_predicted) : 'N/A',
+            'text-mole-green'
+        ),
+        renderDiagnosisRow('CONFIANZA: ',
+            data.confidence ? (data.confidence * 100).toFixed(1) + '%' : 'N/A',
+            'text-mole-text'
+        )
+    );
+}
+
+function renderDiagnosisError(error) {
+    const msg = error.data?.detail?.title || error.message || "El servidor de IA está temporalmente fuera de línea. Por favor, reintente en unos minutos.";
+    return el('div', { className: 'space-y-2' },
+        renderDiagnosisRow('ESPECIE: ', 'SISTEMA DESCONECTADO', 'text-mole-red'),
+        renderDiagnosisRow('CONDICIÓN: ', 'Motor de Visión Inaccesible', 'text-mole-red'),
+        renderDiagnosisRow('ERROR: ', msg, 'text-mole-red')
+    );
+}
+
 // ==========================================================
 // 8. FLUJO DE DIAGN STICO 
 // ==========================================================
@@ -48,50 +83,33 @@ async function handleImageUpload(event) {
     try {
 
         // Zero-Trust: Validamos token antes de disparar a la red
-        if (!window.ApiService.isTokenPresent()) {
+        if (!apiService.isTokenPresent()) {
             throw new Error("Acceso denegado: Se requiere autenticaci\u00f3n para usar el Motor IA.");
         }
 
         //   USO DE API SERVICE: Endpoint 'vision/analyze/' mapeado en Gateway
         // Debug: log Authorization header (masked) before request - helpful for 401 debugging
-        console.log('Authorization header \u2192', window.ApiService.buildHeaders().Authorization);
-        const data = await window.ApiService.upload('vision/analyze/', formData);
+        console.log('Authorization header \u2192', apiService.buildHeaders().Authorization);
+        const data = await apiService.upload('vision/analyze/', formData);
 
         if (term) {
-            term.innerHTML = `
-                <div class="space-y-2">
-                    <p class="text-xs"><span class="text-mole-text-dim">ESPECIE:</span> <span class="text-mole-accent font-bold">${data.species || 'DESCONOCIDA'}</span></p>
-                    <p class="text-xs"><span class="text-mole-text-dim">CONDICI\u00d3N:</span> <span class="text-mole-cyan font-bold">${data.condition || 'NO DETECTADA'}</span></p>
-                    <p class="text-xs"><span class="text-mole-text-dim">SEVERIDAD:</span> <span class="text-mole-amber font-bold">${data.severity ? data.severity.toUpperCase() : 'N/A'}</span></p>
-                    <p class="text-xs"><span class="text-mole-text-dim">PH ESTIMADO:</span> <span class="text-mole-green font-bold">${data.ph_predicted !== null && data.ph_predicted !== undefined ? data.ph_predicted : 'N/A'}</span></p>
-                    <p class="text-xs"><span class="text-mole-text-dim">CONFIANZA:</span> <span class="text-mole-text font-bold">${data.confidence ? (data.confidence * 100).toFixed(1) + '%' : 'N/A'}</span></p>
-                </div>
-            `;
+            safeRender(term, renderDiagnosisResult(data));
         }
 
-        if (data.severity && data.severity.toLowerCase() === 'high' && typeof logPlantIssue === 'function') {
-            logPlantIssue(data.species || "ESPECIE ESCANEADA", data.condition);
+        if (data.severity && data.severity.toLowerCase() === 'high' && typeof window.logPlantIssue === 'function') {
+            window.logPlantIssue(data.species || "ESPECIE ESCANEADA", data.condition);
         }
 
     } catch (error) {
         console.error("> [ ERROR CR\u00cdTICO ] Error en conexi\u00f3n con el motor de visi\u00f3n:", error);
         // If unauthorized, clear token and redirect to login
         if (error && error.status === 401) {
-            window.ApiService.clearToken();
+            apiService.clearToken();
             window.location.href = '/login.html';
             return; // Skip UI update, page navigation will occur
         }
         if (term) {
-                term.innerHTML = `
-                <div class="space-y-2">
-                    <p class="text-xs"><span class="text-mole-text-dim">ESPECIE:</span> <span class="text-mole-red font-bold">SISTEMA DESCONECTADO</span></p>
-                    <p class="text-xs"><span class="text-mole-text-dim">CONDICI\u00d3N:</span> <span class="text-mole-red font-bold">Motor de Visi\u00f3n Inaccesible</span></p>
-                    <p class="text-xs"><span class="text-mole-text-dim">ERROR:</span> <span class="text-mole-red">${
-                        // Prefer detailed server message if available
-                        error.data?.detail?.title || error.message || "El servidor de IA est\u00e1 temporalmente fuera de l\u00ednea. Por favor, reintente en unos minutos."
-                    }</span></p>
-                </div>
-            `;
+            safeRender(term, renderDiagnosisError(error));
         }
         
     } finally {

@@ -1,0 +1,131 @@
+# Override para pruebas de sistema end-to-end.
+# Usar: docker compose -f infrastructure/docker-compose.yml -f infrastructure/docker-compose.test.yml up -d
+
+services:
+  # ── Base de datos local (reemplaza RDS para testing) ──────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mole_test_postgres
+    environment:
+      POSTGRES_DB: mole_test
+      POSTGRES_USER: mole
+      POSTGRES_PASSWORD: mole
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mole -d mole_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - mole_internal
+
+  # ── Redis expuesto para depuración ────────────────────────────
+  redis:
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  # ── Fake NVIDIA NIM (OpenAI-compatible, respuestas fijas) ────
+  nim-fake:
+    build:
+      context: ./fake-nim
+    container_name: mole_test_nim_fake
+    ports:
+      - "8800:8000"
+    networks:
+      - mole_internal
+
+  # ── MinIO local (reemplaza S3 para testing) ───────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: mole_test_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - mole_internal
+
+  # ── django-backend con entorno de test ────────────────────────
+  django-backend:
+    container_name: mole_test_django
+    environment:
+      - DEBUG=True
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mole_test
+      - POSTGRES_USER=mole
+      - POSTGRES_PASSWORD=mole
+      - DATABASE_URL=postgresql://mole:mole@postgres:5432/mole_test
+      - REDIS_URL=redis://redis:6379/0
+      - USE_S3=False
+      - AWS_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - TRAINING_BUCKET_NAME=mole-test
+      - JWT_SECRET_KEY=test-secret-key-for-e2e-tests
+      - JWT_ALGORITHM=HS256
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── ms2_chat con conexiones reales locales ────────────────────
+  ms2_chat:
+    container_name: mole_test_ms2_chat
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://mole:mole@postgres:5432/mole_test
+      - NVIDIA_BASE_URL=http://nim-fake:8000/v1
+      - NVIDIA_API_KEY=fake-key
+      - DEBUG=1
+      - JWT_SECRET_KEY=test-secret-key-for-e2e-tests
+      - JWT_ALGORITHM=HS256
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nim-fake:
+        condition: service_started
+
+  # ── ms1_vision con MinIO local ────────────────────────────────
+  ms1_vision:
+    container_name: mole_test_ms1_vision
+    environment:
+      - AWS_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - TRAINING_BUCKET_NAME=mole-test
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── ms3_reports con Postgres local ────────────────────────────
+  ms3_reports:
+    container_name: mole_test_ms3_reports
+    environment:
+      - DATABASE_URL=postgresql://mole:mole@postgres:5432/mole_test
+      - REDIS_URL=redis://redis:6379/2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

@@ -1,0 +1,74 @@
+name: System Tests (E2E) + License Compliance
+
+on:
+  push:
+    branches: [ dev, main ]
+  pull_request:
+    branches: [ dev, main ]
+
+jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install project dependencies
+        run: |
+          pip install --no-cache-dir -r microservices/mole_chat/requirements.txt
+
+      - name: Install license checker
+        run: |
+          pip install --no-cache-dir pip-licenses
+
+      - name: Run license compliance gate
+        run: |
+          echo "=== Dependency license audit ==="
+          pip-licenses --format=json --with-urls --with-license-file > /tmp/licenses.json
+          echo "--- JSON report saved to /tmp/licenses.json ---"
+          pip-licenses --fail-on="GPL;LGPL;AGPL;GPLv2;GPLv3;LGPLv2;LGPLv3" --format=plain
+
+  system-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [license-check]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: |
+          pip install pyjwt
+
+      - name: Build and start environment
+        run: |
+          docker compose -f infrastructure/docker-compose.e2e.yml up -d --remove-orphans
+
+      - name: Wait for services
+        run: |
+          bash scripts/wait-for-services.sh
+
+      - name: Run system tests
+        run: |
+          for test in tests/system/test_*.sh; do
+            echo "▶️  Running $test"
+            bash "$test"
+          done
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          docker compose -f infrastructure/docker-compose.e2e.yml logs --tail=50
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker compose -f infrastructure/docker-compose.e2e.yml down -v

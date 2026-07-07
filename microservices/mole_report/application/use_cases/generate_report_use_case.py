@@ -6,6 +6,7 @@ from infrastructure.redis.job_metadata_store import JobMetadataStore
 from infrastructure.llm.nvidia_client import NvidiaReportClient
 from infrastructure.db.supabase_client import SupabaseClient
 from infrastructure.storage.s3_adapter import S3Adapter
+from infrastructure.vector.pgvector_adapter import PgVectorAdapter
 from application.services.report_builder import ReportBuilder
 from app.config import settings
 from infrastructure.pdf.weasyprint_report_generator import WeasyPrintReportGenerator
@@ -18,6 +19,7 @@ class GenerateReportUseCase:
         self.job_store = JobMetadataStore.from_env()
         self.nim = NvidiaReportClient.from_env()
         self.supabase = SupabaseClient.from_env()
+        self.vector = PgVectorAdapter()
 
     def _detect_anomalies(self, logs: list) -> list:
         # Simple statistical anomaly detection: points outside mean +/- 2*std
@@ -52,7 +54,15 @@ class GenerateReportUseCase:
             anomalies = self._detect_anomalies(combined_logs)
             self.job_store.set_progress(job_id, 40)
 
-            # 2) NVIDIA NIM: Synthesize insights from telemetry
+            # 2) RAG: fetch scientific context from pgvector
+            import asyncio
+            try:
+                docs_context = asyncio.run(self.vector.search(" ".join(payload.get("sensors", []))))
+            except Exception:
+                docs_context = ""
+                logger.exception("pgvector search failed (non-fatal)")
+
+            # 3) NVIDIA NIM: Synthesize insights from telemetry + context
             insights = self.nim.synthesize_insights(docs=[], logs=combined_logs)
             self.job_store.set_progress(job_id, 75)
 
@@ -102,7 +112,7 @@ class GenerateReportUseCase:
                 audit_payload = {
                     "job_id": job_id,
                     "status": "SUCCESS",
-                    "s3_path": public_url,
+                    "s3_path": presigned_url,
                     "started_at": start_ts,
                     "finished_at": datetime.utcnow().isoformat() + "Z",
                 }

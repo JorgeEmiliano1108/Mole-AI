@@ -1,15 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
-import os
 import re
-import aiofiles
 from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user
 from app.api.limiter import limiter
 from app.application.use_cases.chat_usecase import MoleAIChatUseCase
-from app.domain.schemas import ChatRequest, ChatResponse, EmbeddingRequest, EmbeddingResponse, IngestPDFRequest, IngestPDFResponse, SourcesResponse, ContextUpdateRequest
+from app.domain.schemas import ChatRequest, ChatResponse
 from app.infrastructure.adapters.pgvector_store import PgVectorStore
-from app.infrastructure.adapters.llm_client import LLMClient
+from app.infrastructure.adapters.nvidia_client import LLMClient
 from app.infrastructure.adapters.redis_sensor_cache_adapter import RedisSensorCacheAdapter
 from app.infrastructure.adapters.citation_manager import CitationManager
 from app.core.config import settings
@@ -42,9 +40,9 @@ class DeleteResponse(BaseModel):
     message: str
 
 
-# ✅ Chat — Rate limited: 15 requests/minute per real client IP
+# ✅ Chat — Rate limited: configurable limit per real client IP
 @router.post("/api/v1/mole-ai/chat", response_model=ChatResponse)
-@limiter.limit("15/minute")
+@limiter.limit(settings.CHAT_RATE_LIMIT)
 async def chat_endpoint(
     request: Request,
     chat_request: ChatRequest,
@@ -77,14 +75,7 @@ async def chat_endpoint(
         try:
             system_prompt = load_prompt("agronomist")
         except Exception:
-            system_prompt = (
-                "Eres Mole.AI, un asistente agrónomo experto especializado en flora. "
-                "REGLA DE ORO: Si la información proporcionada en el CONTEXTO DISPONIBLE "
-                "(sensores, base local o Trefle API) no contiene la respuesta, DEBES "
-                "responder textualmente: 'No tengo suficiente información científica "
-                "para responder esto con seguridad.' "
-                "NUNCA inventes nombres científicos, tratamientos ni propiedades."
-            )
+            system_prompt = "Eres Mole.AI, un asistente agrónomo experto especializado en flora."
         
         # Create use case with injected dependencies
         use_case = MoleAIChatUseCase(
@@ -104,6 +95,8 @@ async def chat_endpoint(
 # 📄 Endpoint para ingestar manuales/documentos (vía HTTP upload directo)
 # NOTA: La vía principal de ingesta es ahora el RAG Listener (Redis Pub/Sub).
 # Este endpoint se mantiene como fallback para uploads manuales sin MinIO.
+
+
 @router.post("/api/v1/knowledge/ingest-pdf", response_model=IngestResponse)
 async def ingest_pdf_endpoint(
     request: Request,
@@ -113,25 +106,42 @@ async def ingest_pdf_endpoint(
     
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Solo se permiten archivos PDF.")
+    if ".." in file.filename or "/" in file.filename or "\\" in file.filename:
+        raise HTTPException(status_code=400, detail="Nombre de archivo inválido.")
     
-    temp_path = f"/tmp/{file.filename}"
-    async with aiofiles.open(temp_path, 'wb') as out_file:
-        content = await file.read()
-        await out_file.write(content)
-        
+    # Read content and validate size
+    content = await file.read()
+    if len(content) > settings.MAX_PDF_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail=f"PDF demasiado grande. Tamaño máximo: {settings.MAX_PDF_SIZE // (1024*1024)} MiB."
+        )
+    
+    # Quick page count via pikepdf (MPL 2.0) to reject oversized documents early
     try:
-        # Use pgvector store for ingestion
+        from io import BytesIO
+        from pikepdf import Pdf
+        pdf = Pdf.open(BytesIO(content))
+        n_pages = len(pdf.pages)
+        pdf.close()
+        if n_pages > settings.MAX_PDF_PAGES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"PDF excede el límite de {settings.MAX_PDF_PAGES} páginas."
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    try:
         from app.infrastructure.adapters.rag_listener import _extract_text_from_pdf
         from langchain_text_splitters import RecursiveCharacterTextSplitter
-        from app.core.config import settings
         import uuid
 
-        store = await _get_pgvector_store(request)
+        store = _get_pgvector_store(request)
 
-        with open(temp_path, "rb") as f:
-            pdf_bytes = f.read()
-
-        text = _extract_text_from_pdf(pdf_bytes)
+        text = _extract_text_from_pdf(content)
         if not text.strip():
             raise ValueError("PDF vacío o no contiene texto extraíble.")
 
@@ -152,9 +162,6 @@ async def ingest_pdf_endpoint(
         return IngestResponse(success=True, doc_id=doc_id, message=f"PDF {file.filename} indexado exitosamente ({len(chunks)} chunks).")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error procesando PDF: {str(e)}")
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
 
 
 # 🗑️ Endpoint para borrar documentos selectivamente
@@ -164,7 +171,7 @@ async def delete_pdf_endpoint(
     doc_id: str, 
     current_user_id: str = Depends(get_current_user)
 ):
-    store = await _get_pgvector_store(request)
+    store = _get_pgvector_store(request)
     deleted = await store.delete_by_doc_id(doc_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Documento no encontrado o no pudo ser eliminado.")

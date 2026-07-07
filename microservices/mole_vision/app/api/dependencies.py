@@ -57,7 +57,9 @@ async def get_current_user(
         # Mantenemos TODAS las validaciones críticas.
         claims = jwt.decode(
             token, settings.JWT_SECRET_KEY, algorithms=["HS256"],
-            options={"verify_exp": True, "verify_aud": False}  # aud apagado por incompatibilidad de Django
+            audience="authenticated",
+            options={"verify_aud": True, "verify_exp": True},
+            leeway=30,
         )
     except jwt.ExpiredSignatureError as exc:
         logger.error("jwt_validation_failed", error_type="ExpiredSignatureError", detail=str(exc))
@@ -80,12 +82,26 @@ _diagnostic_repository: Optional[DiagnosticRepositoryPort] = None
 
 
 def get_vision_client() -> VisionClientPort:
-    """Factory for vision client — NVIDIA NIM (Llama 3.2 Vision)."""
+    """Factory for vision client — NVIDIA NIM only (Mock via test fakes)."""
     global _vision_adapter
-    if _vision_adapter is None:
-        _vision_adapter = NvidiaVisionAdapter()
-        logger.info("vision_client_factory", chosen="nvidia_nim")
-    return _vision_adapter
+    if _vision_adapter is not None:
+        return _vision_adapter
+
+    # 1) Try NVIDIA NIM
+    try:
+        adapter = NvidiaVisionAdapter()
+        if adapter.is_ready():
+            _vision_adapter = adapter
+            logger.info("vision_client_factory", chosen="nvidia_nim")
+            return _vision_adapter
+    except Exception as exc:
+        logger.warning("nvidia_init_failed", error=str(exc))
+
+    # 2) No fallback — NVIDIA NIM is the only production adapter
+    raise RuntimeError(
+        "NVIDIA NIM vision adapter not available. "
+        "Use MockVisionAdapter from tests/fakes/ for CI/testing."
+    )
 
 
 def get_event_publisher() -> EventPublisherPort:

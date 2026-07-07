@@ -7,8 +7,9 @@ Skill 03: Async - await en publicación de eventos
 from typing import Optional
 from dataclasses import replace
 import structlog
+from app.core.privacy import anonymize_id
 
-from app.domain.entities import DiagnosticResult
+from app.domain.entities import PlantDiagnosis
 from app.application.ports import (
     VisionClientPort,
     EventPublisherPort,
@@ -40,7 +41,7 @@ class AnalyzePlantUseCase:
         image_bytes: bytes,
         plant_id: str,
         user_claims: Optional[dict] = None,
-    ) -> DiagnosticResult:
+    ) -> PlantDiagnosis:
         """
         Ejecuta el análisis de la planta.
         
@@ -50,14 +51,16 @@ class AnalyzePlantUseCase:
             user_claims: Claims del JWT autenticado
             
         Returns:
-            DiagnosticResult: Entidad de dominio con el resultado
+            PlantDiagnosis: Entidad de dominio con diagnóstico fitosanitario completo
         """
         if not self.vision_client.is_ready():
             logger.error("vision_model_not_ready")
             raise RuntimeError("Vision model not available")
         
         diagnostic = await self.vision_client.analyze(image_bytes)
-        diagnostic = replace(diagnostic, plant_id=plant_id)
+        # Anonimizar plant_id antes de persistir/publish
+        hashed_plant_id = anonymize_id(plant_id)
+        diagnostic = replace(diagnostic, plant_id=hashed_plant_id)
         
         diagnostic_id = await self.diagnostic_repository.save_diagnostic(diagnostic)
         
@@ -76,8 +79,8 @@ class AnalyzePlantUseCase:
         logger.info(
             "diagnostic_completed",
             diagnostic_id=diagnostic_id,
-            plant_id=plant_id,
-            condition=diagnostic.condition,
+            plant_id=hashed_plant_id,
+            affliction=diagnostic.affliction_name,
             severity=diagnostic.severity.value,
         )
         

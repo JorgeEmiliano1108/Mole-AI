@@ -1,4 +1,13 @@
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except ImportError:
+    # Stub HTML class for environments without weasyprint
+    class HTML:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError('weasyprint is required for PDF generation')
+        @staticmethod
+        def write_pdf(*args, **kwargs):
+            raise RuntimeError('weasyprint is required for PDF generation')
 import inspect
 
 try:

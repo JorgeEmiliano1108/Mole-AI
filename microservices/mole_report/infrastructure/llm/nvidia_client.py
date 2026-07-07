@@ -1,14 +1,14 @@
 """
 Infrastructure Layer - NVIDIA NIM LLM Client for Report Synthesis
-Reemplaza: HuggingFaceClient
 Model: meta/llama-3.3-70b-instruct
 """
-import os
 import logging
 from typing import List, Dict
 
 from openai import OpenAI
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +31,23 @@ class NvidiaReportClient:
     """Synchronous NVIDIA NIM client (used inside Celery task)."""
 
     def __init__(self):
-        self.model = os.getenv("NVIDIA_REPORT_MODEL", "meta/llama-3.3-70b-instruct")
-        self.client = OpenAI(
-            api_key=os.getenv("NVIDIA_API_KEY"),
-            base_url=os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
-            timeout=120.0,
-            max_retries=3,
-        )
+        self.model = settings.nvidia_report_model
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None and settings.nvidia_api_key:
+            self._client = OpenAI(
+                api_key=settings.nvidia_api_key,
+                base_url=settings.nvidia_base_url,
+                timeout=120.0,
+                max_retries=3,
+            )
+        return self._client
+
+    @client.setter
+    def client(self, value):
+        self._client = value
 
     @classmethod
     def from_env(cls) -> "NvidiaReportClient":
@@ -70,8 +80,7 @@ class NvidiaReportClient:
         Calls NVIDIA NIM synchronously (Celery context).
         Returns dict with 'summary' and 'text' keys.
         """
-        if not os.getenv("NVIDIA_API_KEY"):
-            logger.warning("NVIDIA_API_KEY missing — returning stub insights.")
+        if not self.client:
             return {
                 "summary": "Sin API Key configurada.",
                 "text": "No se pudo generar el análisis de IA.",

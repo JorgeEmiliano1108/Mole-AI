@@ -2,6 +2,7 @@
 # Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
 # =============================================================================
 import logging
+from django.conf import settings
 from django.http import JsonResponse
 import requests
 import redis
@@ -51,5 +52,13 @@ class GracefulDegradationMiddleware:
                 status=503
             )
         
-        # For other exceptions, return None to let Django's default exception handler handle it
+        # For other exceptions, handle based on DEBUG
+        if not settings.DEBUG:
+            logger.error(
+                "unhandled_exception",
+                extra={"error": str(exception), "path": request.path}
+            )
+        else:
+            logger.exception("unhandled_exception", exc_info=True)
+        # Let Django's default handler produce a 500 response
         return None

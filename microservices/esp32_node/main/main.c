@@ -4,14 +4,10 @@
  * =============================================================================
  * main.c — Mole.AI Telemetry Node (Bare-Metal, ESP-IDF 5.x)
  *
- * Boot sequence (State Machine):
- *   1. NVS init
- *   2. NVS token check → if missing → Captive Portal AP mode
- *   3. WiFi STA connection (with saved credentials)
- *   4. NTP synchronization (ETSI EN 303 645 Anti-Replay)
- *   5. I2C bus + sensor initialization (DHT20, LTR390, Soil×N)
- *   6. WebSocket client connect (Bearer Token from NVS)
- *   7. Telemetry FreeRTOS task (cJSON → WebSocket push)
+ * Architecture:
+ *   app_main() initialises NVS, netif, event loop, then launches fsm_task.
+ *   The 12-state FSM owns all orchestration (wifi, sensors, transport, sleep).
+ *   Event handlers post to the FSM event queue — they NEVER block.
  *
  * Regulatory Compliance:
  *   IFT-016:        No calls to esp_wifi_set_max_tx_power()
@@ -19,7 +15,6 @@
  *   LFPDPPP:        Zero PII in flash — identity = Device Token (UUID)
  * =============================================================================
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -28,16 +23,21 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "freertos/semphr.h"
+#include "freertos/timers.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "esp_timer.h"
+#include "esp_sleep.h"
+#include "esp_task_wdt.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "driver/i2c_master.h"
 #include "esp_http_server.h"
+#include "transport_layer.h"
+#include "transport_config.h"
 #include "esp_websocket_client.h"
 #include "esp_adc/adc_oneshot.h"
 #include "lwip/sockets.h"
@@ -52,36 +52,51 @@
 #include "sensor_ltr390.h"
 #include "sensor_soil.h"
 #include "ble_provisioning.h"
+#include "payload_builder.h"
+#include "edge_frame.h"
+#include "sensor_frame.h"
+#include "offline_buffer.h"
+#include "state_machine.h"
 
 static const char *TAG = "MOLE_MAIN";
 
 /* Semaphore to signal provisioning completion (BLE or Captive Portal) */
 SemaphoreHandle_t g_provision_sem = NULL;
 
-/* ── FreeRTOS Event Group ────────────────────────────────────────────────── */
+/* ── FreeRTOS Event Group (used internally by wifi_init_sta) ────────────── */
 static EventGroupHandle_t wifi_event_group;
 #define WIFI_CONNECTED_BIT   BIT0
 
-/* ── Global sensor handles ───────────────────────────────────────────────── */
+/* ── Global sensor handles ────────────────────────────────────────────────── */
 static sensor_dht20_handle_t  s_dht20  = NULL;
 static sensor_ltr390_handle_t s_ltr390 = NULL;
-/* Array of soil sensor handles — one per active pin */
 static sensor_soil_handle_t   s_soil[MOLE_NUM_ACTIVE_SOIL_PINS] = {0};
+static adc_oneshot_unit_handle_t s_adc1 = NULL;
+static i2c_master_bus_handle_t   s_i2c_bus = NULL;
 
 /* ── Device Token (read from NVS at boot) ────────────────────────────────── */
 static char s_device_token[128] = {0};
 
-/* ── WebSocket client handle ─────────────────────────────────────────────── */
-static esp_websocket_client_handle_t s_ws_client = NULL;
+/* ── TransportLayer (HTTP REST) ──────────────────────────────────────────── */
+static transport_handle_t *s_transport = NULL;
+static QueueHandle_t s_transport_event_queue = NULL;
+
+/* ── Payload buffer (pre-allocated, reused per cycle) ────────────────────── */
+static char s_payload_buf[512];
+
+/* ── Edge frame for current telemetry cycle ──────────────────────────────── */
+static edge_frame_t s_edge_frame;
+
+/* ── FSM event queue (handlers post here; fsm_task consumes) ─────────────── */
+static QueueHandle_t s_fsm_queue = NULL;
+
+/* ── Backoff state (VS3) ─────────────────────────────────────────────────── */
+static int s_reconnect_attempt = 0;
 
 /* ==========================================================================
  * SECTION 1: NVS Token Management
  * ========================================================================== */
 
-/**
- * @brief Attempt to load device token from NVS.
- * @return true if token was found and loaded, false if NVS has no token.
- */
 static bool nvs_load_token(void)
 {
     nvs_handle_t handle;
@@ -109,9 +124,6 @@ static bool nvs_load_token(void)
     return false;
 }
 
-/**
- * @brief Save device token to NVS and commit.
- */
 static esp_err_t nvs_save_token(const char *token)
 {
     nvs_handle_t handle;
@@ -127,7 +139,7 @@ static esp_err_t nvs_save_token(const char *token)
  * SECTION 2: Captive Portal (Wi-Fi AP + HTTP Server + DNS)
  * ========================================================================== */
 
-/* Forward declaration — defined in SECTION 3 (WiFi STA) */
+/* Forward declaration — defined below */
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data);
 
@@ -138,17 +150,13 @@ static bool s_scan_completed = false;
 
 static void wifi_background_scan_task(void *pvParameters)
 {
-    /* Wait for WiFi radio PHY calibration to complete */
     ESP_LOGI(TAG, "Waiting for WiFi radio stabilization...");
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     ESP_LOGI(TAG, "Starting background WiFi scan...");
     uint16_t number = MAX_SCANNED_APS;
-    
+
     if (esp_wifi_scan_start(NULL, true) == ESP_OK) {
-        /* ESP-IDF canonical sequence: get_ap_num FIRST, then get_ap_records.
-         * get_ap_records() frees the driver's internal buffer as a side-effect,
-         * so calling get_ap_num() after it would always return 0. */
         esp_wifi_scan_get_ap_num(&s_ap_count_cache);
         if (s_ap_count_cache > MAX_SCANNED_APS) {
             s_ap_count_cache = MAX_SCANNED_APS;
@@ -193,10 +201,10 @@ static void dns_server_task(void *pvParameters)
         struct sockaddr_in source_addr;
         socklen_t socklen = sizeof(source_addr);
         int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer), 0, (struct sockaddr *)&source_addr, &socklen);
-        
+
         if (len > 0) {
             uint16_t tx_id = *((uint16_t *)rx_buffer);
-            uint16_t flags = htons(0x8180); // Standard response
+            uint16_t flags = htons(0x8180);
             uint16_t qdcount = htons(1);
             uint16_t ancount = htons(1);
             uint16_t nscount = 0;
@@ -216,7 +224,7 @@ static void dns_server_task(void *pvParameters)
                 q_len++;
             }
             q_len += 5;
-            
+
             if (12 + q_len <= len && tx_len + q_len + 16 <= sizeof(tx_buffer)) {
                 memcpy(tx_buffer + tx_len, rx_buffer + 12, q_len);
                 tx_len += q_len;
@@ -343,9 +351,6 @@ static esp_err_t captive_scan_handler(httpd_req_t *req)
     uint16_t number = MAX_SCANNED_APS;
 
     if (esp_wifi_scan_start(NULL, true) == ESP_OK) {
-        /* ESP-IDF canonical sequence: get_ap_num FIRST, then get_ap_records.
-         * get_ap_records() frees the driver's internal buffer as a side-effect,
-         * so calling get_ap_num() after it would always return 0. */
         esp_wifi_scan_get_ap_num(&s_ap_count_cache);
         if (s_ap_count_cache > MAX_SCANNED_APS) s_ap_count_cache = MAX_SCANNED_APS;
         number = s_ap_count_cache;
@@ -386,10 +391,8 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
     if (received <= 0) return ESP_FAIL;
     buf[received] = '\0';
 
-    /* Parse form data: ssid=X&pass=Y&token=Z&interval=W */
     char ssid[64] = {0}, pass[64] = {0}, token[128] = {0}, interval_str[16] = {0};
 
-    /* Simple URL-encoded form parser */
     char *p = buf;
     while (p && *p) {
         char *eq = strchr(p, '=');
@@ -411,19 +414,16 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing fields");
         return ESP_FAIL;
     }
-    
-    /* Validate and convert interval */
+
     uint32_t interval_min = atoi(interval_str);
     if (interval_min < 1) interval_min = 1;
     if (interval_min > 120) interval_min = 120;
 
-    /* Save WiFi credentials via ESP WiFi API (stored internally by ESP-IDF) */
     wifi_config_t wifi_cfg = {0};
     strncpy((char *)wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid) - 1);
     strncpy((char *)wifi_cfg.sta.password, pass, sizeof(wifi_cfg.sta.password) - 1);
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
 
-    /* Save device token and interval to NVS */
     nvs_handle_t handle;
     ESP_ERROR_CHECK(nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &handle));
     ESP_ERROR_CHECK(nvs_set_str(handle, MOLE_NVS_KEY_TOKEN, token));
@@ -441,7 +441,6 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "text/html");
     httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
 
-    /* Signal provisioning completion – start_captive_portal will restart */
     if (g_provision_sem) {
         xSemaphoreGive(g_provision_sem);
     }
@@ -452,13 +451,11 @@ static void start_captive_portal(void)
 {
     ESP_LOGI(TAG, "=== CAPTIVE PORTAL MODE ===");
 
-    /* 1. Start WiFi in APSTA mode */
     esp_netif_create_default_wifi_ap();
-    esp_netif_create_default_wifi_sta(); // Required for APSTA scanning
+    esp_netif_create_default_wifi_sta();
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    /* Register WiFi event handler for scan state machine */
     ESP_ERROR_CHECK(esp_event_handler_register(
         WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
 
@@ -479,15 +476,11 @@ static void start_captive_portal(void)
 
     ESP_LOGI(TAG, "AP started: SSID='%s' PASS='%s'", MOLE_AP_SSID, MOLE_AP_PASS);
 
-    /* Start DNS Server Task for Auto-Popup */
     xTaskCreate(dns_server_task, "dns_server", 4096, NULL, 5, NULL);
-
-    /* Start Background WiFi Scanner */
     xTaskCreate(wifi_background_scan_task, "wifi_bg_scan", 4096, NULL, 5, NULL);
 
-    /* 2. Start HTTP server */
     httpd_config_t http_cfg = HTTPD_DEFAULT_CONFIG();
-    http_cfg.uri_match_fn = httpd_uri_match_wildcard; // Necessary to catch all requests for redirect
+    http_cfg.uri_match_fn = httpd_uri_match_wildcard;
     httpd_handle_t server = NULL;
     ESP_ERROR_CHECK(httpd_start(&server, &http_cfg));
 
@@ -512,42 +505,100 @@ static void start_captive_portal(void)
     ESP_LOGI(TAG, "HTTP server listening on http://192.168.4.1/");
     ESP_LOGI(TAG, "Waiting for provisioning via Captive Portal...");
 
-    /* Wait for provisioning completion (BLE or Captive Portal) */
     if (g_provision_sem) {
-        /* The semaphore is given by BLE write callback or by the POST handler
-         * (after storing token and credentials). */
-        xSemaphoreTake(g_provision_sem, portMAX_DELAY);
+        if (xSemaphoreTake(g_provision_sem, pdMS_TO_TICKS(MOLE_PROV_TIMEOUT_MS)) == pdTRUE) {
+            ESP_LOGI(TAG, "Provisioning completed – restarting…");
+            esp_restart();
+        } else {
+            ESP_LOGW(TAG, "Provisioning timed out after %d ms — deep sleep", MOLE_PROV_TIMEOUT_MS);
+            enter_deep_sleep();
+        }
     }
-    ESP_LOGI(TAG, "Provisioning completed – restarting…");
-    esp_restart();
 }
 
 /* ==========================================================================
- * SECTION 3: WiFi STA Mode (Normal Operation)
+ * SECTION 3: WiFi STA + Backoff (event-driven, posts to FSM queue)
  * ========================================================================== */
+
+static void reconnect_save_nvs(void)
+{
+    nvs_handle_t h;
+    if (nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &h) == ESP_OK) {
+        nvs_set_i32(h, "reconnect_cnt", s_reconnect_attempt);
+        nvs_commit(h);
+        nvs_close(h);
+    }
+}
+
+#define BACKOFF_BASE_MS  1000
+#define BACKOFF_MAX_MS   30000
+#define BACKOFF_MAX_ATT  6
+
+static int reconnect_backoff_delay_ms(void)
+{
+    uint32_t attempt = (uint32_t)(s_reconnect_attempt < BACKOFF_MAX_ATT
+                                  ? s_reconnect_attempt : BACKOFF_MAX_ATT - 1);
+    uint32_t delay = BACKOFF_BASE_MS << attempt;
+    if (delay > BACKOFF_MAX_MS) delay = BACKOFF_MAX_MS;
+
+    int32_t jitter_range = (int32_t)(delay / 10);
+    int32_t jitter = (int32_t)(esp_random() % (uint32_t)(jitter_range * 2 + 1))
+                     - jitter_range;
+    int32_t final_delay = (int32_t)delay + jitter;
+    if (final_delay < 100) final_delay = 100;
+
+    s_reconnect_attempt++;
+    return final_delay;
+}
+
+static void reconnect_timer_cb(TimerHandle_t xTimer)
+{
+    reconnect_save_nvs();
+    esp_wifi_connect();
+    vTimerDelete(xTimer);
+}
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
-        /* Only auto-connect if in STA mode (event group exists) */
         if (wifi_event_group) {
             esp_wifi_connect();
         }
     } else if (event_base == WIFI_EVENT &&
                event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (wifi_event_group) {
-            ESP_LOGW(TAG, "WiFi disconnected — reconnecting in 5s...");
-            vTaskDelay(pdMS_TO_TICKS(5000));
-            esp_wifi_connect();
+            int delay_ms = reconnect_backoff_delay_ms();
             xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
+            TimerHandle_t t = xTimerCreate("reconnect",
+                                           pdMS_TO_TICKS(delay_ms),
+                                           pdFALSE, NULL,
+                                           reconnect_timer_cb);
+            if (t) {
+                xTimerStart(t, 0);
+            } else {
+                esp_wifi_connect();
+            }
+            ESP_LOGW(TAG, "WiFi disconnected — reconnect in %d ms (attempt %d)",
+                     delay_ms, s_reconnect_attempt);
+        }
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_WIFI_DISCONNECT;
+            xQueueSend(s_fsm_queue, &ev, 0);
         }
     } else if (event_base == IP_EVENT &&
                event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *evt = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&evt->ip_info.ip));
+        s_reconnect_attempt = 0;
+        reconnect_save_nvs();
+        esp_wifi_set_ps(WIFI_PS_NONE);
         if (wifi_event_group) {
             xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
+        }
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_WIFI_CONNECTED;
+            xQueueSend(s_fsm_queue, &ev, 0);
         }
     }
 }
@@ -565,7 +616,6 @@ static void wifi_init_sta(void)
     ESP_ERROR_CHECK(esp_event_handler_register(
         IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
 
-    /* Load Wi-Fi credentials from NVS */
     char wifi_ssid[32] = {0};
     char wifi_pass[64] = {0};
     size_t size = sizeof(wifi_ssid);
@@ -582,203 +632,79 @@ static void wifi_init_sta(void)
     strncpy((char *)wifi_cfg.sta.password, wifi_pass, sizeof(wifi_cfg.sta.password) - 1);
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
 
-    /*
-     * IFT-016 COMPLIANCE:
-     * We intentionally do NOT call esp_wifi_set_max_tx_power().
-     * The ESP32 SDK default (~20 dBm) complies with IFT-016 EIRP limits
-     * for unlicensed 2.4 GHz ISM band operation in Mexican territory.
-     */
-
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "Waiting for IP address...");
-    xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT,
-                        false, true, portMAX_DELAY);
-    ESP_LOGI(TAG, "WiFi connected.");
+    esp_wifi_set_ps(WIFI_PS_NONE);
+
+    ESP_LOGI(TAG, "WiFi STA started — waiting for IP (async)");
 }
 
 /* ==========================================================================
- * SECTION 4: WebSocket Client (Bearer Token Auth)
+ * SECTION 4: TransportLayer Wrapper
  * ========================================================================== */
 
-static void ws_event_handler(void *arg, esp_event_base_t event_base,
-                             int32_t event_id, void *event_data)
+static void transport_init_and_connect(void)
 {
-    esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)event_data;
-    switch (event_id) {
-        case WEBSOCKET_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "[WS] Connected to Edge Node");
-            break;
-        case WEBSOCKET_EVENT_DISCONNECTED:
-            ESP_LOGW(TAG, "[WS] Disconnected from Edge Node");
-            break;
-        case WEBSOCKET_EVENT_DATA:
-            if (data->op_code == 0x01) { /* Text frame */
-                ESP_LOGI(TAG, "[WS] Received: %.*s", data->data_len, data->data_ptr);
-            }
-            break;
-        case WEBSOCKET_EVENT_ERROR:
-            ESP_LOGE(TAG, "[WS] Error");
-            break;
-        default:
-            break;
+    s_transport_event_queue = xQueueCreate(4, sizeof(transport_event_t));
+    if (!s_transport_event_queue) {
+        ESP_LOGE(TAG, "Failed to create transport event queue");
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_TRANSPORT_DISCONNECT;
+            xQueueSend(s_fsm_queue, &ev, 0);
+        }
+        return;
     }
-}
 
-static esp_err_t ws_client_start(void)
-{
-    /* Build Authorization header with token from NVS */
-    char auth_header[192];
-    snprintf(auth_header, sizeof(auth_header),
-             "Authorization: Bearer %s\r\n", s_device_token);
+    transport_config_t t_cfg = {0};
+    strncpy(t_cfg.uri, CONFIG_MOLE_HTTP_URI, sizeof(t_cfg.uri) - 1);
+    strncpy(t_cfg.bearer_token, s_device_token, sizeof(t_cfg.bearer_token) - 1);
+    t_cfg.timeout_ms          = 10000;
+    t_cfg.retry_max           = 3;
+    t_cfg.retry_backoff_base_ms = 2000;
 
-    esp_websocket_client_config_t ws_cfg = {
-        .uri = CONFIG_MOLE_WS_URI,
-        .headers = auth_header,
-        .reconnect_timeout_ms = 10000,
-        .network_timeout_ms   = 10000,
+    transport_callbacks_t t_cb = {
+        .event_queue = s_transport_event_queue,
     };
 
-    s_ws_client = esp_websocket_client_init(&ws_cfg);
-    if (!s_ws_client) {
-        ESP_LOGE(TAG, "Failed to init WebSocket client");
-        return ESP_FAIL;
+    s_transport = transport_init(&t_cfg, &t_cb);
+    if (!s_transport) {
+        ESP_LOGE(TAG, "Transport init failed");
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_TRANSPORT_DISCONNECT;
+            xQueueSend(s_fsm_queue, &ev, 0);
+        }
+        return;
     }
 
-    esp_websocket_register_events(s_ws_client, WEBSOCKET_EVENT_ANY,
-                                  ws_event_handler, NULL);
-    return esp_websocket_client_start(s_ws_client);
-}
-
-/* ==========================================================================
- * SECTION 5: Telemetry Task (cJSON + WebSocket Push)
- * ========================================================================== */
-
-static void telemetry_task(void *arg)
-{
-    uint32_t interval_ms = (uint32_t)(uintptr_t)arg;
-    const int soil_pins[] = MOLE_ACTIVE_SOIL_PINS;
-
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(interval_ms));
-
-        if (!esp_websocket_client_is_connected(s_ws_client)) {
-            ESP_LOGW(TAG, "[TELEM] WebSocket not connected, skipping cycle.");
-            continue;
+    transport_result_t res = transport_connect(s_transport, 10000);
+    if (res.status == TRANSPORT_OK) {
+        ESP_LOGI(TAG, "Transport connected");
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_TRANSPORT_CONNECTED;
+            xQueueSend(s_fsm_queue, &ev, 0);
         }
-
-        /* ── Read sensors ─────────────────────────────────────────────── */
-        float air_temp = 0, air_hum = 0, lux = 0, uv = 0;
-
-        if (s_dht20) {
-            sensor_dht20_read(s_dht20, &air_temp, &air_hum);
+    } else if (res.status == TRANSPORT_AUTH_FAILED) {
+        ESP_LOGE(TAG, "Transport auth failed");
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_TRANSPORT_AUTH_FAIL;
+            xQueueSend(s_fsm_queue, &ev, 0);
         }
-        if (s_ltr390) {
-            sensor_ltr390_read(s_ltr390, &lux, &uv);
-        } else {
-            /* LTR390 MOCK fallback (sensor not detected on I2C bus) */
-            uv  = 3.5f;
-            lux = 8500.0f;
-        }
-
-        /* ── Build JSON payload ───────────────────────────────────────── */
-        cJSON *root = cJSON_CreateObject();
-        cJSON_AddNumberToObject(root, "timestamp", (double)time(NULL));
-
-        /* Ambient object (shared sensors: DHT20 + LTR390) */
-        cJSON *ambient = cJSON_AddObjectToObject(root, "ambient");
-        cJSON_AddNumberToObject(ambient, "air_temperature", air_temp);
-        cJSON_AddNumberToObject(ambient, "air_humidity",    air_hum);
-        cJSON_AddNumberToObject(ambient, "light_level",     lux);
-        cJSON_AddNumberToObject(ambient, "uv_index",        uv);
-
-        /* Soil object (1:N per-pin readings) */
-        cJSON *soil_obj = cJSON_AddObjectToObject(root, "soil");
-        for (int i = 0; i < MOLE_NUM_ACTIVE_SOIL_PINS; i++) {
-            float moisture = 0;
-            if (s_soil[i]) {
-                sensor_soil_read(s_soil[i], &moisture);
-            }
-            char pin_str[8];
-            snprintf(pin_str, sizeof(pin_str), "%d", soil_pins[i]);
-            cJSON_AddNumberToObject(soil_obj, pin_str, moisture);
-        }
-
-        /* ── Serialize and send ───────────────────────────────────────── */
-        char *json_str = cJSON_PrintUnformatted(root);
-        cJSON_Delete(root);
-
-        if (json_str) {
-            int len = strlen(json_str);
-            int sent = esp_websocket_client_send_text(
-                s_ws_client, json_str, len, pdMS_TO_TICKS(5000));
-
-            if (sent < 0) {
-                ESP_LOGE(TAG, "[TELEM] Failed to send (%d bytes)", len);
-            } else {
-                ESP_LOGI(TAG, "[TELEM] Sent %d bytes", len);
-            }
-            free(json_str);
+    } else {
+        ESP_LOGW(TAG, "Transport connect: HTTP %d", res.http_code);
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_TRANSPORT_DISCONNECT;
+            xQueueSend(s_fsm_queue, &ev, 0);
         }
     }
 }
 
 /* ==========================================================================
- * SECTION 6: app_main — Firmware Entrypoint (State Machine)
+ * SECTION 5: Sensor Init
  * ========================================================================== */
 
-void app_main(void)
+static void sensor_init_all(void)
 {
-    ESP_LOGI(TAG, "╔═══════════════════════════════════════════╗");
-    ESP_LOGI(TAG, "║  Mole.AI Telemetry Node v%s          ║", MOLE_FW_VERSION);
-    ESP_LOGI(TAG, "╚═══════════════════════════════════════════╝");
-
-    /* ── Step 1: NVS Init ────────────────────────────────────────────── */
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-        ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_LOGW(TAG, "NVS partition issue — erasing and reinitializing");
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-    ESP_LOGI(TAG, "[1/6] NVS initialized");
-    /* Create binary semaphore for provisioning synchronization */
-    g_provision_sem = xSemaphoreCreateBinary();
-    if (g_provision_sem == NULL) {
-        ESP_LOGE(TAG, "Failed to create provisioning semaphore");
-    }
-
-    /* ── Step 2: Network stack ───────────────────────────────────────── */
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
-    /* ── Step 3: Token Check (State Machine Decision Point) ──────────── */
-    bool has_token = nvs_load_token();
-
-    if (!has_token) {
-        /*
-         * FIRST BOOT / FACTORY RESET:
-         * No token in NVS → start both BLE provisioning and Captive Portal.
-         * Both paths will signal the semaphore when they have stored credentials.
-         */
-        ble_provisioning_start();
-        start_captive_portal();
-        /* Unreachable — start_captive_portal restarts after semaphore */
-    }
-
-    /* ── Step 4: WiFi STA (token exists, connect to saved AP) ────────── */
-    wifi_init_sta();
-    ESP_LOGI(TAG, "[2/6] WiFi STA connected");
-
-    /* ── Step 5: NTP Sync (ETSI EN 303 645) ──────────────────────────── */
-    ESP_ERROR_CHECK(mole_ntp_init());
-    mole_ntp_wait_sync(10000);
-    ESP_LOGI(TAG, "[3/6] NTP synchronized");
-
-    /* ── Step 6: I2C Bus + Sensors ───────────────────────────────────── */
-    i2c_master_bus_handle_t i2c_bus = NULL;
     i2c_master_bus_config_t bus_cfg = {
         .i2c_port   = I2C_NUM_0,
         .sda_io_num = CONFIG_MOLE_I2C_SDA,
@@ -787,26 +713,21 @@ void app_main(void)
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_cfg, &i2c_bus));
+    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_cfg, &s_i2c_bus));
 
-    /* DHT20 (Temperature + Air Humidity) */
-    ESP_ERROR_CHECK(sensor_dht20_init(i2c_bus, &s_dht20));
+    ESP_ERROR_CHECK(sensor_dht20_init(s_i2c_bus, &s_dht20));
 
-    /* LTR390 (Light + UV) — graceful fallback if not present */
-    esp_err_t err_ltr = sensor_ltr390_init(i2c_bus, &s_ltr390);
+    esp_err_t err_ltr = sensor_ltr390_init(s_i2c_bus, &s_ltr390);
     if (err_ltr != ESP_OK) {
         ESP_LOGE(TAG, "LTR390 init failed (0x%x). Using MOCK data.", err_ltr);
         s_ltr390 = NULL;
     }
 
-    /* ADC1 Singleton Initialization */
-    adc_oneshot_unit_handle_t adc1_handle = NULL;
     adc_oneshot_unit_init_cfg_t unit_cfg = {
         .unit_id = ADC_UNIT_1,
     };
-    ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_cfg, &adc1_handle));
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_cfg, &s_adc1));
 
-    /* Soil sensors — one per active ADC1 pin */
     const int soil_pins[] = MOLE_ACTIVE_SOIL_PINS;
     for (int i = 0; i < MOLE_NUM_ACTIVE_SOIL_PINS; i++) {
         int channel = MOLE_GPIO_TO_ADC1_CHANNEL(soil_pins[i]);
@@ -814,7 +735,7 @@ void app_main(void)
             ESP_LOGE(TAG, "Invalid soil GPIO %d — not an ADC1 pin!", soil_pins[i]);
             continue;
         }
-        esp_err_t err = sensor_soil_init(adc1_handle, channel, &s_soil[i]);
+        esp_err_t err = sensor_soil_init(s_adc1, channel, &s_soil[i]);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Soil sensor on GPIO %d failed (0x%x)", soil_pins[i], err);
             s_soil[i] = NULL;
@@ -822,30 +743,209 @@ void app_main(void)
             ESP_LOGI(TAG, "Soil sensor OK on GPIO %d (ADC1 ch%d)", soil_pins[i], channel);
         }
     }
-    ESP_LOGI(TAG, "[4/6] Sensors initialized");
+}
 
-    /* ── Step 7: WebSocket Client ────────────────────────────────────── */
-    ESP_ERROR_CHECK(ws_client_start());
-    ESP_LOGI(TAG, "[5/6] WebSocket client started → %s", CONFIG_MOLE_WS_URI);
+static int sensor_get_degraded_bitmask(void)
+{
+    int dg = 0;
+    if (!s_dht20)  dg |= DEGRADED_TEMP_BIT | DEGRADED_HUM_BIT;
+    if (!s_ltr390) dg |= DEGRADED_LIGHT_BIT | DEGRADED_UV_BIT;
+    return dg;
+}
 
-    /* ── Step 8: Read Telemetry Interval & Launch Task ───────────────── */
-    uint32_t telemetry_interval_min = 5; // Default fallback
-    nvs_handle_t handle;
-    if (nvs_open(MOLE_NVS_NAMESPACE, NVS_READONLY, &handle) == ESP_OK) {
-        nvs_get_u32(handle, "telemetry_int", &telemetry_interval_min);
-        nvs_close(handle);
+/* ==========================================================================
+ * SECTION 6: Telemetry Send
+ * ========================================================================== */
+
+static void build_edge_frame(void)
+{
+    memset(&s_edge_frame, 0, sizeof(s_edge_frame));
+
+    s_edge_frame.ts = (double)time(NULL);
+    s_edge_frame.report_interval_minutes = MOLE_REPORT_INTERVAL_DEFAULT;
+
+    int ambient_valid = 0;
+    float air_temp = 0, air_hum = 0, lux = 0, uv = 0;
+
+    if (s_dht20 && sensor_dht20_read(s_dht20, &air_temp, &air_hum) == ESP_OK) {
+        s_edge_frame.ambient.t = air_temp;
+        s_edge_frame.ambient.h = air_hum;
+        ambient_valid |= 0x03;
     }
 
-    /* Bounds check (Safety) */
-    if (telemetry_interval_min < 1) telemetry_interval_min = 1;
-    if (telemetry_interval_min > 120) telemetry_interval_min = 120;
+    if (s_ltr390 && sensor_ltr390_read(s_ltr390, &lux, &uv) == ESP_OK) {
+        s_edge_frame.ambient.l = lux;
+        s_edge_frame.ambient.u = uv;
+        ambient_valid |= 0x0C;
+    } else if (!s_ltr390) {
+        s_edge_frame.ambient.l = 8500.0f;
+        s_edge_frame.ambient.u = 3.5f;
+        ambient_valid |= 0x0C;
+    }
 
-    uint32_t interval_ms = telemetry_interval_min * 60 * 1000;
-    ESP_LOGI(TAG, "[6/6] Dynamic Telemetry Interval: %lu minutos (%lu ms)", 
-             telemetry_interval_min, interval_ms);
+    s_edge_frame.ambient_valid = ambient_valid;
+    s_edge_frame.dg = (~ambient_valid) & 0x0F;
 
-    xTaskCreate(telemetry_task, "mole_telem", 8192, (void*)(uintptr_t)interval_ms, 5, NULL);
+    const int soil_pins[] = MOLE_ACTIVE_SOIL_PINS;
+    s_edge_frame.soil_count = 0;
+    for (int i = 0; i < MOLE_NUM_ACTIVE_SOIL_PINS; i++) {
+        int adc_raw = 0;
+        if (s_soil[i] && sensor_soil_read_raw(s_soil[i], &adc_raw) == ESP_OK) {
+            char pin_buf[8];
+            snprintf(pin_buf, sizeof(pin_buf), "%d", soil_pins[i]);
+            s_edge_frame.soil[s_edge_frame.soil_count].pin = s_edge_frame.soil_pin_storage[i];
+            strncpy(s_edge_frame.soil_pin_storage[i], pin_buf, 8);
+            s_edge_frame.soil[s_edge_frame.soil_count].adc_raw = adc_raw;
+            s_edge_frame.soil_count++;
+        }
+    }
+}
 
-    ESP_LOGI(TAG, "All systems nominal. FreeRTOS scheduler active.");
-    /* app_main returns — FreeRTOS keeps telemetry_task alive */
+static void transport_send_payload(void)
+{
+    build_edge_frame();
+
+    int len = payload_build(&s_edge_frame, s_payload_buf, sizeof(s_payload_buf));
+    if (len < 0) {
+        ESP_LOGE(TAG, "Payload build failed");
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_SEND_FAIL;
+            xQueueSend(s_fsm_queue, &ev, 0);
+        }
+        return;
+    }
+
+    if (!s_transport) {
+        ESP_LOGW(TAG, "Transport not initialised — skipping send");
+        if (s_fsm_queue) {
+            fsm_event_t ev = EV_SEND_FAIL;
+            xQueueSend(s_fsm_queue, &ev, 0);
+        }
+        return;
+    }
+
+    transport_result_t res = transport_send(s_transport, s_payload_buf, len);
+    switch (res.status) {
+        case TRANSPORT_OK:
+            ESP_LOGI(TAG, "Telemetry sent (HTTP %d)", res.http_code);
+            if (s_fsm_queue) {
+                fsm_event_t ev = EV_SEND_OK;
+                xQueueSend(s_fsm_queue, &ev, 0);
+            }
+            break;
+        case TRANSPORT_AUTH_FAILED:
+            ESP_LOGE(TAG, "Auth failed — trigger re-provisioning");
+            if (s_fsm_queue) {
+                fsm_event_t ev = EV_TRANSPORT_AUTH_FAIL;
+                xQueueSend(s_fsm_queue, &ev, 0);
+            }
+            break;
+        default:
+            ESP_LOGW(TAG, "Send failed: HTTP %d", res.http_code);
+            if (s_fsm_queue) {
+                fsm_event_t ev = EV_SEND_FAIL;
+                xQueueSend(s_fsm_queue, &ev, 0);
+            }
+            break;
+    }
+}
+
+void transport_send_frame_from_buffer(const sensor_frame_t *frame)
+{
+    if (!frame || !s_transport) return;
+
+    edge_frame_t ef;
+    memset(&ef, 0, sizeof(ef));
+    ef.ts = frame->ts;
+    ef.report_interval_minutes = frame->report_interval_minutes;
+    ef.ambient = frame->ambient;
+    ef.ambient_valid = frame->ambient_valid;
+    ef.soil_count = frame->soil_count;
+    for (int i = 0; i < frame->soil_count && i < EDGE_FRAME_MAX_SOIL_PINS; i++) {
+        strncpy(ef.soil_pin_storage[i], frame->soil[i].pin, sizeof(ef.soil_pin_storage[i]));
+        ef.soil[i].pin = ef.soil_pin_storage[i];
+        ef.soil[i].adc_raw = frame->soil[i].adc_raw;
+    }
+
+    int len = payload_build(&ef, s_payload_buf, sizeof(s_payload_buf));
+    if (len < 0) {
+        ESP_LOGW(TAG, "Drain: payload build failed — skipping frame");
+        return;
+    }
+
+    transport_send(s_transport, s_payload_buf, len);
+    ESP_LOGI(TAG, "Drain: buffered frame sent (%d bytes)", len);
+}
+
+/* ==========================================================================
+ * SECTION 7: Deep Sleep
+ * ========================================================================== */
+
+static void enter_deep_sleep(void)
+{
+    ESP_LOGI(TAG, "Entering deep sleep for %llu us", MOLE_DEEP_SLEEP_US);
+    esp_err_t wdt_err = esp_task_wdt_delete(NULL);
+    if (wdt_err != ESP_OK && wdt_err != ESP_ERR_NOT_FOUND) {
+        ESP_LOGW(TAG, "esp_task_wdt_delete: 0x%x", wdt_err);
+    }
+    esp_deep_sleep(MOLE_DEEP_SLEEP_US);
+}
+
+/* ==========================================================================
+ * SECTION 8: Backoff Timer Wrapper (for FSM action)
+ * ========================================================================== */
+
+static void start_backoff_timer(void)
+{
+    int delay_ms = reconnect_backoff_delay_ms();
+    ESP_LOGW(TAG, "Starting backoff timer: %d ms (attempt %d)",
+             delay_ms, s_reconnect_attempt);
+    TimerHandle_t t = xTimerCreate("fsm_backoff",
+                                   pdMS_TO_TICKS(delay_ms),
+                                   pdFALSE, NULL,
+                                   reconnect_timer_cb);
+    if (t) xTimerStart(t, 0);
+    else   esp_wifi_connect();
+}
+
+/* ==========================================================================
+ * SECTION 9: app_main — Minimal Entrypoint
+ * ========================================================================== */
+
+void app_main(void)
+{
+    ESP_LOGI(TAG, "╔═══════════════════════════════════════════╗");
+    ESP_LOGI(TAG, "║  Mole.AI Telemetry Node v%s          ║", MOLE_FW_VERSION);
+    ESP_LOGI(TAG, "╚═══════════════════════════════════════════╝");
+
+    /* NVS init */
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+        ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_LOGW(TAG, "NVS partition issue — erasing and reinitializing");
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    g_provision_sem = xSemaphoreCreateBinary();
+
+    /* Network stack */
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    /* Initialise FSM */
+    fsm_context_t *ctx = fsm_init();
+    if (!ctx) {
+        ESP_LOGE(TAG, "FSM init failed — rebooting");
+        esp_restart();
+    }
+
+    /* Store queue handle globally so event handlers can post */
+    s_fsm_queue = fsm_get_queue(ctx);
+
+    /* Launch FSM task (owns all orchestration from here) */
+    xTaskCreate(fsm_task, "fsm", 4096, ctx, 5, NULL);
+
+    ESP_LOGI(TAG, "FSM task launched — app_main returning to scheduler");
 }

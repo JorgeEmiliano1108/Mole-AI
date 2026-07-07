@@ -29,5 +29,3 @@ export function toggleTheme() {
     }
 })();
 
-// Expose globally for inline onclick handlers
-window.toggleTheme = toggleTheme;

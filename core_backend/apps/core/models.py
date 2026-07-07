@@ -233,7 +233,13 @@ class AuditLog(models.Model):
 # ---------------------------------------------------------------------------
 import uuid
 
+from django.conf import settings
+
 class Device(models.Model):
+    # Owner of the physical ESP32 device
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='devices')
+    # Soft‑delete flag (added by migration 0009_add_is_active)
+    is_active = models.BooleanField(default=True, help_text="Soft‑delete flag")
     """El Microcontrolador físico (Gateway ESP32)"""
 
     STATUS_CHOICES = [
@@ -261,6 +267,7 @@ class Device(models.Model):
     class Meta:
         db_table = 'devices'
         managed = True
+
 
     def __str__(self):
         return f"{self.name} ({self.status})"
@@ -351,3 +358,32 @@ class TelemetryArchive(models.Model):
     class Meta:
         db_table = 'telemetry_archives'
         managed = True
+
+# ---------------------------------------------------------------------------
+# Signals – reminder on high‑urgency diagnostics
+# ---------------------------------------------------------------------------
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from microservices.mole_report.infrastructure.workers.tasks import send_reminder
+
+@receiver(post_save, sender=AIDiagnostic)
+def schedule_reminder(sender, instance, created, **kwargs):
+    """If a diagnostic is created with high severity, trigger a reminder.
+    The urgency is inferred from ``instance.metadata['urgency']`` if present.
+    """
+    if not created:
+        return
+    urgency = None
+    if isinstance(instance.metadata, dict):
+        urgency = instance.metadata.get('urgency')
+    # Fallback: treat CRITICAL / HIGH severity as high urgency
+    if urgency is None and instance.severity in ['high', 'critical']:
+        urgency = 'HIGH'
+    if urgency and urgency.upper() == 'HIGH':
+        # Assume ``instance.user`` holds the recipient (may be null)
+        recipient = instance.user.id if instance.user else None
+        message = f"Urgent diagnostic {instance.id} requires attention."
+        if recipient:
+            send_reminder.delay(str(recipient), message)
+

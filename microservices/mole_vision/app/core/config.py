@@ -25,8 +25,6 @@ class Settings(BaseSettings):
     
     
     SUPABASE_URL: str = ""
-    SUPABASE_JWT_SECRET: str = ""  
-    SUPABASE_JWT_AUDIENCE: str = "authenticated"
     
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"
@@ -40,13 +38,7 @@ class Settings(BaseSettings):
     # RNF-02: Defensa Anti-DoS
     INFERENCE_TIMEOUT_SECONDS: float = 2.0
     
-    # Supabase Database
-    SUPABASE_DB_NAME: Optional[str] = None
-    SUPABASE_DB_USER: Optional[str] = None
-    SUPABASE_DB_PASSWORD: Optional[str] = None
-    SUPABASE_DB_HOST: Optional[str] = None
-    SUPABASE_DB_PORT: int = 5432
-    
+
     # CORS
     ORIGEN_PERMITIDO: str = "*"
     JWT_SECRET_KEY: str = ""
@@ -60,6 +52,12 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     TRAINING_BUCKET_NAME: str = "mole-training-data"
+
+    # ── NVIDIA NIM ────────────────────────────────────────────────────────
+    NVIDIA_API_KEY: str = ""
+    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
+    NVIDIA_CHAT_MODEL: str = "meta/llama-3.3-70b-instruct"
+    NVIDIA_VISION_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
 
     # ── Fine-Tuning Pipeline ─────────────────────────────────────────────
     CNN_BASE_MODEL_PATH: str = "/app/models/cnn_base.h5"

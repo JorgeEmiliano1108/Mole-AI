@@ -1,3 +1,5 @@
+import { el, safeRender } from './dom.js';
+
 /**
  * tactical.js - Mole.AI Frontend Resilience Layer
  *                                                    
@@ -141,48 +143,53 @@ export function bindWebSocket(ws) {
  * @param {string} label - Text to display (default: 'PROCESANDO...')
  */
 export function showInferenceState(targetId, label = 'PROCESANDO...') {
-    const el = document.getElementById(targetId);
-    if (!el) return;
+    const target = document.getElementById(targetId);
+    if (!target) return;
 
-    // Store original content for restoration
-    if (!el.dataset.originalContent) {
-        el.dataset.originalContent = el.innerHTML;
+    // Store original children for restoration
+    if (!target._originalNodes) {
+        const frag = document.createDocumentFragment();
+        while (target.firstChild) {
+            frag.appendChild(target.firstChild);
+        }
+        target._originalNodes = frag;
     }
 
-    el.innerHTML = `
-        <div class="flex items-center gap-2 animate-pulse">
-            <div class="flex gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-mole-cyan animate-bounce" style="animation-delay: 0ms"></span>
-                <span class="w-1.5 h-1.5 rounded-full bg-mole-cyan animate-bounce" style="animation-delay: 150ms"></span>
-                <span class="w-1.5 h-1.5 rounded-full bg-mole-cyan animate-bounce" style="animation-delay: 300ms"></span>
-            </div>
-            <span class="text-xs text-mole-cyan font-mono font-bold tracking-widest">[${label}]</span>
-        </div>
-    `;
+    const dots = [0, 150, 300].map(delay =>
+        el('span', {
+            className: 'w-1.5 h-1.5 rounded-full bg-mole-cyan animate-bounce',
+            style: `animation-delay: ${delay}ms`
+        })
+    );
+
+    safeRender(target,
+        el('div', { className: 'flex items-center gap-2 animate-pulse' },
+            el('div', { className: 'flex gap-1' }, ...dots),
+            el('span', { className: 'text-xs text-mole-cyan font-mono font-bold tracking-widest' }, `[${label}]`)
+        )
+    );
 }
 
 /**
  * Clear the inference/loading state and restore original content.
  *
  * @param {string} targetId - ID of the DOM element to restore
- * @param {string|null} newContent - Optional new HTML to set instead of original
+ * @param {string|HTMLElement|null} newContent - Optional text or DOM element to set
  */
 export function clearInferenceState(targetId, newContent = null) {
     const el = document.getElementById(targetId);
     if (!el) return;
 
     if (newContent !== null) {
-        el.innerHTML = newContent;
-    } else if (el.dataset.originalContent) {
-        el.innerHTML = el.dataset.originalContent;
+        safeRender(el);
+        if (typeof newContent === 'string') {
+            el.textContent = newContent;
+        } else if (newContent instanceof Node) {
+            el.appendChild(newContent);
+        }
+    } else if (el._originalNodes) {
+        safeRender(el);
+        el.appendChild(el._originalNodes);
     }
-    delete el.dataset.originalContent;
+    delete el._originalNodes;
 }
-
-//     GLOBAL EXPOSURE                                                         
-// Make available on window for non-module scripts (legacy compat)
-window.showTacticalToast = showTacticalToast;
-window.setConnectionStatus = setConnectionStatus;
-window.bindWebSocket = bindWebSocket;
-window.showInferenceState = showInferenceState;
-window.clearInferenceState = clearInferenceState;

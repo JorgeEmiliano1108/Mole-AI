@@ -1,8 +1,7 @@
 import os
 import yaml
-from typing import Dict
 
-PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "prompts")
+PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "prompts")
 
 
 def load_prompt(name: str) -> str:

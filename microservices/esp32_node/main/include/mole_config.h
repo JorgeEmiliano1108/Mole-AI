@@ -16,7 +16,10 @@
 #define MOLE_NVS_KEY_TOKEN    "auth_token"
 
 /* Deep Sleep fallback (when no WebSocket session is active) */
-#define MOLE_DEEP_SLEEP_US     (300ULL * 1000000ULL)  /* 5 minutes */
+#define MOLE_DEEP_SLEEP_US       (300ULL * 1000000ULL)  /* 5 minutes */
+
+/* Default telemetry report interval in minutes (valid 1-120) */
+#define MOLE_REPORT_INTERVAL_DEFAULT  5
 
 /* Sensor I2C addresses */
 #define MOLE_DHT20_ADDR        0x38
@@ -51,3 +54,12 @@
 #define MOLE_AP_PASS           "mole1234"
 #define MOLE_AP_MAX_CONN       2
 #define MOLE_AP_CHANNEL        0
+
+/* BLE provisioning payload JSON keys */
+#define MOLE_BLE_PROV_KEY_SSID     "ssid"
+#define MOLE_BLE_PROV_KEY_PASS     "pass"
+#define MOLE_BLE_PROV_KEY_TOKEN    "token"
+#define MOLE_BLE_PROV_KEY_INTERVAL "interval"
+
+/* Provisioning timeout (ms) — deep sleep if no credentials received */
+#define MOLE_PROV_TIMEOUT_MS   300000

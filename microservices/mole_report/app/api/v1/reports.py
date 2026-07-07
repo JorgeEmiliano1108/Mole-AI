@@ -7,23 +7,17 @@ Reports API v1 — JWT-protected endpoints.
 All endpoints require a valid local JWT (HS256).
 User identity is derived from the token and used for ownership checks.
 """
-import hashlib
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
 from app.api.dependencies import get_current_user
 from app.config import settings
+from domain.schemas import ReportRequest
 from infrastructure.redis.job_metadata_store import JobMetadataStore
 from infrastructure.workers.tasks import generate_report_task
 
 router = APIRouter()
-
-
-class GenerateRequest(BaseModel):
-    date_range_days: int = 90
-    sensors: list[str] = []
 
 
 def get_job_store() -> JobMetadataStore:
@@ -32,19 +26,15 @@ def get_job_store() -> JobMetadataStore:
 
 @router.post("/generate")
 def generate_report(
-    payload: GenerateRequest,
+    payload: ReportRequest,
     current_user: dict = Depends(get_current_user),
     job_store: JobMetadataStore = Depends(get_job_store),
 ):
     job_id = str(uuid.uuid4())
     hashed_uid = current_user["hashed_user_id"]
-
     job_store.create_job(job_id)
-    # Persist ownership so status/download can verify later
     job_store.update_job(job_id, {"hashed_user_id": hashed_uid})
-
-    # Enqueue celery task — only hashed ID transits through Redis (LFPDPPP)
-    generate_report_task.delay(payload.dict(), job_id)
+    generate_report_task.delay(payload.model_dump(), job_id)
     return {"job_id": job_id, "status": "queued"}
 
 

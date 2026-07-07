@@ -3,9 +3,9 @@ RAG Training Listener — Redis Pub/Sub event-driven ingestion pipeline.
 
 Subscribes to `mole:training:new_asset` channel and processes incoming
 training documents by:
-  1. Downloading PDF from MinIO (S3Downloader)
-  2. Extracting text (pypdf)
-  3. Chunking (RecursiveCharacterTextSplitter)
+   1. Downloading PDF from MinIO (S3Downloader)
+   2. Extracting text (pdfminer.six)
+   3. Chunking (RecursiveCharacterTextSplitter)
   4. Computing embeddings (sentence-transformers)
   5. Inserting into PostgreSQL/pgvector (PgVectorStore)
   6. Publishing status loopback to `mole:training:status`
@@ -29,7 +29,6 @@ import traceback
 import uuid
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from pypdf import PdfReader
 
 from app.core.config import settings
 
@@ -122,7 +121,7 @@ async def _process_document(payload: dict, redis_client) -> None:
 
     Steps:
       1. Download PDF from MinIO
-      2. Extract text with pypdf
+       2. Extract text with pdfminer.six
       3. Split into chunks
       4. Compute embeddings + insert into pgvector
       5. Publish status loopback
@@ -226,17 +225,13 @@ async def _process_document(payload: dict, redis_client) -> None:
 
 def _extract_text_from_pdf(pdf_bytes: bytes) -> str:
     """
-    Extract text from a PDF in memory using pypdf.
+    Extract text from a PDF in memory using pdfminer.six (BSD).
 
     Returns concatenated text from all pages.
     """
-    reader = PdfReader(io.BytesIO(pdf_bytes))
-    pages = []
-    for page in reader.pages:
-        text = page.extract_text()
-        if text:
-            pages.append(text.strip())
-    return "\n\n".join(pages)
+    from pdfminer.high_level import extract_text as _extract
+
+    return _extract(io.BytesIO(pdf_bytes)).strip()
 
 
 async def _publish_status(

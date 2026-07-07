@@ -1,3 +1,6 @@
+import { el, safeRender } from '../ui/dom.js';
+import { apiService } from '../api/ApiService.js';
+
 // ==========================================================
 // 3. ASISTENTE BOT NICO (SISTEMA MULTI-MODELO) - 100% FUNCIONAL
 // ==========================================================
@@ -62,13 +65,22 @@ export function appendMessage(msg, isTyping = false) {
                     chatBox.scrollTop = chatBox.scrollHeight;
                 } else {
                     clearInterval(typeInterval);
-                    textDiv.innerHTML = textToType + '<span class="animate-pulse">\u2588</span>';
+                    textDiv.textContent = '';
+                    textDiv.appendChild(document.createTextNode(textToType));
+                    const cursor = document.createElement('span');
+                    cursor.className = 'animate-pulse';
+                    cursor.textContent = '\u2588';
+                    textDiv.appendChild(cursor);
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
             }, 20);
             return;
         } else {
-            textDiv.innerHTML = '> ' + msg.text.replace('> MOLE-IA: ', '') + '<span class="animate-pulse">\u2588</span>';
+            textDiv.textContent = '> ' + msg.text.replace('> MOLE-IA: ', '');
+            const cursor = document.createElement('span');
+            cursor.className = 'animate-pulse';
+            cursor.textContent = '\u2588';
+            textDiv.appendChild(cursor);
             msgDiv.appendChild(textDiv);
         }
     } else if (msg.type === 'user') {
@@ -148,7 +160,7 @@ export function closeChat() {
 }
 
 
-async function sendChatMessage(customPrompt = null, forcedEngine = null) {
+export async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     const input = document.getElementById('chat-input');
     const chatMessages = document.getElementById('chat-messages');
     
@@ -177,7 +189,7 @@ async function sendChatMessage(customPrompt = null, forcedEngine = null) {
     try {
         const activeSessionId = localStorage.getItem('moleia_current_session_id') || localStorage.getItem('moleia_current_user') || 'anon';
         
-        const data = await window.ApiService.post('llm/chat/', {
+        const data = await apiService.post('llm/chat/', {
             prompt: query,
             engine: engine,
             sessionId: activeSessionId
@@ -262,7 +274,7 @@ async function handleChatVisionUpload(event) {
     saveChatHistory();
 
     try {
-        if (!window.ApiService || !window.ApiService.isTokenPresent()) {
+        if (!apiService || !apiService.isTokenPresent()) {
             throw new Error("Acceso denegado: Se requiere autenticación para usar el Motor de Visión.");
         }
 
@@ -271,7 +283,7 @@ async function handleChatVisionUpload(event) {
         const currentOp = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
         formData.append('operator', currentOp);
 
-        const data = await window.ApiService.upload('vision/analyze/', formData);
+        const data = await apiService.upload('vision/analyze/', formData);
 
         const typingElement = document.getElementById(typingId);
         if (typingElement) typingElement.remove();
@@ -295,7 +307,7 @@ async function handleChatVisionUpload(event) {
     } catch (error) {
         console.error("Error en motor de visión del chat:", error);
         if (error && error.status === 401) {
-            window.ApiService.clearToken();
+            apiService.clearToken();
             window.location.href = '/login.html';
             return;
         }

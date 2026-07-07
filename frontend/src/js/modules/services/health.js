@@ -2,6 +2,69 @@
 // ISSUE-04: Device Health - Polling + Dual View (Bot nico / SRE)
 // ==========================================================
 import { getAuthToken } from '../api/config.js';
+import { el, safeRender } from '../ui/dom.js';
+import { apiService } from '../api/ApiService.js';
+
+function renderAmbientCard(label, value, valueClass) {
+    return el('div', { className: 'bg-mole-bg border border-mole-border rounded p-2 text-center' },
+        el('span', { className: 'text-[10px] text-mole-dim uppercase tracking-wider block mb-1' }, label),
+        el('span', { className: `text-lg font-bold ${valueClass}` }, value)
+    );
+}
+
+function renderSoilCard(s) {
+    const hum = s.soil_humidity;
+    const idealMin = s.ideal_humidity_min;
+    const idealMax = s.ideal_humidity_max;
+    let humStatus = 'neutral';
+    if (hum != null && idealMin != null && idealMax != null) {
+        if (hum >= idealMin && hum <= idealMax) humStatus = 'optimal';
+        else if (hum < idealMin) humStatus = 'low';
+        else humStatus = 'high';
+    }
+    const humColors = { optimal: 'text-emerald-400', low: 'text-sky-400', high: 'text-red-400', neutral: 'text-mole-dim' };
+    const humValue = hum != null ? hum.toFixed(1) + '%' : '--';
+
+    const idealEl = idealMin != null
+        ? el('span', { className: 'text-[9px] text-mole-dim block -mt-1' }, `Ideal: ${idealMin}–${idealMax}%`)
+        : null;
+
+    return el('div', { className: 'bg-mole-surface border border-mole-border/50 rounded p-3 shadow-cyber' },
+        el('div', { className: 'flex justify-between items-center mb-2' },
+            el('div', {},
+                el('span', { className: 'text-xs font-bold text-mole-cyan' }, s.plant_nickname || 'Sin Nombre'),
+                el('span', { className: 'text-[9px] text-mole-dim font-mono ml-2' }, `PIN: ${s.pin}`)
+            ),
+            el('span', { className: 'text-[10px] text-mole-green italic' }, s.species || '--')
+        ),
+        el('div', { className: 'flex items-center justify-between bg-mole-bg rounded p-2' },
+            el('span', { className: 'text-[10px] text-mole-dim uppercase tracking-wider' }, 'Humedad Suelo'),
+            el('div', { className: 'text-right' },
+                el('span', { className: `text-base font-bold ${humColors[humStatus]}` }, humValue),
+                idealEl
+            )
+        )
+    );
+}
+
+function renderSreSoilRow(s) {
+    return el('tr', { className: 'border-b border-mole-border/10' },
+        el('td', { className: 'py-1 text-mole-cyan' }, s.pin),
+        el('td', { className: 'py-1 text-emerald-400 text-right' },
+            s.soil_humidity != null ? s.soil_humidity.toFixed(1) + '%' : 'null'
+        ),
+        el('td', { className: 'py-1 text-mole-dim text-right hidden md:table-cell text-[8px]' },
+            s.recorded_at ? new Date(s.recorded_at).toLocaleTimeString() : '--'
+        )
+    );
+}
+
+function renderSreInfoRow(label, value) {
+    return el('tr', { className: 'border-b border-mole-border/30' },
+        el('td', { className: 'py-1 text-mole-dim' }, label),
+        el('td', { className: 'py-1 text-mole-cyan text-right' }, value)
+    );
+}
 
 const HEALTH_POLL_INTERVAL = 30_000; // 30 seconds
 const LS_VIEW_MODE_KEY = 'moleia_health_view_mode';
@@ -142,7 +205,7 @@ function setViewMode(mode) {
 async function fetchHealth() {
     // FE-05: Guard
     if (!currentDeviceId) {
-        const fallbackToken = window.getAuthToken ? window.getAuthToken() : null;
+        const fallbackToken = getAuthToken();
         if (fallbackToken) {
             try {
                 const plantRes = await fetch(`${window.AppConfig.API_BASE_URL}plants/`, { 
@@ -292,7 +355,7 @@ function setupPlantRegistration() {
 
             try {
                 // 1. Create plant mapped by name and physical hardware pin
-                const plantRes = await window.ApiService.post('plants/', { 
+                const plantRes = await apiService.post('plants/', { 
                     nickname: nickname,
                     hardware_pin: pin 
                 });
@@ -300,15 +363,15 @@ function setupPlantRegistration() {
 
                 // 2. If device is selected, also create the relational binding
                 if (currentDeviceId) {
-                    await window.ApiService.post(`devices/${currentDeviceId}/bindings/`, {
+                    await apiService.post(`devices/${currentDeviceId}/bindings/`, {
                         hardware_pin: pin,
                         plant_id: plantRes.id
                     });
                     console.log("Hardware binding exitoso para dispositivo " + currentDeviceId);
                 } else {
                     console.warn("Planta creada pero no hay deviceId para bindear.");
-                    if (window.ApiService && window.ApiService.showToast) {
-                        window.ApiService.showToast("Planta registrada exitosamente. Ahora vincula tu nodo ESP32 desde el menú Wi-Fi.", "success");
+                    if (apiService && apiService.showToast) {
+                        apiService.showToast("Planta registrada exitosamente. Ahora vincula tu nodo ESP32 desde el menú Wi-Fi.", "success");
                     } else {
                         alert("Planta registrada exitosamente. Recuerda vincular tu nodo ESP32 para iniciar el monitoreo.");
                     }
@@ -348,98 +411,52 @@ function renderBotanico(d) {
         else lastSeenStr = `Hace ${Math.floor(mins / 60)}h ${mins % 60}m`;
     }
 
-    // Ambiente global
     const amb = d.ambient || {};
-    const ambientHtml = `
-        <div class="grid grid-cols-2 gap-2 mb-4">
-            <div class="bg-mole-bg border border-mole-border rounded p-2 text-center">
-                <span class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">Temperatura</span>
-                <span class="text-lg font-bold text-orange-400">${amb.air_temperature != null ? amb.air_temperature.toFixed(1) + ' C' : '--'}</span>
-            </div>
-            <div class="bg-mole-bg border border-mole-border rounded p-2 text-center">
-                <span class="text-[10px] text-mole-dim uppercase tracking-wider block mb-1">UV Index</span>
-                <span class="text-lg font-bold text-violet-400">${amb.uv_index != null ? amb.uv_index : '--'}</span>
-            </div>
-        </div>
-    `;
-
-    // FE-04: Iterate soil[] array for multi-pin view (Vertical Scroll - Q-FE-04-1)
-    let soilHtml = '';
     const soilData = d.soil || [];
 
-    if (soilData.length === 0) {
-        soilHtml = `<div class="text-center text-mole-dim text-xs py-4 font-mono border border-dashed border-mole-border rounded">Sin pines configurados</div>`;
-    } else {
-        soilHtml = `<div class="flex flex-col gap-3 overflow-y-auto max-h-[300px] pr-1">`;
+    const soilCards = soilData.length === 0
+        ? [el('div', { className: 'text-center text-mole-dim text-xs py-4 font-mono border border-dashed border-mole-border rounded' }, 'Sin pines configurados')]
+        : soilData.map(function(s) { return renderSoilCard(s); });
 
-        soilData.forEach(s => {
-            const hum = s.soil_humidity;
-            const idealMin = s.ideal_humidity_min;
-            const idealMax = s.ideal_humidity_max;
-
-            let humStatus = 'neutral';
-            if (hum != null && idealMin != null && idealMax != null) {
-                if (hum >= idealMin && hum <= idealMax) humStatus = 'optimal';
-                else if (hum < idealMin) humStatus = 'low';
-                else humStatus = 'high';
-            }
-            const humColors = { optimal: 'text-emerald-400', low: 'text-sky-400', high: 'text-red-400', neutral: 'text-mole-dim' };
-
-            soilHtml += `
-                <div class="bg-mole-surface border border-mole-border/50 rounded p-3 shadow-cyber">
-                    <div class="flex justify-between items-center mb-2">
-                        <div>
-                            <span class="text-xs font-bold text-mole-cyan">${s.plant_nickname || 'Sin Nombre'}</span>
-                            <span class="text-[9px] text-mole-dim font-mono ml-2">PIN: ${s.pin}</span>
-                        </div>
-                        <span class="text-[10px] text-mole-green italic">${s.species || '--'}</span>
-                    </div>
-                    <div class="flex items-center justify-between bg-mole-bg rounded p-2">
-                        <span class="text-[10px] text-mole-dim uppercase tracking-wider">Humedad Suelo</span>
-                        <div class="text-right">
-                            <span class="text-base font-bold ${humColors[humStatus]}">${hum != null ? hum.toFixed(1) + '%' : '--'}</span>
-                            ${idealMin != null ? `<span class="text-[9px] text-mole-dim block -mt-1">Ideal: ${idealMin}–${idealMax}%</span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        soilHtml += `</div>`;
-    }
+    const soilContainer = soilData.length > 0
+        ? el('div', { className: 'flex flex-col gap-3 overflow-y-auto max-h-[300px] pr-1' }, ...soilCards)
+        : soilCards[0];
 
     const role = localStorage.getItem('moleia_user_role');
     const isSre = role === 'admin' || role === 'superuser';
 
     if (!isSre) {
-        panel.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-8">
-                <span class="w-6 h-6 rounded-full mb-3 animate-pulse" style="background:${statusColor}"></span>
-                <span class="text-sm font-bold tracking-widest uppercase mb-2" style="color:${statusColor}">${statusLabel}</span>
-                <span class="text-[10px] text-mole-dim font-mono mb-4">NODO IOT: ${d.device_name || d.device_id}</span>
-                <div class="flex gap-2">
-                    <span class="text-[10px] text-mole-cyan font-mono border border-mole-cyan/30 px-3 py-1 rounded bg-mole-cyan/5">SENSORES: ${soilData.length}</span>
-                    <span class="text-[10px] text-mole-dim font-mono border border-mole-border px-3 py-1 rounded bg-mole-bg">${lastSeenStr}</span>
-                </div>
-            </div>
-        `;
+        safeRender(panel,
+            el('div', { className: 'flex flex-col items-center justify-center py-8' },
+                el('span', { className: 'w-6 h-6 rounded-full mb-3 animate-pulse', style: { background: statusColor } }),
+                el('span', { className: 'text-sm font-bold tracking-widest uppercase mb-2', style: { color: statusColor } }, statusLabel),
+                el('span', { className: 'text-[10px] text-mole-dim font-mono mb-4' }, `NODO IOT: ${d.device_name || d.device_id}`),
+                el('div', { className: 'flex gap-2' },
+                    el('span', { className: 'text-[10px] text-mole-cyan font-mono border border-mole-cyan/30 px-3 py-1 rounded bg-mole-cyan/5' }, `SENSORES: ${soilData.length}`),
+                    el('span', { className: 'text-[10px] text-mole-dim font-mono border border-mole-border px-3 py-1 rounded bg-mole-bg' }, lastSeenStr)
+                )
+            )
+        );
         return;
     }
 
-    panel.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full animate-pulse" style="background:${statusColor}"></span>
-                <span class="text-xs font-bold tracking-widest uppercase" style="color:${statusColor}">${statusLabel}</span>
-            </div>
-            <span class="text-[10px] text-mole-dim font-mono">${lastSeenStr}</span>
-        </div>
-        ${ambientHtml}
-        <h3 class="text-[10px] text-mole-accent font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-            <span class="w-1 h-1 bg-mole-accent"></span> LECTURAS POR CULTIVO
-        </h3>
-        ${soilHtml}
-    `;
+    safeRender(panel,
+        el('div', { className: 'flex items-center justify-between mb-3' },
+            el('div', { className: 'flex items-center gap-2' },
+                el('span', { className: 'w-3 h-3 rounded-full animate-pulse', style: { background: statusColor } }),
+                el('span', { className: 'text-xs font-bold tracking-widest uppercase', style: { color: statusColor } }, statusLabel)
+            ),
+            el('span', { className: 'text-[10px] text-mole-dim font-mono' }, lastSeenStr)
+        ),
+        el('div', { className: 'grid grid-cols-2 gap-2 mb-4' },
+            renderAmbientCard('Temperatura', amb.air_temperature != null ? amb.air_temperature.toFixed(1) + ' C' : '--', 'text-orange-400'),
+            renderAmbientCard('UV Index', amb.uv_index != null ? amb.uv_index : '--', 'text-violet-400')
+        ),
+        el('h3', { className: 'text-[10px] text-mole-accent font-bold uppercase tracking-wider mb-2 flex items-center gap-2' },
+            el('span', { className: 'w-1 h-1 bg-mole-accent' }), ' LECTURAS POR CULTIVO'
+        ),
+        soilContainer
+    );
 }
 
 function renderSre(d) {
@@ -450,72 +467,53 @@ function renderSre(d) {
     const badge = badgeColors[d.status] || badgeColors.offline;
 
     const soilData = d.soil || [];
-    let soilTable = `<div class="text-center text-mole-dim text-[10px] py-2 border border-dashed border-mole-border/50">Sin lecturas de suelo</div>`;
-
+    let soilTbody = el('tbody', {});
     if (soilData.length > 0) {
-        soilTable = `
-            <table class="w-full text-[10px] font-mono mt-1">
-                <thead>
-                    <tr class="text-mole-dim border-b border-mole-border/30">
-                        <th class="py-1 text-left font-normal">PIN</th>
-                        <th class="py-1 text-right font-normal">HUM</th>
-                        <th class="py-1 text-right font-normal hidden md:table-cell">TIME</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${soilData.map(s => `
-                        <tr class="border-b border-mole-border/10">
-                            <td class="py-1 text-mole-cyan">${s.pin}</td>
-                            <td class="py-1 text-emerald-400 text-right">${s.soil_humidity != null ? s.soil_humidity.toFixed(1) + '%' : 'null'}</td>
-                            <td class="py-1 text-mole-dim text-right hidden md:table-cell text-[8px]">${s.recorded_at ? new Date(s.recorded_at).toLocaleTimeString() : '--'}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
+        soilData.forEach(function(s) { soilTbody.appendChild(renderSreSoilRow(s)); });
     }
 
-    panel.innerHTML = `
-        <div class="flex items-center justify-between mb-3">
-            <span class="text-xs font-bold px-2 py-1 rounded border ${badge} uppercase tracking-widest">${d.status.toUpperCase()}</span>
-            <span class="text-[10px] text-mole-dim font-mono">${d.device_id}</span>
-        </div>
-        <table class="w-full text-[11px] font-mono">
-            <tbody>
-                <tr class="border-b border-mole-border/30">
-                    <td class="py-1 text-mole-dim">last_seen</td>
-                    <td class="py-1 text-mole-cyan text-right">${d.last_seen || 'null'}</td>
-                </tr>
-                <tr class="border-b border-mole-border/30">
-                    <td class="py-1 text-mole-dim">delta_seconds</td>
-                    <td class="py-1 text-mole-cyan text-right">${d.last_seen_delta_seconds}s</td>
-                </tr>
-                <tr class="border-b border-mole-border/30">
-                    <td class="py-1 text-mole-dim">uptime_24h</td>
-                    <td class="py-1 text-mole-cyan text-right">${d.sre_metrics?.uptime_pct_24h ?? '--'}%</td>
-                </tr>
-                <tr class="border-b border-mole-border/30">
-                    <td class="py-1 text-mole-dim">ws_reconnects_24h</td>
-                    <td class="py-1 text-mole-cyan text-right">${d.sre_metrics?.ws_reconnects_24h ?? '--'}</td>
-                </tr>
-            </tbody>
-        </table>
-        
-        <div class="mt-3">
-            <div class="px-2 py-1 bg-mole-bg text-[9px] text-mole-dim uppercase tracking-wider border border-mole-border/30 rounded-t flex justify-between">
-                <span>SOIL BINDINGS</span>
-                <span>${soilData.length} ACTIVE</span>
-            </div>
-            <div class="border-x border-b border-mole-border/30 px-2 py-1 rounded-b">
-                ${soilTable}
-            </div>
-        </div>
-        
-        <div class="mt-3 border border-mole-border/30 rounded">
-            <div class="px-2 py-1 bg-mole-bg text-[9px] text-mole-dim uppercase tracking-wider border-b border-mole-border/30">AMBIENT PAYLOAD</div>
-            <pre class="px-2 py-1 text-[9px] text-mole-cyan font-mono overflow-x-auto">${JSON.stringify(d.ambient || {}, null, 2)}</pre>
-        </div>
-    `;
+    const soilTable = soilData.length > 0
+        ? el('div', {},
+            el('table', { className: 'w-full text-[10px] font-mono mt-1' },
+                el('thead', {},
+                    el('tr', { className: 'text-mole-dim border-b border-mole-border/30' },
+                        el('th', { className: 'py-1 text-left font-normal' }, 'PIN'),
+                        el('th', { className: 'py-1 text-right font-normal' }, 'HUM'),
+                        el('th', { className: 'py-1 text-right font-normal hidden md:table-cell' }, 'TIME')
+                    )
+                ),
+                soilTbody
+            )
+        )
+        : el('div', { className: 'text-center text-mole-dim text-[10px] py-2 border border-dashed border-mole-border/50' }, 'Sin lecturas de suelo');
+
+    safeRender(panel,
+        el('div', { className: 'flex items-center justify-between mb-3' },
+            el('span', { className: `text-xs font-bold px-2 py-1 rounded border ${badge} uppercase tracking-widest` }, d.status.toUpperCase()),
+            el('span', { className: 'text-[10px] text-mole-dim font-mono' }, d.device_id)
+        ),
+        el('table', { className: 'w-full text-[11px] font-mono' },
+            el('tbody', {},
+                renderSreInfoRow('last_seen', d.last_seen || 'null'),
+                renderSreInfoRow('delta_seconds', `${d.last_seen_delta_seconds}s`),
+                renderSreInfoRow('uptime_24h', `${d.sre_metrics?.uptime_pct_24h ?? '--'}%`),
+                renderSreInfoRow('ws_reconnects_24h', d.sre_metrics?.ws_reconnects_24h ?? '--')
+            )
+        ),
+        el('div', { className: 'mt-3' },
+            el('div', { className: 'px-2 py-1 bg-mole-bg text-[9px] text-mole-dim uppercase tracking-wider border border-mole-border/30 rounded-t flex justify-between' },
+                el('span', {}, 'SOIL BINDINGS'),
+                el('span', {}, `${soilData.length} ACTIVE`)
+            ),
+            el('div', { className: 'border-x border-b border-mole-border/30 px-2 py-1 rounded-b' },
+                soilTable
+            )
+        ),
+        el('div', { className: 'mt-3 border border-mole-border/30 rounded' },
+            el('div', { className: 'px-2 py-1 bg-mole-bg text-[9px] text-mole-dim uppercase tracking-wider border-b border-mole-border/30' }, 'AMBIENT PAYLOAD'),
+            el('pre', { className: 'px-2 py-1 text-[9px] text-mole-cyan font-mono overflow-x-auto' }, JSON.stringify(d.ambient || {}, null, 2))
+        )
+    );
 }
 
 function renderStatusOverlay(d) {

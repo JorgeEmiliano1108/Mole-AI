@@ -2,22 +2,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import reports
 from app.config import settings
-import os
 from prometheus_fastapi_instrumentator import Instrumentator
 
-app = FastAPI(title="MS-3 Reports Service", version="0.1.0")
+app = FastAPI(title="MS-3 Reports Service", version="0.2.0")
 
 # Prometheus metrics instrumentation
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
 
-# CORS configuration from environment (strict: use ORIGEN_PERMITIDO)
-_origen = os.getenv('ORIGEN_PERMITIDO', '')
+# CORS configuration from environment
+_origen = settings.origen_permitido
 if _origen:
     _allow_origins = [o.strip() for o in _origen.split(',') if o.strip()]
 else:
     _allow_origins = []
-_allow_credentials = os.getenv('CORS_ALLOW_CREDENTIALS', 'False').lower() in ('true', '1')
+_allow_credentials = settings.cors_allow_credentials
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allow_origins,
@@ -45,12 +44,17 @@ app.include_router(reports.router, tags=["reports"])
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host=settings.HOST, port=settings.PORT)
+    uvicorn.run(app, host=settings.ms3_host, port=settings.ms3_port)
+
+
+@app.get('/health')
+def _health() -> dict:
+    return {"status": "ok", "service": "mole_report"}
 
 
 @app.get('/config')
 def _config() -> dict:
-    status = "Running in Staging" if os.getenv('DEBUG', 'False').lower() == 'false' else 'Running in Development'
-    port = os.getenv('PORT') or getattr(settings, 'PORT', None)
-    db_connected = bool(os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_NAME'))
+    status = "Running in Staging" if not settings.debug else 'Running in Development'
+    port = settings.ms3_port
+    db_connected = bool(settings.database_url or settings.ms3_supabase_url)
     return {"status": status, "port": port, "db_connected": db_connected}

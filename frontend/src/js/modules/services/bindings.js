@@ -3,6 +3,39 @@
 // Renders a persistent table of active bindings + assignment form
 // ==========================================================
 import { getAuthToken } from '../api/config.js';
+import { el, safeRender } from '../ui/dom.js';
+
+function renderEmptyRow(colspan) {
+    return el('tr', {},
+        el('td', { className: 'text-center text-mole-dim text-xs py-6 font-mono', colspan: String(colspan) },
+            '[ SIN BINDINGS ACTIVOS ]'
+        )
+    );
+}
+
+function renderErrorRow() {
+    return el('tr', {},
+        el('td', { className: 'text-center text-mole-red text-xs py-4 font-mono', colspan: '4' },
+            'ERROR AL CARGAR BINDINGS'
+        )
+    );
+}
+
+function renderBindingRow(b, deviceId) {
+    return el('tr', { className: 'border-b border-mole-border/30 hover:bg-mole-bg/50 transition-colors' },
+        el('td', { className: 'py-2 px-2 text-mole-cyan font-mono text-xs' }, b.hardware_pin),
+        el('td', { className: 'py-2 px-2 text-mole-text text-xs' }, b.plant_nickname || '--'),
+        el('td', { className: 'py-2 px-2 text-mole-green text-[10px] italic font-mono' }, b.species || '--'),
+        el('td', { className: 'py-2 px-2 text-right' },
+            el('button', {
+                className: 'text-mole-red hover:text-mole-red/70 text-[10px] font-bold tracking-wider px-2 py-1 border border-mole-red/30 rounded hover:bg-mole-red/10 transition-colors',
+                'data-action': 'binding:delete',
+                'data-binding-id': b.id,
+                'data-device-id': deviceId
+            }, '[DESVINCULAR]')
+        )
+    );
+}
 
 let _bindingsInitialized = false;
 
@@ -14,7 +47,9 @@ export function initBindingsPanel() {
     if (!deviceId) {
         // PATCH-02: Do NOT set _bindingsInitialized here so re-navigation retries
         _bindingsInitialized = false;
-        container.innerHTML = '<p class="text-mole-dim text-xs font-mono text-center py-6">[ SELECCIONE UN DISPOSITIVO ]</p>';
+        safeRender(container,
+            el('p', { className: 'text-mole-dim text-xs font-mono text-center py-6' }, '[ SELECCIONE UN DISPOSITIVO ]')
+        );
         return;
     }
 
@@ -50,37 +85,14 @@ async function loadBindings(deviceId) {
         if (countEl) countEl.textContent = bindings.length;
 
         if (bindings.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="text-center text-mole-dim text-xs py-6 font-mono">
-                        [ SIN BINDINGS ACTIVOS ]
-                    </td>
-                </tr>`;
+            safeRender(tableBody, renderEmptyRow('4'));
             return;
         }
 
-        tableBody.innerHTML = bindings.map(b => `
-            <tr class="border-b border-mole-border/30 hover:bg-mole-bg/50 transition-colors">
-                <td class="py-2 px-2 text-mole-cyan font-mono text-xs">${b.hardware_pin}</td>
-                <td class="py-2 px-2 text-mole-text text-xs">${b.plant_nickname || '--'}</td>
-                <td class="py-2 px-2 text-mole-green text-[10px] italic font-mono">${b.species || '--'}</td>
-                <td class="py-2 px-2 text-right">
-                    <button
-                        data-action="binding:delete"
-                        data-binding-id="${b.id}"
-                        data-device-id="${deviceId}"
-                        class="text-mole-red hover:text-mole-red/70 text-[10px] font-bold tracking-wider px-2 py-1 border border-mole-red/30 rounded hover:bg-mole-red/10 transition-colors"
-                    >[DESVINCULAR]</button>
-                </td>
-            </tr>`).join('');
+        safeRender(tableBody, ...bindings.map(b => renderBindingRow(b, deviceId)));
     } catch (e) {
         console.error('[Bindings] Load failed:', e.message);
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="text-center text-mole-red text-xs py-4 font-mono">
-                    ERROR AL CARGAR BINDINGS
-                </td>
-            </tr>`;
+        safeRender(tableBody, renderErrorRow());
     }
 }
 

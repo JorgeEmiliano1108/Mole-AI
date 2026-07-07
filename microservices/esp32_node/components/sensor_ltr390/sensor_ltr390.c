@@ -17,7 +17,7 @@
 
 static const char *TAG = "LTR390";
 
-#define LTR390_ADDR        0x1C
+#define LTR390_ADDR        0x53   /* per datasheet rev 1.1 */
 
 /* Register addresses */
 #define LTR390_REG_CTRL     0x00  /* Main control */
@@ -39,6 +39,12 @@ static const char *TAG = "LTR390";
 /* Gain = 3x, Resolution = 16-bit (meas rate register) */
 #define LTR390_GAIN_3X      0x01
 #define LTR390_RES_16BIT    0x20  /* 16-bit, 25ms integration */
+
+/* Conversion factors for gain=3x, 16-bit resolution (per datasheet AN-001) */
+/* lux = raw_als * ALS_LUX_FACTOR */
+#define ALS_LUX_FACTOR      0.06f
+/* UV Index = raw_uvs * UVS_UVI_FACTOR */
+#define UVS_UVI_FACTOR      0.23f
 
 #define LTR390_STATUS_READY 0x08
 
@@ -111,23 +117,18 @@ esp_err_t sensor_ltr390_read(sensor_ltr390_handle_t handle,
 
     uint8_t status = 0;
     read_reg(handle->dev, LTR390_REG_STATUS, &status, 1);
-    if (status & LTR390_STATUS_READY) {
-        *lux = (float)read_20bit(handle->dev, LTR390_REG_ALS_L);
-    } else {
-        *lux = -1.0f;
-    }
+    uint32_t raw_als = read_20bit(handle->dev, LTR390_REG_ALS_L);
+    *lux = (status & LTR390_STATUS_READY) ? (float)raw_als * ALS_LUX_FACTOR : -1.0f;
 
     /* ── UVS mode ──────────────────────────────────────────────────── */
     write_reg(handle->dev, LTR390_REG_CTRL, LTR390_MODE_UVS);
     vTaskDelay(pdMS_TO_TICKS(100));
 
     read_reg(handle->dev, LTR390_REG_STATUS, &status, 1);
-    if (status & LTR390_STATUS_READY) {
-        *uv_index = (float)read_20bit(handle->dev, LTR390_REG_UVS_L);
-    } else {
-        *uv_index = -1.0f;
-    }
+    uint32_t raw_uvs = read_20bit(handle->dev, LTR390_REG_UVS_L);
+    *uv_index = (status & LTR390_STATUS_READY) ? (float)raw_uvs * UVS_UVI_FACTOR : -1.0f;
 
-    ESP_LOGD(TAG, "ALS=%.0f  UVS=%.0f", *lux, *uv_index);
+    ESP_LOGD(TAG, "lux=%.1f uv=%.2f (raw_als=%lu raw_uvs=%lu)",
+             *lux, *uv_index, raw_als, raw_uvs);
     return ESP_OK;
 }

@@ -40,5 +40,8 @@ Repository Prep
 
 Support
 Open an issue or contact the internal DevOps team for onboarding and secrets rotation.
+
+Changelog
+- 2026-07-06: Fixed `settings.HOST`/`settings.PORT` → `settings.ms3_host`/`settings.ms3_port` in mole_report (AttributeError at startup). Removed 11 unused environment variables from `.env`. See `microservices/mole_report/docs/README.md` §14 for details.
 # Mole-AI
 Plants Monitoring and Assistance System

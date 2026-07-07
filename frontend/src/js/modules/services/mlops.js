@@ -2,6 +2,9 @@
 // M DULO DE MACHINE LEARNING OPERATIONS (MLOps) & SEGURIDAD
 // ==========================================================
 
+import { apiService } from '../api/ApiService.js';
+import { getAuthToken } from '../api/config.js';
+
 // Helper para Exponential Backoff en caso de Error 429 (Too Many Requests)
 async function withBackoff(fn, maxRetries = 3) {
     let attempt = 0;
@@ -13,7 +16,7 @@ async function withBackoff(fn, maxRetries = 3) {
                 attempt++;
                 const delay = Math.pow(2, attempt) * 1000;
                 console.warn(`[!] Limitador de tasa activado (429). Reintentando en ${delay}ms...`);
-                if (window.ApiService) ApiService.showToast(`Servidor ocupado. Reintentando en ${delay/1000}s...`, 'warn');
+                if (apiService) apiService.showToast(`Servidor ocupado. Reintentando en ${delay/1000}s...`, 'warn');
                 await new Promise(resolve => setTimeout(resolve, delay));
             } else {
                 throw error;
@@ -26,7 +29,7 @@ async function withBackoff(fn, maxRetries = 3) {
 async function trainRagModel() {
     const fileInput = document.getElementById('mlops-rag-file');
     if (!fileInput || !fileInput.files[0]) {
-        if (window.ApiService) ApiService.showToast('Seleccione un documento primero.', 'error');
+        if (apiService) apiService.showToast('Seleccione un documento primero.', 'error');
         return;
     }
     const btn = document.getElementById('btn-train-rag');
@@ -40,7 +43,7 @@ async function trainRagModel() {
         await withBackoff(async () => {
             const response = await fetch(`${window.AppConfig.API_BASE_URL}/ai/rag/train/`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${window.getAuthToken()}` },
+                headers: { 'Authorization': `Bearer ${getAuthToken()}` },
                 body: formData
             });
             if (!response.ok) {
@@ -50,10 +53,10 @@ async function trainRagModel() {
             }
         });
         
-        if (window.ApiService) ApiService.showToast('Base de Conocimiento RAG actualizada.', 'success');
+        if (apiService) apiService.showToast('Base de Conocimiento RAG actualizada.', 'success');
         fileInput.value = '';
     } catch (e) {
-        if (window.ApiService) ApiService.showToast('Fallo al contactar el MS2 (RAG).', 'error');
+        if (apiService) apiService.showToast('Fallo al contactar el MS2 (RAG).', 'error');
     } finally {
         btn.innerText = "[ ALIMENTAR RAG ]";
         btn.classList.remove('animate-pulse');
@@ -63,7 +66,7 @@ async function trainRagModel() {
 async function trainCnnModel() {
     const fileInput = document.getElementById('mlops-cnn-file');
     if (!fileInput || !fileInput.files[0]) {
-        if (window.ApiService) ApiService.showToast('Seleccione un dataset ZIP primero.', 'error');
+        if (apiService) apiService.showToast('Seleccione un dataset ZIP primero.', 'error');
         return;
     }
     const btn = document.getElementById('btn-train-cnn');
@@ -77,7 +80,7 @@ async function trainCnnModel() {
         await withBackoff(async () => {
             const response = await fetch(`${window.AppConfig.API_BASE_URL}/ai/vision/retrain/`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${window.getAuthToken()}` },
+                headers: { 'Authorization': `Bearer ${getAuthToken()}` },
                 body: formData
             });
             if (!response.ok) {
@@ -87,33 +90,12 @@ async function trainCnnModel() {
             }
         });
         
-        if (window.ApiService) ApiService.showToast('Fine-Tuning de MS1 iniciado. Revise los logs.', 'success');
+        if (apiService) apiService.showToast('Fine-Tuning de MS1 iniciado. Revise los logs.', 'success');
         fileInput.value = '';
     } catch (e) {
-        if (window.ApiService) ApiService.showToast('Fallo al iniciar reentrenamiento CNN.', 'error');
+        if (apiService) apiService.showToast('Fallo al iniciar reentrenamiento CNN.', 'error');
     } finally {
         btn.innerText = "[ INICIAR FINE-TUNING ]";
         btn.classList.remove('animate-pulse');
-    }
-}
-
-async function forgotPassword() {
-    const user = prompt("Ingrese su usuario o correo para recuperar la credencial:");
-    if (!user) return;
-
-    try {
-        const response = await fetch(`${window.AppConfig.API_BASE_URL}/auth/password-reset/`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ identifier: user })
-        });
-
-        if (response.ok) {
-            alert("> PROTOCOLO DE RECUPERACI\u00d3N INICIADO. Revise su terminal (correo).");
-        } else {
-            alert("> [ ERROR ] Credencial no encontrada o sistema bloqueado.");
-        }
-    } catch (e) {
-        alert("> [ ERROR CR\u00cdTICO ] No se pudo contactar al servidor central.");
     }
 }

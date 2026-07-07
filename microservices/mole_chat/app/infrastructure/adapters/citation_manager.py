@@ -23,7 +23,7 @@ class CitationManager(CitationManagerPort):
         if local_data and local_data != "No hay documentos locales relevantes.":
             sources.append(SourceMetadata(
                 autor="Base de Conocimiento Mole.AI",
-                url="local://faiss_vector_store",
+                url="local://pgvector",
                 confianza=0.85
             ))
             

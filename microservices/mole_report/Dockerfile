@@ -42,11 +42,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd --create-home --shell /bin/bash appuser && \
+    chown -R appuser:appuser /srv/ms3_reports
+
 COPY --from=builder /opt/venv /opt/venv
 
 EXPOSE 8003
 
-# Uvicorn con recarga (el worker se levantará por separado con el comando adaptado)
+USER appuser
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]
 
 # ==========================================
@@ -62,5 +66,7 @@ RUN chown -R appuser:appuser /srv/ms3_reports
 
 USER appuser
 
-# Producción estandar
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')" || exit 1
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003"]

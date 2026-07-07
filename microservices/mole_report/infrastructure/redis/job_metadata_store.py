@@ -1,7 +1,8 @@
-import os
 import json
 import redis
 from typing import Optional
+
+from app.config import settings
 
 
 class JobMetadataStore:
@@ -10,8 +11,7 @@ class JobMetadataStore:
 
     @classmethod
     def from_env(cls):
-        url = os.getenv("MS3_REDIS_URL") or "redis://redis:6379"
-        r = redis.from_url(url, decode_responses=True)
+        r = redis.from_url(settings.ms3_redis_url, decode_responses=True)
         return cls(r)
 
     def _key(self, job_id: str) -> str:

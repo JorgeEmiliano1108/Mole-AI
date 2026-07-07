@@ -29,6 +29,19 @@ class ReportTaskBase(Task):
         return super().on_failure(exc, task_id, args, kwargs, einfo)
 
 # FIX: Nombre de tarea explícito para el registro exacto en el Broker
+
+@celery_app.task(name='send_reminder', bind=True, max_retries=2)
+def send_reminder(self, recipient_id: str, message: str):
+    """Send a reminder (e.g., via WhatsApp) to the given recipient.
+    In production this would call an external messaging service.
+    In tests it will be mocked via `send_reminder.delay`.
+    """
+    # Placeholder implementation – real integration goes here.
+    # For now we just log the intent.
+    import structlog
+    logger = structlog.get_logger()
+    logger.info('reminder_sent', recipient_id=recipient_id, message=message)
+    return True
 @celery_app.task(
     name="generate_report_task",
     bind=True,

@@ -16,7 +16,6 @@ COPY vite.config.js ./
 COPY tailwind.config.js ./
 COPY postcss.config.js ./
 COPY src/ ./src/
-COPY static/ ./static/
 COPY public/ ./public/
 COPY *.html ./
 
@@ -28,17 +27,24 @@ RUN pnpm install --frozen-lockfile --ignore-scripts && \
 # ── Stage 2: Runtime (Nginx mínimo) ───────────────────────────────────────────
 FROM nginx:1.25-alpine AS runtime
 
+# Hardening: no correr como root
+RUN sed -i 's/^user  nginx;/user nginx;/' /etc/nginx/nginx.conf || true
+
 # Copiar estáticos compilados desde el builder
 COPY --from=builder /app/dist/ /usr/share/nginx/html/
 
-# Copiar carpeta static/ para apiService.js y otros assets estáticos
-COPY --from=builder /app/static/ /usr/share/nginx/static/
-
 # Copiar configuración del API Gateway (desde el contexto frontend/)
-
 COPY nginx.conf /etc/nginx/nginx.conf
 COPY cors_headers.conf /etc/nginx/conf.d/cors_headers.conf
 
+# Hardening: usuario no root
+USER nginx
+
 EXPOSE 80
 
+# Healthcheck — verify nginx responds
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+
+# Hardening: rootfs read-only, logs a /tmp (se sobreescribe con tmpfs en orquestación)
 CMD ["nginx", "-g", "daemon off;"]

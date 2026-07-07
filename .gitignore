@@ -41,6 +41,8 @@ infrastructure/mosquitto/certs/*.key
 **/data/
 **/logs/
 **/storage/
+!microservices/mole_report/infrastructure/storage/
+!infrastructure/mosquitto/certs/ca.crt
 **/vectors/
 **/checkpoints/
 **/models/*.tflite
@@ -88,3 +90,4 @@ staticfiles/
 media/
 dump.rdb
 
+skills-main/

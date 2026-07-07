@@ -1,11 +1,18 @@
 menu "Mole.AI Node Configuration"
 
     config MOLE_WS_URI
-        string "Edge Node WebSocket URI"
+        string "Edge Node WebSocket URI (legacy)"
         default "ws://107.23.238.115:18789"
         help
             WebSocket endpoint of the Edge Node gateway.
             Format: ws://<edge_node_ip>:<port>
+
+    config MOLE_HTTP_URI
+        string "Edge Node HTTP REST URI"
+        default "http://107.23.238.115:8000/api/v1/sensor-data/edge-batch/"
+        help
+            HTTP REST endpoint for edge-batch telemetry upload.
+            Format: http://<host>:<port>/api/v1/sensor-data/edge-batch/
 
     config MOLE_I2C_SDA
         int "I2C SDA GPIO"

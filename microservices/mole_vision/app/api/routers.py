@@ -18,8 +18,14 @@ from app.api.dependencies import (
     AuthenticatedUser,
 )
 from app.application.use_cases.analyze_plant import AnalyzePlantUseCase
-from app.domain.schemas import DiagnosticResponseSchema, PhStripResponseSchema, HealthCheckSchema, ConditionCategorySchema, SeverityLevelSchema 
-from app.domain.entities import DiagnosticResult
+from app.domain.schemas import (
+    DiagnosticResponseV2Schema, HealthCheckSchema,
+    PlantDiagnosisSchema, GrowthStageSchema,
+    AfflictionTypeSchema, ProgressionStageSchema,
+    SeverityLevelSchema,
+)
+from app.domain.entities import PlantDiagnosis
+from app.core.nom059 import check_nom059_violation
 
 logger = structlog.get_logger()
 
@@ -39,14 +45,14 @@ def get_analyze_use_case(
 
 
 # Vision Analysis — 5 requests/minute per client IP (guards NVIDIA token budget)
-@router.post("/analyze/", response_model=DiagnosticResponseSchema)
+@router.post("/analyze/", response_model=DiagnosticResponseV2Schema)
 @limiter.limit("5/minute")
 async def analyze_vision(
     request: Request,
     user: AuthenticatedUser,
     image_bytes: bytes = Depends(get_image_file),
     use_case: AnalyzePlantUseCase = Depends(get_analyze_use_case),
-) -> DiagnosticResponseSchema:
+) -> DiagnosticResponseV2Schema:
     """Endpoint para analizar una imagen de planta."""
     try:
         plant_id = user.get("plant_id", "unknown")
@@ -56,17 +62,47 @@ async def analyze_vision(
             plant_id=plant_id,
             user_claims=user,
         )
-        
-        return DiagnosticResponseSchema(
+
+        # NOM-059-SEMARNAT compliance: block protected species responses
+        if check_nom059_violation(diagnostic):
+            logger.warning(
+                "nom059_violation_blocked",
+                plant_id=diagnostic.plant_id,
+                species_common=diagnostic.species_common,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "type": "https://mole.ai/errors/nom059",
+                    "title": "Solicitud prohibida",
+                    "status": 403,
+                    "detail": (
+                        "Esta consulta involucra una especie protegida por la "
+                        "NOM-059-SEMARNAT. Para información oficial, consulte "
+                        "la lista SEMARNAT."
+                    ),
+                },
+            )
+
+        return DiagnosticResponseV2Schema(
             id="",
             plant_id=diagnostic.plant_id,
-            species=diagnostic.species,
-            condition=diagnostic.condition,
-            condition_category=ConditionCategorySchema(diagnostic.condition_category.value),
-            severity=SeverityLevelSchema(diagnostic.severity.value),
-            confidence=diagnostic.confidence,
-            ph_predicted=diagnostic.ph_predicted,
-            # ✅ Fallback seguro por si timestamp es None (evita el error de Pylance)
+            diagnosis=PlantDiagnosisSchema(
+                species_common=diagnostic.species_common,
+                species_scientific=diagnostic.species_scientific,
+                growth_stage=GrowthStageSchema(diagnostic.growth_stage.value),
+                affliction_name=diagnostic.affliction_name,
+                affliction_type=AfflictionTypeSchema(diagnostic.affliction_type.value),
+                causal_agent=diagnostic.causal_agent,
+                severity=SeverityLevelSchema(diagnostic.severity.value),
+                progression=ProgressionStageSchema(diagnostic.progression.value),
+                confidence=diagnostic.confidence,
+                immediate_actions=diagnostic.immediate_actions,
+                preventive_measures=diagnostic.preventive_measures,
+                mitigation_steps=diagnostic.mitigation_steps,
+                ph_predicted=diagnostic.ph_predicted,
+                model_version=diagnostic.model_version,
+            ),
             timestamp=diagnostic.timestamp or datetime.now(timezone.utc).replace(tzinfo=None),
         )
     except HTTPException:
@@ -82,31 +118,6 @@ async def analyze_vision(
                 "detail": "Diagnostic processing failed",
             },
         )
-
-
-@router.post("/analyze-ph-strip/", response_model=PhStripResponseSchema)
-async def analyze_ph_strip(
-    user: AuthenticatedUser, 
-    image_bytes: bytes = Depends(get_image_file),
-) -> PhStripResponseSchema:
-    """Endpoint para analizar tira reactiva de pH."""
-    from app.infrastructure.adapters.colorimetric_adapter import ColorimetricAdapter
-    
-    try:
-        adapter = ColorimetricAdapter()
-        ph_value = adapter.estimate_ph(image_bytes)
-        
-        return PhStripResponseSchema(
-            estimated_ph=ph_value,
-            method="Colorimetry_Euclidean_RGB",
-        )
-    except Exception as exc:
-        logger.error("ph_strip_failed", error=str(exc))
-        raise HTTPException(
-            status_code=500,
-            detail={"type": "https://mole.ai/errors/internal", "title": "pH Analysis Failed"},
-        )
-
 
 @router.get("/health/", response_model=HealthCheckSchema)
 async def health() -> HealthCheckSchema:

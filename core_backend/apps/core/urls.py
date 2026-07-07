@@ -24,6 +24,7 @@ urlpatterns = [
     path('devices/<uuid:id>/health/', device_health_view, name='device_health'),
     path('devices/<uuid:id>/bindings/', device_bindings_view, name='device_bindings'),
     path('devices/<uuid:id>/bindings/<int:binding_id>/', device_binding_delete_view, name='device_binding_delete'),
+    path('devices/<uuid:id>/revoke/', views.revoke_device_token, name='device_revoke'),
 
     # IA y Diagnósticos
     path('diagnostics/', views.diagnostic_view, name='diagnostic'),

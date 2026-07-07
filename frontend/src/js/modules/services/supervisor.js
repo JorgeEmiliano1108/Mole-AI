@@ -2,6 +2,8 @@
 // 5. SISTEMAS DE SUPERVISOR (DIN MICO Y BACKEND READY)
 // ==========================================================
 
+import { getAuthToken } from '../api/config.js';
+
 /**
  * 1. SINCRONIZACI N DE INVENTARIO (OFFLINE-FRIENDLY)
  * Trae las plantas espec ficas del usuario desde el servidor.
@@ -9,7 +11,7 @@
 async function syncUserPlants() {
     try {
         const currentUser = localStorage.getItem('moleia_current_user'); 
-        const token = window.getAuthToken();
+        const token = getAuthToken();
 
         if (!currentUser || !token) return;
 
@@ -80,7 +82,7 @@ async function triggerOverride(type, plantName = null) {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${window.getAuthToken()}`
+                'Authorization': `Bearer ${getAuthToken()}`
             },
             body: JSON.stringify({ plant: targetPlant, action: type, data: db[targetPlant] })
         });

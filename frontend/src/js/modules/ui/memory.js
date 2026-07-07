@@ -51,12 +51,14 @@ window.addEventListener('beforeunload', () => {
     detachChatListener();
     
     // 2. Apagamos los sensores de telemetr a continua (Polling de datos del huerto)
+    // GLOBAL: window.monitorInterval — shared con main.js, migrar en FE-DT17
     if (typeof window.monitorInterval !== 'undefined' && window.monitorInterval) {
         clearInterval(window.monitorInterval);
         console.log("> [ OK ] Intervalo de telemetr\u00eda de sensores destruido.");
     }
 
     // 3. (Backend Estricto) Desconexi n forzada de WebSockets si estuvieran activos:
+    // GLOBAL: window.socketInstance — shared con main.js, migrar en FE-DT17
     if (typeof window.socketInstance !== 'undefined' && window.socketInstance) {
         window.socketInstance.disconnect();
         console.log("> [ OK ] Socket de conexi\u00f3n en tiempo real cerrado.");

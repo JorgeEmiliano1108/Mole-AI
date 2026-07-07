@@ -69,3 +69,15 @@ esp_err_t sensor_soil_read(sensor_soil_handle_t handle, float *moisture_pct)
     ESP_LOGD(TAG, "raw=%d  moisture=%.1f%%", raw, pct);
     return ESP_OK;
 }
+
+esp_err_t sensor_soil_read_raw(sensor_soil_handle_t handle, int *adc_raw)
+{
+    if (!handle || !adc_raw) return ESP_ERR_INVALID_ARG;
+
+    esp_err_t err = adc_oneshot_read(handle->adc_handle, handle->channel,
+                                     adc_raw);
+    if (err != ESP_OK) return err;
+
+    ESP_LOGD(TAG, "raw=%d (direct)", *adc_raw);
+    return ESP_OK;
+}

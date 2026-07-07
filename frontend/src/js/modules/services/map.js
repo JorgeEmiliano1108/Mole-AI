@@ -1,7 +1,13 @@
+import { el, safeRender } from '../ui/dom.js';
+import { apiService } from '../api/ApiService.js';
+import { getAuthToken } from '../api/config.js';
+import L from 'leaflet/dist/leaflet.js';
+import 'leaflet/dist/leaflet.css';
+
 // ==========================================================
 // 10. FLUJO DE GEOLOCALIZACI N (MAPA Y PERMISOS) [BACKEND ESTRICTO]
 // ==========================================================
-// Leaflet loaded via CDN in dashboard.html - uses global L
+// Leaflet (bundled via pnpm)
 
 export let mapInstance = null;
 export let userLocation = null;
@@ -38,9 +44,8 @@ export function initMapView() {
     const mapDiv = document.getElementById('map');
     if (!mapDiv) return;
     
-    if (!window.mapInstance) {
-        window.mapInstance = L.map('map').setView([23.6345, -102.5528], 5);
-        mapInstance = window.mapInstance;
+    if (!mapInstance) {
+        mapInstance = L.map('map').setView([23.6345, -102.5528], 5);
 
         // Base Ciberpunk (CartoDB Dark Matter)
         layers.base = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -74,7 +79,6 @@ export function initMapView() {
     }, 500);
 }
 
-window.initMapView = initMapView;
 
 function setupLayerControls() {
     const toggleButtonLayer = (btnId, layerObj, activeClass, inactiveClass) => {
@@ -126,10 +130,12 @@ function setupMapInteractivity() {
         // Estado Loading
         panel.classList.remove('hidden');
         title.innerText = "CLIMA ACTUAL";
-        content.innerHTML = `<div class="text-mole-cyan animate-pulse">Obteniendo telemetr\u00eda orbital...</div>`;
+        safeRender(content,
+            el('div', { className: 'text-mole-cyan animate-pulse' }, 'Obteniendo telemetr\u00eda orbital...')
+        );
 
         try {
-            const res = await window.ApiService.get(`weather/current/?lat=${lat}&lon=${lng}`);
+            const res = await apiService.get(`weather/current/?lat=${lat}&lon=${lng}`);
             if (res && res.main) {
                 const temp = res.main.temp.toFixed(1);
                 const humidity = res.main.humidity;
@@ -137,30 +143,32 @@ function setupMapInteractivity() {
                 const city = res.name || 'Coordenada Remota';
 
                 title.innerText = city.toUpperCase();
-                content.innerHTML = `
-                    <div class="flex justify-between border-b border-mole-border pb-1">
-                        <span class="text-mole-text-dim">Condici\u00f3n:</span>
-                        <span class="font-bold text-mole-cyan capitalize">${desc}</span>
-                    </div>
-                    <div class="flex justify-between border-b border-mole-border pb-1">
-                        <span class="text-mole-text-dim">Temperatura:</span>
-                        <span class="text-orange-400 font-mono">${temp}\u00b0C</span>
-                    </div>
-                    <div class="flex justify-between border-b border-mole-border pb-1">
-                        <span class="text-mole-text-dim">Humedad:</span>
-                        <span class="text-sky-400 font-mono">${humidity}%</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-mole-text-dim">Coordenadas:</span>
-                        <span class="text-mole-text font-mono text-[10px]">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
-                    </div>
-                `;
+                safeRender(content,
+                    el('div', { className: 'flex justify-between border-b border-mole-border pb-1' },
+                        el('span', { className: 'text-mole-text-dim' }, 'Condici\u00f3n:'),
+                        el('span', { className: 'font-bold text-mole-cyan capitalize' }, desc)
+                    ),
+                    el('div', { className: 'flex justify-between border-b border-mole-border pb-1' },
+                        el('span', { className: 'text-mole-text-dim' }, 'Temperatura:'),
+                        el('span', { className: 'text-orange-400 font-mono' }, `${temp}\u00b0C`)
+                    ),
+                    el('div', { className: 'flex justify-between border-b border-mole-border pb-1' },
+                        el('span', { className: 'text-mole-text-dim' }, 'Humedad:'),
+                        el('span', { className: 'text-sky-400 font-mono' }, `${humidity}%`)
+                    ),
+                    el('div', { className: 'flex justify-between' },
+                        el('span', { className: 'text-mole-text-dim' }, 'Coordenadas:'),
+                        el('span', { className: 'text-mole-text font-mono text-[10px]' }, `${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                    )
+                );
             } else {
                 throw new Error("Respuesta inv\u00e1lida");
             }
         } catch (error) {
             title.innerText = "ERROR DE CONEXI\u00d3N";
-            content.innerHTML = `<div class="text-mole-red">Fallo al contactar sat\u00e9lite meteorol\u00f3gico.</div>`;
+            safeRender(content,
+                el('div', { className: 'text-mole-red' }, 'Fallo al contactar sat\u00e9lite meteorol\u00f3gico.')
+            );
         }
     });
 }
@@ -173,11 +181,11 @@ async function loadMapPins() {
 
     let geoData = [];
     const currentUser = localStorage.getItem('moleia_current_user') || 'GLOBAL';
-    const token = window.getAuthToken();
+    const token = getAuthToken();
 
     try {
         if (!token) throw new Error("Acceso denegado: Se requiere Token.");
-        geoData = await window.ApiService.get(`map/hotspots/?user=${currentUser}`);
+        geoData = await apiService.get(`map/hotspots/?user=${currentUser}`);
     } catch (error) {
         console.error("> [ ERROR CR\u00cdTICO ] Fallo al sincronizar radar t\u00e1ctico:", error);
         return;
@@ -207,23 +215,23 @@ async function loadMapPins() {
                     title.innerText = (point.species || 'ESPECIE DESCONOCIDA').toUpperCase();
                     title.className = "text-sm font-bold text-mole-green tracking-wider truncate";
                     
-                    content.innerHTML = `
-                        <div class="flex justify-between border-b border-mole-border pb-1">
-                            <span class="text-mole-text-dim">Severidad:</span>
-                            <span class="font-bold uppercase" style="color: ${color}">${severity}</span>
-                        </div>
-                        <div class="flex justify-between border-b border-mole-border pb-1">
-                            <span class="text-mole-text-dim">Latitud:</span>
-                            <span class="text-mole-text font-mono">${point.lat.toFixed(4)}</span>
-                        </div>
-                        <div class="flex justify-between border-b border-mole-border pb-1">
-                            <span class="text-mole-text-dim">Longitud:</span>
-                            <span class="text-mole-text font-mono">${point.lng.toFixed(4)}</span>
-                        </div>
-                        <button class="w-full mt-2 py-1.5 text-xs font-bold text-mole-bg bg-mole-green hover:bg-mole-green/80 rounded transition-colors tracking-widest">
-                            VER DETALLES
-                        </button>
-                    `;
+                    safeRender(content,
+                        el('div', { className: 'flex justify-between border-b border-mole-border pb-1' },
+                            el('span', { className: 'text-mole-text-dim' }, 'Severidad:'),
+                            el('span', { className: 'font-bold uppercase', style: { color } }, severity)
+                        ),
+                        el('div', { className: 'flex justify-between border-b border-mole-border pb-1' },
+                            el('span', { className: 'text-mole-text-dim' }, 'Latitud:'),
+                            el('span', { className: 'text-mole-text font-mono' }, point.lat.toFixed(4))
+                        ),
+                        el('div', { className: 'flex justify-between border-b border-mole-border pb-1' },
+                            el('span', { className: 'text-mole-text-dim' }, 'Longitud:'),
+                            el('span', { className: 'text-mole-text font-mono' }, point.lng.toFixed(4))
+                        ),
+                        el('button', {
+                            className: 'w-full mt-2 py-1.5 text-xs font-bold text-mole-bg bg-mole-green hover:bg-mole-green/80 rounded transition-colors tracking-widest'
+                        }, 'VER DETALLES')
+                    );
                 }
             });
 

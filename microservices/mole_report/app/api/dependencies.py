@@ -10,15 +10,16 @@ No dependency on Supabase or external JWKS endpoints.
 
 import hashlib
 import logging
-import os
 
 import jwt
 from fastapi import Header, HTTPException
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # ── Configuration ──────────────────────────────────────────────────────
-_JWT_SECRET = os.getenv("JWT_SECRET_KEY", os.getenv("SUPABASE_JWT_SECRET", ""))
+_JWT_SECRET = settings.jwt_secret_key
 _JWT_AUDIENCE = "authenticated"
 _JWT_LEEWAY = 30  # seconds
 

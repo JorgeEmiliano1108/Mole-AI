@@ -9,15 +9,17 @@ boto3==1.28.0
 jinja2==3.1.2
 python-dotenv==1.0.0
 openai>=1.0.0
-# Resilience (M5)
+# Resilience
 tenacity>=8.2
-# Pydantic v2 (M1)
+# Pydantic v2
 pydantic>=2.7
+pydantic-settings>=2.2
 # JWT validation (HS256 Local — Zero-Trust)
 PyJWT>=2.8
 cryptography>=42.0
 # Pin pydyf to a version compatible with WeasyPrint 57.x
 pydyf<0.12
-
-# Observabilidad Prometheus
+# Observabilidad
 prometheus-fastapi-instrumentator>=6.1.0
+structlog>=24.1.0
+asyncpg>=0.29

@@ -26,6 +26,34 @@ class ConditionCategory(str, Enum):
     UNKNOWN = "unknown"
 
 
+class GrowthStage(str, Enum):
+    """Etapa de crecimiento de la planta."""
+    PLANTULA = "plántula"
+    VEGETATIVA = "vegetativa"
+    FLORACION = "floración"
+    FRUCTIFICACION = "fructificación"
+    SENESCENCIA = "senescencia"
+    UNKNOWN = "unknown"
+
+
+class AfflictionType(str, Enum):
+    """Tipo de aflicción que afecta a la planta."""
+    PEST = "pest"
+    FUNGAL = "fungal"
+    BACTERIAL = "bacterial"
+    VIRAL = "viral"
+    NUTRIENT = "nutrient"
+    PHYSIOLOGICAL = "physiological"
+    UNKNOWN = "unknown"
+
+
+class ProgressionStage(str, Enum):
+    """Etapa de progresión de la aflicción."""
+    INITIAL = "initial"
+    ADVANCED = "advanced"
+    TERMINAL = "terminal"
+
+
 @dataclass(frozen=True)
 class DiagnosticResult:
     """
@@ -55,17 +83,6 @@ class DiagnosticResult:
 
 
 @dataclass(frozen=True)
-class PhEstimation:
-    """
-    Entidad de dominio para estimación de pH vía colorimetría.
-    Usada en el análisis de tiras reactivas.
-    """
-    estimated_ph: float
-    method: str = "Colorimetry_Euclidean_RGB"
-    confidence: float = 0.0
-
-
-@dataclass(frozen=True)
 class DiagnosticEvent:
     """
     Entidad de dominio para eventos publicados en Redis.
@@ -90,3 +107,48 @@ class DiagnosticEvent:
             "ph_predicted": self.ph_predicted,
             "timestamp": self.timestamp,
         }
+
+
+@dataclass(frozen=True)
+class PlantDiagnosis:
+    """
+    Entidad de dominio para diagnóstico fitosanitario completo con detección
+    de plagas/enfermedades, etapa de crecimiento y recomendaciones.
+    """
+    # -- Identificación --
+    plant_id: str
+    species_common: str
+    species_scientific: str
+
+    # -- Etapa de crecimiento --
+    growth_stage: GrowthStage
+
+    # -- Plaga / Enfermedad --
+    affliction_name: str
+    affliction_type: AfflictionType
+    causal_agent: str
+
+    # -- Severidad y progresión --
+    severity: SeverityLevel
+    progression: ProgressionStage
+    confidence: float
+
+    # -- Recomendaciones --
+    immediate_actions: tuple[str, ...]
+    preventive_measures: tuple[str, ...]
+    mitigation_steps: tuple[str, ...]
+
+    # -- Metadatos --
+    ph_predicted: Optional[float] = None
+    timestamp: Optional[datetime] = None
+    model_version: str = "2.0.0"
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            object.__setattr__(self, "timestamp", datetime.now(timezone.utc).replace(tzinfo=None))
+        object.__setattr__(self, "confidence", max(0.0, min(1.0, self.confidence)))
+
+    @property
+    def requires_immediate_action(self) -> bool:
+        return self.severity in (SeverityLevel.HIGH, SeverityLevel.CRITICAL) \
+            or self.progression == ProgressionStage.TERMINAL

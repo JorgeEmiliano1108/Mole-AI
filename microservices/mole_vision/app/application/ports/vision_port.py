@@ -1,12 +1,12 @@
 """
-Puerto de Visión - Skill 01: Interfaz abstracta para inferencia CNN.
-La implementación concreta (TFLite) vivirá en infrastructure/adapters/.
+Puerto de Visión - Skill 01: Interfaz abstracta para inferencia de visión.
+Implementación concreta: NvidiaVisionAdapter en infrastructure/adapters/.
 """
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.domain.entities import DiagnosticResult
+    from app.domain.entities import PlantDiagnosis
 
 
 class VisionClientPort(ABC):
@@ -18,15 +18,15 @@ class VisionClientPort(ABC):
     """
     
     @abstractmethod
-    async def analyze(self, image_bytes: bytes) -> "DiagnosticResult":
+    async def analyze(self, image_bytes: bytes) -> "PlantDiagnosis":
         """
-        Ejecuta la inferencia CNN sobre la imagen.
+        Ejecuta la inferencia de visión sobre la imagen.
         
         Args:
             image_bytes: Bytes de imagen limpia (sin EXIF/GPS).
             
         Returns:
-            DiagnosticResult: Entidad de dominio con el diagnóstico.
+            PlantDiagnosis: Entidad de dominio con diagnóstico fitosanitario completo.
         """
         pass
     

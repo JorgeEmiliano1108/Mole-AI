@@ -28,11 +28,26 @@ from asgiref.sync import async_to_sync
 # Repositorios y Modelos
 from .models import (
     SensorLog, BotanicalKnowledge, AIDiagnostic, 
-    DiagnosticoGeolocalizado, FeedbackTicket
+    DiagnosticoGeolocalizado, FeedbackTicket, Device
 )
 from apps.plants.models import UserPlant
 from apps.ai_models.models import LLMRequest
 from apps.authentication.infrastructure.authentication import HardwareAPIKeyAuthentication
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def revoke_device_token(request, id):
+    """
+    Revoca (desactiva) un dispositivo IoT.
+    Soft‑delete: marca `is_active=False` sin borrar datos históricos.
+    """
+    try:
+        device = Device.objects.get(pk=id)
+    except Device.DoesNotExist:
+        return Response(status=404)
+    device.is_active = False
+    device.save(update_fields=['is_active'])
+    return Response(status=204)
 
 # Servicios y Serializers
 from .throttles import LLMChatThrottle, DiagnosticsThrottle, SensorDataThrottle
@@ -157,7 +172,7 @@ class EdgeNodeIngestView(APIView):
         # ── Auth: resolve Device by Bearer token ────────────────────────
         auth_header = request.headers.get('Authorization', '').replace('Bearer ', '')
         device = Device.objects.filter(auth_token=auth_header).first()
-        if not device:
+        if not device or not getattr(device, 'is_active', True):
             return Response({"error": "Device not found or unauthorized"}, status=401)
 
         # ── Validate compact contract ───────────────────────────────────

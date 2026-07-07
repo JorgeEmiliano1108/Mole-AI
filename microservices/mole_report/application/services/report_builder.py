@@ -3,8 +3,18 @@ import base64
 import gc
 from datetime import datetime
 from collections import defaultdict
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+try:
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+except ImportError:
+    # Stub classes when matplotlib is unavailable; used only in report generation, not in tests.
+    class Figure:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError('matplotlib is required for Figure')
+    class FigureCanvas:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError('matplotlib is required for FigureCanvas')
+
 from jinja2 import Template
 
 class ReportBuilder:

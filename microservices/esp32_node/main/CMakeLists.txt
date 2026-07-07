@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "ble_provisioning.c"
+    SRCS "main.c" "ble_provisioning.c" "payload_builder.c" "transport_layer.c" "state_machine.c" "offline_buffer.c"
     INCLUDE_DIRS "include"
     REQUIRES
         nvs_flash

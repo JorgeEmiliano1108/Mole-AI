@@ -279,7 +279,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 | UC-08 | Usuario autenticado | RF-08 | POST /api/v1/mole-ai/chat | Implementado | test_chat_e2e.py |
 | UC-09 | Usuario autenticado | RF-09 | POST /api/v1/vision/analyze/ | Implementado | test_vision_api.py |
 | UC-10 | Usuario autenticado | RF-10 | POST /api/v1/reports/generate | Implementado | test_report_generation.py |
-| UC-11 | Sistema | RF-11 | Proceso interno del sistema (sin endpoint público) | Implementado | test_audit.py |
+| UC-11 | Sistema | RF-11 | Proceso interno (sin endpoint público) | Implementado | test_audit.py |
 | UC-12 | Administrador | RF-12 (Futuro) | *Pendiente* | Futuro | Pendiente |
 | UC-F-01 | Usuario autenticado | RF-F-01 | UI login (frontend) | Implementado | Pendiente |
 | UC-F-02 | Usuario autenticado | RF-F-02 | UI navegación (frontend) | Parcial | Pendiente |

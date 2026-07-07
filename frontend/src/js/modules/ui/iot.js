@@ -2,6 +2,8 @@
 // 14. M DULO IOT (ESP32) - NUEVO FLUJO DE WIZARD
 // ==========================================================
 
+import { getAuthToken } from '../api/config.js';
+
 /**
  * Show the IoT wizard modal and start at step 1.
  */
@@ -112,7 +114,7 @@ async function startHardwareProvisioning() {
   const ssid = document.getElementById('wifi-ssid')?.value;
   const password = document.getElementById('wifi-pass')?.value;
   const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-  const token = window.getAuthToken();
+  const token = getAuthToken();
 
   try {
     if (!token) throw new Error('Autorizaci\u00f3n denegada. Token de seguridad faltante.');

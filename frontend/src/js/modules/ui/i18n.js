@@ -2,6 +2,8 @@
 // 15. M DULO I18N: TRADUCCI N DIN MICA [BACKEND ESTRICTO]
 // ==========================================================
 
+import { getAuthToken } from '../api/config.js';
+
 // Use centralized AppConfig for API base URL (see static/js/config.js)
 // Avoid redeclaring API_BASE_URL in multiple modules.
 // Access via: window.AppConfig.API_BASE_URL
@@ -93,7 +95,7 @@ async function switchLanguage(newLang) {
 
     // 2. Sincronizamos con el servidor para que se guarde en el perfil del Operador
     const currentUser = localStorage.getItem('moleia_current_user');
-    const token = window.getAuthToken();
+    const token = getAuthToken();
 
     if (currentUser && token) {
         try {
@@ -102,7 +104,7 @@ async function switchLanguage(newLang) {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${window.getAuthToken()}`
+                    'Authorization': `Bearer ${getAuthToken()}`
                 },
                 body: JSON.stringify({
                     usuario: currentUser,

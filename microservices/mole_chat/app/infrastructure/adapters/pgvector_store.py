@@ -1,7 +1,7 @@
 """
 pgvector Store Adapter — Async PostgreSQL Vector Storage
 
-Replaces FAISS + sentence-transformers.
+Replaces legacy FAISS stub + sentence-transformers.
 Embeddings via NVIDIA NIM OpenAI-compatible embeddings endpoint.
 Similarity search via pgvector (cosine distance).
 
@@ -20,7 +20,6 @@ Table schema:
 """
 import asyncio
 import logging
-import os
 import uuid
 from typing import List, Optional, Tuple
 
@@ -83,9 +82,10 @@ class PgVectorStore:
 
     def __init__(self):
         self._pool: Optional[asyncpg.Pool] = None
+        self._init_lock = asyncio.Lock()
         # Lazy OpenAI client for embeddings
         self._embed_client: Optional[AsyncOpenAI] = None
-        self._embed_model: str = os.getenv("NVIDIA_EMBEDDING_MODEL", "nvidia/nv-embedqa-e5-v5")
+        self._embed_model: str = settings.NVIDIA_EMBEDDING_MODEL
 
     # ── Connection Pool ──────────────────────────────────────────────────
 
@@ -94,28 +94,29 @@ class PgVectorStore:
         if self._pool is not None:
             return
 
-        dsn = settings.DATABASE_URL
-        # asyncpg uses 'postgresql://' scheme
-        if dsn.startswith("postgres://"):
-            dsn = dsn.replace("postgres://", "postgresql://", 1)
+        async with self._init_lock:
+            if self._pool is not None:
+                return
+            dsn = settings.DATABASE_URL
+            if dsn.startswith("postgres://"):
+                dsn = dsn.replace("postgres://", "postgresql://", 1)
 
-        self._pool = await asyncpg.create_pool(
-            dsn=dsn,
-            min_size=2,
-            max_size=10,
-            command_timeout=30,
-        )
-        logger.info("pgvector_pool_created", extra={"dsn_masked": dsn[:30] + "…"})
+            self._pool = await asyncpg.create_pool(
+                dsn=dsn,
+                min_size=2,
+                max_size=10,
+                command_timeout=30,
+            )
+            logger.info("pgvector_pool_created", extra={"dsn_masked": dsn[:30] + "…"})
 
-        async with self._pool.acquire() as conn:
-            await conn.execute(CREATE_EXTENSION_SQL)
-            await conn.execute(CREATE_TABLE_SQL)
-            # Use HNSW index — works with any number of rows (IVFFlat needs >100)
-            try:
-                await conn.execute(CREATE_HNSW_INDEX_SQL)
-            except Exception as e:
-                logger.warning("hnsw_index_creation_skipped", extra={"error": str(e)})
-        logger.info("pgvector_table_ensured", extra={"table": TABLE_NAME})
+            async with self._pool.acquire() as conn:
+                await conn.execute(CREATE_EXTENSION_SQL)
+                await conn.execute(CREATE_TABLE_SQL)
+                try:
+                    await conn.execute(CREATE_HNSW_INDEX_SQL)
+                except Exception as e:
+                    logger.warning("hnsw_index_creation_skipped", extra={"error": str(e)})
+            logger.info("pgvector_table_ensured", extra={"table": TABLE_NAME})
 
     async def close(self) -> None:
         """Close the connection pool."""
@@ -128,8 +129,8 @@ class PgVectorStore:
     def _get_embed_client(self) -> AsyncOpenAI:
         if self._embed_client is None:
             self._embed_client = AsyncOpenAI(
-                api_key=os.getenv("NVIDIA_API_KEY"),
-                base_url=os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
+                api_key=settings.NVIDIA_API_KEY,
+                base_url=settings.NVIDIA_BASE_URL,
             )
         return self._embed_client
 

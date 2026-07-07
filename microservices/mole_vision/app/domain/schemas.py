@@ -24,6 +24,31 @@ class ConditionCategorySchema(str, Enum):
     UNKNOWN = "unknown"
 
 
+class GrowthStageSchema(str, Enum):
+    PLANTULA = "plántula"
+    VEGETATIVA = "vegetativa"
+    FLORACION = "floración"
+    FRUCTIFICACION = "fructificación"
+    SENESCENCIA = "senescencia"
+    UNKNOWN = "unknown"
+
+
+class AfflictionTypeSchema(str, Enum):
+    PEST = "pest"
+    FUNGAL = "fungal"
+    BACTERIAL = "bacterial"
+    VIRAL = "viral"
+    NUTRIENT = "nutrient"
+    PHYSIOLOGICAL = "physiological"
+    UNKNOWN = "unknown"
+
+
+class ProgressionStageSchema(str, Enum):
+    INITIAL = "initial"
+    ADVANCED = "advanced"
+    TERMINAL = "terminal"
+
+
 class VisionInputSchema(BaseModel):
     """Schema de entrada para análisis de visión."""
     plant_id: str = Field(..., min_length=1, max_length=255)
@@ -71,20 +96,6 @@ class DiagnosticResponseSchema(BaseModel):
     )
 
 
-class PhStripInputSchema(BaseModel):
-    """Schema de entrada para análisis de tira reactiva de pH."""
-    pass  # Solo recibe bytes de imagen, no parámetros adicionales
-
-
-class PhStripResponseSchema(BaseModel):
-    """Schema de respuesta para estimación de pH."""
-    estimated_ph: float = Field(..., ge=0.0, le=14.0)
-    method: str = Field(default="Colorimetry_Euclidean_RGB")
-    disclaimer: str = Field(
-        default="Valor estimado por visión algorítmica. No sustituye un análisis químico de laboratorio."
-    )
-
-
 class EventPayloadSchema(BaseModel):
     """Schema para payloads de eventos publicados en Redis."""
     event_type: str
@@ -101,3 +112,38 @@ class HealthCheckSchema(BaseModel):
     status: str = Field(..., pattern="^(ok|unhealthy)$")
     checks: Optional[dict] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PlantDiagnosisSchema(BaseModel):
+    """Schema de salida v2 para diagnóstico fitosanitario completo."""
+    species_common: str = Field(default="Desconocida")
+    species_scientific: str = Field(default="No identificada")
+    growth_stage: GrowthStageSchema = Field(default=GrowthStageSchema.UNKNOWN)
+    affliction_name: str = Field(default="Ninguna")
+    affliction_type: AfflictionTypeSchema = Field(default=AfflictionTypeSchema.UNKNOWN)
+    causal_agent: str = Field(default="Desconocido")
+    severity: SeverityLevelSchema = Field(default=SeverityLevelSchema.MEDIUM)
+    progression: ProgressionStageSchema = Field(default=ProgressionStageSchema.INITIAL)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    immediate_actions: tuple[str, ...] = Field(default_factory=tuple)
+    preventive_measures: tuple[str, ...] = Field(default_factory=tuple)
+    mitigation_steps: tuple[str, ...] = Field(default_factory=tuple)
+    ph_predicted: Optional[float] = Field(default=None, ge=0.0, le=14.0)
+    model_version: str = Field(default="2.0.0")
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence(cls, v: float) -> float:
+        return max(0.0, min(1.0, v))
+
+
+class DiagnosticResponseV2Schema(BaseModel):
+    """Schema de respuesta v2 para el endpoint de diagnósticos."""
+    id: Optional[str] = None
+    plant_id: str
+    diagnosis: PlantDiagnosisSchema
+    timestamp: datetime
+    disclaimer: str = Field(
+        default="Aviso: Este diagnóstico es generado por inteligencia artificial. "
+                "Consulte a un ingeniero agrónomo para validación profesional."
+    )

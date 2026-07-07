@@ -33,6 +33,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Añadimos únicamente la carpeta raíz del proyecto al sys.path.
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
+# Add the repository root so sibling packages (e.g., microservices) are importable
+PROJECT_ROOT = BASE_DIR.parent
+# Add explicit path for microservices mount
+MICROSERVICES_PATH = '/microservices'
+# Add mole_report path for infrastructure imports
+MOLE_REPORT_PATH = '/microservices/mole_report'
+if str(MOLE_REPORT_PATH) not in sys.path:
+    sys.path.insert(0, str(MOLE_REPORT_PATH))
+if str(MICROSERVICES_PATH) not in sys.path:
+    sys.path.insert(0, str(MICROSERVICES_PATH))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # Variables adicionales para desarrollo
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'

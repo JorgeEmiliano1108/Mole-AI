@@ -53,3 +53,25 @@ window.addEventListener('pageshow', (event) => {
         if (token) window.location.replace('/dashboard.html');
     }
 });
+
+// 4. Password Recovery (migrado de mlops.js en FE-DT14 por cohesión semántica)
+export async function forgotPassword() {
+    const user = prompt("Ingrese su usuario o correo para recuperar la credencial:");
+    if (!user) return;
+
+    try {
+        const response = await fetch(`${window.AppConfig.API_BASE_URL}/auth/password-reset/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: user })
+        });
+
+        if (response.ok) {
+            alert("> PROTOCOLO DE RECUPERACI\u00d3N INICIADO. Revise su terminal (correo).");
+        } else {
+            alert("> [ ERROR ] Credencial no encontrada o sistema bloqueado.");
+        }
+    } catch (e) {
+        alert("> [ ERROR CR\u00cdTICO ] No se pudo contactar al servidor central.");
+    }
+}

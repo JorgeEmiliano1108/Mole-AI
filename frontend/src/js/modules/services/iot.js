@@ -3,6 +3,9 @@
 // ==========================================================
 
 //    BLE GATT UUIDs (must match ESP32 firmware)               
+import { apiService } from '../api/ApiService.js';
+import { getAuthToken } from '../api/config.js';
+
 const BLE_SERVICE_UUID    = '0000fee0-0000-1000-8000-00805f9b34fb';
 const CHAR_SSID_UUID      = '0000abce-0000-1000-8000-00805f9b34fb';
 const CHAR_PASS_UUID      = '0000abcf-0000-1000-8000-00805f9b34fb';
@@ -98,7 +101,9 @@ async function startBleScan() {
     }
 
     setStatus('Escaneando dispositivos Bluetooth...', 'loading');
-    list.innerHTML = '<p class="text-mole-cyan text-[10px] font-mono text-center py-4 animate-pulse">SCANNING...</p>';
+    safeRender(list,
+        el('p', { className: 'text-mole-cyan text-[10px] font-mono text-center py-4 animate-pulse' }, 'SCANNING...')
+    );
 
     try {
         const device = await navigator.bluetooth.requestDevice({
@@ -108,15 +113,15 @@ async function startBleScan() {
 
         _selectedBleDevice = device;
 
-        list.innerHTML = `
-            <div class="flex items-center justify-between p-2.5 bg-mole-bg border-2 border-mole-cyan rounded transition-colors">
-                <div class="flex items-center gap-2">
-                    <span class="w-2 h-2 bg-mole-green rounded-full animate-pulse"></span>
-                    <span class="text-mole-text text-xs font-mono">${device.name || 'ESP32 Node'}</span>
-                </div>
-                <span class="text-mole-cyan text-[10px] font-mono">${device.id?.slice(0, 17) || 'PAIRED'}</span>
-            </div>
-        `;
+        safeRender(list,
+            el('div', { className: 'flex items-center justify-between p-2.5 bg-mole-bg border-2 border-mole-cyan rounded transition-colors' },
+                el('div', { className: 'flex items-center gap-2' },
+                    el('span', { className: 'w-2 h-2 bg-mole-green rounded-full animate-pulse' }),
+                    el('span', { className: 'text-mole-text text-xs font-mono' }, device.name || 'ESP32 Node')
+                ),
+                el('span', { className: 'text-mole-cyan text-[10px] font-mono' }, (device.id || 'PAIRED').slice(0, 17))
+            )
+        );
 
         if (btnBind) {
             btnBind.disabled = false;
@@ -126,7 +131,9 @@ async function startBleScan() {
 
     } catch (err) {
         if (err.name === 'NotFoundError') {
-            list.innerHTML = '<p class="text-mole-dim text-[10px] font-mono text-center py-4">[ Ning\u00fan dispositivo seleccionado ]</p>';
+            safeRender(list,
+                el('p', { className: 'text-mole-dim text-[10px] font-mono text-center py-4' }, '[ Ning\u00fan dispositivo seleccionado ]')
+            );
             setStatus('Escaneo cancelado por el usuario.', 'info');
         } else {
             setStatus('Error BLE: ' + err.message, 'error');
@@ -143,7 +150,7 @@ async function provisionViaBle() {
 
     const ssid  = (document.getElementById('prov-ssid')?.value || '').trim();
     const pass  = (document.getElementById('prov-pass')?.value || '').trim();
-    const token = window.getAuthToken ? window.getAuthToken() : '';
+    const token = getAuthToken() || '';
 
     if (!ssid || !pass) {
         setStatus('ERROR: Ingrese SSID y contrase\u00f1a en la pesta\u00f1a Wi-Fi primero.', 'error');
@@ -209,7 +216,7 @@ async function provisionViaWifi() {
             wifi_ssid: ssid,
         };
 
-        await window.ApiService.post('iot/nodes/', payload);
+        await apiService.post('iot/nodes/', payload);
         setStatus('Nodo "' + payload.node_name + '" registrado en la plataforma.', 'success');
 
     } catch (err) {
@@ -217,5 +224,3 @@ async function provisionViaWifi() {
     }
 }
 
-// Expose globally for navigation hook
-window.initIoTView = initIoTView;

@@ -1,6 +1,12 @@
 import os
 import sys
 import json
+
+# Set dummy environment variables for CI
+os.environ.setdefault("SUPABASE_URL", "http://example.com")
+os.environ.setdefault("SUPABASE_KEY", "dummykey")
+os.environ.setdefault("TEST_USER_EMAIL", "test@example.com")
+os.environ.setdefault("TEST_USER_PASSWORD", "password")
 import httpx
 import jwt
 from dotenv import load_dotenv

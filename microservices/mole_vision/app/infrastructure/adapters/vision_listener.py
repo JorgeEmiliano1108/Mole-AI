@@ -191,14 +191,7 @@ async def _process_image_training(payload: dict, redis_client) -> None:
             },
         )
 
-        # ── Step 3: Hot-swap TFLite model ────────────────────────────
-        new_tflite_path = training_result.get("tflite_path", "")
-        new_labels_path = training_result.get("labels_path", "")
-
-        if new_tflite_path:
-            _hot_swap_model(new_tflite_path, new_labels_path)
-
-        # ── Step 4: Publish INDEXED status ───────────────────────────
+        # ── Step 3: Publish INDEXED status ───────────────────────────
         await _publish_status(
             redis_client,
             record_id=record_id,
@@ -213,7 +206,6 @@ async def _process_image_training(payload: dict, redis_client) -> None:
             "vision_pipeline_success",
             extra={
                 "record_id": record_id,
-                "tflite_path": new_tflite_path,
                 "metrics": training_result.get("metrics"),
             },
         )
@@ -243,49 +235,6 @@ async def _process_image_training(payload: dict, redis_client) -> None:
             import os
             parent_dir = os.path.dirname(dataset_path)
             S3Downloader.cleanup(parent_dir)
-
-
-def _hot_swap_model(tflite_path: str, labels_path: str) -> None:
-    """
-    Hot-swap the TFLite model in the running FastAPI process.
-
-    This replaces the singleton vision adapter in dependencies.py
-    without requiring a container restart.
-    """
-    try:
-        from app.infrastructure.adapters.tflite_adapter import TFLiteVisionAdapter, TFLITE_AVAILABLE
-        import app.api.dependencies as deps
-
-        if not TFLITE_AVAILABLE:
-            logger.warning("tflite_not_available_for_hotswap")
-            return
-
-        # Create new adapter with the fine-tuned model
-        new_adapter = TFLiteVisionAdapter(
-            model_path=tflite_path,
-            labels_path=labels_path if labels_path else None,
-        )
-
-        if new_adapter.is_ready():
-            # Atomic swap of the singleton
-            old_adapter = deps._vision_adapter
-            deps._vision_adapter = new_adapter
-            logger.info(
-                "model_hot_swapped",
-                extra={
-                    "new_model": tflite_path,
-                    "new_labels": labels_path,
-                    "old_model": getattr(old_adapter, "model_path", "unknown"),
-                },
-            )
-        else:
-            logger.error("new_model_not_ready", extra={"path": tflite_path})
-
-    except Exception as e:
-        logger.error(
-            "hot_swap_failed",
-            extra={"tflite_path": tflite_path, "error": str(e)},
-        )
 
 
 async def _publish_status(

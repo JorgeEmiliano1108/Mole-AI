@@ -14,7 +14,8 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_system.h"
-#include "esp_http_client.h"
+#include "cJSON.h"
+#include "mole_config.h"
 
 /* NimBLE Includes */
 #include "nimble/nimble_port.h"
@@ -76,7 +77,7 @@ static void generate_and_store_ltk(void)
     }
 
     nvs_handle_t nvs_handle;
-    esp_err_t err = nvs_open("mole", NVS_READWRITE, &nvs_handle);
+    esp_err_t err = nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
     if (err == ESP_OK) {
         nvs_set_blob(nvs_handle, "ltk", ltk, sizeof(ltk));
         nvs_commit(nvs_handle);
@@ -102,17 +103,40 @@ static int gatt_chr_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                 buf[len] = '\0';
                 ESP_LOGI(BLE_TAG, "BLE write received (%d bytes)", len);
 
-                // Store the payload in NVS
-                nvs_handle_t nvs_handle;
-                if (nvs_open("mole", NVS_READWRITE, &nvs_handle) == ESP_OK) {
-                    nvs_set_str(nvs_handle, "ble_prov_payload", buf);
-                    nvs_commit(nvs_handle);
-                    nvs_close(nvs_handle);
+                /* Parse JSON payload — expected format:
+                 * {"ssid":"...","pass":"...","token":"...","interval":5}
+                 */
+                cJSON *root = cJSON_Parse(buf);
+                if (root) {
+                    nvs_handle_t nvs_handle;
+                    if (nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle) == ESP_OK) {
+                        cJSON *ssid     = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_SSID);
+                        cJSON *pass     = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_PASS);
+                        cJSON *token    = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_TOKEN);
+                        cJSON *interval = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_INTERVAL);
+
+                        if (ssid     && cJSON_IsString(ssid)     && ssid->valuestring)
+                            nvs_set_str(nvs_handle, "wifi_ssid", ssid->valuestring);
+                        if (pass     && cJSON_IsString(pass)     && pass->valuestring)
+                            nvs_set_str(nvs_handle, "wifi_pass", pass->valuestring);
+                        if (token    && cJSON_IsString(token)    && token->valuestring)
+                            nvs_set_str(nvs_handle, MOLE_NVS_KEY_TOKEN, token->valuestring);
+                        if (interval && cJSON_IsNumber(interval))
+                            nvs_set_u32(nvs_handle, "telemetry_int",
+                                        (uint32_t)interval->valuedouble);
+
+                        nvs_commit(nvs_handle);
+                        nvs_close(nvs_handle);
+                        ESP_LOGI(BLE_TAG, "BLE credentials saved to NVS");
+                    }
+                    cJSON_Delete(root);
+                } else {
+                    ESP_LOGE(BLE_TAG, "Invalid BLE provisioning JSON: %s", buf);
                 }
 
                 free(buf);
 
-                // Generate LTK and signal main task
+                /* Signal main task (triggers reboot from start_captive_portal) */
                 generate_and_store_ltk();
                 if (g_provision_sem) {
                     xSemaphoreGive(g_provision_sem);

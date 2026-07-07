@@ -33,6 +33,14 @@ esp_err_t sensor_soil_init(adc_oneshot_unit_handle_t adc_handle, int adc_channel
  */
 esp_err_t sensor_soil_read(sensor_soil_handle_t handle, float *moisture_pct);
 
+/**
+ * @brief Read raw ADC value (0–4095) for edge-batch payload.
+ *
+ * Use this when sending data to POST /api/v1/sensor-data/edge-batch/
+ * which expects raw ADC values in s[].v.
+ */
+esp_err_t sensor_soil_read_raw(sensor_soil_handle_t handle, int *adc_raw);
+
 #ifdef __cplusplus
 }
 #endif

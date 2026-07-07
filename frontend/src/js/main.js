@@ -1,39 +1,38 @@
 import '../css/themes/pip-boy.css';
 import '../css/main.css';
 import './auth.js';
-import './modules/ui/theme.js';
-import './modules/ui/navigation.js';
-import './typewriter.ts'; // Typewriter effect - auto init on DOMContentLoaded
-import * as userDashboard from './modules/auth/userDashboard.js';
-import * as adminDashboard from './modules/auth/adminDashboard.js';
+import { forgotPassword } from './auth.js';
+import { toggleTheme } from './modules/ui/theme.js';
+import { registerLazyLoader, switchFieldView } from './modules/ui/navigation.js';
+import './typewriter.js'; // Typewriter effect - auto init on DOMContentLoaded
+import * as userDashboard from './modules/dashboard/userDashboard.js';
+import * as adminDashboard from './modules/dashboard/adminDashboard.js';
 import * as i18n from './modules/ui/i18n.js';
-import * as dom from './modules/ui/dom.js';
+import { el, safeRender, safeEmpty } from './modules/ui/dom.js';
 import * as history from './modules/ui/history.js';
 import * as menus from './modules/ui/menus.js';
 import * as security from './modules/ui/security.js';
 import * as memory from './modules/ui/memory.js';
 import * as iot from './modules/ui/iot.js';
-import { initIoTView } from './modules/services/iot.js';
 import { initBindingsPanel, deleteBinding } from './modules/services/bindings.js';
-import * as config from './modules/api/config.js';
 import * as mlops from './modules/services/mlops.js';
 import * as vision from './modules/services/vision.js';
-import * as privacy from './modules/ui/privacy.js';
-import * as reports from './modules/services/reports.js';
 import * as chat from './modules/services/chat.js';
 import * as supervisor from './modules/services/supervisor.js';
 import * as crops from './modules/services/crops.js';
-import * as map from './modules/services/map.js';
 import * as tactical from './modules/ui/tactical.js';
-import './modules/sessionManager.js';
-import { attachCursor } from './modules/ui/cursor';
-import { loadWiki } from './modules/services/wiki.js';
-import { initHealthView, setDeviceId as setHealthDeviceId, pausePolling, resumePolling } from './modules/services/health.js';
-window.loadWiki = loadWiki;
-window.initIoTView = initIoTView;
-window.setHealthDeviceId = setHealthDeviceId;
+import './modules/auth/sessionManager.js';
+import './modules/dashboard/sre.js';
+import { showSuggestedActions } from './modules/ui/chatWidget.js';
+import { attachCursor } from './modules/ui/cursor.js';
+import { apiService } from './modules/api/ApiService.js';
+import { initHealthView, pausePolling, resumePolling } from './modules/services/health.js';
+
+// Register lazy-loaded modules for navigation.js (avoids layer violation ui -> services)
+registerLazyLoader('view-mapa', () => import('./modules/services/map.js'));
 
 // -- FE-02: Global State Singleton (session-scoped cache) --
+// GLOBAL: Estado compartido cross-módulo (wiki.js, health.js) — migrar en FE-DT17
 window.MoleState = window.MoleState || {
     speciesCatalog: [],       // Populated once on login, read locally by wiki/health
     speciesCatalogLoaded: false,
@@ -43,7 +42,7 @@ window.MoleState = window.MoleState || {
 
 async function _fetchSpeciesCatalog() {
     try {
-        const data = await window.ApiService.get('plants/species/');
+        const data = await apiService.get('plants/species/');
         window.MoleState.speciesCatalog = Array.isArray(data) ? data : (data.results || []);
         window.MoleState.speciesCatalogLoaded = true;
     } catch (e) {
@@ -70,11 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token) loadSpeciesCatalog();
 });
 
-// Safety check: Wait for global apiService to be loaded
-if (!window.moleApi) {
-    console.warn("[Main] Waiting for apiService.js to load...");
-}
-
 // --- ROUTE GUARD: Protect against BFCache and unauthorized access ---
 function checkAuthGuard() {
     // 1. Check if we are in a protected page
@@ -86,7 +80,7 @@ function checkAuthGuard() {
     }
 
     // 2. Check for token and role
-    const token = window.getAuthToken ? window.getAuthToken() : null;
+    const token = getAuthToken();
     const role = localStorage.getItem('moleia_user_role');
 
     if (!token && !role) {
@@ -103,7 +97,7 @@ function checkAuthGuard() {
             const payload = JSON.parse(atob(token.split('.')[1]));
             if (payload.exp && (Date.now() / 1000) > payload.exp) {
                 console.warn('[Route Guard] Token expired, clearing session...');
-                if (window.clearAuthToken) window.clearAuthToken();
+                clearAuthToken();
                 localStorage.removeItem('moleia_user_role');
                 window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
                 window.location.replace('/index.html');
@@ -111,7 +105,7 @@ function checkAuthGuard() {
             }
         } catch (e) {
             console.warn('[Route Guard] Failed to decode token, treating as invalid:', e.message);
-            if (window.clearAuthToken) window.clearAuthToken();
+            clearAuthToken();
             localStorage.removeItem('moleia_user_role');
             window.dispatchEvent(new CustomEvent('userRoleReady', { detail: { role: 'guest' } }));
             window.location.replace('/index.html');
@@ -149,14 +143,7 @@ if (document.readyState === 'loading') {
 // 0. EXPOSE GLOBAL FUNCTIONS TO WINDOW (for inline HTML handlers)
 // ==========================================================
 // Import JWT helpers from config and expose to window
-import { getAuthToken, setAuthToken, clearAuthToken } from './modules/api/config.js';
-window.getAuthToken = getAuthToken;
-window.setAuthToken = setAuthToken;
-window.clearAuthToken = clearAuthToken;
-
-// Import updatePlant from crops and expose to window
-import { updatePlant as doUpdatePlant } from './modules/services/crops.js';
-window.updatePlant = doUpdatePlant;
+import { getAuthToken, clearAuthToken } from './modules/api/config.js';
 
 // ==========================================================
 // 0. CONFIGURACI N ESTRUCTURAL (M DULOS E IDIOMAS)
@@ -290,8 +277,6 @@ function typeContent(section) {
     }, 20);
 }
 
-// Ensure typeContent is accessible from inline handlers
-window.typeContent = typeContent;
 
 // Small compatibility shims for UI buttons - now using physical navigation
 function openUserCreationModal() {
@@ -363,7 +348,7 @@ async function submitRegistration() {
     }
 
     try {
-        const response = await window.moleApi.post('auth/register/', {
+        const response = await apiService.post('auth/register/', {
             username: user,
             email: email,
             password: pass
@@ -392,7 +377,7 @@ async function attemptLogin() {
     errorMsg.classList.add('hidden');
 
     try {
-        const userData = await window.moleApi.post('auth/login/', {
+        const userData = await apiService.post('auth/login/', {
             username: user,
             password: pass
         });
@@ -402,7 +387,7 @@ async function attemptLogin() {
         const username = userData.username || user; // 2. Get username
 
         if (token) {
-            await window.moleApi.setToken(token);
+            await apiService.setToken(token);
 
             // 3. Save data to localStorage for UI consistency
             if (role) {
@@ -431,7 +416,7 @@ async function attemptLogin() {
 // --- CIERRE DE SESI N ---
 function logout() {
     // 1. Limpiar tokens (backend + cliente)
-    try { window.clearAuthToken(); } catch (e) { if (window.moleApi && typeof window.moleApi.clearToken === 'function') window.moleApi.clearToken(); }
+    try { clearAuthToken(); } catch (e) { if (typeof apiService.clearToken === 'function') apiService.clearToken(); }
 
     // 2. Limpiar TODAS las llaves de sesi n (Zero-Trust)
     localStorage.removeItem('moleia_current_user');
@@ -442,8 +427,8 @@ function logout() {
 
     // 3. Limpiar intervalos y listeners
     if (typeof detachChatListener === 'function') detachChatListener();
-    if (window.monitorInterval) clearInterval(window.monitorInterval);
-    if (window.clockInterval) clearInterval(window.clockInterval);
+    if (window.monitorInterval) clearInterval(window.monitorInterval); // GLOBAL: shared con memory.js — migrar en FE-DT17
+    if (clockInterval) clearInterval(clockInterval);
     if (typeof typeInterval !== 'undefined') clearInterval(typeInterval);
 
     console.log("> SESI\u00d3N CERRADA: Memoria purgada y procesos detenidos.");
@@ -544,7 +529,7 @@ function updateClock() {
 // Inicia el reloj de inmediato para no esperar el primer segundo
 updateClock();
 // Configura el intervalo para que se actualice cada 1000 milisegundos (1 segundo)
-window.clockInterval = setInterval(updateClock, 1000);
+const clockInterval = setInterval(updateClock, 1000);
 
 //    ISSUE-04 / FE-10: Health Polling now orchestrated by userRoleReady event in health.js   
 // Removed direct call to initHealthView() from main.js to avoid Race Conditions.
@@ -674,6 +659,7 @@ function closeIotAndShowPlantBtn() {
 // ==========================================================
 
 // Variable para guardar el intervalo del monitor y poder detenerlo despu s
+// GLOBAL: Shared state entre main.js y memory.js para limpieza de sesión — migrar en FE-DT17
 window.monitorInterval = null;
 
 function registerNewPlant() {
@@ -723,9 +709,7 @@ function handleSwitchField(target) {
     if (typeof pausePolling === 'function') pausePolling();
 
     // Delegate to navigation.js
-    if (typeof window.switchFieldView === 'function') {
-        window.switchFieldView(viewId);
-    }
+    switchFieldView(viewId);
 
     // Resume health polling only when monitoreo is active
     if (viewId === 'view-monitoreo' && typeof resumePolling === 'function') {
@@ -793,7 +777,7 @@ const ActionMap = {
     'auth:register': () => submitRegistration(),
     'nav:toggle-register': () => toggleAuthForm('register'),
     'nav:toggle-login': () => toggleAuthForm('login'),
-    'auth:forgot': () => typeof forgotPassword === 'function' && forgotPassword(),
+    'auth:forgot': () => forgotPassword(),
 
     'mlops:train-rag': () => typeof trainRagModel === 'function' && trainRagModel(),
     'admin:create-operator': () => openUserCreationModal(),
@@ -804,21 +788,42 @@ const ActionMap = {
     'iot:finalize': () => closeIotAndShowPlantBtn(),
     'report:download': (target) => handleReportDownload(target),
     'menu:toggle-cultivos': () => toggleCultivosMenu(),
-    'chat:new': () => typeof chat !== 'undefined' && chat.clearChatHistory ? chat.clearChatHistory() : console.warn("Modulo de chat no cargado."),
+    'chat:new': () => {
+        if (typeof chat !== 'undefined' && chat.clearChatHistory) chat.clearChatHistory();
+        showSuggestedActions();
+    },
     'chat:history': () => {
         const toast = document.getElementById('toast-container');
         if (toast) {
-            toast.innerHTML = `<div class="bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse"><p class="text-mole-cyan font-mono text-[11px] uppercase tracking-widest">&gt; HISTORIAL (EN CONSTRUCCION)</p></div>`;
-            setTimeout(() => toast.innerHTML = '', 3000);
+            safeRender(toast,
+                el('div', { className: 'bg-mole-surface border-l-4 border-mole-cyan p-3 shadow-cyber mb-2 animate-pulse' },
+                    el('p', { className: 'text-mole-cyan font-mono text-[11px] uppercase tracking-widest' },
+                        '> HISTORIAL (EN CONSTRUCCION)'
+                    )
+                )
+            );
+            setTimeout(() => safeEmpty(toast), 3000);
         }
     },
 
     // -- FE-01: Orphan action handlers --
     'switch-field': (target) => handleSwitchField(target),
     'toggle-dropdown': (target) => handleToggleDropdown(target),
-    'toggle-theme': () => typeof window.toggleTheme === 'function' && window.toggleTheme(),
-    'open-chat': () => typeof chat !== 'undefined' && chat.openChat ? chat.openChat() : (typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null),
-    'close-chat': () => typeof chat !== 'undefined' && chat.closeChat ? chat.closeChat() : (typeof chat !== 'undefined' && chat.toggleChat ? chat.toggleChat() : null),
+    'toggle-theme': () => toggleTheme(),
+    'chat:suggest': (target) => {
+        const msg = target.getAttribute('data-msg');
+        const mode = target.getAttribute('data-mode');
+        if (mode === 'wiki') {
+            const chatWin = document.getElementById('chat-window');
+            if (chatWin) chatWin.style.transform = 'translateX(100%)';
+            const wikiBtn = document.querySelector('[data-action="switch-field"][data-target="view-wiki"]');
+            if (wikiBtn) wikiBtn.click();
+            return;
+        }
+        if (msg && typeof chat !== 'undefined' && chat.sendChatMessage) chat.sendChatMessage(msg, null);
+    },
+    'open-chat': () => { if (typeof chat !== 'undefined' && chat.openChat) chat.openChat(); },
+    'close-chat': () => { if (typeof chat !== 'undefined' && chat.closeChat) chat.closeChat(); },
     'close-module': (target) => handleCloseModule(target),
     'hide-panel': (target) => {
         const panelId = target.getAttribute('data-target');
@@ -937,7 +942,7 @@ function loadFloraSearch() {
     // ---- Zero state helper -------------------------------------------------
     function renderZeroState(container) {
         const suggestions = ['Nopal', 'Agave Tequilana', 'Ma\u00edz', 'Cacao', 'Vainilla'];
-        container.innerHTML = '';
+        safeEmpty(container);
         const chipContainer = document.createElement('div');
         chipContainer.className = 'flex flex-wrap gap-2 p-2';
         suggestions.forEach(text => {
@@ -1020,7 +1025,7 @@ async function searchPlant(query) {
 
     try {
         floraSearchAbortController = new AbortController();
-        const data = await window.moleApi.get('plants/search/?q=' + encodeURIComponent(query), {}, { signal: floraSearchAbortController.signal });
+        const data = await apiService.get('plants/search/?q=' + encodeURIComponent(query), {}, { signal: floraSearchAbortController.signal });
         const results = Array.isArray(data) ? data : (data.results || []);
 
         renderPlantResults(results);
@@ -1149,7 +1154,7 @@ function renderPlantResults(results) {
                 eImage.alt = name + ' - imagen bot\u00e1nica';
                 eImage.onerror = function () {
                     this.onerror = null; // evitar loop infinito
-                    this.src = '/static/assets/topo.png';
+                    this.src = '/assets/topo.png';
                     this.alt = 'Sin imagen disponible';
                 };
                 card.appendChild(eImage);
@@ -1238,7 +1243,6 @@ function renderPlantResults(results) {
 Object.assign(window, userDashboard);
 Object.assign(window, adminDashboard);
 Object.assign(window, i18n);
-Object.assign(window, dom);
 Object.assign(window, history);
 Object.assign(window, menus);
 Object.assign(window, security);
@@ -1247,18 +1251,9 @@ Object.assign(window, iot);
 Object.assign(window, config);
 Object.assign(window, mlops);
 Object.assign(window, vision);
-Object.assign(window, reports);
 Object.assign(window, chat);
 Object.assign(window, supervisor);
 Object.assign(window, crops);
-Object.assign(window, map);
 Object.assign(window, tactical);
 
-//    Wire ApiService.showToast to Tactical Toast                           
-// This replaces the legacy CSS-dependent toast with our design-system-native one.
-if (window.ApiService) {
-    window.ApiService.showToast = function (message, type) {
-        const typeMap = { error: 'error', warn: 'warn', info: 'info', success: 'success' };
-        window.showTacticalToast(message, typeMap[type] || 'info');
-    };
-}
+

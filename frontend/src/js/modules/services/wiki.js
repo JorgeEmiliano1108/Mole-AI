@@ -1,6 +1,79 @@
-// ==========================================================
-// Wiki Tactica -- SpeciesCatalog browser with MoleState cache
-// ==========================================================
+import { el, safeRender } from '../ui/dom.js';
+import { apiService } from '../api/ApiService.js';
+
+const WIKI_CATEGORY_BADGE = { planta: 'PLANTA', plaga: 'PLAGA', enfermedad: 'ENFERMEDAD' };
+const WIKI_CATEGORY_COLOR = { planta: 'border-mole-green', plaga: 'border-mole-amber', enfermedad: 'border-mole-red' };
+
+function renderWikiCard(item) {
+    const name = item.common_name || item.nombre || item.scientific_name || '';
+    const sciName = item.scientific_name || item.nombre_cientifico || '';
+    const desc = item.description || item.descripcion || '';
+    const cat = item.category || 'planta';
+    const imgSrc = (item.image_url && item.image_url !== 'undefined') ? item.image_url : '/assets/topo.png';
+    const catBadge = WIKI_CATEGORY_BADGE[cat] || 'ESPECIE';
+    const catBorder = WIKI_CATEGORY_COLOR[cat] || 'border-mole-cyan';
+    const itemId = String(item.id || '').slice(0, 8).toUpperCase();
+
+    const badges = [];
+    if (item.is_protected_nom059) {
+        badges.push(
+            el('span', { className: 'px-2 py-0.5 bg-mole-red/20 text-mole-red text-[9px] border border-mole-red/40 font-bold' }, 'NOM-059')
+        );
+    }
+
+    const humBadgeText = item.ideal_humidity_min != null
+        ? `H: ${item.ideal_humidity_min}-${item.ideal_humidity_max}%`
+        : (item.humedad ? `H: ${item.humedad}` : null);
+    const tempBadgeText = item.ideal_temp_min != null
+        ? `T: ${item.ideal_temp_min}-${item.ideal_temp_max} C`
+        : (item.temperatura ? `T: ${item.temperatura}` : null);
+    const phBadgeText = item.ideal_ph_min != null
+        ? `pH: ${item.ideal_ph_min}-${item.ideal_ph_max}`
+        : (item.ph ? `pH: ${item.ph}` : null);
+
+    const humBadgeEl = humBadgeText ? el('span', { className: 'px-2 py-0.5 bg-sky-900/50 text-sky-400 text-[9px] border border-sky-700/50 font-mono' }, humBadgeText) : null;
+    const tempBadgeEl = tempBadgeText ? el('span', { className: 'px-2 py-0.5 bg-orange-900/50 text-orange-400 text-[9px] border border-orange-700/50 font-mono' }, tempBadgeText) : null;
+    const phBadgeEl = phBadgeText ? el('span', { className: 'px-2 py-0.5 bg-mole-surface/80 text-mole-cyan text-[9px] border border-mole-border font-mono' }, phBadgeText) : null;
+
+    const overlayBadges = [humBadgeEl, tempBadgeEl, phBadgeEl].filter(Boolean);
+    if (item.is_protected_nom059) {
+        overlayBadges.push(
+            el('span', { className: 'px-2 py-0.5 bg-mole-red/20 text-mole-red text-[9px] border border-mole-red/40' }, 'NOM-059')
+        );
+    }
+
+    const img = el('img', {
+        src: imgSrc,
+        alt: name,
+        className: 'w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-100 group-hover:scale-105',
+        onerror: "this.onerror=null; this.src='/assets/topo.png';"
+    });
+
+    return el('div', {
+        className: `group relative overflow-hidden bg-mole-surface border ${catBorder}/40 hover:${catBorder} rounded-lg cursor-pointer transition-all duration-300 hover:shadow-cyber`
+    },
+        el('div', { className: 'h-44 overflow-hidden bg-mole-bg flex items-center justify-center' }, img),
+        el('div', { className: 'p-3' },
+            el('p', { className: 'text-[10px] text-mole-dim font-mono mb-1' },
+                catBadge,
+                ...badges
+            ),
+            el('h3', { className: 'text-mole-cyan font-bold text-sm truncate' }, name),
+            el('p', { className: 'text-mole-green font-mono text-xs italic truncate' }, sciName)
+        ),
+        el('div', {
+            className: `absolute inset-0 bg-black/90 backdrop-blur-sm p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between border-2 ${catBorder}`
+        },
+            el('div', {},
+                el('p', { className: 'text-[10px] text-mole-cyan font-mono mb-1 opacity-60' }, `DATA_SHEET // ${itemId}`),
+                el('h4', { className: 'text-white text-sm font-bold mb-1' }, name),
+                el('p', { className: 'text-mole-text-dim text-[10px] italic mb-3' }, sciName),
+                el('p', { className: 'text-mole-text-dim text-[10px] leading-relaxed line-clamp-4' }, desc || 'Sin descripcion disponible.')
+            ),
+            el('div', { className: 'flex flex-wrap gap-1.5 mt-3' }, ...overlayBadges)
+        )
+    );
+}
 
 let _wikiDebounceTimer = null;
 
@@ -55,7 +128,9 @@ async function fetchAndRender() {
     // PATCH-01: Await species cache before filtering locally
     if (window.MoleState && typeof window.MoleState.ensureSpeciesLoaded === 'function') {
         if (!window.MoleState.speciesCatalogLoaded) {
-            grid.innerHTML = '<p class="text-mole-cyan animate-pulse font-mono text-xs col-span-full">CARGANDO CATALOGO...</p>';
+            safeRender(grid,
+                el('p', { className: 'text-mole-cyan animate-pulse font-mono text-xs col-span-full' }, 'CARGANDO CATALOGO...')
+            );
         }
         await window.MoleState.ensureSpeciesLoaded();
     }
@@ -86,20 +161,26 @@ async function fetchAndRender() {
 
     // Fallback: fetch from API (first load or if MoleState not ready)
     if (!query && !category) {
-        grid.innerHTML = '<p class="text-mole-dim font-mono text-sm col-span-full text-center mt-10 opacity-50">> INGRESA UN TERMINO O SELECCIONA UNA CATEGORIA</p>';
+        safeRender(grid,
+            el('p', { className: 'text-mole-dim font-mono text-sm col-span-full text-center mt-10 opacity-50' },
+                '> INGRESA UN TERMINO O SELECCIONA UNA CATEGORIA'
+            )
+        );
         if (countEl) countEl.classList.add('hidden');
         return;
     }
 
     if (loading) loading.classList.remove('hidden');
-    grid.innerHTML = '<p class="text-mole-cyan animate-pulse font-mono text-xs col-span-full">ESCANEANDO BASE DE DATOS...</p>';
+    safeRender(grid,
+        el('p', { className: 'text-mole-cyan animate-pulse font-mono text-xs col-span-full' }, 'ESCANEANDO BASE DE DATOS...')
+    );
 
     try {
         const params = new URLSearchParams();
         if (query)    params.set('q', query);
         if (category) params.set('category', category);
 
-        const data = await window.ApiService.get(`plants/search/?${params.toString()}`);
+        const data = await apiService.get(`plants/search/?${params.toString()}`);
         const list = Array.isArray(data) ? data : [];
         renderWikiCards(list);
 
@@ -109,7 +190,9 @@ async function fetchAndRender() {
         }
     } catch (e) {
         console.error('[Wiki] Error al buscar:', e);
-        grid.innerHTML = '<p class="text-mole-red font-mono text-xs col-span-full">ERROR DE SINCRONIZACION. Intente nuevamente.</p>';
+        safeRender(grid,
+            el('p', { className: 'text-mole-red font-mono text-xs col-span-full' }, 'ERROR DE SINCRONIZACION. Intente nuevamente.')
+        );
     } finally {
         if (loading) loading.classList.add('hidden');
     }
@@ -147,12 +230,16 @@ function showHistoryDropdown() {
         return;
     }
     
-    dropdown.innerHTML = history.map(item => 
-        `<div class="wiki-history-item px-4 py-2 hover:bg-mole-cyan hover:text-mole-base text-mole-cyan text-xs font-mono cursor-pointer transition-colors border-b border-mole-border last:border-0" data-query="${item}">
-            <svg class="w-3 h-3 inline-block mr-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            ${item}
-        </div>`
-    ).join('');
+    const fragment = document.createDocumentFragment();
+    history.forEach(function(hItem) {
+        const div = document.createElement('div');
+        div.className = 'wiki-history-item px-4 py-2 hover:bg-mole-cyan hover:text-mole-base text-mole-cyan text-xs font-mono cursor-pointer transition-colors border-b border-mole-border last:border-0';
+        div.setAttribute('data-query', hItem);
+        div.textContent = hItem;
+        fragment.appendChild(div);
+    });
+    safeRender(dropdown);
+    dropdown.appendChild(fragment);
     
     dropdown.querySelectorAll('.wiki-history-item').forEach(el => {
         el.addEventListener('click', (e) => {
@@ -178,69 +265,13 @@ function renderWikiCards(list) {
     if (!grid) return;
 
     if (!list.length) {
-        grid.innerHTML = '<p class="text-mole-dim font-mono text-sm col-span-full text-center mt-10 opacity-60">[ SIN RESULTADOS ]</p>';
+        safeRender(grid,
+            el('p', { className: 'text-mole-dim font-mono text-sm col-span-full text-center mt-10 opacity-60' },
+                '[ SIN RESULTADOS ]'
+            )
+        );
         return;
     }
 
-    const categoryBadge = { planta: 'PLANTA', plaga: 'PLAGA', enfermedad: 'ENFERMEDAD' };
-    const categoryColor = { planta: 'border-mole-green', plaga: 'border-mole-amber', enfermedad: 'border-mole-red' };
-
-    grid.innerHTML = list.map(item => {
-        // Normalize keys (MoleState uses model fields, API search uses transformed keys)
-        const name       = item.common_name || item.nombre || item.scientific_name || '';
-        const sciName    = item.scientific_name || item.nombre_cientifico || '';
-        const desc       = item.description || item.descripcion || '';
-        const cat        = item.category || 'planta';
-        const imgSrc     = (item.image_url && item.image_url !== 'undefined') ? item.image_url : '/static/assets/topo.png';
-        const catBadge   = categoryBadge[cat] || 'ESPECIE';
-        const catBorder  = categoryColor[cat] || 'border-mole-cyan';
-        const itemId     = String(item.id || '').slice(0, 8).toUpperCase();
-
-        // NOM-059 badge
-        const nomBadge = item.is_protected_nom059
-            ? `<span class="px-2 py-0.5 bg-mole-red/20 text-mole-red text-[9px] border border-mole-red/40 font-bold">NOM-059</span>`
-            : '';
-
-        // Ideal range badges (from MoleState model fields)
-        const humBadge = (item.ideal_humidity_min != null)
-            ? `<span class="px-2 py-0.5 bg-sky-900/50 text-sky-400 text-[9px] border border-sky-700/50 font-mono">H: ${item.ideal_humidity_min}-${item.ideal_humidity_max}%</span>`
-            : (item.humedad ? `<span class="px-2 py-0.5 bg-sky-900/50 text-sky-400 text-[9px] border border-sky-700/50 font-mono">H: ${item.humedad}</span>` : '');
-
-        const tempBadge = (item.ideal_temp_min != null)
-            ? `<span class="px-2 py-0.5 bg-orange-900/50 text-orange-400 text-[9px] border border-orange-700/50 font-mono">T: ${item.ideal_temp_min}-${item.ideal_temp_max} C</span>`
-            : (item.temperatura ? `<span class="px-2 py-0.5 bg-orange-900/50 text-orange-400 text-[9px] border border-orange-700/50 font-mono">T: ${item.temperatura}</span>` : '');
-
-        const phBadge = (item.ideal_ph_min != null)
-            ? `<span class="px-2 py-0.5 bg-mole-surface/80 text-mole-cyan text-[9px] border border-mole-border font-mono">pH: ${item.ideal_ph_min}-${item.ideal_ph_max}</span>`
-            : (item.ph ? `<span class="px-2 py-0.5 bg-mole-surface/80 text-mole-cyan text-[9px] border border-mole-border font-mono">pH: ${item.ph}</span>` : '');
-
-        return `
-        <div class="group relative overflow-hidden bg-mole-surface border ${catBorder}/40 hover:${catBorder} rounded-lg cursor-pointer transition-all duration-300 hover:shadow-cyber">
-            <div class="h-44 overflow-hidden bg-mole-bg flex items-center justify-center">
-                <img
-                    src="${imgSrc}"
-                    alt="${name}"
-                    class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500 scale-100 group-hover:scale-105"
-                    onerror="this.onerror=null; this.src='/static/assets/topo.png';"
-                >
-            </div>
-            <div class="p-3">
-                <p class="text-[10px] text-mole-dim font-mono mb-1">${catBadge} ${nomBadge}</p>
-                <h3 class="text-mole-cyan font-bold text-sm truncate">${name}</h3>
-                <p class="text-mole-green font-mono text-xs italic truncate">${sciName}</p>
-            </div>
-            <div class="absolute inset-0 bg-black/90 backdrop-blur-sm p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between border-2 ${catBorder}">
-                <div>
-                    <p class="text-[10px] text-mole-cyan font-mono mb-1 opacity-60">DATA_SHEET // ${itemId}</p>
-                    <h4 class="text-white text-sm font-bold mb-1">${name}</h4>
-                    <p class="text-mole-text-dim text-[10px] italic mb-3">${sciName}</p>
-                    <p class="text-mole-text-dim text-[10px] leading-relaxed line-clamp-4">${desc || 'Sin descripcion disponible.'}</p>
-                </div>
-                <div class="flex flex-wrap gap-1.5 mt-3">
-                    ${humBadge}${tempBadge}${phBadge}
-                    ${item.is_protected_nom059 ? `<span class="px-2 py-0.5 bg-mole-red/20 text-mole-red text-[9px] border border-mole-red/40">NOM-059</span>` : ''}
-                </div>
-            </div>
-        </div>`;
-    }).join('');
+    safeRender(grid, ...list.map(function(item) { return renderWikiCard(item); }));
 }

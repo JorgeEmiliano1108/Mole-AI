@@ -69,5 +69,8 @@ RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
 USER appuser
 EXPOSE 8001
 
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/vision/health')" || exit 1
+
 # Workers dinámicos o estáticos según orquestador
 CMD ["uvicorn", "app.api.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]

@@ -2,6 +2,13 @@
 // 6. SISTEMA DE REPORTES DUALES (ADMIN) [BACKEND READY]
 // ==========================================================
 
+import { jsPDF } from 'jspdf';
+import { getAuthToken } from '../api/config.js';
+
+// --- ESTADO COMPARTIDO PARA EXPORTACIÓN ---
+let systemUserReports = [];
+let systemPlantReports = [];
+
 // --- L GICA DEL MODAL DE CONTACTO (OPERADORES) ---
 export function openContactModal() {
     const modal = document.getElementById('contact-modal');
@@ -44,7 +51,7 @@ export function sendReport() {
         };
 
         try {
-            const token = window.getAuthToken();
+            const token = getAuthToken();
             // Endpoint para reportes de usuarios
             const response = await fetch(`${window.AppConfig.API_BASE_URL}/reports/users`, {
                 method: 'POST',
@@ -84,7 +91,7 @@ async function logPlantIssue(plantName, issueDetails) {
     };
 
     try {
-        const token = window.getAuthToken();
+        const token = getAuthToken();
         // Endpoint para reportes de plantas/sistemas
         await fetch(`${window.AppConfig.API_BASE_URL}/reports/plants`, {
             method: 'POST',
@@ -97,6 +104,9 @@ async function logPlantIssue(plantName, issueDetails) {
         localStorage.setItem('moleia_plant_reports', JSON.stringify(localPlantReports));
     }
 }
+
+// GLOBAL bridge F2: vision.js y chat.js lo consumen vía window — migrar a ES6 import en FE-DT17
+window.logPlantIssue = logPlantIssue;
 
 // --- RENDERIZADO DUAL PARA EL PANEL DE ADMIN ---
 async function renderAdminReports() {
@@ -112,7 +122,7 @@ async function renderAdminReports() {
         plantContainer.appendChild(createNode('div', 'text-center opacity-50 text-xs py-8 animate-pulse', '> DESCARGANDO BIT\u00c1CORA BOT\u00c1NICA...'));
     }
 
-    const token = window.getAuthToken();
+    const token = getAuthToken();
     
     // 1. CARGAR REPORTES DE USUARIOS
     let userReports = [];
@@ -122,7 +132,7 @@ async function renderAdminReports() {
     } catch (e) {
         userReports = JSON.parse(localStorage.getItem('moleia_user_reports')) || [];
     }
-    window.systemUserReports = userReports; // Guardar en global para exportar
+    systemUserReports = userReports;
 
     // 2. CARGAR REPORTES DE PLANTAS
     let plantReports = [];
@@ -132,7 +142,7 @@ async function renderAdminReports() {
     } catch (e) {
         plantReports = JSON.parse(localStorage.getItem('moleia_plant_reports')) || [];
     }
-    window.systemPlantReports = plantReports; // Guardar en global para exportar
+    systemPlantReports = plantReports;
 
     // 3. PINTAR BANDEJA DE USUARIOS
     if(userContainer) {
@@ -175,10 +185,10 @@ export function generateMasterReport(type) {
     let title = "";
 
     if (type === 'usuarios') {
-        targetData = window.systemUserReports || [];
+        targetData = systemUserReports || [];
         title = "REPORTE MAESTRO DE OPERADORES";
     } else if (type === 'plantas') {
-        targetData = window.systemPlantReports || [];
+        targetData = systemPlantReports || [];
         title = "BIT\u00c1CORA DE ANOMAL\u00cdAS BOT\u00c1NICAS";
     }
 
@@ -187,8 +197,6 @@ export function generateMasterReport(type) {
         return;
     }
 
-    // Initialize jsPDF from CDN global
-    const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     // Header

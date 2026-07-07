@@ -2,6 +2,8 @@
 // 9. FLUJO DE MI HUERTO (HISTORIAL Y FAVORITOS) [BACKEND ESTRICTO]
 // ==========================================================
 
+import { getAuthToken } from '../api/config.js';
+
 // Variable para recordar qu  pesta a estamos viendo
 export let currentTab = 'history'; 
 
@@ -47,7 +49,7 @@ async function fetchAndRenderHuerto(tab) {
     container.appendChild(syncing);
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = window.getAuthToken();
+    const token = getAuthToken();
     let dataToRender = [];
 
     try {
@@ -134,7 +136,7 @@ async function saveToFavorites(event) {
     btn.classList.add('animate-pulse');
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = window.getAuthToken();
+    const token = getAuthToken();
 
     // Tomamos los datos de la UI del diagn stico. El backend deber  asignar el ID real.
     const newFavorite = {

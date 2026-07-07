@@ -1,0 +1,9 @@
+reporte_final.pdf
+*.pyc
+__pycache__/
+.venv/
+*.egg-info/
+dist/
+build/
+.env
+*.pdf

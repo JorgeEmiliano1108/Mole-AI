@@ -26,13 +26,15 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
 
 
-# Pydantic v2 model: requires `respuesta`, `sources` and `disclaimer` (bool or text)
+# Pydantic v2 model: requires `respuesta`, `sources`, `disclaimer` and `generated_by`
 class ChatResponse(BaseModel):
     model_config = ConfigDict()
     respuesta: str
     sources: List[SourceMetadata] = []
     # Disclaimer defaults to mandatory COFEPRIS legal text; can be overridden but never empty
     disclaimer: Union[bool, str] = Field(default=COFEPRIS_DISCLAIMER)
+    # Ética IA / Transparencia algorítmica: identify AI-generated content
+    generated_by: str = Field(default="Mole.AI")
 
 
 class EmbeddingRequest(BaseModel):

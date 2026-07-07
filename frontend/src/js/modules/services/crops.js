@@ -2,6 +2,8 @@
 // 7. FUNCIONES PARA NUEVOS USUARIOS Y MODAL DE CULTIVOS [BACKEND ESTRICTO]
 // ==========================================================
 
+import { getAuthToken } from '../api/config.js';
+
 /**
  * ESTADO VAC O: Limpia el dashboard para usuarios sin cultivos.
  */
@@ -105,7 +107,7 @@ async function registerNewPlant() {
     };
 
     try {
-        const token = window.getAuthToken();
+        const token = getAuthToken();
         const response = await fetch(`${window.AppConfig.API_BASE_URL}/user-plants/`, {
             method: 'POST',
             headers: { 

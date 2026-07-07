@@ -5,6 +5,8 @@ Skill 03: Async - usa redis.asyncio
 """
 from typing import Optional
 import json
+import hashlib
+from opentelemetry import trace as ot_trace
 
 # Importamos explícitamente las clases asíncronas para ayudar al linter
 from redis.asyncio import Redis, from_url
@@ -63,7 +65,17 @@ class RedisEventPublisher(EventPublisherPort):
         try:
             client = await self._get_client()
             # Silenciamos el falso positivo del linter
-            await client.publish(channel, json.dumps(event.to_payload()))  # type: ignore
+            payload = event.to_payload()
+            # Obtener trace_id del span activo (no anonimizar)
+            span = ot_trace.get_current_span()
+            trace_id = format(span.get_span_context().trace_id, "032x")
+            payload["trace_id"] = trace_id
+            # anonimizar IDs críticos
+            if "plant_id" in payload:
+                payload["plant_id"] = hashlib.sha256(str(payload["plant_id"]).encode()).hexdigest()
+            if "diagnostic_id" in payload:
+                payload["diagnostic_id"] = hashlib.sha256(str(payload["diagnostic_id"]).encode()).hexdigest()
+            await client.publish(channel, json.dumps(payload))  # type: ignore
             logger.info("event_published", channel=channel, diagnostic_id=diagnostic_id)
         except Exception as e:
             logger.error("redis_publish_failed", error=str(e))
@@ -85,7 +97,15 @@ class RedisEventPublisher(EventPublisherPort):
         try:
             client = await self._get_client()
             # Silenciamos el falso positivo del linter
-            await client.publish(channel, json.dumps(event))  # type: ignore
+            payload = event
+            # Obtener trace_id del span activo (no anonimizar)
+            span = ot_trace.get_current_span()
+            trace_id = format(span.get_span_context().trace_id, "032x")
+            payload["trace_id"] = trace_id
+            # anonimizar plant_id
+            if "plant_id" in payload:
+                payload["plant_id"] = hashlib.sha256(str(payload["plant_id"]).encode()).hexdigest()
+            await client.publish(channel, json.dumps(payload))  # type: ignore
             logger.warning("diagnostic_failed", plant_id=plant_id, error=error)
         except Exception as e:
             logger.error("redis_publish_failed", error=str(e))

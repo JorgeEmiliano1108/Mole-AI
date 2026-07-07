@@ -60,7 +60,8 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 
 ## Vista de componentes (C4 – Nivel 3) – ms2_chat
 - **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo y expone el endpoint `/api/v1/mole-ai/chat`.
-  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs, Redis para coordinación de tareas RAG, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad**.
+  - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs (opcional), Redis para coordinación de tareas RAG, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad**.
+  - **Nota de seguridad**: la ingesta de PDFs (`POST /api/v1/knowledge/ingest-pdf`) procesa el contenido íntegramente en memoria — no escribe a disco. El nombre de archivo es sanitizado para evitar path traversal.
 
 ## Vista de componentes (C4 – Nivel 3) – ms3_reports
 - **Servicio de generación de reportes** – Crea PDFs a partir de datos de sensores bajo demanda, gestiona trabajos asíncronos y provee URLs pre‑firmadas para descarga; expone el endpoint `/api/v1/reports/generate`.
@@ -72,6 +73,13 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 - **AWS S3** es un recurso externo; las credenciales se suministran mediante variables de entorno (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
 - **Celery workers** se escalan de forma independiente (configurable mediante `docker‑compose scale`).
 - **MQTT broker** y **edge_node** operan en la red interna; el broker está expuesto en los puertos configurados en `docker‑compose.yml`.
+
+### Entorno de pruebas E2E
+- Existe un entorno autónomo definido en `infrastructure/docker-compose.e2e.yml` que levanta postgres, redis, minio, un fake NIM (`infrastructure/fake-nim/`) y los 3 microservicios.
+- ms2_chat se construye con `target: production` (sin `--reload`) para evitar el error `SpawnProcess` + `PYTHONPATH` de uvicorn development mode.
+- El orquestador `scripts/run_system_tests.sh` levanta el entorno, ejecuta `scripts/wait-for-services.sh` para health checks, corre los tests en `tests/system/test_*.sh`, y limpia con `docker compose down -v`.
+- `scripts/wait-for-services.sh` verifica health de ms2_chat y ms3_reports; ms1_vision es opcional debido a un error preexistente (`ModuleNotFoundError: opentelemetry` en su Dockerfile).
+- El fake NIM (`infrastructure/fake-nim/server.py`) simula los endpoints `/v1/chat/completions` y `/v1/embeddings` de NVIDIA NIM (dimensión 1024), permitiendo pruebas E2E sin dependencia externa.
 
 ## Cross‑cutting Concepts (arc42 Sección 7)
 - **Seguridad** – TLS en NGINX, JWT con expiración < 30 min, permission classes, anti‑replay y rate‑limit.

@@ -2,6 +2,8 @@
 // 11. FLUJO DE DESCARGA DE REPORTES Y MEN S [BACKEND ESTRICTO]
 // ==========================================================
 
+import { getAuthToken } from '../api/config.js';
+
 export async function downloadReportPDF(reportId, btnElement) {
     if (!btnElement) return;
 
@@ -12,7 +14,7 @@ export async function downloadReportPDF(reportId, btnElement) {
     btnElement.disabled = true;
 
     const currentUser = localStorage.getItem('moleia_current_user') || 'ANONYMOUS';
-    const token = window.getAuthToken();
+    const token = getAuthToken();
 
     try {
         if (!token) throw new Error("Acceso denegado: Se requiere Token de Autenticaci\u00f3n para descargas.");
