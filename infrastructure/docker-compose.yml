@@ -12,12 +12,14 @@ x-logging: &default-logging
 
 services:
   # --- API GATEWAY (Nginx) — Single Ingress Point ---
+  # V2 pivot (web retired): imagen nginx pura + conf montada. Cero Node/pnpm
+  # en el repo (RNF03/RNF04); el admin es Django Admin RBAC (issue 01).
   nginx:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: nginx:1.25-alpine
     container_name: mole_ai_nginx
     logging: *default-logging
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "127.0.0.1:8080:80"
     depends_on:
@@ -25,7 +27,6 @@ services:
         condition: service_healthy
       # Microservices removed: Nginx uses lazy DNS (resolver 127.0.0.11)
       # so it boots independently of ms1/ms2/ms3 availability.
-      # volumes removed — frontend assets baked into image via multi-stage build (Cloud-Native immutable)
     networks:
       - mole_public
       - mole_internal
@@ -43,7 +44,7 @@ services:
       - ../microservices:/microservices:ro
       - ../infrastructure/mosquitto/certs:/app/mqtt_certs # TLS certs for MQTT
       - backend_logs:/app/logs
-      # django_media removed — media now served from Amazon S3
+      # django_media removed — media now served from object storage (S3v4 API)
     env_file:
       - ../.env
     environment:
@@ -164,7 +165,7 @@ services:
     networks:
       - mole_internal
 
-  # --- POSTGRESQL (pgvector) ---
+  # --- POSTGRESQL (pgvector) — base local; credenciales desde DB_* del .env ---
   postgres:
     image: pgvector/pgvector:pg16
     container_name: mole_ai_postgres
@@ -176,11 +177,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: mole_dev
-      POSTGRES_USER: mole
-      POSTGRES_PASSWORD: mole
+      POSTGRES_DB: ${DB_NAME:-mole_dev}
+      POSTGRES_USER: ${DB_USER:-mole}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD debe estar definido en .env}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mole -d mole_dev"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -319,7 +320,8 @@ services:
     environment:
       # Sobrescribimos variables para el entorno Docker
       - EDGE_DB_PATH=/app/data/edge_mole.sqlite3
-      - BACKEND_BATCH_URL=http://django-backend:8000/api/v1/sensor-data/batch/
+      # ADR-0002: ingesta canónica trama edge
+      - EDGE_SYNC_URL=http://django-backend:8000/api/v1/sensor-data/edge-batch/
     depends_on:
       - django-backend
     networks:
@@ -332,6 +334,6 @@ volumes:
   postgres_data:
   prometheus_data:
   backend_logs:
-    # minio_data removed — S3
-    # django_media removed — S3
+    # minio_data removed — object storage externo (ver OBJECT_STORAGE_* en .env)
+    # django_media removed — object storage
 

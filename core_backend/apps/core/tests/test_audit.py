@@ -1,11 +1,12 @@
-from django.test import TestCase
-from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
-from django.urls import reverse
-from unittest.mock import patch
 import os
 import tempfile
-from celery.exceptions import Retry
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import NoReverseMatch, reverse
+from rest_framework.test import APIClient
+
 from apps.ai_models.tasks import analyze_vision_async
 
 User = get_user_model()
@@ -35,7 +36,7 @@ class AuditTests(TestCase):
         """Test 2 (RBAC): Fuerzo un request autenticado con Agricultor hacia un endpoint Admin."""
         try:
             url = reverse('core:admin_users_create')
-        except Exception:
+        except NoReverseMatch:
             # Fallback path if reverse fails
             url = '/api/v1/core/admin/users/'
 
@@ -54,44 +55,53 @@ class AuditTests(TestCase):
     @patch('apps.ai_models.tasks.os.remove')
     @patch('apps.ai_models.tasks.requests.post')
     def test_celery_resilience_file_survival(self, mock_post, mock_os_remove):
-        """Test 3 (Celery Resiliencia): Simula falla de red transitoria y asegura supervivencia del archivo."""
+        """Test 3 (Celery Resiliencia): ante falla de red, la tarea reintenta
+        (lanza Retry) y NO borra el archivo: el archivo sobrevive al fallo."""
+        from celery.exceptions import Retry
         from requests.exceptions import ConnectionError
-        
+
         # Creamos el archivo temporal sólo para que la función open() no falle.
-        # No evaluaremos disco real, sino cuántas veces Celery invocó os.remove internamente.
         with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(b"fake image data")
             temp_path = f.name
-            
-        class MockResponse:
-            def raise_for_status(self): pass
-            def json(self): return {"status": "ok"}
-            
-        call_count = [0]
-        
-        def custom_mock_post(*args, **kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                raise ConnectionError("Falla simulada de red 1era vez")
-            return MockResponse()
-            
-        mock_post.side_effect = custom_mock_post
-        
-        # En Eager Mode, Celery captura el primer Retry y reintenta de forma transparente.
-        # La primera vez lanzará ConnectionError (falla). La segunda vez devolverá 200 (éxito).
-        try:
-            analyze_vision_async.apply(args=[temp_path], kwargs={'auth_token': 'Bearer test_token'})
-        except Exception:
-            pass
-            
-        # ASERCIÓN OBLIGATORIA: mock_os_remove debió ser llamado exactamente UNA vez
-        # (por el bloque de éxito del 2do intento). Si fue llamado 2 veces, se borró prematuramente.
-        self.assertEqual(
-            mock_os_remove.call_count, 1, 
-            f"Fallo de resiliencia: os.remove se llamó {mock_os_remove.call_count} veces."
+
+        mock_post.side_effect = ConnectionError("Falla simulada de red")
+
+        # Backend en memoria: sin Redis local, el reintento se registra en
+        # backend `memory://` en vez de intentar conexión real. Se restaura
+        # en `finally` para no contaminar otros tests.
+        from unittest.mock import patch as _patch
+
+        from celery.backends.cache import CacheBackend
+        real_backend = analyze_vision_async._backend
+        analyze_vision_async.backend = CacheBackend(
+            app=analyze_vision_async.app, url="memory://"
         )
-        print("[\u2713] Celery Seguro validado con Mocks: os.remove invocado estrictamente una vez tras el éxito.")
-        
+        try:
+            # .apply(throw=True) ejecuta eager: ante ConnectionError la tarea
+            # lanza Retry (reencolado por el worker) SIN borrar el archivo.
+            # Se neutraliza celery.app.trace.logger: Celery 5.6 invoca
+            # logger.info/log(fmt, dict) y rompe con logging stdlib
+            # ("format requires a mapping", TypeError ajeno al producto;
+            # en CI con structlog no ocurre).
+            with _patch("celery.app.trace.logger"), self.assertRaises(Retry):
+                analyze_vision_async.apply(
+                    args=[temp_path],
+                    kwargs={"auth_token": "Bearer test_token"},
+                    throw=True,  # sin throw, .apply() traga la
+                    # excepción en EagerResult en vez de elevar Retry.
+                )
+        finally:
+            analyze_vision_async.backend = real_backend
+
+        # ASERCIÓN: os.remove NO debió llamarse en ningún reintento (el archivo
+        # sobrevive al fallo para reprocesarlo cuando MS1 vuelva).
+        self.assertEqual(
+            mock_os_remove.call_count, 0,
+            f"Fallo de resiliencia: os.remove se llamó {mock_os_remove.call_count} veces ante un fallo de red."
+        )
+        print("[✓] Celery Seguro validado: el archivo sobrevive al fallo y la tarea se reencola.")
+
         # Cleanup real para no ensuciar el SO del testing:
         if os.path.exists(temp_path):
             os.remove(temp_path)

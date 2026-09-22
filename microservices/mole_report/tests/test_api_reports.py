@@ -1,15 +1,21 @@
-"""Tests for Reports API endpoints — requires TestClient."""
+"""Tests for Reports API endpoints — requires TestClient.
+
+Rutas con prefijo /api/v1/reports (coherente con nginx + proxy Django,
+issue 11): el TestClient ejerce el mismo path que producción.
+"""
 
 import pytest
 
 pytest.importorskip("fastapi.testclient", reason="Requires FastAPI TestClient")
 
-from fastapi.testclient import TestClient  # noqa: E402
-from unittest.mock import patch  # noqa: E402
-import jwt  # noqa: E402
+from unittest.mock import patch
 
-from app.main import app  # noqa: E402
-from app.config import settings  # noqa: E402
+import jwt
+from app.config import settings
+from app.main import app
+from fastapi.testclient import TestClient
+
+P = "/api/v1/reports"
 
 
 @pytest.fixture
@@ -33,12 +39,12 @@ def test_health_returns_ok(client):
 
 
 def test_generate_no_auth(client):
-    resp = client.post("/generate", json={"date_range_days": 30})
+    resp = client.post(f"{P}/generate", json={"date_range_days": 30})
     assert resp.status_code == 403  # no auth header
 
 
 def test_get_status_no_auth(client):
-    resp = client.get("/abc/status")
+    resp = client.get(f"{P}/abc/status")
     assert resp.status_code == 403
 
 
@@ -48,7 +54,7 @@ def test_get_status_not_found(client, valid_token):
         return_value=None,
     ):
         resp = client.get(
-            "/nonexistent/status",
+            f"{P}/nonexistent/status",
             headers={"Authorization": f"Bearer {valid_token}"},
         )
         assert resp.status_code == 404
@@ -60,7 +66,7 @@ def test_get_status_access_denied(client, valid_token):
         return_value={"hashed_user_id": "other-user", "status": "SUCCESS"},
     ):
         resp = client.get(
-            "/some-job/status",
+            f"{P}/some-job/status",
             headers={"Authorization": f"Bearer {valid_token}"},
         )
         assert resp.status_code == 403
@@ -72,7 +78,7 @@ def test_get_download_not_found(client, valid_token):
         return_value=None,
     ):
         resp = client.get(
-            "/nonexistent/download",
+            f"{P}/nonexistent/download",
             headers={"Authorization": f"Bearer {valid_token}"},
         )
         assert resp.status_code == 404
@@ -87,7 +93,7 @@ def test_get_download_not_ready(client, valid_token):
         },
     ):
         resp = client.get(
-            "/some-job/download",
+            f"{P}/some-job/download",
             headers={"Authorization": f"Bearer {valid_token}"},
         )
         assert resp.status_code == 400

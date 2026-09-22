@@ -1,15 +1,20 @@
 """Refresh endpoint for JWT tokens (20‑minute sliding window)."""
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
+import jwt
 from django.conf import settings
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .infrastructure.local_jwt_auth import LocalJWTAuthentication
-import jwt
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -39,6 +44,7 @@ def refresh_view(request):
         "aud": "authenticated",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=ttl),
         "iat": datetime.now(timezone.utc),
+        "jti": uuid.uuid4().hex,  # B3: cada refresh rota el identificador.
     }
     token = jwt.encode(payload, signing_key, algorithm=signing_alg)
     return Response({"token": token})

@@ -19,6 +19,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 
 from rest_framework.views import APIView
+from rest_framework import authentication
 from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
 from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -40,14 +41,36 @@ def revoke_device_token(request, id):
     """
     Revoca (desactiva) un dispositivo IoT.
     Soft‑delete: marca `is_active=False` sin borrar datos históricos.
+    Solo el dueño o staff (igual que rotate_device_token).
     """
     try:
         device = Device.objects.get(pk=id)
     except Device.DoesNotExist:
         return Response(status=404)
+    user = request.user
+    if not (getattr(user, 'is_staff', False) or device.owner_id == getattr(user, 'id', None)):
+        return Response({"error": "Sin permiso sobre este dispositivo."}, status=403)
     device.is_active = False
     device.save(update_fields=['is_active'])
     return Response(status=204)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def rotate_device_token(request, id):
+    """
+    Rota el Bearer token de un dispositivo (RNF-02).
+    Solo el dueño o staff. El token anterior queda invalidado de inmediato
+    y el nuevo expira en 90 días (`auth_token_expires_at`).
+    """
+    try:
+        device = Device.objects.get(pk=id)
+    except Device.DoesNotExist:
+        return Response(status=404)
+    user = request.user
+    if not (getattr(user, 'is_staff', False) or device.owner_id == getattr(user, 'id', None)):
+        return Response({"error": "Sin permiso sobre este dispositivo."}, status=403)
+    new_token = device.rotate_token()
+    return Response({"auth_token": new_token, "expires_at": device.auth_token_expires_at}, status=200)
 
 # Servicios y Serializers
 from .throttles import LLMChatThrottle, DiagnosticsThrottle, SensorDataThrottle
@@ -57,7 +80,6 @@ from .serializers import (
     FeedbackTicketCreateSerializer, FeedbackTicketResponseSerializer,
     SensorDataPatchSerializer, PlantKnowledgeQuerySerializer
 )
-from apps.ai_models.utils import consultar_phi_vision
 
 # Cliente MoleAI (RAG)
 try:
@@ -72,6 +94,49 @@ logger = logging.getLogger(__name__)
 class HardwareOnlyPermission(BasePermission):
     def has_permission(self, request, view):
         return getattr(request.user, 'is_hardware_device', False)
+
+class DeviceBearerScheme(authentication.BaseAuthentication):
+    """Declara el esquema `Bearer` sin validar (la validación vive en el permiso).
+
+    DRF degrada AuthenticationFailed a 403 cuando ningún autenticador declara
+    header `WWW-Authenticate`. Esta clase solo aporta `authenticate_header()`
+    para que las denegaciones del permiso lleguen como 401. Nunca autentica.
+    """
+
+    def authenticate(self, request):
+        return None
+
+    def authenticate_header(self, request):
+        return 'Bearer'
+
+
+class DeviceBearerPermission(BasePermission):
+    """Trama edge: Bearer por dispositivo (`Device.auth_token`), no llave global.
+
+    La flota ESP32 envía `Authorization: Bearer <auth_token>` (firmware
+    `transport_layer.c`), incompatible con `HardwareAPIKeyAuthentication`
+    (header `X-Hardware-Api-Key` global). Este permiso resuelve el Device,
+    exige `is_active` y token no expirado, y lo adjunta como `request.device`.
+    Sin esto, `AllowAny` dejaba la ingesta abierta (REC-1 / S09).
+    Deniega con 401 (AuthenticationFailed), no 403: el token es credencial.
+    """
+    message = 'Device not found or unauthorized'
+
+    def has_permission(self, request, view):
+        from .models import Device
+        from django.utils import timezone
+        from rest_framework import exceptions
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token:
+            raise exceptions.AuthenticationFailed(self.message)
+        device = Device.objects.filter(auth_token=token, is_active=True).first()
+        if not device:
+            raise exceptions.AuthenticationFailed(self.message)
+        expires_at = getattr(device, 'auth_token_expires_at', None)
+        if expires_at and timezone.now() > expires_at:
+            raise exceptions.AuthenticationFailed(self.message)
+        request.device = device
+        return True
 
 # --- VISTA INDEX ---
 def index_view(request):
@@ -123,6 +188,7 @@ def sensor_data_view(request):
 @api_view(['POST'])
 @authentication_classes([HardwareAPIKeyAuthentication])
 @permission_classes([HardwareOnlyPermission])
+@throttle_classes([SensorDataThrottle])
 def sensor_batch_view(request):
     serializer = SensorBatchSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -151,7 +217,7 @@ def sensor_data_patch_view(request, pk):
         serializer = SensorDataPatchSerializer(log, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"status": "updated"})
+        return Response({"status": "updated", "sensor_log_id": log.pk})
     except SensorLog.DoesNotExist:
         return Response(status=404)
 
@@ -162,16 +228,23 @@ class EdgeNodeIngestView(APIView):
     AmbientReading + SoilReading (1:N relational schema).
 
     Decisions: A1=partial success, A2=ACID, A3=freeze SensorLog, A4=future-only anti-replay.
+    Auth: DeviceBearerPermission (Bearer por dispositivo + expiración).
+    DeviceBearerScheme declara el esquema para que las denegaciones sean 401.
     """
-    permission_classes = [AllowAny]  # Temporal — will use HardwareOnlyPermission in production
+    authentication_classes = [DeviceBearerScheme]
+    permission_classes = [DeviceBearerPermission]
+    throttle_classes = [SensorDataThrottle]
 
     def post(self, request):
-        from .models import Device, HardwareBinding, AmbientReading, SoilReading
         from .serializers import EdgeFrameSerializer
+        from apps.core.services.edge_ingest import ingest_frame
 
-        # ── Auth: resolve Device by Bearer token ────────────────────────
-        auth_header = request.headers.get('Authorization', '').replace('Bearer ', '')
-        device = Device.objects.filter(auth_token=auth_header).first()
+        # ── Auth: Device resuelto por DeviceBearerPermission ───────────────
+        device = getattr(request, 'device', None)
+        if device is None:  # Defensa en profundidad si el permiso se retira
+            from .models import Device as DeviceModel
+            auth_header = request.headers.get('Authorization', '').replace('Bearer ', '')
+            device = DeviceModel.objects.filter(auth_token=auth_header).first()
         if not device or not getattr(device, 'is_active', True):
             return Response({"error": "Device not found or unauthorized"}, status=401)
 
@@ -180,72 +253,114 @@ class EdgeNodeIngestView(APIView):
         if not serializer.is_valid():
             return Response({"error": "Invalid frame", "details": serializer.errors}, status=400)
 
-        v = serializer.validated_data
-        naive_dt = datetime.fromtimestamp(v['ts'])
-        recorded_at = timezone.make_aware(naive_dt)
-        ambient_data = v.get('a')  # Already expanded by serializer
-        soil_items = v.get('s', [])
-
-        soil_mapped = 0
-        orphaned_pins = []
-
-        # ── A2: ACID — entire frame succeeds or rolls back ─────────────
-        with transaction.atomic():
-            # Heartbeat (ISSUE-01)
-            update_fields = {'last_seen': timezone.now(), 'status': 'online'}
-            if v.get('ri'):
-                update_fields['report_interval_minutes'] = v['ri']
-            Device.objects.filter(pk=device.pk).update(**update_fields)
-
-            # Ambient demux
-            if ambient_data:
-                AmbientReading.objects.create(
-                    device=device,
-                    recorded_at=recorded_at,
-                    **ambient_data
-                )
-
-            # Soil demux (A1: partial success — skip unbound pins, report them)
-            if soil_items:
-                bindings_by_pin = {
-                    b.hardware_pin: b
-                    for b in HardwareBinding.objects.filter(device=device)
-                }
-
-                soil_objects = []
-                for item in soil_items:
-                    binding = bindings_by_pin.get(str(item['p']))
-                    if binding:
-                        soil_objects.append(
-                            SoilReading(
-                                binding=binding,
-                                recorded_at=recorded_at,
-                                soil_humidity=item['v']
-                            )
-                        )
-                    else:
-                        orphaned_pins.append(str(item['p']))
-
-                if soil_objects:
-                    SoilReading.objects.bulk_create(soil_objects)
-                    soil_mapped = len(soil_objects)
-
-                if orphaned_pins:
-                    logger.warning(
-                        "EdgeIngest: device=%s orphaned pins: %s",
-                        device.pk, orphaned_pins
-                    )
+        # Lógica compartida (apps/core/services/edge_ingest.py): idéntica
+        # respuesta que antes del refactor (ingesta directa, sin dedupe).
+        result = ingest_frame(device, serializer.validated_data)
 
         return Response({
             "status": "ingested",
-            "ambient": ambient_data is not None,
-            "soil_mapped": soil_mapped,
-            "orphaned_pins": orphaned_pins,
+            "ambient": result["ambient"],
+            "soil_mapped": result["soil_mapped"],
+            "orphaned_pins": result["orphaned_pins"],
+        })
+
+
+class SyncBatchView(APIView):
+    """
+    POST /api/v1/sync/batch/ — Sincronización edge con cursor (MRF03/RNF06).
+
+    JSON-RPC 2.0 estricto sobre el mismo auth DeviceBearer que `edge-batch/`
+    (dual-stack: la forma legacy sigue viva sin cambios).
+    Request: {"jsonrpc":"2.0","method":"sync.telemetry",
+              "params":{"cursor":<iso|null>,"frames":[{ts,ri,a,s}...]},"id":any}
+    Response: {"jsonrpc":"2.0",
+               "result":{"applied_up_to":<iso|null>,"accepted":[i...],
+                         "conflicts":[{index,error,details?}...]},"id":same}
+    Errores protocolo: {"jsonrpc":"2.0","error":{"code","message"},"id":same|null}
+    Códigos: -32700 parse, -32600 request inválido, -32601 método desconocido,
+             -32602 parámetros inválidos. Auth (401) y throttle igual que edge-batch.
+    Semántica: éxito parcial por trama (A1); cada trama en su transacción (A2);
+    reenvíos idempotentes (`dedupe=True`); conflictos = tramas rechazadas con
+    motivo (server-wins documentado: lo aceptado manda).
+    """
+
+    authentication_classes = [DeviceBearerScheme]
+    permission_classes = [DeviceBearerPermission]
+    throttle_classes = [SensorDataThrottle]
+
+    METHOD = "sync.telemetry"
+
+    def post(self, request):
+        from .serializers import EdgeFrameSerializer
+        from apps.core.services.edge_ingest import ingest_frame
+
+        device = getattr(request, 'device', None)
+        if device is None:
+            from .models import Device as DeviceModel
+            auth_header = request.headers.get('Authorization', '').replace('Bearer ', '')
+            device = DeviceModel.objects.filter(auth_token=auth_header).first()
+        if not device or not getattr(device, 'is_active', True):
+            return Response({"error": "Device not found or unauthorized"}, status=401)
+
+        body = request.data
+        rpc_id = body.get("id") if isinstance(body, dict) else None
+        if not isinstance(body, dict):
+            return self._err(-32700, "Parse error: se esperaba objeto JSON", rpc_id)
+        if body.get("jsonrpc") != "2.0" or "method" not in body:
+            return self._err(-32600, "Invalid Request: jsonrpc=='2.0' y method requeridos", rpc_id)
+        if body.get("method") != self.METHOD:
+            return self._err(-32601, f"Method not found: {body.get('method')}", rpc_id)
+        params = body.get("params", {})
+        if not isinstance(params, dict) or not isinstance(params.get("frames"), list):
+            return self._err(-32602, "Invalid params: params.frames (lista) requerido", rpc_id)
+
+        accepted = []
+        conflicts = []
+        applied_up_to = params.get("cursor")
+        for i, raw in enumerate(params["frames"]):
+            if not isinstance(raw, dict):
+                conflicts.append({"index": i, "error": "frame no es objeto"})
+                continue
+            serializer = EdgeFrameSerializer(data=raw)
+            if not serializer.is_valid():
+                conflicts.append({
+                    "index": i, "error": "Invalid frame",
+                    "details": serializer.errors,
+                })
+                continue
+            try:
+                result = ingest_frame(
+                    device, serializer.validated_data, dedupe=True
+                )
+            except Exception as exc:
+                logger.exception("SyncBatch: fallo trama %d device=%s", i, device.pk)
+                conflicts.append({"index": i, "error": str(exc)[:200]})
+                continue
+            accepted.append(i)
+            applied_up_to = result["recorded_at"].isoformat()
+
+        return Response({
+            "jsonrpc": "2.0",
+            "result": {
+                "applied_up_to": applied_up_to,
+                "accepted": accepted,
+                "conflicts": conflicts,
+            },
+            "id": rpc_id,
+        })
+
+    @staticmethod
+    def _err(code, message, rpc_id):
+        return Response({
+            "jsonrpc": "2.0",
+            "error": {"code": code, "message": message},
+            "id": rpc_id,
         })
 
 # --- INTELIGENCIA ARTIFICIAL Y DIAGNÓSTICOS ---
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([DiagnosticsThrottle])
 def diagnostic_view(request):
     """
     POST /api/v1/diagnostics/
@@ -255,19 +370,20 @@ def diagnostic_view(request):
     import tempfile
     import os
     from apps.ai_models.tasks import analyze_vision_async
-    
+    from utils.uploads import safe_temp_path
+
     serializer = DiagnosticRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     v_data = serializer.validated_data
-    
+
     image_file = v_data.get('image')
     if not image_file:
         return Response({"error": "Imagen requerida"}, status=400)
-    
-    from django.utils._os import safe_join
-    temp_dir = tempfile.gettempdir()
-    # Use Django's safe_join to prevent path traversal
-    temp_path = safe_join(temp_dir, f"diagnostic_{request.user.id}_{image_file.name}")
+
+    # Helper canónico anti path-traversal (Guardrail B).
+    temp_path = safe_temp_path(
+        image_file.name, prefix=f"diagnostic_{request.user.id}_"
+    )
     
     with open(temp_path, 'wb+') as f:
         for chunk in image_file.chunks():
@@ -446,6 +562,7 @@ def chat_history_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@throttle_classes([LLMChatThrottle])
 def llm_chat_view(request):
     question = request.data.get('question', '').strip()
     if not question:
@@ -552,6 +669,8 @@ def task_status_view(request, task_id):
 
 # --- SISTEMA E HISTORIAL ---
 @api_view(['GET'])
+@permission_classes([AllowAny])  # Health-check público (contrato móvil §7: ping pre-login).
+# Solo expone {status, timestamp}; sin PII ni estado interno.
 def health_check_view(request):
     return Response({'status': 'healthy', 'timestamp': timezone.now().isoformat()})
 

@@ -14,6 +14,15 @@ from apps.core.models import SensorLog
 logger = logging.getLogger(__name__)
 
 
+def _env_first(*names: str, default: str = "") -> str:
+    """Primera var definida y no vacía (genérica primero, legacy después)."""
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
+
+
 class Command(BaseCommand):
     help = 'Inicia el daemon consumidor MQTT para Mole.AI (Sprint 1: TLS Enabled)'
 
@@ -46,9 +55,13 @@ class Command(BaseCommand):
             logger.exception("Excepción crítica al procesar el mensaje MQTT")
 
     def handle(self, *args, **options):
-        broker_uri = os.getenv('CONFIG_MQTT_BROKER_URI', 'mqtt://127.0.0.1:1883')
+        # Genérico MQTT_BROKER_URI / MQTT_TLS_ENABLED; legacy entre paréntesis.
+        broker_uri = _env_first(
+            'MQTT_BROKER_URI', 'CONFIG_MQTT_BROKER_URI',
+            default='mqtt://mqtt_broker:1883',
+        )
         hardware_key = os.getenv('DJANGO_MQTT_SECRET')
-        use_tls = os.getenv('MQTT_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+        use_tls = _env_first('MQTT_TLS_ENABLED', 'MQTT_USE_TLS', default='True').lower() in ('true', '1', 'yes')
 
         if not hardware_key:
             self.stdout.write(self.style.ERROR("FATAL: DJANGO_MQTT_SECRET no encontrada en el entorno."))

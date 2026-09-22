@@ -11,7 +11,7 @@ class AdminIntegrationTests(APITestCase):
         self.client = APIClient()
 
     def test_admin_stats_requires_admin(self):
-        url = '/api/v1/admin/stats/'
+        url = '/api/v1/admin/statistics'
 
         # Unauthenticated should be rejected (401 or 403 depending on config)
         resp = self.client.get(url)
@@ -34,7 +34,7 @@ class AdminIntegrationTests(APITestCase):
         self.assertIn('regs', data)
 
     def test_live_alerts_requires_admin(self):
-        url = '/api/v1/admin/telemetry/latest/'
+        url = '/api/v1/admin/live-alerts'
 
         # Unauthenticated
         resp = self.client.get(url)

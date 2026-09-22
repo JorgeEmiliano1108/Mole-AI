@@ -23,7 +23,7 @@ def test_aggregator_returns_empty_dict_when_no_rows():
     query.order_by.return_value = query
     query.first.return_value = None
 
-    with patch("ai_models.services.SensorLog") as sensor_log_model:
+    with patch("apps.ai_models.services.SensorLog") as sensor_log_model:
         sensor_log_model.objects.filter.return_value = query
         result = SensorDataAggregator.get_latest_sensor_readings(
             plant_id="11111111-1111-1111-1111-111111111111",
@@ -49,7 +49,7 @@ def test_aggregator_returns_flat_wide_table_fields_only():
     query.order_by.return_value = query
     query.first.return_value = latest
 
-    with patch("ai_models.services.SensorLog") as sensor_log_model:
+    with patch("apps.ai_models.services.SensorLog") as sensor_log_model:
         sensor_log_model.objects.filter.return_value = query
         result = SensorDataAggregator.get_latest_sensor_readings(hours_back=24)
 

@@ -46,8 +46,17 @@ from store_forward_daemon import enqueue_reading, init_db
 load_dotenv()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-MQTT_BROKER_HOST = os.getenv("MQTT_LOCAL_HOST", "192.168.1.1")
-MQTT_PORT = int(os.getenv("MQTT_LOCAL_PORT", "1883"))
+def _env_first(*names: str, default: str = "") -> str:
+    """Primera var definida y no vacía (genérica primero, legacy después)."""
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
+
+
+MQTT_BROKER_HOST = _env_first("MQTT_FIELD_HOST", "MQTT_LOCAL_HOST", default="192.168.1.1")
+MQTT_PORT = int(_env_first("MQTT_FIELD_PORT", "MQTT_LOCAL_PORT", default="1883"))
 TOPIC_SENSOR = "mole/sensors/#"
 
 logging.basicConfig(

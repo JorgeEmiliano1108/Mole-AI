@@ -25,7 +25,9 @@ until curl -s -f http://localhost:8003/health > /dev/null 2>&1; do
 done
 echo "  ✅ ms3_reports OK"
 
-# ms1_vision has a pre-existing opentelemetry dependency issue; optional for mole_chat tests
+# ms1_vision es opcional para los tests de chat (no lo requieren); si su health
+# falla se continúa. Nota histórica: el comentario anterior citaba un
+# ModuleNotFoundError de opentelemetry ya resuelto (existe en requirements.txt:30).
 if curl -s -f http://localhost:8001/api/v1/vision/health/ > /dev/null 2>&1; then
     echo "  ✅ ms1_vision OK"
 else

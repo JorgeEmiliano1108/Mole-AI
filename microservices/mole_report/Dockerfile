@@ -58,11 +58,12 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload
 # ==========================================
 FROM development AS production
 
-RUN useradd --create-home --shell /bin/bash appuser && \
-    chown -R appuser:appuser /srv/ms3_reports
+# Etapa production hereda de development (appuser ya existe): idempotente.
+# COPY --chown evita el chown posterior (falla con userns-remap en el daemon).
+RUN id -u appuser >/dev/null 2>&1 || useradd --create-home --shell /bin/bash appuser || true
 
-COPY . .
-RUN chown -R appuser:appuser /srv/ms3_reports
+COPY --chown=appuser:appuser . .
+RUN mkdir -p /srv/ms3_reports && chown appuser:appuser /srv/ms3_reports || true
 
 USER appuser
 

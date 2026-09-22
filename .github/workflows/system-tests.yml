@@ -7,6 +7,9 @@ on:
     branches: [ dev, main ]
 
 jobs:
+  # docs-consistency retirado 2026-09-21 (pivot V2): vigilaba
+  # frontend/docs/requisitos.md vs urls.py y el frontend ya no existe.
+  # La coherencia endpoints↔docs vive en el gate mobile-contract.
   license-check:
     runs-on: ubuntu-latest
     container:
@@ -29,6 +32,80 @@ jobs:
           pip-licenses --format=json --with-urls --with-license-file > /tmp/licenses.json
           echo "--- JSON report saved to /tmp/licenses.json ---"
           pip-licenses --fail-on="GPL;LGPL;AGPL;GPLv2;GPLv3;LGPLv2;LGPLv3" --format=plain
+
+  mobile-contract:
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install backend dependencies
+        run: |
+          pip install --no-cache-dir -r core_backend/requirements.txt
+
+      - name: Mobile contract gate (OpenAPI snapshot sin cambios no declarados)
+        env:
+          PY: /usr/local/bin/python
+        run: |
+          bash scripts/check-mobile-contract.sh
+
+  backend-quality:
+    # Alcance: módulos saneados por el plan de bloqueantes (B1/B2/B3).
+    # El resto del backend tiene deuda lint pre-existente (issue 12) y se
+    # excluye hasta su limpieza dedicada.
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.12-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install backend dependencies
+        run: |
+          pip install --no-cache-dir -r core_backend/requirements.txt ruff
+
+      - name: Ruff (módulos saneados)
+        run: |
+          ruff check core_backend/utils/uploads.py \
+            core_backend/apps/ai_models/tests/test_upload_security.py \
+            core_backend/apps/authentication/consent.py \
+            core_backend/apps/authentication/token_denylist.py \
+            core_backend/apps/authentication/refresh.py \
+            core_backend/apps/authentication/tests/test_token_denylist.py \
+            core_backend/apps/authentication/tests/test_consent.py
+
+      - name: Pytest seguridad (uploads, consent, denylist, auth)
+        working-directory: core_backend
+        env:
+          DEBUG: "True"
+          SECRET_KEY: test
+          JWT_SECRET_KEY: test
+          HARDWARE_API_KEY: test
+          DJANGO_LTK_ENCRYPTION_KEY: kCF3lDElvKqx5JycjjC8Kn9NRoVsy0gkhHqk6yAXhIk=
+          DB_URL: sqlite:////tmp/test.sqlite3
+        run: |
+          python -m pytest apps/ai_models/tests/test_upload_security.py \
+            apps/authentication/tests/test_consent.py \
+            apps/authentication/tests/test_token_denylist.py \
+            tests/test_authentication/test_login_dual.py \
+            apps/core/tests/test_audit.py \
+            -q -p no:cacheprovider
+
+  mobile-quality:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/cirruslabs/flutter:stable
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Flutter analyze (0 issues) + tests
+        working-directory: mobile
+        run: |
+          flutter analyze
+          flutter test
 
   system-tests:
     runs-on: ubuntu-latest

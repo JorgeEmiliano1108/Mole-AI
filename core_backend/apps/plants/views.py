@@ -45,13 +45,22 @@ def my_collection_view(request):
 @permission_classes([AllowAny])
 def species_search_view(request):
     """
-    GET /api/v1/plants/search/?q=nombre&category=plaga
-    Busca especies en SpeciesCatalog (públic). Soporta filtros ?q= y ?category=.
+    GET /api/v1/plants/search/?q=nombre&category=plaga&endemic=&habitat=
+    Busca especies en SpeciesCatalog (públic). Soporta filtros ?q=, ?category=,
+    ?endemic=(1/true) y ?habitat= (búsqueda en habitat+uses). Expone campos
+    informativos (habitat, uses) para el portal público (issue 14/18).
     """
     from django.db.models import Q
-    
+
     query    = request.GET.get("q", "").strip()
     category = request.GET.get("category", "").strip()
+    endemic  = (request.GET.get("endemic", "") or "").strip().lower() in ("1", "true", "si", "sí")
+    habitat  = request.GET.get("habitat", "").strip()
+
+    if not query and not category and not endemic and not habitat:
+        return Response(
+            {"error": "Parámetro 'q', 'category', 'endemic' o 'habitat' requerido."}, status=400
+        )
 
     qs = SpeciesCatalog.objects.all()
 
@@ -63,6 +72,12 @@ def species_search_view(request):
     if category:
         qs = qs.filter(category=category)
 
+    if endemic:
+        qs = qs.filter(is_endemic=True)
+
+    if habitat:
+        qs = qs.filter(Q(habitat__icontains=habitat) | Q(uses__icontains=habitat))
+
     qs = qs[:50]  # Límite de seguridad
 
     results = []
@@ -73,10 +88,13 @@ def species_search_view(request):
             "nombre_cientifico": species.scientific_name,
             "descripcion": species.description or "",
             "category": species.category,
+            "habitat": species.habitat or "",
+            "uses": species.uses or "",
             "humedad": f"{species.ideal_humidity_min}-{species.ideal_humidity_max}%" if species.ideal_humidity_min else None,
             "temperatura": f"{species.ideal_temp_min}-{species.ideal_temp_max}°C" if species.ideal_temp_min else None,
             "ph": f"{species.ideal_ph_min}-{species.ideal_ph_max}" if species.ideal_ph_min else None,
             "image_url": species.image_url or "",
+            "is_endemic": bool(species.is_endemic),
         }
         # NOM-059
         if species.is_protected_nom059:

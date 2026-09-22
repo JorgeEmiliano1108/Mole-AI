@@ -41,43 +41,55 @@ class NOM059ComplianceTestCase(TestCase):
         response = self.client.get("/api/v1/plants/search/?q=Oyamel")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
+        self.assertIsInstance(data, list)
+        self.assertGreater(len(data), 0)
+        item = data[0]
 
-        self.assertTrue(data.get("is_protected_nom059"))
-        self.assertIn("protection_warning", data)
-        self.assertIn("NOM-059", data["protection_warning"])
-        self.assertEqual(data.get("protection_category"), "P")
+        self.assertTrue(item.get("is_protected_nom059"))
+        self.assertIn("protection_warning", item)
+        self.assertIn("NOM-059", item["protection_warning"])
+        self.assertEqual(item.get("protection_category"), "P")
 
     def test_threatened_species_includes_warning(self):
         """Verificar que especie amenazada incluye advertencia."""
         response = self.client.get("/api/v1/plants/search/?q=Gloxinia")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
+        self.assertIsInstance(data, list)
+        self.assertGreater(len(data), 0)
+        item = data[0]
 
-        self.assertTrue(data.get("is_protected_nom059"))
-        self.assertIn("protection_warning", data)
-        self.assertEqual(data.get("protection_category"), "T")
+        self.assertTrue(item.get("is_protected_nom059"))
+        self.assertIn("protection_warning", item)
+        self.assertEqual(item.get("protection_category"), "T")
 
     def test_unprotected_species_no_warning(self):
         """Verificar que especie no protegida NO incluye advertencia."""
         response = self.client.get("/api/v1/plants/search/?q=Tomate")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
+        self.assertIsInstance(data, list)
+        self.assertGreater(len(data), 0)
+        item = data[0]
 
-        self.assertFalse(data.get("is_protected_nom059", False))
-        self.assertNotIn("protection_warning", data)
-        self.assertNotIn("protection_category", data)
+        self.assertFalse(item.get("is_protected_nom059", False))
+        self.assertNotIn("protection_warning", item)
+        self.assertNotIn("protection_category", item)
 
     def test_search_by_scientific_name(self):
         """Verificar búsqueda también incluye advertencia."""
         response = self.client.get("/api/v1/plants/search/?q=Pseudotsuga")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
-        self.assertTrue(data.get("is_protected_nom059"))
+        self.assertIsInstance(data, list)
+        self.assertGreater(len(data), 0)
+        self.assertTrue(data[0].get("is_protected_nom059"))
 
     def test_not_found_species(self):
-        """Verificar que especie no encontrada devuelve 404."""
+        """Búsqueda sin coincidencias: 200 + lista vacía (semántica de búsqueda)."""
         response = self.client.get("/api/v1/plants/search/?q=EspecieInexistente")
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), [])
 
     def test_missing_query_parameter(self):
         """Verificar que query sin parámetro q devuelve 400."""

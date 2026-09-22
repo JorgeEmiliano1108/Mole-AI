@@ -18,87 +18,99 @@ ADVERTENCIA:
   - Este script NO modifica el .env original
   - Hacer backup manual antes de ejecutar en producción
 """
-import os
 import sys
 from pathlib import Path
 
 # =============================================================================
 # Lista de variables sensibles a sanitizar
+# Alineada con el .env único global (único archivo de entorno del repo).
+# El fallback por patrones (KEY/SECRET/PASSWORD/TOKEN/CREDENTIAL) cubre
+# cualquier variable futura no listada aquí.
 # =============================================================================
 SENSITIVE_VARS = [
     # Credenciales de base de datos
-    "SUPABASE_DB_PASSWORD",
-    "POSTGRES_PASSWORD",
-    "DATABASE_URL",  # Contiene password en URL
-    
-    # Supabase
-    "SUPABASE_KEY",
-    "SUPABASE_JWT_SECRET",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_S3_SECRET_KEY",
-    
-    # AI / ML
-    "HUGGINGFACE_API_KEY",
-    "MOLE_AI_API_KEY",
-    
-    # Hardware / IoT
+    "DB_PASSWORD",
+    "DB_URL",  # Contiene password en URL
+    "DATABASE_URL",  # Alias legacy: contiene password en URL
+
+    # Secretos Django / IdP
+    "SECRET_KEY",
+    "JWT_SECRET_KEY",
+    "IDP_JWT_SECRET",
+    "IDP_SERVICE_KEY",
+    "DJANGO_LTK_ENCRYPTION_KEY",
+    "DJANGO_MQTT_SECRET",
+    "DJANGO_SUPERUSER_PASSWORD",
+
+    # AI / ML (NVIDIA NIM + OpenWeather son los únicos proveedores externos)
+    "LLM_API_KEY",
+    "MOLE_AI_API_KEY",  # Alias legacy de EDGE_API_KEY
+    "OPENWEATHER_API_KEY",
+
+    # Hardware / IoT / Edge
     "HARDWARE_API_KEY",
-    
-    # MinIO / S3
-    "MINIO_ROOT_USER",
-    "MINIO_ROOT_PASSWORD",
-    "MS3_S3_ACCESS_KEY",
-    "MS3_S3_SECRET_KEY",
-    "SUPABASE_S3_ACCESS_KEY",
-    "SUPABASE_S3_SECRET_KEY",
-    
-    # Botánias
-    "TREFLE_API_TOKEN",
-    
+    "EDGE_API_KEY",
+    "EDGE_IDENTITY_PASSWORD",
+
+    # Object storage (S3/MinIO genérico)
+    "OBJECT_STORAGE_ACCESS_KEY",
+    "OBJECT_STORAGE_SECRET_KEY",
+
+    # Brokers con posible password embebida en URL
+    "CELERY_BROKER_URL",
+    "CELERY_RESULT_BACKEND",
+    "REDIS_URL",
+
+    # Terceros
+    "BOTANICAL_API_TOKEN",
+
     # Test (no exponer credenciales reales)
     "TEST_USER_EMAIL",
     "TEST_USER_PASSWORD",
-    
+
     # Cualquier otra variable con "KEY", "SECRET", "PASSWORD" en nombre
 ]
 
 # Nombres de variables a incluir en .env.example (sin valores)
 PUBLIC_VARS = [
     "DEBUG",
-    "SECRET_KEY",
-    "ALLOWED_HOSTS",
-    "CSRF_TRUSTED_ORIGINS",
     "PORT",
-    "API_PORT",
-    "SUPABASE_DB_NAME",
-    "SUPABASE_DB_USER",
-    "SUPABASE_DB_HOST",
-    "SUPABASE_DB_PORT",
-    "POSTGRES_USER",
-    "POSTGRES_DB",
-    "POSTGRES_PORT",
-    "REDIS_URL",
-    "MQTT_BROKER_HOST",
-    "MQTT_BROKER_PORT",
-    "S3_ENDPOINT",
-    "VISION_BACKEND",
-    "CNN_MODEL_PATH",
-    "CNN_LABELS_PATH",
-    "OOD_MODEL_PATH",
-    "OOD_THRESHOLD",
-    "FASTAPI_URL",
-    "MOLE_AI_TIMEOUT",
+    "HOST",
+    "API_PUBLIC_BASE_URL",
+    "API_INTERNAL_BASE_URL",
+    "DJANGO_BASE_URL",
+    "DJANGO_ALLOWED_HOSTS",
+    "CSRF_TRUSTED_ORIGINS",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_NAME",
+    "DB_USER",
+    "JWT_ALGORITHM",
+    "JWT_TTL_MINUTES",
+    "IDP_BASE_URL",
+    "LLM_BASE_URL",
+    "LLM_CHAT_MODEL",
+    "LLM_VISION_MODEL",
+    "LLM_EMBEDDING_MODEL",
+    "LLM_EMBEDDING_DIMENSION",
+    "MQTT_BROKER_URI",
+    "MQTT_TLS_ENABLED",
+    "MQTT_FIELD_HOST",
+    "MQTT_FIELD_PORT",
+    "OBJECT_STORAGE_ENABLED",
+    "OBJECT_STORAGE_ENDPOINT_URL",
+    "OBJECT_STORAGE_REGION",
+    "OBJECT_STORAGE_BUCKET_MEDIA",
+    "OBJECT_STORAGE_BUCKET_REPORTS",
+    "OBJECT_STORAGE_BUCKET_TRAINING",
+    "EDGE_SYNC_URL",
     "EDGE_DB_PATH",
+    "EDGE_IDENTITY_USER",
     "SYNC_INTERVAL",
-    "TFLITE_MODEL_PATH",
-    "MQTT_LOCAL_HOST",
-    "MQTT_LOCAL_PORT",
-    "EMBEDDING_MODEL_ID",
-    "LLM_MODEL_ID",
-    "HF_INFERENCE_API_URL",
-    "HF_API_TIMEOUT",
-    "HF_MAX_RETRIES",
-    "VISION_MODEL_NAME",
+    "MOLE_AI_TIMEOUT",
+    "SECURE_SSL_REDIRECT",
+    "SECURE_HSTS_SECONDS",
+    "AXES_FAILURE_LIMIT",
 ]
 
 
@@ -187,12 +199,12 @@ def clean_env_file(input_path: Path, output_path: Path, example_path: Path):
                 f.write(f"# {key}={original_value}\n")
     
     print(f"[OK] Generado {example_path}")
-    print("")
+    print()
     print("[INFO] Resumen de variables sensibles encontradas:")
     for key in sorted(env_vars.keys()):
         if is_sensitive(key):
             print(f"  - {key}")
-    print("")
+    print()
     print("[SIGUIENTE] Pasos sugeridos:")
     print("  1. Revisar .env.clean y completar valores sensibles")
     print("  2. Agregar .env.clean a .gitignore (si no lo está)")
@@ -224,8 +236,7 @@ def main():
             f.write("# ===========================================================================\n\n")
             
             all_vars = set(SENSITIVE_VARS + PUBLIC_VARS)
-            for var in sorted(all_vars):
-                f.write(f"# {var}=\n")
+            f.writelines(f"# {var}=\n" for var in sorted(all_vars))
         
         print(f"[OK] Generado {example_file}")
 

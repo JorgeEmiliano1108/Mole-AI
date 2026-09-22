@@ -251,6 +251,10 @@ class Device(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     auth_token = models.CharField(max_length=128, unique=True, help_text="Bearer token")
+    auth_token_expires_at = models.DateTimeField(
+        null=True, blank=True, db_index=True,
+        help_text="Expiración del Bearer token; NULL = sin expiración (legacy)",
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offline')
     last_seen = models.DateTimeField(
         null=True,
@@ -271,6 +275,16 @@ class Device(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.status})"
+
+    def rotate_token(self, days=90):
+        """Rota el Bearer token con expiración (RNF-02). Invalida el anterior."""
+        import secrets
+        from datetime import timedelta
+        from django.utils import timezone
+        self.auth_token = secrets.token_urlsafe(48)
+        self.auth_token_expires_at = timezone.now() + timedelta(days=days)
+        self.save(update_fields=['auth_token', 'auth_token_expires_at'])
+        return self.auth_token
 
 class HardwareBinding(models.Model):
     """Mapeo físico entre un Pin de Hardware y una Planta de Usuario"""
@@ -365,7 +379,16 @@ class TelemetryArchive(models.Model):
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from microservices.mole_report.infrastructure.workers.tasks import send_reminder
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    from microservices.mole_report.infrastructure.workers.tasks import send_reminder
+except ImportError:  # pragma: no cover - MS3 no montado (p.ej. entorno E2E/test)
+    send_reminder = None
+    logger.warning("send_reminder no disponible: microservices.mole_report no importable")
 
 @receiver(post_save, sender=AIDiagnostic)
 def schedule_reminder(sender, instance, created, **kwargs):
@@ -385,5 +408,8 @@ def schedule_reminder(sender, instance, created, **kwargs):
         recipient = instance.user.id if instance.user else None
         message = f"Urgent diagnostic {instance.id} requires attention."
         if recipient:
+            if send_reminder is None:  # pragma: no cover - degradación sin MS3
+                logger.warning("reminder omitido: send_reminder no disponible")
+                return
             send_reminder.delay(str(recipient), message)
 

@@ -1,0 +1,20 @@
+# Dependencias SOLO-entrenamiento (P0/P2) — NO van a la imagen del servicio.
+# El servicio (requirements.txt) infiere vía NVIDIA NIM; entrenar es un job
+# aparte con GPU. Separar evita engordar prod con TF + cuDNN.
+#
+# Notas de compatibilidad verificadas (2026-09-20, skill diagnose):
+# - Entrenar: TF 2.16.1 (CPU fallback sin nvidia-container-toolkit).
+# - Convertir: TF 2.18.0 (2.16.x crashea LLVM "Failed to infer result type"
+#   con MobileNetV2; 2.15.0 tiene release roto absl; 2.17 convierte pero con
+#   skew de modelo guardado en 2.16). Ideal: misma versión train+convert;
+#   verificado: train 2.16.1 + convert 2.18.0 OK (smoke 3 clases → FP16
+#   2.6MB, softmax=1.0).
+# - Checkpoint: formato .keras (h5py falla con modelos anidados en TF 2.16).
+# - QAT (tfmot) NO soporta transfer-learning anidado
+#   ("Quantizing a keras Model inside another keras Model is not supported"):
+#   estrategia P2 = medir caída PTQ-INT8 en holdout primero; QAT solo si la
+#   caída supera el umbral (requiere reestructurar a Functional plano).
+#   tfmot + tf-keras solo como contingencia documentada, no instalados aquí.
+tensorflow[and-cuda]>=2.15,<2.17
+numpy>=1.24
+Pillow>=10.0

@@ -35,17 +35,38 @@ class Settings(BaseSettings):
     def from_env(cls) -> "Settings":
         import os
 
+        def _first(*names: str, default: str = "") -> str:
+            """Primera var definida y no vacía (genérica primero, legacy después)."""
+            for name in names:
+                value = os.getenv(name)
+                if value:
+                    return value
+            return default
+
         s = cls()
-        s.jwt_secret_key = os.getenv("JWT_SECRET_KEY") or os.getenv("SUPABASE_JWT_SECRET") or ""
+        s.jwt_secret_key = _first("JWT_SECRET_KEY", "IDP_JWT_SECRET", "SUPABASE_JWT_SECRET")
         s.debug = os.getenv("DEBUG", "False").lower() == "true"
-        s.database_url = os.getenv("DATABASE_URL")
+        s.database_url = _first("DB_URL", "DATABASE_URL") or None
+        # El default histórico apuntaba al host inexistente `mole_ai_redis`;
+        # REDIS_URL del entorno (compose) manda salvo override explícito ms3_redis_url.
+        if s.ms3_redis_url == "redis://mole_ai_redis:6379":
+            s.ms3_redis_url = _first("REDIS_URL", default=s.ms3_redis_url)
 
         if not s.ms3_s3_access_key:
-            s.ms3_s3_access_key = os.getenv("AWS_ACCESS_KEY_ID") or ""
+            s.ms3_s3_access_key = _first("OBJECT_STORAGE_ACCESS_KEY", "AWS_ACCESS_KEY_ID")
         if not s.ms3_s3_secret_key:
-            s.ms3_s3_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY") or ""
+            s.ms3_s3_secret_key = _first("OBJECT_STORAGE_SECRET_KEY", "AWS_SECRET_ACCESS_KEY")
         if not s.ms3_s3_bucket:
-            s.ms3_s3_bucket = os.getenv("AWS_STORAGE_BUCKET_NAME") or "mole-ai-production"
+            s.ms3_s3_bucket = _first("OBJECT_STORAGE_BUCKET_REPORTS", "OBJECT_STORAGE_BUCKET_MEDIA", "AWS_STORAGE_BUCKET_NAME", default="mole-ai-production")
+        if not s.ms3_s3_endpoint:
+            s.ms3_s3_endpoint = _first("OBJECT_STORAGE_ENDPOINT_URL") or None
+        if not s.ms3_supabase_url:
+            s.ms3_supabase_url = _first("IDP_BASE_URL", "SUPABASE_URL") or None
+        if not s.ms3_supabase_key:
+            s.ms3_supabase_key = _first("IDP_SERVICE_KEY", "SUPABASE_KEY") or None
+        if not s.nvidia_api_key:
+            s.nvidia_api_key = _first("LLM_API_KEY", "NVIDIA_API_KEY") or None
+        s.nvidia_base_url = _first("LLM_BASE_URL", "NVIDIA_BASE_URL", default=s.nvidia_base_url)
         return s
 
 

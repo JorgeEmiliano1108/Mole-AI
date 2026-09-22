@@ -28,13 +28,13 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
    ▼
 [MQTT Broker] ◄─ Edge Node (ESP32) ◄─ Sensors
 ```
-*Los usuarios finales acceden a través del navegador a la SPA que consume los endpoints REST expuestos por Nginx.  Nginx actúa como único punto de entrada, terminando TLS y gestionando CORS.*
+*Los usuarios finales acceden a través del navegador a la SPA que consume los endpoints REST expuestos por Nginx.  Nginx actúa como único punto de entrada y router (TLS solo en host EC2 vía `infrastructure/nginx/mole_ai_ssl.conf`; compose local sirve HTTP `:8080`, bloque 443 comentado).*
 
 ## Vista de contenedores (C4 – Nivel 2)
 | Contenedor | Tecnologías | Responsabilidad principal |
 |------------|-------------|---------------------------|
-| **NGINX** | Nginx (Docker) | Terminación TLS, routing a `/api/v1/*`, gestión de CORS, health‑checks. |
-| **Core Django Backend** | Django 5, Django‑REST‑Framework, Channels, Axes, pgvector, PostgreSQL | Gestión de usuarios, dispositivos, telemetría, auditoría, publicación de eventos MQTT, exposición de API de gestión. |
+| **NGINX** | Nginx (Docker) | Routing a `/api/v1/*`, gestión de CORS, health‑checks (TLS solo en host EC2). |
+| **Core Django Backend** | Django 4.2, Django‑REST‑Framework, Channels, Axes, pgvector, PostgreSQL | Gestión de usuarios, dispositivos, telemetría, auditoría, publicación de eventos MQTT, exposición de API de gestión. |
 | **ms1_vision** | FastAPI (abstract) | Servicio de visión: análisis de imágenes de plantas y generación de diagnóstico estructurado. |
 | **ms2_chat** | FastAPI (abstract) | Servicio de chat IA con RAG/CAG, ingestión de PDFs y búsqueda semántica. |
 | **ms3_reports** | FastAPI (abstract) | Servicio de generación de reportes PDF bajo demanda y gestión de jobs con URLs pre‑firmadas. |
@@ -43,7 +43,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **AWS S3** | Amazon S3 | Almacenamiento definitivo de PDFs, reportes y cualquier archivo binario. |
 | **Celery Workers** | Celery, RabbitMQ/Redis broker | Ejecución asíncrona de tareas pesadas (embeddings, visión, generación de PDFs). |
 | **MQTT Broker** | Eclipse Mosquitto | Canal de telemetría de bajo consumo para dispositivos ESP32. |
-| **Edge Node** | Docker (custom), WebSocket → HTTP | Gateway que recibe datos de los ESP32 vía WebSocket y los envía en lote al endpoint `/api/v1/sensor-data/batch/`. |
+| **Edge Node** | Docker (custom), WebSocket → HTTP | Gateway que recibe datos de los ESP32 vía WebSocket y los envía en lote al endpoint canónico `/api/v1/sensor-data/edge-batch/` (trama edge, ADR-0002; `batch/` alias deprecado). |
 
 ## Vista de componentes (C4 – Nivel 3) – Core Django
 - **Gestión de identidad** – Autenticación (login, registro, verificación de email) y emisión de tokens JWT.
@@ -68,7 +68,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 
 ## Vista de despliegue (C4 – Nivel 4)
 - Todos los contenedores se ejecutan sobre una red Docker (`mole_public`, `mole_internal`).
-- **NGINX** actúa como terminador TLS y router; los puertos expuestos se configuran en `docker‑compose.yml`. 
+- **NGINX** actúa como router (TLS solo en host EC2; compose local HTTP); los puertos expuestos se configuran en `docker‑compose.yml`. 
 - **Redis** y **PostgreSQL** se despliegan como servicios stateful con volúmenes persistentes (`backend_logs`, `postgres_data`).
 - **AWS S3** es un recurso externo; las credenciales se suministran mediante variables de entorno (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
 - **Celery workers** se escalan de forma independiente (configurable mediante `docker‑compose scale`).
@@ -82,16 +82,16 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 - El fake NIM (`infrastructure/fake-nim/server.py`) simula los endpoints `/v1/chat/completions` y `/v1/embeddings` de NVIDIA NIM (dimensión 1024), permitiendo pruebas E2E sin dependencia externa.
 
 ## Cross‑cutting Concepts (arc42 Sección 7)
-- **Seguridad** – TLS en NGINX, JWT con expiración < 30 min, permission classes, anti‑replay y rate‑limit.
-- **Observabilidad** – Métricas con Prometheus, trazas OpenTelemetry, logs estructurados.
+- **Seguridad** – TLS en NGINX de host (compose local HTTP), JWT con expiración < 30 min, permission classes, anti‑replay y rate‑limit.
+- **Observabilidad** – Métricas con Prometheus, logs estructurados (trazas OpenTelemetry no implementadas: solo 1 test ignorado).
 - **Resiliencia** – Se contempla el uso de circuit‑breaker y retries en llamadas a servicios externos; aún no está implementado.
 
 ## Decisiones arquitectónicas confirmadas
 | Decisión | Motivo | Estado |
 |----------|--------|-------|
 | **Motor de visión activo** | Reemplazo de TFLite por un modelo de visión externo (NVIDIA Vision). | Implementado.
-| **Almacenamiento de objetos** | Descarte de MinIO por lentitud; adopción de **AWS S3** como backend definitivo. | Implementado.
-| **Variables NVIDIA unificadas** | Centralizar la selección de modelos mediante variables de entorno (p.ej. `NVIDIA_VISION_MODEL`, `NVIDIA_CHAT_MODEL`, `NVIDIA_REPORT_MODEL`, `NVIDIA_EMBEDDING_MODEL`). | Implementado.
+| **Almacenamiento de objetos** | API S3-compatible (MinIO local / S3) vía `OBJECT_STORAGE_*`; `OBJECT_STORAGE_ENABLED=False` usa filesystem. | Implementado.
+| **Variables LLM unificadas** | Centralizar la selección de modelos mediante variables de entorno genéricas (`LLM_VISION_MODEL`, `LLM_CHAT_MODEL`, `LLM_EMBEDDING_MODEL`; legacy `NVIDIA_*` como fallback). | Implementado.
 | **Rol Admin** | Administrador con privilegios sobre usuarios, plantas y auditoría; **no** puede modificar variables NVIDIA_* (RF‑12 fuera de alcance). | Implementado.
 | **Microservicios independientes** | Facilita escalado horizontal y aislamiento de fallos. | Implementado.
 | **Uso de pgvector** | Permite búsqueda semántica de documentos de conocimiento. | Implementado.
@@ -119,7 +119,7 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 | **Escalado de Celery** | Un solo worker podría convertirse en cuello de botella bajo alta carga de ingestión. | Configurar número de workers y colas (`celery -Q reports_queue,training_queue`). |
 | **Gestión de credenciales** | Exposición accidental de `JWT_SECRET_KEY` o credenciales AWS compromete la seguridad. | Usar Docker secrets / AWS Parameter Store y habilitar rotación periódica. |
 | **Complejidad de microservicios** | Aumenta la superficie de ataque y el coste operativo. | Mantener documentación actualizada, aplicar pruebas de integración y usar herramientas de orquestación (Docker‑Compose, Kubernetes). |
-| **Modelo de visión estático** | Cambiar el modelo requiere redeploy del servicio de visión. | Variables `NVIDIA_VISION_MODEL` permiten cambiar modelo sin modificar código; solo es necesario reiniciar el servicio. |
+| **Modelo de visión estático** | Cambiar el modelo requiere redeploy del servicio de visión. | Variable `LLM_VISION_MODEL` permite cambiar modelo sin modificar código; solo es necesario reiniciar el servicio. |
 | **Tamaño de la tabla pgvector** | Crecimiento ilimitado de embeddings puede degradar performance. | Implementar políticas de retención (p. ej., eliminar chunks > 2 años) y crear índices GIN eficientes. |
 
 > **Nota:** el fallback con modelos ONNX es exclusivamente una **evolución futura** y no constituye una mitigación actual.

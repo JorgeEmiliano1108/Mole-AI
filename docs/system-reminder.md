@@ -104,15 +104,14 @@ El objetivo del PRD es describir **qué está disponible hoy**, **qué se contem
 ## 8. Deuda técnica (elementos que deben resolverse, no son requisitos)
 | Elemento | Motivo de la deuda | Consecuencia funcional concreta |
 |----------|---------------------|--------------------------------|
-| `tflite_adapter.py` | Código legado sin uso; confunde la base de código. | Riesgo de mantenimiento innecesario y posibles errores si se reutiliza accidentalmente. |
-| Comentarios de **MinIO** en `docker‑compose.yml` | Indica almacenamiento obsoleto; puede generar errores al intentar usarlo en producción. | Posible falla de despliegue o confusión operativa. |
+| Comentarios de **MinIO** en `docker‑compose.yml` | Mitigado: solo quedan notas explicativas de remoción (`minio_data removed — object storage externo`, `infrastructure/docker-compose.yml:336-337`) que apuntan a `OBJECT_STORAGE_*`; sin bloques de servicio activos. | Sin riesgo de despliegue; confusión menor al leer el compose. |
 | Ausencia de política de retención para `botanical_knowledge` | Crecimiento ilimitado de la tabla pgvector. | Degradación progresiva del tiempo de respuesta en búsquedas y aumento de costes de almacenamiento. |
 | Credenciales en archivo `.env` sin rotación automática | Exposición potencial y dificultad para rotar claves. | Vulnerabilidad de seguridad y mayor esfuerzo manual para actualizaciones de secrets. |
 | Falta de Alertmanager / Grafana | No hay notificaciones automáticas ante superación de límites. | Detección tardía de incidentes críticos (latencia, errores, saturación). |
-| No hay CI/CD automatizado | Despliegues manuales incrementan probabilidad de error humano. | Riesgo de introducir bugs en producción y retrasos en entregas. |
+| CI existe, falta CD automatizado | `.github/workflows/system-tests.yml` corre `docs-consistency`, `license-check` y `system-tests`; el despliegue sigue siendo manual. | Riesgo de error humano solo en la fase de despliegue. |
 | No existe fallback local a modelos IA | Dependencia total de NVIDIA; caída del servicio implica indisponibilidad total del chat/visión/embeddings. | Interrupción total de funcionalidades clave. |
 | Modelo de roles limitado a `is_staff`/`is_superuser` | No permite granularidad futura sin refactor. | Dificultad para delegar permisos específicos sin sobrecargar privilegios. |
-| Tests de resiliencia a fallos de infraestructura inexistentes | No se puede validar la tolerancia a caídas de Redis, PostgreSQL o MQTT. | Falta de evidencia de comportamiento bajo escenarios de falla. |
+| Tests de resiliencia parciales: MQTT (`tests/test_mqtt_resilience.py`) y Celery (`apps/core/tests/test_audit.py::test_celery_resilience_file_survival`) cubiertos; faltan escenarios Redis-down y PostgreSQL-down. | Sin evidencia de comportamiento ante caídas de Redis/PostgreSQL. |
 | No hay políticas de lifecycle en S3 | Los PDFs pueden acumularse indefinidamente, generando costes. | Coste operativo creciente y posible saturación del bucket. |
 | SLA no formalizado | No hay compromiso contractual verificable para clientes. | Falta de garantía de nivel de servicio ante usuarios externos. |
 

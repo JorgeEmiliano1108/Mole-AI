@@ -2,17 +2,16 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
-import uuid
+import logging
 import requests
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
 
+logger = logging.getLogger(__name__)
+
 from apps.core.models import FeedbackTicket, SensorLog
 from apps.plants.models import UserPlant
-from django.db.models import Avg, Count
-
-from celery.result import AsyncResult
 
 User = get_user_model()
 
@@ -152,7 +151,7 @@ def master_report_status_view(request, job_id):
             return Response({"status": "processing"})
         return Response({"status": "failed"}, status=500)
     except Exception as e:
-        print(f"Error checking status ms3: {e}")
+        logger.exception("Error checking status ms3: %s", e)
         return Response({"status": "failed"}, status=500)
 
 @api_view(['POST'])
@@ -185,48 +184,180 @@ def admin_users_create_view(request):
     
     return Response({"status": "success", "message": f"Usuario {username} creado con rol {role}"}, status=status.HTTP_201_CREATED)
 
+
+def _role_of(user):
+    if user.is_superuser:
+        return "Superadmin"
+    if user.is_staff:
+        return "Admin"
+    return "Operador"
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def admin_users_list_view(request):
+    """
+    GET /api/v1/admin/users/?search=&role=&page= — Tabla usuarios (issue 16).
+
+    `role` admite Operador|Admin|Superadmin (case-insensitive) y se resuelve
+    a nivel ORM: Superadmin → is_superuser, Admin → staff no-superuser,
+    Operador → ni staff ni superuser. Sin N+1 ni filtrado en memoria.
+    """
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    User = get_user_model()
+    qs = User.objects.all().order_by('-date_joined')
+    search = (request.query_params.get('search') or '').strip()
+    if search:
+        qs = qs.filter(Q(username__icontains=search) | Q(email__icontains=search))
+    role = (request.query_params.get('role') or '').strip().lower()
+    if role == 'superadmin':
+        qs = qs.filter(is_superuser=True)
+    elif role == 'admin':
+        qs = qs.filter(is_staff=True, is_superuser=False)
+    elif role == 'operador':
+        qs = qs.filter(is_staff=False, is_superuser=False)
+    total = qs.count()
+    try:
+        page_num = max(1, int(request.query_params.get('page', 1)))
+    except (TypeError, ValueError):
+        page_num = 1
+    items = Paginator(qs, 50).get_page(page_num).object_list
+    return Response({
+        "count": total,
+        "results": [{
+            "id": u.id, "username": u.username, "email": u.email,
+            "role": _role_of(u), "is_active": u.is_active,
+            "is_premium": getattr(u, 'is_premium', False),
+            "date_joined": u.date_joined,
+        } for u in items],
+    })
+
+
+@api_view(['GET', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def admin_user_detail_view(request, user_id):
+    """
+    GET/PATCH/DELETE /api/v1/admin/users/<id>/ — Gestiona rol y estado.
+    PATCH admite {role: Operador|Admin|Superadmin, is_active: bool}.
+    DELETE desactiva (soft, nunca borra: preserva auditoría).
+    """
+    from apps.core.models import AuditLog
+    User = get_user_model()
+    try:
+        user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return Response({"error": "No existe."}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response({
+            "id": user.id, "username": user.username, "email": user.email,
+            "role": _role_of(user), "is_active": user.is_active,
+            "is_premium": getattr(user, 'is_premium', False),
+            "data_consent": getattr(user, 'data_consent', None),
+            "date_joined": user.date_joined,
+        })
+
+    if request.method == 'DELETE':
+        if user.is_superuser and not request.user.is_superuser:
+            return Response({"error": "Solo Superadmin desactiva Superadmin."},
+                            status=status.HTTP_403_FORBIDDEN)
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        AuditLog.objects.create(
+            user_id=request.user.id, action="ADMIN_DEACTIVATE",
+            ip_address=request.META.get("REMOTE_ADDR"),
+            details=f"Desactivado user_id={user.id}.",
+        )
+        return Response({"status": "deactivated"})
+
+    # PATCH
+    role = request.data.get('role')
+    if role is not None:
+        if role not in ('Operador', 'Admin', 'Superadmin'):
+            return Response({"error": "Rol inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        if role == 'Superadmin' and not request.user.is_superuser:
+            return Response({"error": "Solo Superadmin otorga Superadmin."},
+                            status=status.HTTP_403_FORBIDDEN)
+        user.is_staff = role in ('Admin', 'Superadmin')
+        user.is_superuser = (role == 'Superadmin')
+    if 'is_active' in request.data:
+        if user.is_superuser and not request.user.is_superuser:
+            return Response({"error": "Solo Superadmin toca Superadmin."},
+                            status=status.HTTP_403_FORBIDDEN)
+        user.is_active = bool(request.data.get('is_active'))
+    user.save()
+    AuditLog.objects.create(
+        user_id=request.user.id, action="ADMIN_UPDATE_USER",
+        ip_address=request.META.get("REMOTE_ADDR"),
+        details=f"Actualizado user_id={user.id} role={_role_of(user)} active={user.is_active}.",
+    )
+    return Response({"status": "updated", "role": _role_of(user),
+                     "is_active": user.is_active})
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def live_alerts_view(request):
     """
     Devuelve un JSON con las alertas en vivo (Telemetría) para el Dashboard Admin.
-    Reemplaza los mocks estáticos leyendo eventos recientes.
+    Lee el esquema vivo 1:N (`AmbientReading` + `SoilReading` vía bindings);
+    si está vacío, cae a `SensorLog` legacy. Cada alerta lleva identificadores
+    estructurados para la app (issue 16).
     """
-    logs = SensorLog.objects.order_by('-recorded_at')[:5]
+    from apps.core.models import AmbientReading, SoilReading
     alerts = []
-    for log in logs:
-        # Generar alerta si la humedad del suelo está baja
-        if log.soil_humidity is not None and log.soil_humidity < 20.0:
-            alerts.append({
-                "msg": f"Humedad por debajo del umbral crítico ({log.soil_humidity}%)",
-                "tipo": "error"
-            })
-        elif log.soil_humidity is not None and log.soil_humidity < 35.0:
-            alerts.append({
-                "msg": f"Humedad baja detectada ({log.soil_humidity}%)",
-                "tipo": "warn"
-            })
-            
-        # Generar alerta si la temperatura es alta
-        if log.air_temperature is not None and log.air_temperature > 30.0:
-            alerts.append({
-                "msg": f"Fluctuación térmica detectada ({log.air_temperature}°C)",
-                "tipo": "warn"
-            })
-            
-        # Generar alerta si el UV es alto
-        if log.uv_index is not None and log.uv_index > 8.0:
-            alerts.append({
-                "msg": f"Índice UV peligroso detectado ({log.uv_index})",
-                "tipo": "error"
-            })
-            
+
+    def push(tipo, msg, source, recorded_at, device_id=None, plant_id=None):
+        alerts.append({
+            "tipo": tipo, "msg": msg, "source": source,
+            "recorded_at": recorded_at.isoformat() if recorded_at else None,
+            "device_id": str(device_id) if device_id else None,
+            "plant_id": str(plant_id) if plant_id else None,
+        })
+
+    soils = (SoilReading.objects.select_related("binding__device", "binding__plant")
+             .order_by('-recorded_at')[:20])
+    for s in soils:
+        dev = s.binding.device if s.binding else None
+        pid = s.binding.plant_id if s.binding else None
+        if s.soil_humidity is not None and s.soil_humidity < 20.0:
+            push("error", f"Humedad por debajo del umbral crítico ({s.soil_humidity}%)",
+                 "soil", s.recorded_at, getattr(dev, 'id', None), pid)
+        elif s.soil_humidity is not None and s.soil_humidity < 35.0:
+            push("warn", f"Humedad baja detectada ({s.soil_humidity}%)",
+                 "soil", s.recorded_at, getattr(dev, 'id', None), pid)
+
+    ambients = AmbientReading.objects.select_related("device").order_by('-recorded_at')[:20]
+    for a in ambients:
+        if a.air_temperature is not None and a.air_temperature > 30.0:
+            push("warn", f"Fluctuación térmica detectada ({a.air_temperature}°C)",
+                 "ambient", a.recorded_at, a.device_id)
+        if a.uv_index is not None and a.uv_index > 8.0:
+            push("error", f"Índice UV peligroso detectado ({a.uv_index})",
+                 "ambient", a.recorded_at, a.device_id)
+
+    if not alerts:
+        # Fallback legacy: SensorLog congelado (A3) para flotas viejas.
+        for log in SensorLog.objects.order_by('-recorded_at')[:5]:
+            if log.soil_humidity is not None and log.soil_humidity < 20.0:
+                push("error", f"Humedad por debajo del umbral crítico ({log.soil_humidity}%)",
+                     "sensorlog", log.recorded_at, None, str(log.plant_id))
+            elif log.soil_humidity is not None and log.soil_humidity < 35.0:
+                push("warn", f"Humedad baja detectada ({log.soil_humidity}%)",
+                     "sensorlog", log.recorded_at, None, str(log.plant_id))
+            if log.air_temperature is not None and log.air_temperature > 30.0:
+                push("warn", f"Fluctuación térmica detectada ({log.air_temperature}°C)",
+                     "sensorlog", log.recorded_at, None, str(log.plant_id))
+            if log.uv_index is not None and log.uv_index > 8.0:
+                push("error", f"Índice UV peligroso detectado ({log.uv_index})",
+                     "sensorlog", log.recorded_at, None, str(log.plant_id))
+
     # Si no hay alertas críticas/warnings, proveer información de estado
     if not alerts:
         alerts.append({
             "msg": "Monitor Vital estable. Biomasa operando dentro de umbrales.",
             "tipo": "info"
         })
-        
+
     # Limitar la salida a los primeros 5 eventos más relevantes
     return Response({"alerts": alerts[:5]})

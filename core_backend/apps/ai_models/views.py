@@ -2,7 +2,6 @@
 # Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
 # =============================================================================
 import os
-import uuid
 import logging
 from typing import List
 
@@ -16,6 +15,7 @@ from celery.result import AsyncResult
 
 from apps.ai_models.tasks import train_rag_async, train_vision_async, analyze_vision_async
 from apps.ai_models.utils import safe_serialize
+from utils.uploads import safe_temp_path, assert_magic_image
 
 logger = logging.getLogger(__name__)
 
@@ -70,14 +70,15 @@ def train_rag_view(request):
         return Response({"error": error_msg}, status=400)
         
     try:
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        temp_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}_{file_obj.name}")
-        
+        temp_path = safe_temp_path(
+            file_obj.name,
+            base_dir=os.path.join(settings.MEDIA_ROOT, 'temp'),
+        )
+
         with open(temp_path, 'wb+') as destination:
             for chunk in file_obj.chunks():
                 destination.write(chunk)
-                
+
         train_rag_async.delay(temp_path, file_obj.name, file_obj.content_type)  # type: ignore
         return Response({"status": "accepted", "task": "RAG_TRAIN"}, status=202)
     except Exception as e:
@@ -91,15 +92,15 @@ def train_vision_view(request):
         return Response({"error": "No datasets provided"}, status=400)
         
     try:
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        
         datasets_info = []
         for d in datasets:
             is_valid, _ = validate_file(d, ALLOWED_DATASET_TYPES)
             if not is_valid: continue
 
-            temp_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}_{d.name}")
+            temp_path = safe_temp_path(
+                d.name,
+                base_dir=os.path.join(settings.MEDIA_ROOT, 'temp'),
+            )
             with open(temp_path, 'wb+') as destination:
                 for chunk in d.chunks():
                     destination.write(chunk)
@@ -123,9 +124,15 @@ def analyze_vision_view(request):
         return Response({"error": error_msg}, status=400)
 
     try:
-        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        temp_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}_{file_obj.name}")
+        assert_magic_image(file_obj)
+    except ValueError as e:
+        return Response({"error": str(e)}, status=400)
+
+    try:
+        temp_path = safe_temp_path(
+            file_obj.name,
+            base_dir=os.path.join(settings.MEDIA_ROOT, 'temp'),
+        )
 
         with open(temp_path, 'wb+') as destination:
             for chunk in file_obj.chunks():
@@ -142,14 +149,20 @@ def analyze_vision_view(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def vision_task_status_view(request, task_id):
+    """Contrato unificado con `task_status_view` (core): `status` minúsculas
+    (pending|success|failure) + `state` crudo Celery + `result`/`error`/`info`
+    serializados. Los clientes (web/Flutter) leen `status`."""
     try:
         task = AsyncResult(task_id)
         state = task.state
-        
+
+        status_map = {"SUCCESS": "success", "FAILURE": "failure"}
         response_data = {
-            'task_state': state,
+            'status': status_map.get(state, 'pending'),
+            'state': state,
             'result': safe_serialize(task.result) if state == 'SUCCESS' else None,
-            'info': safe_serialize(task.info) if state != 'SUCCESS' else None
+            'error': safe_serialize(task.result) if state == 'FAILURE' else None,
+            'info': safe_serialize(task.info) if state not in ('SUCCESS', 'FAILURE') else None,
         }
         return Response(response_data)
     except Exception as exc:

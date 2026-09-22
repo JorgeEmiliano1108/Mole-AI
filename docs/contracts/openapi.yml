@@ -1,0 +1,1648 @@
+openapi: 3.0.3
+info:
+  title: Mole.AI API
+  version: 1.0.0
+paths:
+  /api/schema/:
+    get:
+      operationId: schema_retrieve
+      description: |-
+        OpenApi3 schema for this API. Format can be selected via content negotiation.
+
+        - YAML: application/vnd.oai.openapi
+        - JSON: application/vnd.oai.openapi+json
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - json
+          - yaml
+      - in: query
+        name: lang
+        schema:
+          type: string
+          enum:
+          - af
+          - ar
+          - ar-dz
+          - ast
+          - az
+          - be
+          - bg
+          - bn
+          - br
+          - bs
+          - ca
+          - ckb
+          - cs
+          - cy
+          - da
+          - de
+          - dsb
+          - el
+          - en
+          - en-au
+          - en-gb
+          - eo
+          - es
+          - es-ar
+          - es-co
+          - es-mx
+          - es-ni
+          - es-ve
+          - et
+          - eu
+          - fa
+          - fi
+          - fr
+          - fy
+          - ga
+          - gd
+          - gl
+          - he
+          - hi
+          - hr
+          - hsb
+          - hu
+          - hy
+          - ia
+          - id
+          - ig
+          - io
+          - is
+          - it
+          - ja
+          - ka
+          - kab
+          - kk
+          - km
+          - kn
+          - ko
+          - ky
+          - lb
+          - lt
+          - lv
+          - mk
+          - ml
+          - mn
+          - mr
+          - ms
+          - my
+          - nb
+          - ne
+          - nl
+          - nn
+          - os
+          - pa
+          - pl
+          - pt
+          - pt-br
+          - ro
+          - ru
+          - sk
+          - sl
+          - sq
+          - sr
+          - sr-latn
+          - sv
+          - sw
+          - ta
+          - te
+          - tg
+          - th
+          - tk
+          - tr
+          - tt
+          - udm
+          - uk
+          - ur
+          - uz
+          - vi
+          - zh-hans
+          - zh-hant
+      tags:
+      - schema
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.oai.openapi:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/yaml:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/vnd.oai.openapi+json:
+              schema:
+                type: object
+                additionalProperties: {}
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/admin/live-alerts:
+    get:
+      operationId: v1_admin_live_alerts_retrieve
+      description: |-
+        Devuelve un JSON con las alertas en vivo (Telemetría) para el Dashboard Admin.
+        Lee el esquema vivo 1:N (`AmbientReading` + `SoilReading` vía bindings);
+        si está vacío, cae a `SensorLog` legacy. Cada alerta lleva identificadores
+        estructurados para la app (issue 16).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/report-text:
+    get:
+      operationId: v1_admin_report_text_retrieve
+      description: Devuelve las estadísticas básicas como JSON para que el frontend
+        genere el TXT
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/reports/{job_id}/status:
+    get:
+      operationId: v1_admin_reports_status_retrieve
+      description: Consulta a Celery AsyncResult
+      parameters:
+      - in: path
+        name: job_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/reports/generate:
+    post:
+      operationId: v1_admin_reports_generate_create
+      description: Llama a Celery generar_master_report_task.delay()
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/statistics:
+    get:
+      operationId: v1_admin_statistics_retrieve
+      description: Devuelve un JSON con estadísticas reales de la BD
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/users/:
+    get:
+      operationId: v1_admin_users_retrieve
+      description: GET /api/v1/admin/users/?search=&role=&page= — Tabla usuarios (issue
+        16).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/users/{user_id}/:
+    get:
+      operationId: v1_admin_users_retrieve_2
+      description: |-
+        GET/PATCH/DELETE /api/v1/admin/users/<id>/ — Gestiona rol y estado.
+        PATCH admite {role: Operador|Admin|Superadmin, is_active: bool}.
+        DELETE desactiva (soft, nunca borra: preserva auditoría).
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: v1_admin_users_partial_update
+      description: |-
+        GET/PATCH/DELETE /api/v1/admin/users/<id>/ — Gestiona rol y estado.
+        PATCH admite {role: Operador|Admin|Superadmin, is_active: bool}.
+        DELETE desactiva (soft, nunca borra: preserva auditoría).
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: v1_admin_users_destroy
+      description: |-
+        GET/PATCH/DELETE /api/v1/admin/users/<id>/ — Gestiona rol y estado.
+        PATCH admite {role: Operador|Admin|Superadmin, is_active: bool}.
+        DELETE desactiva (soft, nunca borra: preserva auditoría).
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/admin/users/create/:
+    post:
+      operationId: v1_admin_users_create_create
+      description: Crea un usuario real usando el gestor de Django
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/cnn/inferences/:
+    get:
+      operationId: v1_ai_cnn_inferences_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/config/:
+    get:
+      operationId: v1_ai_config_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/health/:
+    get:
+      operationId: v1_ai_health_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/llm/requests/:
+    get:
+      operationId: v1_ai_llm_requests_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/performance/:
+    get:
+      operationId: v1_ai_performance_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/train/rag/:
+    post:
+      operationId: v1_ai_train_rag_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/train/vision/:
+    post:
+      operationId: v1_ai_train_vision_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/vision/analyze/:
+    post:
+      operationId: v1_ai_vision_analyze_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/vision/status/{task_id}/:
+    get:
+      operationId: v1_ai_vision_status_retrieve
+      description: |-
+        Contrato unificado con `task_status_view` (core): `status` minúsculas
+        (pending|success|failure) + `state` crudo Celery + `result`/`error`/`info`
+        serializados. Los clientes (web/Flutter) leen `status`.
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/consent/:
+    post:
+      operationId: v1_auth_consent_create
+      description: |-
+        POST /api/v1/auth/consent/ — Registra el consentimiento explícito de
+        tratamiento de datos personales (LFPDPPP Art. 8, BR-02).
+        Body: {"consent": true} para otorgar, {"consent": false} para revocar.
+        Persiste `data_consent` + `data_consent_date` (NULL al revocar) y audita.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/debug/:
+    get:
+      operationId: v1_auth_debug_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/health/:
+    get:
+      operationId: v1_auth_health_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/login/:
+    post:
+      operationId: v1_auth_login_create
+      description: |-
+        POST /api/v1/auth/login/
+        Local authentication with username/password.
+        Returns JWT token for local auth.
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/logout/:
+    post:
+      operationId: v1_auth_logout_create
+      description: |-
+        POST /api/v1/auth/logout/ — Revoca el JWT actual vía denylist (B3) y
+        orienta al cliente a descartarlo. TTL = vida restante del token.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/metadata/:
+    get:
+      operationId: v1_auth_metadata_retrieve
+      description: GET /api/v1/auth/metadata/ — JWT claims attached during authentication.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/password-change/:
+    post:
+      operationId: v1_auth_password_change_create
+      description: |-
+        POST /api/v1/auth/password-change/
+        Body: {"current_password", "new_password"}. Requiere JWT vigente +
+        contraseña actual + fortaleza NIST + AuditLog.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/password-reset/confirm/:
+    post:
+      operationId: v1_auth_password_reset_confirm_create
+      description: |-
+        POST /api/v1/auth/password-reset/confirm/
+        Body: {"token", "new_password"}. Valida token vigente (<1h), fortaleza
+        NIST y lo invalida tras usar (un solo uso) + AuditLog.
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/password-reset/request/:
+    post:
+      operationId: v1_auth_password_reset_request_create
+      description: |-
+        POST /api/v1/auth/password-reset/request/
+        Body: {"email"}. SIEMPRE responde 202 (anti-enumeración: no revela si el
+        email existe). Encola correo con token de un solo uso TTL 1h + AuditLog.
+        Throttle anon 100/h (settings) contra enumeración masiva.
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/profile/:
+    get:
+      operationId: v1_auth_profile_retrieve
+      description: |-
+        GET    /api/v1/auth/profile/ — Return the authenticated user's profile.
+        PATCH  /api/v1/auth/profile/ — Update mutable profile fields.
+        DELETE /api/v1/auth/profile/ — Derecho ARCO: eliminación de cuenta.
+               Anonimiza PII y elimina el usuario. Los registros científicos
+               (SensorLog, AIDiagnostic) se conservan con user_id/plant_id = NULL
+               gracias a on_delete=SET_NULL en las FK relacionadas.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: v1_auth_profile_partial_update
+      description: |-
+        GET    /api/v1/auth/profile/ — Return the authenticated user's profile.
+        PATCH  /api/v1/auth/profile/ — Update mutable profile fields.
+        DELETE /api/v1/auth/profile/ — Derecho ARCO: eliminación de cuenta.
+               Anonimiza PII y elimina el usuario. Los registros científicos
+               (SensorLog, AIDiagnostic) se conservan con user_id/plant_id = NULL
+               gracias a on_delete=SET_NULL en las FK relacionadas.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: v1_auth_profile_destroy
+      description: |-
+        GET    /api/v1/auth/profile/ — Return the authenticated user's profile.
+        PATCH  /api/v1/auth/profile/ — Update mutable profile fields.
+        DELETE /api/v1/auth/profile/ — Derecho ARCO: eliminación de cuenta.
+               Anonimiza PII y elimina el usuario. Los registros científicos
+               (SensorLog, AIDiagnostic) se conservan con user_id/plant_id = NULL
+               gracias a on_delete=SET_NULL en las FK relacionadas.
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/refresh/:
+    post:
+      operationId: v1_auth_refresh_create
+      description: |-
+        Return a fresh JWT with a new expiration.
+        The client must include the current token in the Authorization header.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/register/:
+    post:
+      operationId: v1_auth_register_create
+      description: |-
+        POST /api/v1/auth/register/
+        Registra a un nuevo agricultor u operador de manera local con contraseña segura.
+        Envía correo de verificación tras registro exitoso.
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/resend-verification/:
+    post:
+      operationId: v1_auth_resend_verification_create
+      description: |-
+        POST /api/v1/auth/resend-verification/
+        Reenvía el correo de verificación.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/subscription/:
+    get:
+      operationId: v1_auth_subscription_retrieve
+      description: |-
+        GET /api/v1/auth/subscription/ — Current subscription status.
+        PUT /api/v1/auth/subscription/ — (placeholder for Stripe/webhook integration).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    put:
+      operationId: v1_auth_subscription_update
+      description: |-
+        GET /api/v1/auth/subscription/ — Current subscription status.
+        PUT /api/v1/auth/subscription/ — (placeholder for Stripe/webhook integration).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/validate-token/:
+    post:
+      operationId: v1_auth_validate_token_create
+      description: |-
+        POST /api/v1/auth/validate-token/
+        Accepts a Supabase JWT in the Authorization header, validates it,
+        creates/updates the Django user, and returns user info.
+        Used for Supabase authentication flows.
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/verify-email/{token}/:
+    get:
+      operationId: v1_auth_verify_email_retrieve
+      description: |-
+        GET /api/v1/auth/verify-email/<token>/
+        Verifica el correo electrónico del usuario.
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/chat/fallback/:
+    post:
+      operationId: v1_chat_fallback_create
+      description: |-
+        POST /api/v1/chat/fallback/
+        Dispatches RAG chat to Celery (chat_queue).
+        Returns 202 with task_id — frontend polls /api/v1/tasks/status/{task_id}/
+        for the chat answer.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/chat/history/:
+    get:
+      operationId: v1_chat_history_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/devices/{id}/bindings/:
+    get:
+      operationId: v1_devices_bindings_retrieve
+      description: |-
+        GET  /api/v1/devices/{id}/bindings/  -- list all bindings for device
+        POST /api/v1/devices/{id}/bindings/  -- create a new binding
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: v1_devices_bindings_create
+      description: |-
+        GET  /api/v1/devices/{id}/bindings/  -- list all bindings for device
+        POST /api/v1/devices/{id}/bindings/  -- create a new binding
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/devices/{id}/bindings/{binding_id}/:
+    delete:
+      operationId: v1_devices_bindings_destroy
+      description: DELETE /api/v1/devices/{id}/bindings/{binding_id}/
+      parameters:
+      - in: path
+        name: binding_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/devices/{id}/health/:
+    get:
+      operationId: v1_devices_health_retrieve
+      description: |-
+        GET /api/v1/devices/{id}/health/
+        Reads from AmbientReading + SoilReading (1:N schema). SensorLog is frozen.
+
+        Query budget: constant 4 queries (Device, Ambient, Bindings+Subquery, SoilReadings IN).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/devices/{id}/revoke/:
+    delete:
+      operationId: v1_devices_revoke_destroy
+      description: |-
+        Revoca (desactiva) un dispositivo IoT.
+        Soft‑delete: marca `is_active=False` sin borrar datos históricos.
+        Solo el dueño o staff (igual que rotate_device_token).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/devices/{id}/rotate/:
+    post:
+      operationId: v1_devices_rotate_create
+      description: |-
+        Rota el Bearer token de un dispositivo (RNF-02).
+        Solo el dueño o staff. El token anterior queda invalidado de inmediato
+        y el nuevo expira en 90 días (`auth_token_expires_at`).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/diagnosticos/geolocalizados/:
+    get:
+      operationId: v1_diagnosticos_geolocalizados_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/diagnosticos/geolocalizados/create/:
+    post:
+      operationId: v1_diagnosticos_geolocalizados_create_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/diagnostics/:
+    post:
+      operationId: v1_diagnostics_create
+      description: |-
+        POST /api/v1/diagnostics/
+        Envía imagen a MS1 de forma asíncrona via Celery.
+        No bloquea el request - el frontend hace polling del task_id.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/diagnostics/{id}/download/:
+    get:
+      operationId: v1_diagnostics_download_retrieve
+      description: |-
+        GET /api/v1/diagnostics/{id}/download/
+        Dispatches PDF generation to Celery (reports_queue).
+        Returns 202 with task_id — frontend polls /api/v1/tasks/status/{task_id}/
+        for the presigned download URL.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/diagnostics/history/:
+    get:
+      operationId: v1_diagnostics_history_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/feedback/:
+    post:
+      operationId: v1_feedback_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/fichas/:
+    get:
+      operationId: v1_fichas_retrieve
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/health/:
+    get:
+      operationId: v1_health_retrieve
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/history/:
+    get:
+      operationId: v1_history_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/iot/nodes/:
+    post:
+      operationId: v1_iot_nodes_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/llm/chat/:
+    post:
+      operationId: v1_llm_chat_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/map/hotspots/:
+    get:
+      operationId: v1_map_hotspots_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/plant-knowledge/:
+    get:
+      operationId: v1_plant_knowledge_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/plants/:
+    get:
+      operationId: v1_plants_retrieve
+      description: |-
+        GET  /api/v1/user-plants/  — List the authenticated user's plants.
+        POST /api/v1/user-plants/  — Create a new plant, return the generated plant_id (UUID).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: v1_plants_create
+      description: |-
+        GET  /api/v1/user-plants/  — List the authenticated user's plants.
+        POST /api/v1/user-plants/  — Create a new plant, return the generated plant_id (UUID).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/plants/flora/:
+    post:
+      operationId: v1_plants_flora_create
+      description: |-
+        POST /api/v1/plants/flora/
+        Crea ficha técnica con foto. El usuario autenticado es propietario.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/plants/search/:
+    get:
+      operationId: v1_plants_search_retrieve
+      description: |-
+        GET /api/v1/plants/search/?q=nombre&category=plaga&endemic=&habitat=
+        Busca especies en SpeciesCatalog (públic). Soporta filtros ?q=, ?category=,
+        ?endemic=(1/true) y ?habitat= (búsqueda en habitat+uses). Expone campos
+        informativos (habitat, uses) para el portal público (issue 14/18).
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/plants/species/:
+    get:
+      operationId: v1_plants_species_list
+      description: CRUD for SpeciesCatalog. Read allowed for all; writes restricted
+        to staff/superuser.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSpeciesList'
+          description: ''
+    post:
+      operationId: v1_plants_species_create
+      description: CRUD for SpeciesCatalog. Read allowed for all; writes restricted
+        to staff/superuser.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Species'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Species'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Species'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Species'
+          description: ''
+  /api/v1/plants/species/{id}/:
+    get:
+      operationId: v1_plants_species_retrieve
+      description: CRUD for SpeciesCatalog. Read allowed for all; writes restricted
+        to staff/superuser.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this species catalog.
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Species'
+          description: ''
+    put:
+      operationId: v1_plants_species_update
+      description: CRUD for SpeciesCatalog. Read allowed for all; writes restricted
+        to staff/superuser.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this species catalog.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Species'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Species'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Species'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Species'
+          description: ''
+    patch:
+      operationId: v1_plants_species_partial_update
+      description: CRUD for SpeciesCatalog. Read allowed for all; writes restricted
+        to staff/superuser.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this species catalog.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSpecies'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSpecies'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSpecies'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Species'
+          description: ''
+    delete:
+      operationId: v1_plants_species_destroy
+      description: CRUD for SpeciesCatalog. Read allowed for all; writes restricted
+        to staff/superuser.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this species catalog.
+        required: true
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/reports/plants:
+    post:
+      operationId: v1_reports_plants_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/reports/users:
+    get:
+      operationId: v1_reports_users_retrieve
+      description: Devuelve los últimos reportes interceptados
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensor-data/:
+    post:
+      operationId: v1_sensor_data_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensor-data/{id}/:
+    patch:
+      operationId: v1_sensor_data_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensor-data/batch/:
+    post:
+      operationId: v1_sensor_data_batch_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensor-data/edge-batch/:
+    post:
+      operationId: v1_sensor_data_edge_batch_create
+      description: |-
+        POST /api/v1/sensor-data/edge-batch/
+        Ingests the compact ESP32 telemetry frame and demultiplexes into
+        AmbientReading + SoilReading (1:N relational schema).
+
+        Decisions: A1=partial success, A2=ACID, A3=freeze SensorLog, A4=future-only anti-replay.
+        Auth: DeviceBearerPermission (Bearer por dispositivo + expiración).
+        DeviceBearerScheme declara el esquema para que las denegaciones sean 401.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensor-data/latest/:
+    get:
+      operationId: v1_sensor_data_latest_retrieve
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensor-logs/:
+    post:
+      operationId: v1_sensor_logs_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sensors/ingest:
+    post:
+      operationId: v1_sensors_ingest_create
+      description: |-
+        POST /api/v1/sensors/ingest
+        JWT-protected endpoint for IoT sensor data ingestion.
+
+        This replaces the legacy HardwareAPIKey-based sensor_data_view for
+        nodes that have been upgraded to M2M JWT authentication (Zero-Trust).
+        The JwtHttpMiddleware in the middleware stack has already validated
+        the Bearer token before this view executes.
+
+        Payload: same schema as SensorReadingSerializer.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/sync/batch/:
+    post:
+      operationId: v1_sync_batch_create
+      description: |-
+        POST /api/v1/sync/batch/ — Sincronización edge con cursor (MRF03/RNF06).
+
+        JSON-RPC 2.0 estricto sobre el mismo auth DeviceBearer que `edge-batch/`
+        (dual-stack: la forma legacy sigue viva sin cambios).
+        Request: {"jsonrpc":"2.0","method":"sync.telemetry",
+                  "params":{"cursor":<iso|null>,"frames":[{ts,ri,a,s}...]},"id":any}
+        Response: {"jsonrpc":"2.0",
+                   "result":{"applied_up_to":<iso|null>,"accepted":[i...],
+                             "conflicts":[{index,error,details?}...]},"id":same}
+        Errores protocolo: {"jsonrpc":"2.0","error":{"code","message"},"id":same|null}
+        Códigos: -32700 parse, -32600 request inválido, -32601 método desconocido,
+                 -32602 parámetros inválidos. Auth (401) y throttle igual que edge-batch.
+        Semántica: éxito parcial por trama (A1); cada trama en su transacción (A2);
+        reenvíos idempotentes (`dedupe=True`); conflictos = tramas rechazadas con
+        motivo (server-wins documentado: lo aceptado manda).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/tasks/status/{task_id}/:
+    get:
+      operationId: v1_tasks_status_retrieve
+      description: |-
+        GET /api/v1/tasks/status/{task_id}/
+
+        Unified polling endpoint for all async Celery operations.
+        Returns the task state and result on completion.
+
+        States:
+          - PENDING:  Task received but not yet started
+          - STARTED:  Worker picked up the task
+          - SUCCESS:  Completed — result is in the response
+          - FAILURE:  Failed — error info is in the response
+          - RETRY:    Retrying after a transient failure
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/telemetry/latest/:
+    get:
+      operationId: v1_telemetry_latest_retrieve
+      description: |-
+        GET /api/v1/telemetry/latest/?plant_id=<uuid>
+        Returns the most recent SensorLog for the given plant_id if the plant belongs to the request.user.
+        Nota: vista síncrona a propósito — el DRF instalado no soporta vistas
+        async (un `async def` aquí devolvía la corrutina sin ejecutar).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/training/documents/:
+    get:
+      operationId: v1_training_documents_retrieve
+      description: List all training documents with optional status filter.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/training/documents/upload/request/:
+    post:
+      operationId: v1_training_documents_upload_request_create
+      description: |-
+        Step 1: Generate a presigned PUT URL for uploading a training document.
+        Creates a TrainingDocument record with status=PENDING.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/training/images/:
+    get:
+      operationId: v1_training_images_retrieve
+      description: List all training images with optional status/disease filter.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/training/images/upload/request/:
+    post:
+      operationId: v1_training_images_upload_request_create
+      description: |-
+        Step 1: Generate a presigned PUT URL for uploading a training image/ZIP.
+        Creates a TrainingImage record with status=PENDING.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/training/upload/confirm/:
+    post:
+      operationId: v1_training_upload_confirm_create
+      description: |-
+        Step 3: Frontend confirms that the presigned upload completed.
+        Django verifies the object exists in S3 via HEAD, then enqueues Celery notification.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/user-plants/:
+    get:
+      operationId: v1_user_plants_retrieve
+      description: |-
+        GET  /api/v1/user-plants/  — List the authenticated user's plants.
+        POST /api/v1/user-plants/  — Create a new plant, return the generated plant_id (UUID).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: v1_user_plants_create
+      description: |-
+        GET  /api/v1/user-plants/  — List the authenticated user's plants.
+        POST /api/v1/user-plants/  — Create a new plant, return the generated plant_id (UUID).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/user-plants/{plant_id}/:
+    get:
+      operationId: v1_user_plants_retrieve_2
+      description: |-
+        GET    /api/v1/plants/<uuid>/  — Detail of a plant.
+        PATCH  /api/v1/plants/<uuid>/  — Update a plant.
+        DELETE /api/v1/plants/<uuid>/  — Delete a plant.
+      parameters:
+      - in: path
+        name: plant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: v1_user_plants_partial_update
+      description: |-
+        GET    /api/v1/plants/<uuid>/  — Detail of a plant.
+        PATCH  /api/v1/plants/<uuid>/  — Update a plant.
+        DELETE /api/v1/plants/<uuid>/  — Delete a plant.
+      parameters:
+      - in: path
+        name: plant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: v1_user_plants_destroy
+      description: |-
+        GET    /api/v1/plants/<uuid>/  — Detail of a plant.
+        PATCH  /api/v1/plants/<uuid>/  — Update a plant.
+        DELETE /api/v1/plants/<uuid>/  — Delete a plant.
+      parameters:
+      - in: path
+        name: plant_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/user-plants/favorites/:
+    get:
+      operationId: v1_user_plants_favorites_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: v1_user_plants_favorites_create
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/user-plants/favorites/{fav_id}/:
+    delete:
+      operationId: v1_user_plants_favorites_destroy
+      parameters:
+      - in: path
+        name: fav_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      responses:
+        '204':
+          description: No response body
+  /api/v1/user-plants/my-collection/:
+    get:
+      operationId: v1_user_plants_my_collection_retrieve
+      description: |-
+        GET /api/v1/plants/my-collection/
+        Returns the list of plants that belong to the authenticated user (created_by/request.user).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/weather/current/:
+    get:
+      operationId: v1_weather_current_retrieve
+      description: Proxy seguro para obtener clima actual por coordenadas.
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/weather/tile/{layer}/{z}/{x}/{y}.png:
+    get:
+      operationId: v1_weather_tile_.png_retrieve
+      description: |-
+        Proxy seguro para capas de OpenWeather (Temp, Precipitación, etc).
+        Evita exponer la API KEY en el JS del frontend.
+      parameters:
+      - in: path
+        name: layer
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: x
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: y
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: z
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    BlankEnum:
+      enum:
+      - ''
+    CategoryEnum:
+      enum:
+      - planta
+      - plaga
+      - enfermedad
+      type: string
+      description: |-
+        * `planta` - Planta
+        * `plaga` - Plaga
+        * `enfermedad` - Enfermedad
+    PaginatedSpeciesList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Species'
+    PatchedSpecies:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        scientific_name:
+          type: string
+        common_name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        ideal_humidity_min:
+          type: number
+          format: double
+          nullable: true
+        ideal_humidity_max:
+          type: number
+          format: double
+          nullable: true
+        ideal_temp_min:
+          type: number
+          format: double
+          nullable: true
+        ideal_temp_max:
+          type: number
+          format: double
+          nullable: true
+        ideal_ph_min:
+          type: number
+          format: double
+          nullable: true
+        ideal_ph_max:
+          type: number
+          format: double
+          nullable: true
+        ideal_ph_optimal:
+          type: number
+          format: double
+          nullable: true
+        habitat:
+          type: string
+          nullable: true
+        soil_type:
+          type: string
+          nullable: true
+        irrigation:
+          type: string
+          nullable: true
+        uses:
+          type: string
+          nullable: true
+        uv_rays:
+          type: number
+          format: double
+          nullable: true
+        soil_humidity_min:
+          type: number
+          format: double
+          nullable: true
+        soil_humidity_max:
+          type: number
+          format: double
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryEnum'
+          description: |-
+            Categoría taxonómica para filtrado en la Wiki.
+
+            * `planta` - Planta
+            * `plaga` - Plaga
+            * `enfermedad` - Enfermedad
+        is_protected_nom059:
+          type: boolean
+          description: Indica si la especie está protegida por NOM-059-SEMARNAT.
+        protection_category:
+          oneOf:
+          - $ref: '#/components/schemas/ProtectionCategoryEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+    ProtectionCategoryEnum:
+      enum:
+      - P
+      - T
+      - Pr
+      type: string
+      description: |-
+        * `P` - En peligro de extinción
+        * `T` - Amenazada
+        * `Pr` - Sujeta a protección especial
+    Species:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        scientific_name:
+          type: string
+        common_name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        ideal_humidity_min:
+          type: number
+          format: double
+          nullable: true
+        ideal_humidity_max:
+          type: number
+          format: double
+          nullable: true
+        ideal_temp_min:
+          type: number
+          format: double
+          nullable: true
+        ideal_temp_max:
+          type: number
+          format: double
+          nullable: true
+        ideal_ph_min:
+          type: number
+          format: double
+          nullable: true
+        ideal_ph_max:
+          type: number
+          format: double
+          nullable: true
+        ideal_ph_optimal:
+          type: number
+          format: double
+          nullable: true
+        habitat:
+          type: string
+          nullable: true
+        soil_type:
+          type: string
+          nullable: true
+        irrigation:
+          type: string
+          nullable: true
+        uses:
+          type: string
+          nullable: true
+        uv_rays:
+          type: number
+          format: double
+          nullable: true
+        soil_humidity_min:
+          type: number
+          format: double
+          nullable: true
+        soil_humidity_max:
+          type: number
+          format: double
+          nullable: true
+        image_url:
+          type: string
+          nullable: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryEnum'
+          description: |-
+            Categoría taxonómica para filtrado en la Wiki.
+
+            * `planta` - Planta
+            * `plaga` - Plaga
+            * `enfermedad` - Enfermedad
+        is_protected_nom059:
+          type: boolean
+          description: Indica si la especie está protegida por NOM-059-SEMARNAT.
+        protection_category:
+          oneOf:
+          - $ref: '#/components/schemas/ProtectionCategoryEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+      required:
+      - id
+      - scientific_name

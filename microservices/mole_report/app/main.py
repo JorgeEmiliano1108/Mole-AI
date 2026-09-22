@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+
 from app.api.v1 import reports
 from app.config import settings
-from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="MS-3 Reports Service", version="0.2.0")
 
@@ -38,7 +39,7 @@ async def shutdown_event():
     pass
 
 
-app.include_router(reports.router, tags=["reports"])
+app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 
 
 if __name__ == "__main__":

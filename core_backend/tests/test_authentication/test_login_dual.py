@@ -26,7 +26,7 @@ class DualLoginTestCase(TestCase):
     def test_login_with_username(self):
         """Verificar que login con username funciona correctamente."""
         response = self.client.post(
-            "/api/v1/auth/validate-token/",
+            "/api/v1/auth/login/",
             {"username": "agricultor_test", "password": "Test1234"},
             content_type="application/json"
         )
@@ -38,7 +38,7 @@ class DualLoginTestCase(TestCase):
     def test_login_with_email(self):
         """Verificar que login con email funciona (Dual Login Backend)."""
         response = self.client.post(
-            "/api/v1/auth/validate-token/",
+            "/api/v1/auth/login/",
             {"username": "test@mole.ai", "password": "Test1234"},
             content_type="application/json"
         )
@@ -50,7 +50,7 @@ class DualLoginTestCase(TestCase):
     def test_login_case_insensitive_username(self):
         """Verificar que username es case-insensitive."""
         response = self.client.post(
-            "/api/v1/auth/validate-token/",
+            "/api/v1/auth/login/",
             {"username": "AGRICULTOR_TEST", "password": "Test1234"},
             content_type="application/json"
         )
@@ -59,7 +59,7 @@ class DualLoginTestCase(TestCase):
     def test_login_case_insensitive_email(self):
         """Verificar que email es case-insensitive."""
         response = self.client.post(
-            "/api/v1/auth/validate-token/",
+            "/api/v1/auth/login/",
             {"username": "TEST@MOLE.AI", "password": "Test1234"},
             content_type="application/json"
         )
@@ -68,7 +68,7 @@ class DualLoginTestCase(TestCase):
     def test_login_invalid_credentials(self):
         """Verificar que credenciales inválidas devuelven 401."""
         response = self.client.post(
-            "/api/v1/auth/validate-token/",
+            "/api/v1/auth/login/",
             {"username": "agricultor_test", "password": "WrongPass123"},
             content_type="application/json"
         )
@@ -77,7 +77,7 @@ class DualLoginTestCase(TestCase):
     def test_login_nonexistent_user(self):
         """Verificar que usuario inexistente devuelve 401."""
         response = self.client.post(
-            "/api/v1/auth/validate-token/",
+            "/api/v1/auth/login/",
             {"username": "nobody@test.com", "password": "Test1234"},
             content_type="application/json"
         )

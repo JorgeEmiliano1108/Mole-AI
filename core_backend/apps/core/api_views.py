@@ -58,10 +58,12 @@ def mock_sensor_data(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-async def telemetry_latest_view(request):
+def telemetry_latest_view(request):
     """
     GET /api/v1/telemetry/latest/?plant_id=<uuid>
     Returns the most recent SensorLog for the given plant_id if the plant belongs to the request.user.
+    Nota: vista síncrona a propósito — el DRF instalado no soporta vistas
+    async (un `async def` aquí devolvía la corrutina sin ejecutar).
     """
     plant_id = request.GET.get('plant_id')
     if not plant_id:
@@ -69,18 +71,11 @@ async def telemetry_latest_view(request):
 
     # Verify ownership: plant must belong to the authenticated user
     try:
-        await sync_to_async(
-            UserPlant.objects.get, thread_sensitive=True
-        )(id=plant_id, user=request.user)
+        UserPlant.objects.get(id=plant_id, user=request.user)
     except UserPlant.DoesNotExist:
         return Response({'error': 'Plant not found or does not belong to the user.'}, status=404)
 
-    log = await sync_to_async(
-        lambda: SensorLog.objects.filter(plant_id=plant_id)
-                .order_by('-recorded_at')
-                .first(),
-        thread_sensitive=True,
-    )()
+    log = SensorLog.objects.filter(plant_id=plant_id).order_by('-recorded_at').first()
 
     if not log:
         return Response({'error': 'No telemetry available for this plant.'}, status=404)
@@ -164,7 +159,7 @@ async def sensors_ingest_view(request):
         )()
         return Response({"status": "success", "registered": 1}, status=201)
     except Exception as exc:
-        logger.exception("Sensor ingest failed: %s", exc)
+        logger.exception("Sensor ingest failed")
         return Response({"error": str(exc)}, status=500)
 
 
@@ -179,9 +174,10 @@ def device_health_view(request, id):
 
     Query budget: constant 4 queries (Device, Ambient, Bindings+Subquery, SoilReadings IN).
     """
+    from django.db.models import OuterRef, Subquery
     from django.utils import timezone
-    from django.db.models import Subquery, OuterRef
-    from apps.core.models import Device, AmbientReading, SoilReading, HardwareBinding
+
+    from apps.core.models import AmbientReading, Device, HardwareBinding, SoilReading
 
     try:
         device = Device.objects.get(id=id)

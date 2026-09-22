@@ -1,6 +1,8 @@
 import os
-from django.core.management.base import BaseCommand
+
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
 
 class Command(BaseCommand):
     help = 'Asegura la existencia del superusuario EmiMole con todos los permisos activos.'
@@ -9,8 +11,14 @@ class Command(BaseCommand):
         User = get_user_model()
         username = 'EmiMole'
         email = 'emi@mole.ai'
-        import os
-        password = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'moleai2026')
+        # V2 staging: sin default. Un password hardcodeado en repo es fuga
+        # de credencial (ver issue 10/B7). Falla explícito si falta el env.
+        password = os.getenv('DJANGO_SUPERUSER_PASSWORD', '')
+        if not password:
+            raise ValueError(
+                "DJANGO_SUPERUSER_PASSWORD no definido: rehúso crear "
+                "superusuario con credencial por defecto."
+            )
 
         user, created = User.objects.get_or_create(
             username=username,

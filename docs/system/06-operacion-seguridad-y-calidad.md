@@ -47,10 +47,10 @@ Todos los bloques se despliegan con `docker‑compose.yml`; los puertos y variab
 - **Health‑checks**: cada servicio expone `/health/` con código 200 si está operativo.
 
 ### 7.4 Calidad
-- **Objetivos**: latencia ≤ 200 ms en endpoints críticos; cobertura de pruebas ≥ 80 % (actual: **88%** en ms2_chat); disponibilidad ≥ 99.5 % (medida por Prometheus).
+- **Objetivos**: latencia ≤ 200 ms en endpoints críticos; cobertura de pruebas ≥ 80 % (actual ms2_chat: 82.86% según `coverage.json`, no 88%); disponibilidad ≥ 99.5 % (medida por Prometheus).
 - **Estrategia de pruebas**:
-  - **Unitarias**: 113 tests, 0 fallos con `requirements.lock` (pytest + fakes, 0% MagicMock)
-  - **E2E**: 3 scripts shell sobre Docker Compose autónomo (`docker-compose.e2e.yml`) — chat con sensores Redis reales, validación JWT, bloqueo NOM-059
+  - **Unitarias**: ms2_chat 122 funciones (115 passed + 10 skipped verificado 2026-09-14), ms1_vision 51 passed, mole_report 34 funciones (26 passed + 6 failed pre-existentes en `test_api_reports`), backend 32 ficheros / 81 funciones. `pytest-mock` y `MagicMock` sí se usan (`test_jwt.py`, `test_pgvector_mock.py`).
+  - **E2E**: 3 scripts shell sobre Docker Compose autónomo (`docker-compose.e2e.yml`) — chat con sensores Redis reales, validación JWT, bloqueo NOM-059 (verdes 2026-09-14)
   - **Integración** (`pytest --run-integration`): esqueleto para pgvector (requiere `--break-system-packages` no disponible; pendiente de Dockerizar)
   - **Carga** (Locust): no implementado — pendiente
 - **Gate de licencias**: el CI ejecuta `pip-licenses --fail-on="GPL;LGPL;AGPL;GPLv2;GPLv3;LGPLv2;LGPLv3"` y bloquea el build si aparece cualquier licencia no permitida (ver `.github/workflows/system-tests.yml`).

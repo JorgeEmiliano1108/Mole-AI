@@ -32,6 +32,9 @@ urlpatterns = [
 
     # User Profile endpoints
     path('profile/', views.user_profile_view, name='user_profile'),
+
+    # LFPDPPP consentimiento explícito (BR-02)
+    path('consent/', views.consent_view, name='consent'),
     
     # User Subscription endpoints
     path('subscription/', views.user_subscription_view, name='user_subscription'),
@@ -42,6 +45,11 @@ urlpatterns = [
     # Logout endpoint
     path('logout/', views.logout_view, name='logout'),
     path('refresh/', refresh_view, name='refresh'),
+
+    # Recuperación de contraseña (ADR-0006, issue 16)
+    path('password-reset/request/', views.password_reset_request_view, name='password_reset_request'),
+    path('password-reset/confirm/', views.password_reset_confirm_view, name='password_reset_confirm'),
+    path('password-change/', views.password_change_view, name='password_change'),
     
     # Health Check endpoint
     path('health/', views.AuthHealthCheckView.as_view(), name='auth_health_check'),

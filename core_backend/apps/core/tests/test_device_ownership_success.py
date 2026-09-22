@@ -20,6 +20,6 @@ def test_device_owner_success(owner_user_with_device):
     # Verify the FK works
     assert device.owner == user
     # Revoke endpoint should succeed (204)
-    url = reverse('device_revoke', kwargs={'id': device.id})
+    url = reverse('core:device_revoke', kwargs={'id': device.id})
     response = client.delete(url)
     assert response.status_code == 204

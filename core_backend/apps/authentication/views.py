@@ -10,13 +10,20 @@
 # Cualquier uso no autorizado será perseguido conforme a la Ley Federal
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.response import Response
-from rest_framework import status
+import uuid
 
-from .infrastructure.authentication import SupabaseAuthentication
+from rest_framework import status
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
+
 from .infrastructure.local_jwt_auth import LocalJWTAuthentication
 
 
@@ -94,6 +101,31 @@ def user_profile_view(request):
     return Response({"status": "updated", "fields": updated})
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def consent_view(request):
+    """
+    POST /api/v1/auth/consent/ — Registra el consentimiento explícito de
+    tratamiento de datos personales (LFPDPPP Art. 8, BR-02).
+    Body: {"consent": true} para otorgar, {"consent": false} para revocar.
+    Persiste `data_consent` + `data_consent_date` (NULL al revocar) y audita.
+    """
+    from apps.authentication.consent import record_consent
+    consent = request.data.get("consent", None)
+    if consent is not True and consent is not False:
+        return Response(
+            {"error": "Campo 'consent' booleano requerido."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    user = request.user
+    record_consent(user, consent, ip_address=request.META.get("REMOTE_ADDR"))
+    return Response({
+        "status": "recorded",
+        "data_consent": user.data_consent,
+        "data_consent_date": user.data_consent_date,
+    })
+
+
 @api_view(["GET", "PUT"])
 @permission_classes([IsAuthenticated])
 def user_subscription_view(request):
@@ -137,12 +169,21 @@ def user_metadata_view(request):
 @permission_classes([IsAuthenticated])
 def logout_view(request):
     """
-    POST /api/v1/auth/logout/ — Stateless API Logout
-    En REST JWT, la invalidación del token debe hacerse borrando el token 
-    en el cliente (Frontend). No mantenemos sesiones de lado del servidor.
+    POST /api/v1/auth/logout/ — Revoca el JWT actual vía denylist (B3) y
+    orienta al cliente a descartarlo. TTL = vida restante del token.
     """
+    from datetime import datetime, timezone
+
+    from apps.authentication.token_denylist import deny_jti
+    payload = getattr(request.user, "jwt_payload", {}) or {}
+    try:
+        exp = datetime.fromtimestamp(payload.get("exp", 0), tz=timezone.utc)
+        ttl = max(1, int((exp - datetime.now(timezone.utc)).total_seconds()))
+    except Exception:
+        ttl = 20 * 60
+    deny_jti(payload.get("jti"), ttl)
     return Response({
-        "status": "logged_out", 
+        "status": "logged_out",
         "message": "Token must be discarded by client."
     }, status=status.HTTP_200_OK)
 
@@ -182,11 +223,22 @@ def register_view(request):
     if email and User.objects.filter(email__iexact=email).exists():
         return Response({"error": "El correo electrónico ya está registrado."}, status=status.HTTP_400_BAD_REQUEST)
 
+    # LFPDPPP Art. 8 (B2): el alta exige consentimiento explícito previo.
+    # Se reutiliza la misma validación estricta y auditoría que consent_view.
+    if request.data.get("consent", None) is not True:
+        return Response(
+            {"error": "Debes aceptar el uso de datos personales (LFPDPPP)."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     # Crear usuario con email no verificado inicialmente
     user = User.objects.create_user(username=username, email=email, password=password)
     user.is_active = True
     user.is_email_verified = False
     user.save(update_fields=["is_active", "is_email_verified"])
+
+    from apps.authentication.consent import record_consent
+    record_consent(user, True, ip_address=request.META.get("REMOTE_ADDR"))
 
     # Enqueue tarea de verificación de correo (Celery)
     try:
@@ -210,10 +262,11 @@ def login_view(request):
     Local authentication with username/password.
     Returns JWT token for local auth.
     """
-    from django.contrib.auth import authenticate, get_user_model
-    from django.conf import settings
-    import jwt
     from datetime import datetime, timedelta, timezone
+
+    import jwt
+    from django.conf import settings
+    from django.contrib.auth import authenticate, get_user_model
     
     identifier = request.data.get("username")
     password = request.data.get("password")
@@ -259,6 +312,7 @@ def login_view(request):
         "aud": "authenticated",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=getattr(settings, 'JWT_TTL_MINUTES', 20)),
         "iat": datetime.now(timezone.utc),
+        "jti": uuid.uuid4().hex,  # B3: revocable vía denylist en logout.
     }
     
     token = jwt.encode(payload, signing_key, algorithm=signing_alg)
@@ -405,3 +459,111 @@ def auth_debug_view(request):
         "is_authenticated": request.user.is_authenticated,
         "supabase_uid": getattr(request.user, "supabase_uid", None),
     })
+
+# --- Recuperación de contraseña (ADR-0006, issue 16) -------------------------
+RESET_TOKEN_TTL_SECONDS = 3600  # 1 hora, un solo uso
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
+def password_reset_request_view(request):
+    """
+    POST /api/v1/auth/password-reset/request/
+    Body: {"email"}. SIEMPRE responde 202 (anti-enumeración: no revela si el
+    email existe). Encola correo con token de un solo uso TTL 1h + AuditLog.
+    Throttle anon 100/h (settings) contra enumeración masiva.
+    """
+    from django.contrib.auth import get_user_model
+
+    from apps.core.models import AuditLog
+
+    email = (request.data.get("email") or "").strip()
+    User = get_user_model()
+    user = User.objects.filter(email__iexact=email).first() if email else None
+    if user is not None and user.email:
+        try:
+            from apps.authentication.tasks import send_password_reset_email_task
+            send_password_reset_email_task.delay(user.id, user.email, user.username)
+        except Exception as exc:  # noqa: BLE001 — cualquier fallo de broker/mail;
+            # se registra y se sigue respondiendo 202 (anti-enumeración).
+            import logging
+            logging.getLogger(__name__).warning("password-reset delay falló: %s", exc)
+        AuditLog.objects.create(
+            user_id=user.id,
+            action="PASSWORD_RESET_REQUESTED",
+            ip_address=request.META.get("REMOTE_ADDR"),
+            details="Password reset solicitado.",
+        )
+    return Response({"status": "accepted"}, status=status.HTTP_202_ACCEPTED)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def password_reset_confirm_view(request):
+    """
+    POST /api/v1/auth/password-reset/confirm/
+    Body: {"token", "new_password"}. Valida token vigente (<1h), fortaleza
+    NIST y lo invalida tras usar (un solo uso) + AuditLog.
+    """
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    from apps.authentication.validators import validate_password_strength
+    from apps.core.models import AuditLog
+
+    token = request.data.get("token") or ""
+    new_password = request.data.get("new_password") or ""
+    User = get_user_model()
+    user = User.objects.filter(password_reset_token=token).first() if token else None
+    if user is None or not user.password_reset_sent_at:
+        return Response({"error": "Token inválido."}, status=status.HTTP_400_BAD_REQUEST)
+    age = (timezone.now() - user.password_reset_sent_at).total_seconds()
+    if age > RESET_TOKEN_TTL_SECONDS:
+        return Response({"error": "Token expirado."}, status=status.HTTP_400_BAD_REQUEST)
+
+    is_valid, error_msg = validate_password_strength(new_password)
+    if not is_valid:
+        return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.password_reset_token = None
+    user.password_reset_sent_at = None
+    user.save(update_fields=["password", "password_reset_token", "password_reset_sent_at"])
+    AuditLog.objects.create(
+        user_id=user.id,
+        action="PASSWORD_RESET_CONFIRMED",
+        ip_address=request.META.get("REMOTE_ADDR"),
+        details="Password restablecido vía token.",
+    )
+    return Response({"status": "password_updated"})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def password_change_view(request):
+    """
+    POST /api/v1/auth/password-change/
+    Body: {"current_password", "new_password"}. Requiere JWT vigente +
+    contraseña actual + fortaleza NIST + AuditLog.
+    """
+    from apps.authentication.validators import validate_password_strength
+    from apps.core.models import AuditLog
+
+    user = request.user
+    if not user.check_password(request.data.get("current_password") or ""):
+        return Response({"error": "Contraseña actual incorrecta."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    new_password = request.data.get("new_password") or ""
+    is_valid, error_msg = validate_password_strength(new_password)
+    if not is_valid:
+        return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    AuditLog.objects.create(
+        user_id=user.id,
+        action="PASSWORD_CHANGED",
+        ip_address=request.META.get("REMOTE_ADDR"),
+        details="Password cambiado por el usuario.",
+    )
+    return Response({"status": "password_updated"})

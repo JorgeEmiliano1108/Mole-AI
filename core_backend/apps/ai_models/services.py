@@ -20,6 +20,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 import sys
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Agregar apps al path para imports absolutos
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -35,8 +38,6 @@ except ImportError as e:
     CNNInference = None
     ModelPerformance = None
     SensorLog = None
-
-logger = logging.getLogger(__name__)
 
 # Sensor columns in the Wide Table (sensor_logs).
 SENSOR_COLUMNS: list = [

@@ -186,10 +186,10 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         if is_local_superuser:
             user_id = payload.get('sub')
             try:
-                user = User.objects.get(id=user_id, username='EmiMole')
+                user = User.objects.get(id=user_id, is_superuser=True)
                 return (user, token)
             except User.DoesNotExist:
-                raise exceptions.AuthenticationFailed('Local Superuser EmiMole not found.')
+                raise exceptions.AuthenticationFailed('Local superuser not found.')
                 
         # Extract user information from payload
         user_id = payload.get('sub')

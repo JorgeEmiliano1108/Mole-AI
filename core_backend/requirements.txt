@@ -60,3 +60,6 @@ pytest-django>=4.7.0
 psycopg2-binary>=2.9.9
 dj-database-url>=2.1.0
 paho-mqtt>=2.0.0
+
+# Observabilidad B6 (opcional: sin SENTRY_DSN es no-op)
+sentry-sdk>=2.0.0

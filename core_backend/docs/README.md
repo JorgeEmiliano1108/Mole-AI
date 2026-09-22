@@ -1,10 +1,12 @@
 # core_backend — Monolito Django de orquestación Mole.AI
 
-⚠️ **RIESGO CRÍTICO — Shadowing de paquetes**: Los directorios `apps/starlette/` y `apps/pwd/` causan shadowing de paquetes pip/stdlib. Si cualquier dependencia necesita `import starlette` o `import pwd`, la importación resolverá a estos directorios locales (vacíos) en vez de los paquetes reales. Ver TD-01 para mitigación.
+> Nota 2026-09-14: los directorios `apps/starlette/` y `apps/pwd/` citados en
+> versiones anteriores **ya no existen** (TD-01/BUG-01/BUG-02 cerrados).
+> Fuentes de verdad: este README + `audit-matrix.md` (raíz) para gaps honestos.
 
 ## 1. Overview
 
-`core_backend` es el monolito Django que orquesta todos los microservicios de Mole.AI. Gestiona autenticación, dispositivos IoT, telemetría de sensores, control de riego, diagnósticos con IA, reportes, y análisis predictivo para agricultura de precisión.
+`core_backend` es el monolito Django que orquesta todos los microservicios de Mole.AI. Gestiona autenticación, dispositivos IoT, telemetría de sensores, diagnósticos con IA y reportes. No implementa riego automático, control PID ni predicción de cosecha (ver RF-14/15/16).
 
 Actúa como API Gateway interno y backend de administración (Django Admin) para las operaciones del sistema.
 
@@ -40,19 +42,19 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 | Framework | Django ~4.2 + Django REST Framework ~3.14 |
 | API | DRF ViewSets + Routers + function-based views |
 | Autenticación | JWT local HS256 + Supabase opcional + API Keys por dispositivo |
-| Base de datos | PostgreSQL 15 + pgvector |
+| Base de datos | PostgreSQL 16 + pgvector (servicio `postgres` del compose; `DB_URL` o partes `DB_*`) |
 | Cache | Redis (django-redis + celery) |
 | Task Queue | Celery + Redis (broker) |
-| Object Storage | MinIO (S3-compatible) via django-storages |
-| AI/ML | Celery tasks para invocar mole_vision, mole_chat |
-| Reporting | django-storages + S3/MinIO para PDFs generados por mole_report |
+| Object Storage | S3-compatible via django-storages (MinIO local o S3 con `OBJECT_STORAGE_*`) |
+| AI/ML | Celery tasks para invocar mole_vision (NIM), mole_chat |
+| Reporting | Proxy a mole_report (`:8003`); PDFs de diagnósticos locales con ReportLab |
 | Serialización | DRF Serializers |
 | Background | Celery Beat (tareas programadas) |
-| Config | python-dotenv + variables de entorno |
-| Server | Gunicorn |
+| Config | python-dotenv + variables de entorno genéricas (`_env_first`, ver `.env`) |
+| Server | Daphne (ASGI, `entrypoint.sh`); Gunicorn instalado pero no es el runtime |
 | WebSockets | Django Channels + Daphne |
-| Monitoring | Logging estructurado por app |
-| Testing | pytest-django + Django TestCase (~900+ tests) |
+| Monitoring | Logging estructurado parcial (PIIFilter en `authentication`/`plants`/`django`) |
+| Testing | pytest-django + Django TestCase (32 ficheros, 81 funciones; ver §12) |
 
 ## 4. Apps Django (5)
 
@@ -64,7 +66,8 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 | `core` | `/api/v1/` (catch-all) | Telemetría, dispositivos IoT, mapas, chat, diagnósticos, admin, health |
 | `plants` | `/api/v1/plants/`, `/api/v1/user-plants/` | Catálogo de especies, CRUD de plantas de usuario |
 
-**Nota:** Los directorios `apps/starlette/` y `apps/pwd/` NO son apps Django. Son carpetas que causan shadowing de paquetes pip/stdlib (ver ⚠️ al inicio).
+> `apps/ai_rag_service/` existe como stub vacío (solo `__init__.py`), no está
+> instalado en `INSTALLED_APPS` y no expone rutas.
 
 ## 5. Requisitos Funcionales
 
@@ -128,7 +131,7 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 | ID | Requisito | Estado |
 |----|-----------|--------|
 | RNF-01 | JWT HS256 con expiración configurable | ✅ Implementado (`mole_ai_backend/settings.py` JWT_TTL_MINUTES, JWT_ALGORITHM) |
-| RNF-02 | API Keys rotables por dispositivo | ⚠️ auth_token existe en Device model, pero sin endpoint de rotación |
+| RNF-02 | API Keys rotables por dispositivo | ⚠️ `auth_token` existe + `DELETE devices/<uuid>/revoke/` (soft-delete); sin rotación con expiración |
 | RNF-03 | CORS configurado por orígenes permitidos | ⚠️ Manejado por Nginx (frontend/nginx.conf), no por Django. CORS_ALLOWED_ORIGINS=[] |
 | RNF-04 | Rate limiting con django-ratelimit | ⚠️ Usa DRF throttles (UserRateThrottle), no django-ratelimit |
 | RNF-05 | Hashing de contraseñas con bcrypt/Auth0 | ⚠️ Usa HS256 JWT. SupabaseAuthentication existe pero no bcrypt |
@@ -150,9 +153,9 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 |----|-----------|--------|
 | RNF-12 | Redis cache para queries frecuentes | ✅ django-redis (`mole_ai_backend/settings.py`) |
 | RNF-13 | Bulk insert optimizado para telemetría | ✅ bulk_create en sensor_batch_view y edge-batch |
-| RNF-14 | Downsampling automático de datos viejos | ✅ downsample_telemetry Celery task programada |
+| RNF-14 | Downsampling automático de datos viejos | ❌ La task `downsample_telemetry` existe pero **no** está en `CELERY_BEAT_SCHEDULE` |
 | RNF-15 | Paginación en endpoints de listado | ❌ No implementado. Sin DEFAULT_PAGINATION_CLASS en DRF settings |
-| RNF-16 | Límite de 30s en requests a microservicios | ✅ httpx.Timeout(30) en MicroserviceClient |
+| RNF-16 | Timeouts hacia microservicios | ⚠️ 30s por defecto en `MicroserviceClient`, 60s en factory IA y `llm_chat_view`, 120s `MOLE_AI_TIMEOUT` |
 
 ### 6.4 Mantenibilidad
 
@@ -160,14 +163,14 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 |----|-----------|--------|
 | RNF-17 | Type hints en funciones públicas | ⚠️ Parcial |
 | RNF-18 | Docstrings en clases y métodos críticos | ⚠️ Parcial |
-| RNF-19 | Tests unitarios por app | ❌ ~83 tests en 31 archivos. No 900+ |
-| RNF-20 | Separación de settings por entorno | ❌ Settings monolítico |
+| RNF-19 | Tests unitarios por app | ⚠️ 32 ficheros / 81 funciones (`pytest.ini` excluye 6 paths no-pytest o rotos). Ver §12 |
+| RNF-20 | Separación de settings por entorno | ❌ Settings monolítico (`settings.py`, 427 líneas) |
 
 ### 6.5 Observabilidad
 
 | ID | Requisito | Estado |
 |----|-----------|--------|
-| RNF-21 | Logging estructurado por app | ✅ Implementado (LOGGING config con PIIFilter, formato verbose) |
+| RNF-21 | Logging estructurado por app | ⚠️ LOGGING + PIIFilter solo en loggers `authentication`/`plants`/`django`, no todas las apps |
 | RNF-22 | Tracking de tareas Celery en Django Admin | ❌ No implementado (django-celery-results no en INSTALLED_APPS) |
 | RNF-23 | OpenTelemetry exports (referencias en código) | ❌ Solo 1 test file referencia OTEL. Sin producción |
 | RNF-24 | Health check endpoint | ✅ `/health/` (público) + `/api/v1/health/` (JWT) |
@@ -176,24 +179,23 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 
 | ID | Deuda | Impacto | Módulo |
 |----|-------|---------|--------|
-| TD-01 | **Shadowing de paquetes pip**: directorios `apps/starlette/` y `apps/pwd/` causan `ImportError` al querer usar los paquetes pip reales (`import starlette`, `import pwd`) | **Crítico** — Rompe imports en producción si se instalan esas dependencias | `apps/starlette`, `apps/pwd` |
-| TD-02 | **Variables de entorno duplicadas**: `SUPABASE_URL`, `SUPABASE_DB_URL`, `DATABASE_URL` coexisten sin validación cruzada | **Alto** — Inconsistencia silenciosa en cadena de conexión | `mole_ai_backend/settings.py` |
-| TD-03 | **Settings monolítico**: `settings.py` de ~389 líneas sin split por entorno (dev/staging/prod) | **Medio** — Dificulta cambios específicos por entorno | `mole_ai_backend/settings.py` |
+| TD-01 | ~~Shadowing `apps/starlette/` y `apps/pwd/`~~ — **Cerrado 2026-09-14**: los directorios ya no existen | — | — |
+| TD-02 | **Variables de entorno**: convivían `DATABASE_URL/DB_*/POSTGRES_*`, `AWS_*/MINIO_*`, `SUPABASE_*` | **Medio** — Resuelto parcial 2026-09: helper `_env_first` (genérica primero, legacy después) + `_resolve_db_url` en `settings.py` | `mole_ai_backend/settings.py` |
+| TD-03 | **Settings monolítico**: `settings.py` de 427 líneas sin split por entorno (dev/staging/prod) | **Medio** — Dificulta cambios específicos por entorno | `mole_ai_backend/settings.py` |
 | TD-04 | **Views sin type hints**: ~70% de views carecen de tipos en parámetros/retorno | **Medio** — Menor legibilidad y peor IDE support | Varias apps |
 | TD-05 | **Código legacy no referenciado**: varias vistas y serializers parecen no usarse en rutas activas | **Medio** — Ruido que dificulta navegación | `chat/`, posibles otras |
-| TD-06 | **Test coverage sin métrica central**: no hay `coverage` configurado ni umbral en CI | **Medio** — No se puede medir regresión | `pyproject.toml` |
-| TD-07 | **Dependencias no fijadas**: `requirements.txt` sin versiones pinneadas | **Alto** — Riesgo de rotura silenciosa en deploy | `requirements/*.txt` |
+| TD-06 | **Test coverage sin métrica central**: no hay `coverage` configurado ni umbral en CI | **Medio** — No se puede medir regresión | (no existe `pyproject.toml`) |
+| TD-07 | **Dependencias**: `requirements.txt` único, mayoría `~=` pero varios `>=` abiertos (celery, boto3, argon2, tenacity, locust) | **Medio** — Riesgo de rotura silenciosa en deploy | `requirements.txt` |
 | TD-08 | **Sin pre-commit hooks**: formateo/linting no estandarizados | **Bajo** — Inconsistencias de estilo entre apps | — |
-| TD-09 | **Uso inconsistente de `os.getenv` vs `decouple.config`**: mezcla ambos patrones | **Medio** — Dificulta auditoría de configuración | Varias apps |
+| TD-09 | ~~Mezcla `os.getenv` vs `decouple.config`~~ — **No aplica**: cero `decouple` en código/requirements; todo `os.getenv` + `django-environ` | — | — |
 
 ## 8. Bugs Identificados
 
 | ID | Bug | Severidad | Módulo | Detalle |
 |----|-----|-----------|--------|---------|
-| BUG-01 | **Import collision**: `import starlette` desde `apps/starlette/views.py` resuelve al directorio local en vez del paquete pip | **Crítica** | `apps/starlette/` | Si alguna dependencia pip necesita `import starlette`, se rompe |
-| BUG-02 | **Import collision**: `import pwd` desde `apps/pwd/` resuelve al directorio local | **Alta** | `apps/pwd/` | Idem, cualquier script que necesite `pwd` de stdlib falla |
-| BUG-03 | **Inconsistencia DB URL**: 3+ variables de entorno para DB sin validación cruzada | **Alta** | `settings.py` | Cambiar una sin actualizar las demás causa conexiones caídas |
-| BUG-04 | **DecoupleValueError sin manejo**: si falta env var, `decouple.config()` lanza excepción no capturada al arranque | **Media** | Varias apps | Mejorable con validación al startup |
+| BUG-01/02 | ~~Colisión `starlette`/`pwd`~~ — **Cerrados**: directorios inexistentes | — | — | — |
+| BUG-03 | **Inconsistencia DB URL** (múltiples vars sin validación) | **Media** — Mitigado 2026-09 con `_resolve_db_url` (DSN → partes → sqlite) | `settings.py` | Queda pendiente split por entorno (TD-03) |
+| BUG-04 | ~~`DecoupleValueError`~~ — **No aplica**: sin `decouple` en el proyecto | — | — | — |
 
 ## 9. Cumplimiento Normativo
 
@@ -202,7 +204,7 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 | **LFPDPPP** (Ley Federal de Protección de Datos Personales) | México — Protección de datos personales | ⚠️ Parcial: PII en logs no sanitizada consistentemente; no hay política de retención explícita |
 | **NOM-059-SEMARNAT** | México — Protección de especies en riesgo | ✅ Implementado en mole_vision (double layer: prompt + regex); core_backend no tiene endpoint directo de visión |
 | **MoProSoft** (MMX-I-059-NYCE) | México — Modelo de procesos de software | ⚠️ Parcial: hay trazabilidad en CI/CD pero faltan procesos formales documentados |
-| **ISO 25000** (SQuaRE) | Internacional — Calidad de software | ⚠️ Parcial: cobertura de tests >70% pero sin métricas de mantenibilidad, eficiencia, portabilidad |
+| **ISO 25000** (SQuaRE) | Internacional — Calidad de software | ⚠️ Parcial: sin métricas de cobertura/mantenibilidad en CI; ver `docs/anexos/COMPLIANCE_EXECUTIVE_SUMMARY.md` (36%) |
 
 ## 10. Endpoints Clave
 
@@ -221,9 +223,11 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 | GET | `/api/v1/sensor-data/latest/` | Público | Datos mock de sensores (legacy) |
 | GET | `/api/v1/telemetry/latest/` | JWT | Últimas lecturas de telemetría |
 | POST | `/api/v1/sensors/ingest` | JWT | Ingesta de sensores (Zero-Trust) |
-| GET | `/api/v1/devices/<uuid:id>/health/` | API Key | Health de dispositivo IoT |
-| GET | `/api/v1/devices/<uuid:id>/bindings/` | API Key | Listar bindings de dispositivo |
-| POST | `/api/v1/devices/<uuid:id>/bindings/` | API Key | Crear binding |
+| GET | `/api/v1/devices/<uuid:id>/health/` | JWT | Health de dispositivo IoT |
+| GET | `/api/v1/devices/<uuid:id>/bindings/` | JWT | Listar bindings de dispositivo |
+| POST | `/api/v1/devices/<uuid:id>/bindings/` | JWT + staff | Crear binding |
+| DELETE | `/api/v1/devices/<uuid:id>/bindings/<int:id>/` | JWT + staff | Eliminar binding |
+| DELETE | `/api/v1/devices/<uuid:id>/revoke/` | JWT | Revocar token (soft-delete `is_active=False`) |
 | GET | `/api/v1/map/hotspots/` | JWT | Hotspots de plagas en mapa |
 | GET | `/api/v1/weather/current/` | Público | Clima actual (OpenWeather proxy) |
 | POST | `/api/v1/llm/chat/` | JWT | Chat LLM local |
@@ -264,9 +268,10 @@ Actúa como API Gateway interno y backend de administración (Django Admin) para
 
 ## 12. Tests
 
-- **Total estimado**: ~900+ tests entre todas las apps
-- **Framework**: pytest + Django TestCase
-- **Problema conocido**: shadowing de `starlette/` y `pwd/` puede causar falsos negativos en tests que importen esos paquetes
+- **Real**: 32 ficheros `test_*.py` / 81 funciones (contado 2026-09-14; `pytest.ini` excluye 6 paths no-pytest o rotos con motivo documentado)
+- **Framework**: pytest + pytest-django + Django TestCase
+- **Comando local** (desde `core_backend/`, SQLite): `DB_URL=sqlite:////tmp/test.sqlite3 pytest apps tests --ignore=tests/integration --ignore=tests/load`
+- **Nota**: baseline en HEAD no ejecutaba ningún test (crash `ModuleNotFoundError: microservices` en `django.setup()`); corregido con import defensivo en `apps/core/models.py`
 
 ## 13. Licencias
 

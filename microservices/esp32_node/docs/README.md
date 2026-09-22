@@ -30,7 +30,7 @@
 │                      ↓ (event)                             │
 │              ┌───────────────┐                             │
 │              │    FSM Task   │  xQueueReceive blocking     │
-│              │  (12 estados) │←─────────────────────┐      │
+│              │  (12 nominal + 1 terminal) │←─────────────┐      │
 │              └───────┬───────┘                      │      │
 │                      ↓ (action)                ┌────┴─────┐│
 │              ┌───────────────┐                  │Transport ││

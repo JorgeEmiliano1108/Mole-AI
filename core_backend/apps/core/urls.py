@@ -16,6 +16,8 @@ urlpatterns = [
     path('sensor-data/', views.sensor_data_view, name='sensor_data'),
     path('sensor-data/batch/', views.sensor_batch_view, name='sensor_batch'),
     path('sensor-data/edge-batch/', views.EdgeNodeIngestView.as_view(), name='edge_ingest_batch'),
+    # MRF03/RNF06: sync JSON-RPC con cursor (dual-stack: edge-batch/ intacto).
+    path('sync/batch/', views.SyncBatchView.as_view(), name='sync_batch'),
     path('sensor-data/<int:pk>/', views.sensor_data_patch_view, name='sensor_data_patch'),
     path('sensor-data/latest/', mock_sensor_data, name='mock_sensor'),
     path('telemetry/latest/', telemetry_latest_view, name='telemetry_latest'),
@@ -25,6 +27,7 @@ urlpatterns = [
     path('devices/<uuid:id>/bindings/', device_bindings_view, name='device_bindings'),
     path('devices/<uuid:id>/bindings/<int:binding_id>/', device_binding_delete_view, name='device_binding_delete'),
     path('devices/<uuid:id>/revoke/', views.revoke_device_token, name='device_revoke'),
+    path('devices/<uuid:id>/rotate/', views.rotate_device_token, name='device_rotate'),
 
     # IA y Diagnósticos
     path('diagnostics/', views.diagnostic_view, name='diagnostic'),
@@ -56,6 +59,9 @@ urlpatterns = [
     path('admin/statistics', admin_views.admin_stats_view, name='admin_stats'),
     path('admin/report-text', admin_views.admin_report_text_view, name='admin_report_text'),
     path('admin/users/create/', admin_views.admin_users_create_view, name='admin_users_create'),
+    # Admin usuarios CRUD (issue 16; SuperAdmin o staff queda fuera: IsAdminUser)
+    path('admin/users/', admin_views.admin_users_list_view, name='admin_users_list'),
+    path('admin/users/<int:user_id>/', admin_views.admin_user_detail_view, name='admin_user_detail'),
     path('admin/live-alerts', admin_views.live_alerts_view, name='live_alerts'),
     path('admin/reports/generate', admin_views.master_report_view, name='admin_report_generate'),
     path('admin/reports/<str:job_id>/status', admin_views.master_report_status_view, name='admin_report_status'),

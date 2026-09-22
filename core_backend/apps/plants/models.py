@@ -54,6 +54,13 @@ class SpeciesCatalog(models.Model):
         default=False,
         help_text="Indica si la especie está protegida por NOM-059-SEMARNAT.",
     )
+    # Portal público (issue 18): marca de endemismo mexicano para filtrar
+    # fichas de flora endémica. Backfill vía seeds curados (revisión humana).
+    is_endemic = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Endémica de México (portal público, issue 18).",
+    )
     protection_category = models.CharField(
         max_length=20,
         blank=True,

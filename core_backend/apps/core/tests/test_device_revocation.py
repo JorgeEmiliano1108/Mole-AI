@@ -21,7 +21,7 @@ def test_revocation_endpoint(user_with_device):
     user, device = user_with_device
     client = APIClient()
     client.force_authenticate(user=user)
-    url = reverse('device_revoke', kwargs={'id': device.id})
+    url = reverse('core:device_revoke', kwargs={'id': device.id})
     response = client.delete(url)
     assert response.status_code == 204
     device.refresh_from_db()
@@ -33,10 +33,10 @@ def test_ingest_block_inactive(user_with_device):
     client = APIClient()
     client.force_authenticate(user=user)
     # Revoke first
-    revoke_url = reverse('device_revoke', kwargs={'id': device.id})
+    revoke_url = reverse('core:device_revoke', kwargs={'id': device.id})
     client.delete(revoke_url)
     # Try ingest with token of revoked device
-    ingest_url = reverse('edge_ingest_batch')
+    ingest_url = reverse('core:edge_ingest_batch')
     payload = {
         'ts': 0,
         'a': {},

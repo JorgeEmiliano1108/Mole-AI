@@ -18,6 +18,9 @@ def test_device_owner_unauthorized(two_users_one_device):
     owner, other, device = two_users_one_device
     client = APIClient()
     client.force_authenticate(user=other)
-    url = reverse('device_revoke', kwargs={'id': device.id})
+    url = reverse('core:device_revoke', kwargs={'id': device.id})
     response = client.delete(url)
-    assert response.status_code == 401
+    # Autenticado pero no dueño ni staff → 403 (no 401: sí hay sesión)
+    assert response.status_code == 403
+    device.refresh_from_db()
+    assert device.is_active is True

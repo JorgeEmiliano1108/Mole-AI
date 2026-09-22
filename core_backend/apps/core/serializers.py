@@ -342,6 +342,12 @@ class SensorDataPatchSerializer(serializers.Serializer):
             )
         return attrs
 
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
 # ---------------------------------------------------------------------------
 # IoT NODE – serializer de creación
 # ---------------------------------------------------------------------------

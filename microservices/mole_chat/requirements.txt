@@ -20,6 +20,9 @@ openai>=1.0.0
 slowapi>=0.1.9
 # Lightweight text utilities (no torch/FAISS)
 langchain-text-splitters>=0.2
+# Orquestación multi-agente V3 (MRF04): solo application/orchestration la usa.
+# Puerta F4: flag ORCHESTRATOR_ENABLED apagado por defecto.
+langgraph>=0.2
 pikepdf>=8.0
 pdfminer.six>=20231228
 

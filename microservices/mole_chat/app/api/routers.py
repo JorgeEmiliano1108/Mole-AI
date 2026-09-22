@@ -85,8 +85,25 @@ async def chat_endpoint(
             citation_manager=citation_manager,
             system_prompt=system_prompt
         )
-        
-        response = await use_case.ainvoke(chat_request)
+
+        # V3: orquestador LangGraph tras puertos (flag apagado por defecto;
+        # sin cambio de comportamiento hasta puerta F4).
+        if settings.ORCHESTRATOR_ENABLED:
+            from app.application.orchestration.graph import MoleAIOrchestrator
+            orchestrator = MoleAIOrchestrator(
+                llm_client=llm_client,
+                vector_store=vector_store,
+                redis_adapter=redis_adapter,
+                citation_manager=citation_manager,
+                system_prompt=system_prompt,
+                timeout_s=settings.ORCHESTRATOR_TIMEOUT_S,
+            )
+            try:
+                response = await orchestrator.ainvoke(chat_request)
+            except TimeoutError as exc:
+                raise HTTPException(status_code=504, detail=str(exc))
+        else:
+            response = await use_case.ainvoke(chat_request)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

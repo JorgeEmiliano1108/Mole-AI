@@ -50,12 +50,22 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 logger = logging.getLogger(__name__)
 
 # ── LLM Summary (reuses FastAPI's loaded model — no local LLM in Django) ────
-_FASTAPI_LLM_URL = os.getenv(
+def _env_first(*names: str, default: str = "") -> str:
+    """Primera var definida y no vacía (genérica primero, legacy después)."""
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
+
+
+_FASTAPI_LLM_URL = _env_first(
+    "AI_SUMMARY_URL",
     "FASTAPI_SUMMARY_URL",
     # B2 FIX: hostname corregido de 'fastapi_rag' → 'ms2_chat'
-    "http://ms2_chat:8002/api/v1/mole-ai/chat",
+    default="http://ms2_chat:8002/api/v1/mole-ai/chat",
 )
-_MOLE_AI_API_KEY = os.getenv("MOLE_AI_API_KEY", "")
+_MOLE_AI_API_KEY = _env_first("EDGE_API_KEY", "MOLE_AI_API_KEY")
 
 _SUMMARY_FALLBACK = (
     "No fue posible generar un resumen automático en este momento. "

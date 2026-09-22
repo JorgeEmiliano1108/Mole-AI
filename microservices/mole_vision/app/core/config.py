@@ -4,6 +4,8 @@ Skill 01: Arquitectura Hexagonal - Capa Core
 """
 from typing import Optional
 import os
+from pydantic import Field
+from pydantic.fields import AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,12 +13,14 @@ class Settings(BaseSettings):
     """
     Configuración centralizada del microservicio.
     Todas las variables de entorno se cargan aquí.
+    Nombres genéricos (IDP_/LLM_/OBJECT_STORAGE_) con legacy como fallback.
     """
     
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        populate_by_name=True,
     )
     
     # Service
@@ -24,7 +28,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     
-    SUPABASE_URL: str = ""
+    SUPABASE_URL: str = Field(default="", validation_alias=AliasChoices("IDP_BASE_URL", "SUPABASE_URL"))
     
     # Redis
     REDIS_URL: str = "redis://redis:6379/0"
@@ -47,17 +51,17 @@ class Settings(BaseSettings):
     # Security - JWKS Cache
     JWKS_CACHE_TTL_SECONDS: int = 300
 
-    # ── MinIO / S3 (Training asset download — Fase 3) ────────────────────
-    AWS_S3_ENDPOINT_URL: str = ""
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    TRAINING_BUCKET_NAME: str = "mole-training-data"
+    # ── Object Storage S3v4 (Training asset download — Fase 3) ──────────
+    AWS_S3_ENDPOINT_URL: str = Field(default="", validation_alias=AliasChoices("OBJECT_STORAGE_ENDPOINT_URL", "AWS_S3_ENDPOINT_URL"))
+    AWS_ACCESS_KEY_ID: str = Field(default="", validation_alias=AliasChoices("OBJECT_STORAGE_ACCESS_KEY", "AWS_ACCESS_KEY_ID"))
+    AWS_SECRET_ACCESS_KEY: str = Field(default="", validation_alias=AliasChoices("OBJECT_STORAGE_SECRET_KEY", "AWS_SECRET_ACCESS_KEY"))
+    TRAINING_BUCKET_NAME: str = Field(default="mole-training-data", validation_alias=AliasChoices("OBJECT_STORAGE_BUCKET_TRAINING", "TRAINING_BUCKET_NAME"))
 
-    # ── NVIDIA NIM ────────────────────────────────────────────────────────
-    NVIDIA_API_KEY: str = ""
-    NVIDIA_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
-    NVIDIA_CHAT_MODEL: str = "meta/llama-3.3-70b-instruct"
-    NVIDIA_VISION_MODEL: str = "meta/llama-3.2-11b-vision-instruct"
+    # ── LLM visión (API OpenAI-compatible) ────────────────────────────────
+    NVIDIA_API_KEY: str = Field(default="", validation_alias=AliasChoices("LLM_API_KEY", "NVIDIA_API_KEY"))
+    NVIDIA_BASE_URL: str = Field(default="https://integrate.api.nvidia.com/v1", validation_alias=AliasChoices("LLM_BASE_URL", "NVIDIA_BASE_URL"))
+    NVIDIA_CHAT_MODEL: str = Field(default="meta/llama-3.3-70b-instruct", validation_alias=AliasChoices("LLM_CHAT_MODEL", "NVIDIA_CHAT_MODEL"))
+    NVIDIA_VISION_MODEL: str = Field(default="meta/llama-3.2-11b-vision-instruct", validation_alias=AliasChoices("LLM_VISION_MODEL", "NVIDIA_VISION_MODEL"))
 
     # ── Fine-Tuning Pipeline ─────────────────────────────────────────────
     CNN_BASE_MODEL_PATH: str = "/app/models/cnn_base.h5"

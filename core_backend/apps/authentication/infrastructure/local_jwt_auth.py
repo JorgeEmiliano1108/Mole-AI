@@ -76,7 +76,13 @@ class LocalJWTAuthentication(authentication.BaseAuthentication):
         
         if not payload:
             raise exceptions.AuthenticationFailed('Token validation failed.')
-        
+
+        # B3: revocación por denylist (logout). Tokens legacy sin jti
+        # siguen válidos hasta su expiración natural (≤JWT_TTL_MINUTES).
+        from apps.authentication.token_denylist import is_denied
+        if is_denied(payload.get('jti')):
+            raise exceptions.AuthenticationFailed('Token has been revoked.')
+
         # Get user from payload
         username = payload.get('username')
         if not username:

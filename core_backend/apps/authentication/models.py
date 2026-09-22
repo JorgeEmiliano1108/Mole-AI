@@ -60,6 +60,20 @@ class User(AbstractUser):
         help_text="Marca de tiempo del último envío de verificación.",
     )
 
+    # Recuperación de contraseña (ADR-0006): token hash SHA-256 de un solo
+    # uso, TTL 1h. Jamás se almacena en plaintext.
+    password_reset_token = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        help_text="Hash del token de recuperación (un solo uso).",
+    )
+    password_reset_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Marca de tiempo del último envío de recuperación.",
+    )
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

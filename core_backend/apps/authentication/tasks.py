@@ -20,6 +20,17 @@ def generate_email_token(user_id: int) -> str:
     ).hexdigest()[:64]
 
 
+def generate_password_reset_token(user_id: int) -> str:
+    """Token de recuperación de un solo uso (ADR-0006).
+
+    Reutiliza el mismo esquema hash del token de verificación: SHA-256
+    sobre aleatoriedad + user_id + SECRET_KEY. Jamás se envía el hash
+    crudo fuera del correo; en DB solo vive el hash (aquí idéntico al
+    valor enviado, de un solo uso: se limpia al confirmar).
+    """
+    return generate_email_token(user_id)
+
+
 @shared_task(name="send_verification_email_task")
 def send_verification_email_task(user_id: int, email: str, username: str):
     """
@@ -80,3 +91,40 @@ def verify_email_task(token: str):
         return {"status": "verified", "user_id": user.id}
     except User.DoesNotExist:
         return {"status": "invalid_token"}
+
+
+@shared_task(name="send_password_reset_email_task")
+def send_password_reset_email_task(user_id: int, email: str, username: str):
+    """Envía correo de recuperación (ADR-0006). Espejo de verificación."""
+    from django.core.mail import send_mail
+    from apps.authentication.models import User
+
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return "User not found"
+
+    token = generate_password_reset_token(user_id)
+    user.password_reset_token = token
+    user.password_reset_sent_at = timezone.now()
+    user.save(update_fields=["password_reset_token", "password_reset_sent_at"])
+
+    base_url = os.getenv("FRONTEND_BASE_URL", "http://localhost:8080")
+    reset_url = f"{base_url}/reset-password/{token}"
+
+    try:
+        send_mail(
+            subject="Mole.AI — Recupera tu contraseña",
+            message=(
+                f"Hola {username},\n\n"
+                f"Recibimos una solicitud para restablecer tu contraseña.\n\n"
+                f"Enlace válido por 1 hora y de un solo uso:\n{reset_url}\n\n"
+                f"Si no fuiste tú, ignora este correo.\n\n— El equipo de Mole.AI"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+        return f"Password reset email sent to {email}"
+    except Exception as e:
+        return f"Failed to send email: {str(e)}"

@@ -163,6 +163,12 @@ class JwtHttpMiddleware:
             # HardwareAPIKeyAuthentication flow (backward compatibility).
             return None
 
+        if token.count(".") != 2:
+            # Token opaco (p. ej. Bearer por dispositivo en edge-batch, cuyo
+            # path cae bajo el prefijo /api/v1/sensor-data/): no es JWT,
+            # la vista lo valida. Sin esto, todo device recibe 401 aquí.
+            return None
+
         try:
             from apps.authentication.jwks import get_verification_key
 

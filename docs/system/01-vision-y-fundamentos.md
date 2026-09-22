@@ -37,7 +37,7 @@ Desarrollar y mantener una plataforma de asistencia agronómica basada en IA que
 
 ## Limitaciones
 - La inferencia de visión depende exclusivamente del endpoint de NVIDIA NIM; no se soportan modelos alternativos (p. ej. ONNX, TFLite).
-- El almacenamiento de objetos está limitado a **AWS S3**; MinIO se mantiene solo como referencia histórica.
+- El almacenamiento de objetos es **S3-compatible** (`OBJECT_STORAGE_*`: MinIO local o AWS S3).
 - La disponibilidad de datos está sujeta a la latencia de los servicios externos de NVIDIA y de AWS.
 
 ## Stakeholders
@@ -57,7 +57,7 @@ El modelo clásico de cliente‑servidor se materializa mediante un **frontend**
 Cada dominio funcional (visón, chat/RAG, generación de reportes) está encapsulado en un contenedor Docker independiente, facilitando despliegues independientes, escalado selectivo y aislamiento de fallos.
 
 ### IoT y adquisición de datos
-Los dispositivos ESP32 envían telemetría mediante **MQTT** (puerto 8883 TLS) y mediante HTTP a los endpoints de ingestión.  Los datos se normalizan en el backend y se persisten en PostgreSQL.
+Los dispositivos ESP32 envían telemetría mediante **MQTT** (8883 TLS preferente; 1883 plano legacy abierto para flota ESP32, riesgo aceptado MS-14, cierre fase 2) y mediante HTTP a los endpoints de ingestión.  Los datos se normalizan en el backend y se persisten en PostgreSQL.
 
 ### APIs REST
 Se utilizan **FastAPI** y **Django REST Framework** para describir contratos de servicio claros (método, ruta, payload, códigos).  Los endpoints están versionados bajo el prefijo `/api/v1/`.

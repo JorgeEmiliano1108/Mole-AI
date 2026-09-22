@@ -11,6 +11,7 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 from django.urls import path
+
 from . import views
 
 app_name = "user_plants"
@@ -18,7 +19,10 @@ app_name = "user_plants"
 urlpatterns = [
     path("my-collection/", views.my_collection_view, name="my_collection"),
     path("", views.plant_list_view, name="plant_list"),
-    path("<uuid:plant_id>/", views.plant_detail_view, name="plant_detail"),
+    # NOTA: "favorites/" va ANTES de "<uuid:plant_id>/" por claridad.
+    # (Django lo resolvía igual: el conversor UUID rechaza "favorites",
+    # pero el orden explícito evita lecturas erróneas y futuros choques.)
     path("favorites/", views.favorite_plant_list_view, name="favorite_plant_list"),
     path("favorites/<int:fav_id>/", views.favorite_plant_detail_view, name="favorite_plant_detail"),
+    path("<uuid:plant_id>/", views.plant_detail_view, name="plant_detail"),
 ]
