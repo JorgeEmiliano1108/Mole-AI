@@ -205,8 +205,12 @@ paths:
   /api/v1/admin/users/:
     get:
       operationId: v1_admin_users_retrieve
-      description: GET /api/v1/admin/users/?search=&role=&page= — Tabla usuarios (issue
-        16).
+      description: |-
+        GET /api/v1/admin/users/?search=&role=&page= — Tabla usuarios (issue 16).
+
+        `role` admite Operador|Admin|Superadmin (case-insensitive) y se resuelve
+        a nivel ORM: Superadmin → is_superuser, Admin → staff no-superuser,
+        Operador → ni staff ni superuser. Sin N+1 ni filtrado en memoria.
       tags:
       - v1
       responses:

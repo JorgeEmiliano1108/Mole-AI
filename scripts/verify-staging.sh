@@ -10,7 +10,8 @@
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://127.0.0.1:8000/api/v1/}"
-BASE_URL="${BASE_URL%/}/"
+# Sin slash final: los checks concatenan "/<path>" (doble "//" da 404 en Django).
+BASE_URL="${BASE_URL%/}"
 FAIL=0
 
 check() { # check <nombre> <condición-comando...>
@@ -36,7 +37,8 @@ CODE=$(curl -sk -m 10 -o /dev/null -w "%{http_code}" "$BASE_URL/telemetry/latest
 [ "$CODE" = "401" ] && echo "[OK] telemetry exige auth" || { echo "[FAIL] telemetry sin auth (code=$CODE)"; FAIL=1; }
 
 # 4. OpenAPI schema accesible (contrato congelado existe)
-CODE=$(curl -sk -m 15 -o /dev/null -w "%{http_code}" "${BASE_URL%/v1/}/v1/../schema/")
+SCHEMA_URL="${BASE_URL%/v1}/schema/"
+CODE=$(curl -sk -m 15 -o /dev/null -w "%{http_code}" "$SCHEMA_URL")
 [ "$CODE" = "200" ] && echo "[OK] /api/schema/ accesible" || { echo "[WARN] /api/schema/ code=$CODE (revisar)"; }
 
 # 5. Login real (solo si STAGING_USER/STAGING_PASS por entorno)
