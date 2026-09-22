@@ -97,7 +97,8 @@ class Telemetry {
       this.airHumidity,
       this.airTemperature,
       this.uvIndex,
-      this.phLevel});
+      this.phLevel,
+      this.source = TelemetrySource.server});
 
   factory Telemetry.fromJson(Map<String, dynamic> j) => Telemetry(
         plantId: '${j['plant_id']}',
@@ -117,9 +118,23 @@ class Telemetry {
   final double? uvIndex;
   final double? phLevel;
 
+  /// Origen del dato (contrato visual F5): servidor por defecto; BLE-live
+  /// cuando viene de `BleTelemetry` (FEE2). El historial servidor es
+  /// autoritativo; el dato BLE solo decora la vista en vivo.
+  final TelemetrySource source;
+
   /// Sin `recorded_at` no hay dato (nodo sin logs): la UI muestra vacío,
   /// nunca inventa valores.
   bool get hasData => recordedAt != null;
+}
+
+/// Origen de una lectura de telemetría (badge visual F5, spec §5).
+enum TelemetrySource {
+  /// `GET telemetry/latest/` (+ caché). Autoritativo.
+  server,
+
+  /// Trama FEE2 en vivo (BLE). Solo vista en vivo con badge.
+  bleLive,
 }
 
 class AmbientReading {

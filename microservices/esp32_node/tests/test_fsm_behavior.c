@@ -120,6 +120,33 @@ static void test_unknown_event(void)
     END_TEST("Unknown event keeps state");
 }
 
+/* ─── BLE live stage: SENSOR_INIT → BLE_PUBLISH → TRANSPORT_CONNECTING ───
+ * Nota: el stub de cola usa `static` por TU (send en state_machine.c no es
+ * visible desde este TU), así que se despacha EV_BLE_DONE directamente,
+ * igual que los tests existentes fuerzan `ctx->current`. */
+static void test_ble_publish_stage(void)
+{
+    fsm_context_t *ctx = fsm_init();
+    ctx->current = FSM_SENSOR_INIT;
+
+    fsm_dispatch(ctx, EV_SENSOR_OK);
+    TEST("SENSOR_INIT + EV_SENSOR_OK → FSM_BLE_PUBLISH")
+        ok = (ctx->current == FSM_BLE_PUBLISH);
+    END_TEST("SENSOR_INIT → BLE_PUBLISH");
+
+    /* act_ble_live postea EV_BLE_DONE (ver stub); simular su despacho */
+    fsm_dispatch(ctx, EV_BLE_DONE);
+    TEST("BLE_PUBLISH + EV_BLE_DONE → TRANSPORT_CONNECTING")
+        ok = (ctx->current == FSM_TRANSPORT_CONNECTING);
+    END_TEST("BLE_PUBLISH → TRANSPORT_CONNECTING");
+
+    ctx->current = FSM_SENSOR_INIT;
+    fsm_dispatch(ctx, EV_SENSOR_PARTIAL);
+    TEST("SENSOR_INIT + EV_SENSOR_PARTIAL → FSM_BLE_PUBLISH")
+        ok = (ctx->current == FSM_BLE_PUBLISH);
+    END_TEST("PARTIAL → BLE_PUBLISH");
+}
+
 /* ─── Summary ─────────────────────────────────────────────────────────── */
 int main(void)
 {
@@ -130,6 +157,7 @@ int main(void)
     test_queue_event_dispatch();
     test_creds_found_transition();
     test_unknown_event();
+    test_ble_publish_stage();
 
     printf("\n=== Results: %d passed, %d failed ===\n\n", s_pass, s_fail);
     return s_fail > 0 ? 1 : 0;

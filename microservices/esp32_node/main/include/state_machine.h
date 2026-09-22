@@ -26,6 +26,7 @@ typedef enum {
     FSM_WIFI_CONNECT,
     FSM_NTP_SYNC,
     FSM_SENSOR_INIT,
+    FSM_BLE_PUBLISH,         /* ventana BLE live + publish tras muestreo (FEE2) */
     FSM_TRANSPORT_CONNECTING,
     FSM_TELEMETRY_SENDING,
     FSM_TELEMETRY_DEGRADED,
@@ -51,6 +52,7 @@ typedef enum {
     EV_SENSOR_OK,
     EV_SENSOR_PARTIAL,
     EV_SENSOR_FAIL,
+    EV_BLE_DONE,             /* ventana BLE abierta + trama publicada (best-effort) */
     EV_TRANSPORT_CONNECTED,
     EV_TRANSPORT_DISCONNECT,
     EV_TRANSPORT_AUTH_FAIL,

@@ -86,6 +86,9 @@ static char s_payload_buf[512];
 
 /* ── Edge frame for current telemetry cycle ──────────────────────────────── */
 static edge_frame_t s_edge_frame;
+/* Muestreado una vez por ciclo (BLE_PUBLISH) y reutilizado por el envío
+ * servidor: BLE-live y backend publican la MISMA muestra. */
+static bool s_frame_ready = false;
 
 /* ── FSM event queue (handlers post here; fsm_task consumes) ─────────────── */
 static QueueHandle_t s_fsm_queue = NULL;
@@ -784,7 +787,6 @@ static void build_edge_frame(void)
     }
 
     s_edge_frame.ambient_valid = ambient_valid;
-    s_edge_frame.dg = (~ambient_valid) & 0x0F;
 
     const int soil_pins[] = MOLE_ACTIVE_SOIL_PINS;
     s_edge_frame.soil_count = 0;
@@ -801,9 +803,29 @@ static void build_edge_frame(void)
     }
 }
 
-static void transport_send_payload(void)
+/* Muestreo + ventana BLE live (invocado por FSM:BLE_PUBLISH, en paralelo a
+ * WiFi/NTP — no bloquea). Best-effort: si falla, el path servidor manda. */
+void ble_publish_live_frame(void)
 {
     build_edge_frame();
+    s_frame_ready = true;
+    ble_live_start(BLE_ADV_WINDOW_S);
+    int n = ble_fee2_publish(&s_edge_frame);
+    if (n < 0) {
+        ESP_LOGW(TAG, "BLE live publish failed — continuing to server path");
+    } else {
+        ESP_LOGI(TAG, "BLE live published (%d B)", n);
+    }
+}
+
+static void transport_send_payload(void)
+{
+    /* La muestra ya existe si el FSM pasó por BLE_PUBLISH; si no (rutas
+     * degradadas/offline), se muestrea aquí. Una muestra por ciclo. */
+    if (!s_frame_ready) {
+        build_edge_frame();
+    }
+    s_frame_ready = false;
 
     int len = payload_build(&s_edge_frame, s_payload_buf, sizeof(s_payload_buf));
     if (len < 0) {

@@ -384,6 +384,17 @@ void ble_live_start(uint32_t window_s)
     /* Si el host aún sincroniza, on_sync anunciará la ventana. */
 }
 
+/* Cierra la ventana live antes del deep-sleep (spec §4). Idempotente. */
+void ble_live_stop(void)
+{
+    if (!s_live_mode) return;
+    int rc = ble_gap_adv_stop();
+    if (rc != 0 && rc != BLE_HS_EALREADY) {
+        ESP_LOGW(TAG, "ble_gap_adv_stop rc=%d", rc);
+    }
+    s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+}
+
 /* Codifica y publica la última trama; notifica al central suscrito
  * (best-effort). Retorna bytes codificados o -1. Sin tokens/PII. */
 int ble_fee2_publish(const edge_frame_t *frame)

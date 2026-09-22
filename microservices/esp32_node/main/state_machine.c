@@ -141,6 +141,16 @@ static void act_start_transport(fsm_context_t *ctx)
     (void)ctx;
 }
 
+/* Ventana BLE live (FEE2, spec §4): muestrea una vez, abre la ventana de
+ * advertising (default 30 s, no bloqueante) y publica la trama. Best-effort:
+ * el path servidor sigue siendo autoritativo; siempre postea EV_BLE_DONE. */
+static void act_ble_live(fsm_context_t *ctx)
+{
+    extern void ble_publish_live_frame(void);
+    ble_publish_live_frame();
+    post_event(ctx, EV_BLE_DONE);
+}
+
 static void act_send_telemetry(fsm_context_t *ctx)
 {
     extern void transport_send_payload(void);
@@ -166,6 +176,10 @@ static void act_drain_and_sleep(fsm_context_t *ctx)
 {
     extern void transport_send_frame_from_buffer(const sensor_frame_t *frame);
     extern void enter_deep_sleep(void);
+    extern void ble_live_stop(void);
+
+    /* Radio off antes de dormir: la ventana live nunca sobrevive al ciclo. */
+    ble_live_stop();
 
     while (offline_buffer_count() > 0) {
         sensor_frame_t frame;
@@ -223,10 +237,14 @@ static const fsm_transition_t s_transitions[] = {
     T(FSM_NTP_SYNC,             EV_NTP_SYNCED,        FSM_SENSOR_INIT,          act_init_sensors),
     T(FSM_NTP_SYNC,             EV_NTP_TIMEOUT,       FSM_SENSOR_INIT,          act_init_sensors),
 
-    /* SENSOR_INIT → transport or degraded */
-    T(FSM_SENSOR_INIT,          EV_SENSOR_OK,         FSM_TRANSPORT_CONNECTING, act_start_transport),
-    T(FSM_SENSOR_INIT,          EV_SENSOR_PARTIAL,    FSM_TRANSPORT_CONNECTING, act_start_transport),
+    /* SENSOR_INIT → BLE live (muestreo + ventana + publish), luego transporte.
+     * EV_SENSOR_FAIL no lo emite nadie hoy (ruta a DEGRADED conservada). */
+    T(FSM_SENSOR_INIT,          EV_SENSOR_OK,         FSM_BLE_PUBLISH,          act_ble_live),
+    T(FSM_SENSOR_INIT,          EV_SENSOR_PARTIAL,    FSM_BLE_PUBLISH,          act_ble_live),
     T(FSM_SENSOR_INIT,          EV_SENSOR_FAIL,       FSM_TELEMETRY_DEGRADED,   act_start_transport),
+
+    /* BLE_PUBLISH → transporte (la subida servidor tiene prioridad). */
+    T(FSM_BLE_PUBLISH,          EV_BLE_DONE,          FSM_TRANSPORT_CONNECTING, act_start_transport),
 
     /* TRANSPORT_CONNECTING → telemetry, reconnect, or error */
     T(FSM_TRANSPORT_CONNECTING, EV_TRANSPORT_CONNECTED,    FSM_TELEMETRY_SENDING,   act_send_telemetry),

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/core/offline_store.dart';
 import 'package:mole_ai/features/plants/plants.dart';
+import 'package:mole_ai/features/plants/telemetry_badge.dart';
 import 'package:mole_ai/features/plants/plants_screen.dart'
     show plantsRepositoryProvider, telemetryRepositoryProvider;
 
@@ -84,6 +85,12 @@ class _PlantDetailScreenState extends ConsumerState<PlantDetailScreen> {
                               title: Text(
                                   'Sin datos (nodo sin logs)'))),
                     if (_telemetry?.hasData == true) ...[
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TelemetrySourceBadge(
+                            source: _telemetry!.source),
+                      ),
+                      const SizedBox(height: 8),
                       Card(
                         child: Column(
                           children: [

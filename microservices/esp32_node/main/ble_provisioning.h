@@ -15,6 +15,9 @@ void ble_provisioning_start(void);
 /* Ventana live al despertar (spec gatt-fee2-spec.md §4). */
 void ble_live_start(uint32_t window_s);
 
+/* Cierra la ventana live antes del deep-sleep. Idempotente. */
+void ble_live_stop(void);
+
 /* Publica la última trama FEE2 + notify best-effort. Retorna bytes o -1. */
 int ble_fee2_publish(const edge_frame_t *frame);
 

@@ -9,6 +9,8 @@
 #include "nvs.h"
 
 void ble_provisioning_start(void) { fprintf(stderr, "stub: ble_provisioning_start\n"); }
+void ble_publish_live_frame(void) { fprintf(stderr, "stub: ble_publish_live_frame\n"); }
+void ble_live_stop(void)          { fprintf(stderr, "stub: ble_live_stop\n"); }
 void start_captive_portal(void)   { fprintf(stderr, "stub: start_captive_portal (would restart)\n"); exit(0); }
 void wifi_init_sta(void)          { fprintf(stderr, "stub: wifi_init_sta\n"); }
 esp_err_t mole_ntp_init(void)          { fprintf(stderr, "stub: mole_ntp_init\n"); return ESP_OK; }
