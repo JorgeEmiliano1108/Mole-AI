@@ -1,6 +1,10 @@
 # 18 — Curaduría flora endémica (bloquea portal)
 
-Status: needs-triage
+Status: ready-for-human
+
+> Asignado a humano (Fase 2, veredicto arquitectónico 2026-09-22): la curaduría
+> de fichas y la firma de revisión exigen juicio botánico. El merge requiere
+> revisión firmada en este issue antes de que el portal consuma las fichas.
 
 ## Parent
 
