@@ -9,8 +9,9 @@ echo "========================================="
 if [ "${DEBUG}" != "True" ] && [ "${DEBUG}" != "true" ]; then
   echo "[0/4] Validating required Cloud-Native env vars..."
   missing=0
-  # Strict variables for AWS/NVIDIA migration
-  for v in SECRET_KEY POSTGRES_PASSWORD POSTGRES_HOST AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY NVIDIA_API_KEY; do
+  # Estándar único: nombres canónicos DB_* (settings.py resuelve
+  # _env_first canónico→legacy; ver .env.example en la raíz).
+  for v in SECRET_KEY DB_PASSWORD DB_HOST AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY NVIDIA_API_KEY; do
     if [ -z "${!v}" ]; then
       echo "  ERROR: required env var '${v}' is not set"
       missing=1
@@ -23,8 +24,8 @@ if [ "${DEBUG}" != "True" ] && [ "${DEBUG}" != "true" ]; then
 fi
 
 # Wait for the RDS/PostgreSQL database to be ready
-DB_HOST=${POSTGRES_HOST:-mole-ai-db}
-DB_PORT=${POSTGRES_PORT:-5432}
+DB_HOST=${DB_HOST:-postgres}
+DB_PORT=${DB_PORT:-5432}
 DB_MAX_RETRIES=${DB_MAX_RETRIES:-30}
 DB_RETRY_COUNT=0
 
