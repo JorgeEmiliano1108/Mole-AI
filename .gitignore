@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.production.template
+!.env.example
 .venv/
 venv/
 ENV/
