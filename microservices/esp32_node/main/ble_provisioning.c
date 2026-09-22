@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "esp_log.h"
 #include "esp_random.h"
 #include "nvs.h"
@@ -16,6 +17,9 @@
 #include "esp_system.h"
 #include "cJSON.h"
 #include "mole_config.h"
+#include "edge_frame.h"
+#include "fee2_frame.h"
+#include "ble_provisioning.h"
 
 /* NimBLE Includes */
 #include "nimble/nimble_port.h"
@@ -34,8 +38,20 @@ static const char *BLE_TAG = "MOLE_BLE";
 /* Custom Service & Characteristic UUIDs */
 /* Service: FEE0 */
 static const ble_uuid16_t svc_uuid = BLE_UUID16_INIT(0xFEE0);
-/* Characteristic: FEE1 */
+/* Characteristic: FEE1 (provisioning WRITE, legacy) */
 static const ble_uuid16_t chr_uuid = BLE_UUID16_INIT(0xFEE1);
+/* Characteristic: FEE2 (live telemetry READ+NOTIFY, spec gatt-fee2-spec.md) */
+static const ble_uuid16_t fee2_uuid = BLE_UUID16_INIT(0xFEE2);
+
+/* ── FEE2 live state (spec §1/§4) ─────────────────────────────────────────── */
+static uint16_t s_fee2_attr_handle = 0;
+static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+static bool s_live_mode = false;
+static bool s_stack_inited = false;
+static bool s_synced = false;
+static uint32_t s_window_s = 30;
+static uint8_t s_fee2_value[FEE2_MAX_FRAME_LEN];
+static uint16_t s_fee2_len = 0;
 
 /* Semaphore used by the main task */
 extern SemaphoreHandle_t g_provision_sem;
@@ -48,6 +64,9 @@ static int gatt_chr_access_cb(uint16_t conn_handle, uint16_t attr_handle,
                               struct ble_gatt_access_ctxt *ctxt, void *arg);
 
 /* -------------------------------------------------------------------------- */
+static int gatt_fee2_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+                               struct ble_gatt_access_ctxt *ctxt, void *arg);
+
 /* 1. GATT Service Definition */
 /* -------------------------------------------------------------------------- */
 static const struct ble_gatt_svc_def gatt_svcs[] = {
@@ -60,11 +79,52 @@ static const struct ble_gatt_svc_def gatt_svcs[] = {
                 .access_cb = gatt_chr_access_cb,
                 .flags = BLE_GATT_CHR_F_WRITE,
             },
+            {
+                /* FEE2: latest frame (READ) + live notify (NOTIFY+CCCD).
+                 * NimBLE añade el CCCD 0x2902 automáticamente. */
+                .uuid = &fee2_uuid.u,
+                .access_cb = gatt_fee2_access_cb,
+                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+            },
             { 0 } /* No more characteristics in this service */
         },
     },
     { 0 } /* No more services */
 };
+
+/* -------------------------------------------------------------------------- */
+/* 1b. FEE2 Access Callback (spec §1: READ vigente, vacío → UNLIKELY) */
+/* -------------------------------------------------------------------------- */
+static int gatt_fee2_access_cb(uint16_t conn_handle, uint16_t attr_handle,
+                               struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+    (void)conn_handle;
+    (void)attr_handle;
+    (void)arg;
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR) {
+        /* Sin primera muestra (nodo sin provisionar): valor vacío. */
+        if (s_fee2_len == 0) return BLE_ATT_ERR_UNLIKELY;
+        /* La pila también invoca este READ para serializar el NOTIFY. */
+        return os_mbuf_append(ctxt->om, s_fee2_value, s_fee2_len) == 0
+            ? 0
+            : BLE_ATT_ERR_INSUFFICIENT_RES;
+    }
+    if (ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+    }
+    return 0;
+}
+
+/* Captura el value handle de FEE2 para ble_gatts_notify(). */
+static void gatts_register_cb(struct ble_gatt_register_ctxt *ctxt, void *arg)
+{
+    (void)arg;
+    if (ctxt->op == BLE_GATT_REGISTER_OP_CHR &&
+        ble_uuid_cmp(ctxt->chr.chr_def->uuid, &fee2_uuid.u) == 0) {
+        s_fee2_attr_handle = ctxt->chr.val_handle;
+        ESP_LOGI(BLE_TAG, "FEE2 chr handle: %d", s_fee2_attr_handle);
+    }
+}
 
 /* -------------------------------------------------------------------------- */
 /* Helper Functions for LTK */
@@ -151,9 +211,9 @@ static int gatt_chr_access_cb(uint16_t conn_handle, uint16_t attr_handle,
 }
 
 /* -------------------------------------------------------------------------- */
-/* 3. GAP Event Callback */
+/* 3. GAP Event Callback + Advertising (ventana live vs provisioning) */
 /* -------------------------------------------------------------------------- */
-static void ble_app_advertise(void)
+static void ble_app_advertise(int32_t duration_ms)
 {
     struct ble_gap_adv_params adv_params;
     struct ble_hs_adv_fields fields;
@@ -185,13 +245,13 @@ static void ble_app_advertise(void)
     adv_params.itvl_min = 0x30;
     adv_params.itvl_max = 0x60;
 
-    rc = ble_gap_adv_start(own_addr_type, NULL, BLE_HS_FOREVER,
+    rc = ble_gap_adv_start(own_addr_type, NULL, duration_ms,
                            &adv_params, gap_event_cb, NULL);
     if (rc != 0) {
         ESP_LOGE(BLE_TAG, "Error enabling advertising; rc=%d", rc);
         return;
     }
-    ESP_LOGI(BLE_TAG, "BLE advertising started");
+    ESP_LOGI(BLE_TAG, "BLE advertising started (dur=%ld ms)", (long)duration_ms);
 }
 
 static int gap_event_cb(struct ble_gap_event *event, void *arg)
@@ -199,15 +259,27 @@ static int gap_event_cb(struct ble_gap_event *event, void *arg)
     switch (event->type) {
     case BLE_GAP_EVENT_CONNECT:
         ESP_LOGI(BLE_TAG, "BLE central connected, status=%d", event->connect.status);
-        if (event->connect.status != 0) {
-            ble_app_advertise();
+        if (event->connect.status == 0) {
+            s_conn_handle = event->connect.conn_handle;
+        } else if (!s_live_mode) {
+            /* Solo provisioning reanuncia ante fallo (FOREVER). */
+            ble_app_advertise(BLE_HS_FOREVER);
         }
         break;
 
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGI(BLE_TAG, "BLE central disconnected, reason=%d", event->disconnect.reason);
-        // Restart advertising
-        ble_app_advertise();
+        s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
+        if (!s_live_mode) {
+            // Restart advertising (provisioning)
+            ble_app_advertise(BLE_HS_FOREVER);
+        }
+        /* Live: no reanuncia; el FSM apaga el radio y duerme (spec §4). */
+        break;
+
+    case BLE_GAP_EVENT_ADV_COMPLETE:
+        /* Ventana live expirada: radio off implícito, el FSM duerme. */
+        ESP_LOGI(BLE_TAG, "BLE adv window complete (live=%d)", s_live_mode);
         break;
 
     default:
@@ -232,7 +304,12 @@ static void ble_app_on_sync(void)
         return;
     }
 
-    ble_app_advertise();
+    s_synced = true;
+    if (s_live_mode) {
+        ble_app_advertise((int32_t)(s_window_s * 1000U));
+    } else {
+        ble_app_advertise(BLE_HS_FOREVER);
+    }
 }
 
 static void nimble_host_task(void *param)
@@ -243,18 +320,19 @@ static void nimble_host_task(void *param)
 }
 
 /* -------------------------------------------------------------------------- */
-/* 5. Initialization Entry Point */
+/* 5. Initialization Entry Point + Live API (spec §4) */
 /* -------------------------------------------------------------------------- */
-void ble_provisioning_start(void)
+static void ble_stack_init_once(void)
 {
-    ESP_LOGI(BLE_TAG, "Initializing Native BLE provisioning service");
+    if (s_stack_inited) return;
+    s_stack_inited = true;
 
     nimble_port_init();
 
     /* Initialize the NimBLE host configuration */
     ble_hs_cfg.reset_cb = NULL;
     ble_hs_cfg.sync_cb = ble_app_on_sync;
-    ble_hs_cfg.gatts_register_cb = NULL;
+    ble_hs_cfg.gatts_register_cb = gatts_register_cb;
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
 
     /* Security Config: LESC enabled, no passkey */
@@ -264,8 +342,6 @@ void ble_provisioning_start(void)
     ble_hs_cfg.sm_our_key_dist = 0;
     ble_hs_cfg.sm_their_key_dist = 0;
     ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO;
-
-    ble_svc_gap_device_name_set("MoleProvision");
 
     /* Register GATT services */
     ble_svc_gap_init();
@@ -281,4 +357,48 @@ void ble_provisioning_start(void)
 
     /* Start the task */
     nimble_port_freertos_init(nimble_host_task);
+}
+
+void ble_provisioning_start(void)
+{
+    ESP_LOGI(BLE_TAG, "Initializing Native BLE provisioning service");
+
+    s_live_mode = false;
+    ble_svc_gap_device_name_set("MoleProvision");
+    ble_stack_init_once();
+}
+
+/* Ventana live al despertar (spec §4): anuncia `window_s` y vuelve a dormir.
+ * Llamar una vez por ciclo de wake tras muestrear. No bloquea. */
+void ble_live_start(uint32_t window_s)
+{
+    ESP_LOGI(BLE_TAG, "BLE live window: %lu s", (unsigned long)window_s);
+
+    s_live_mode = true;
+    s_window_s = (window_s == 0) ? BLE_ADV_WINDOW_S : window_s;
+    ble_svc_gap_device_name_set(MOLE_NODE_NAME);
+    ble_stack_init_once();
+    if (s_synced) {
+        ble_app_advertise((int32_t)(s_window_s * 1000U));
+    }
+    /* Si el host aún sincroniza, on_sync anunciará la ventana. */
+}
+
+/* Codifica y publica la última trama; notifica al central suscrito
+ * (best-effort). Retorna bytes codificados o -1. Sin tokens/PII. */
+int ble_fee2_publish(const edge_frame_t *frame)
+{
+    int len = fee2_encode(frame, s_fee2_value, sizeof(s_fee2_value));
+    if (len < 0) {
+        ESP_LOGE(BLE_TAG, "FEE2 encode failed");
+        return -1;
+    }
+    s_fee2_len = (uint16_t)len;
+    if (s_conn_handle != BLE_HS_CONN_HANDLE_NONE && s_fee2_attr_handle != 0) {
+        int rc = ble_gatts_notify(s_conn_handle, s_fee2_attr_handle);
+        if (rc != 0) {
+            ESP_LOGW(BLE_TAG, "FEE2 notify rc=%d (sin suscripción?)", rc);
+        }
+    }
+    return len;
 }

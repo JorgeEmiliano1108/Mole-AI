@@ -31,13 +31,18 @@ FSM_BEH_BIN  = test_fsm_behavior.elf
 OFFBUF_SRCS = test_offline_buffer.c ../main/offline_buffer.c
 OFFBUF_BIN  = test_offline_buffer.elf
 
+# FEE2 fixed-point encoder tests (pure C, spec §2)
+FEE2_SRCS = test_fee2_frame.c ../main/fee2_frame.c
+FEE2_BIN  = test_fee2_frame.elf
+
 .PHONY: test clean
 
-test: $(PAYLOAD_BIN) $(FSM_BIN) $(FSM_BEH_BIN) $(OFFBUF_BIN)
+test: $(PAYLOAD_BIN) $(FSM_BIN) $(FSM_BEH_BIN) $(OFFBUF_BIN) $(FEE2_BIN)
 	./$(PAYLOAD_BIN)
 	./$(FSM_BIN)
 	./$(FSM_BEH_BIN)
 	./$(OFFBUF_BIN)
+	./$(FEE2_BIN)
 
 $(PAYLOAD_BIN): $(PAYLOAD_SRCS)
 	$(CC) $(CFLAGS) -I$(CJSON_H) $(PAYLOAD_SRCS) $(LDFLAGS) -o $@
@@ -51,5 +56,8 @@ $(FSM_BEH_BIN): $(FSM_BEH_SRCS)
 $(OFFBUF_BIN): $(OFFBUF_SRCS)
 	$(CC) $(CFLAGS) $(STUBS) $(OFFBUF_SRCS) $(LDFLAGS) -o $@
 
+$(FEE2_BIN): $(FEE2_SRCS)
+	$(CC) $(CFLAGS) $(FEE2_SRCS) $(LDFLAGS) -o $@
+
 clean:
-	rm -f $(PAYLOAD_BIN) $(FSM_BIN) $(FSM_BEH_BIN)
+	rm -f $(PAYLOAD_BIN) $(FSM_BIN) $(FSM_BEH_BIN) $(FEE2_BIN)

@@ -63,3 +63,7 @@
 
 /* Provisioning timeout (ms) — deep sleep if no credentials received */
 #define MOLE_PROV_TIMEOUT_MS   300000
+
+/* BLE live advertising window per wake cycle (s) — spec gatt-fee2-spec.md §4.
+ * Radio off fuera de la ventana (deep-sleep); 0 = default en ble_live_start. */
+#define BLE_ADV_WINDOW_S       30
