@@ -23,9 +23,9 @@ static int s_pass = 0, s_fail = 0;
 /* ── State count verification ───────────────────────────────────────────── */
 static void test_state_counts(void)
 {
-    TEST("FSM_STATE_COUNT == 13 (12 nominal + ERROR)")
-        ok = (FSM_STATE_COUNT == 13);
-    END_TEST("FSM_STATE_COUNT == 13");
+    TEST("FSM_STATE_COUNT == 14 (13 nominal + ERROR)")
+        ok = (FSM_STATE_COUNT == 14);
+    END_TEST("FSM_STATE_COUNT == 14");
 }
 
 /* ── Event count verification ───────────────────────────────────────────── */

@@ -57,6 +57,7 @@
 #include "sensor_frame.h"
 #include "offline_buffer.h"
 #include "state_machine.h"
+#include "fw_hooks.h"
 
 static const char *TAG = "MOLE_MAIN";
 
@@ -100,7 +101,7 @@ static int s_reconnect_attempt = 0;
  * SECTION 1: NVS Token Management
  * ========================================================================== */
 
-static bool nvs_load_token(void)
+bool nvs_load_token(void)
 {
     nvs_handle_t handle;
     esp_err_t err = nvs_open(MOLE_NVS_NAMESPACE, NVS_READONLY, &handle);
@@ -125,17 +126,6 @@ static bool nvs_load_token(void)
 
     ESP_LOGW(TAG, "Missing device token or WiFi SSID in NVS.");
     return false;
-}
-
-static esp_err_t nvs_save_token(const char *token)
-{
-    nvs_handle_t handle;
-    ESP_ERROR_CHECK(nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &handle));
-    ESP_ERROR_CHECK(nvs_set_str(handle, MOLE_NVS_KEY_TOKEN, token));
-    ESP_ERROR_CHECK(nvs_commit(handle));
-    nvs_close(handle);
-    ESP_LOGI(TAG, "Device Token saved to NVS.");
-    return ESP_OK;
 }
 
 /* ==========================================================================
@@ -450,7 +440,7 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static void start_captive_portal(void)
+void start_captive_portal(void)
 {
     ESP_LOGI(TAG, "=== CAPTIVE PORTAL MODE ===");
 
@@ -558,7 +548,7 @@ static void reconnect_timer_cb(TimerHandle_t xTimer)
 {
     reconnect_save_nvs();
     esp_wifi_connect();
-    vTimerDelete(xTimer);
+    xTimerDelete(xTimer, 0);
 }
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
@@ -606,7 +596,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
-static void wifi_init_sta(void)
+void wifi_init_sta(void)
 {
     wifi_event_group = xEventGroupCreate();
     esp_netif_create_default_wifi_sta();
@@ -647,7 +637,7 @@ static void wifi_init_sta(void)
  * SECTION 4: TransportLayer Wrapper
  * ========================================================================== */
 
-static void transport_init_and_connect(void)
+void transport_init_and_connect(void)
 {
     s_transport_event_queue = xQueueCreate(4, sizeof(transport_event_t));
     if (!s_transport_event_queue) {
@@ -706,7 +696,7 @@ static void transport_init_and_connect(void)
  * SECTION 5: Sensor Init
  * ========================================================================== */
 
-static void sensor_init_all(void)
+void sensor_init_all(void)
 {
     i2c_master_bus_config_t bus_cfg = {
         .i2c_port   = I2C_NUM_0,
@@ -748,7 +738,7 @@ static void sensor_init_all(void)
     }
 }
 
-static int sensor_get_degraded_bitmask(void)
+int sensor_get_degraded_bitmask(void)
 {
     int dg = 0;
     if (!s_dht20)  dg |= DEGRADED_TEMP_BIT | DEGRADED_HUM_BIT;
@@ -818,7 +808,7 @@ void ble_publish_live_frame(void)
     }
 }
 
-static void transport_send_payload(void)
+void transport_send_payload(void)
 {
     /* La muestra ya existe si el FSM pasó por BLE_PUBLISH; si no (rutas
      * degradadas/offline), se muestrea aquí. Una muestra por ciclo. */
@@ -880,7 +870,10 @@ void transport_send_frame_from_buffer(const sensor_frame_t *frame)
     memset(&ef, 0, sizeof(ef));
     ef.ts = frame->ts;
     ef.report_interval_minutes = frame->report_interval_minutes;
-    ef.ambient = frame->ambient;
+    ef.ambient.t = frame->ambient.t;
+    ef.ambient.h = frame->ambient.h;
+    ef.ambient.l = frame->ambient.l;
+    ef.ambient.u = frame->ambient.u;
     ef.ambient_valid = frame->ambient_valid;
     ef.soil_count = frame->soil_count;
     for (int i = 0; i < frame->soil_count && i < EDGE_FRAME_MAX_SOIL_PINS; i++) {
@@ -903,7 +896,7 @@ void transport_send_frame_from_buffer(const sensor_frame_t *frame)
  * SECTION 7: Deep Sleep
  * ========================================================================== */
 
-static void enter_deep_sleep(void)
+void enter_deep_sleep(void)
 {
     ESP_LOGI(TAG, "Entering deep sleep for %llu us", MOLE_DEEP_SLEEP_US);
     esp_err_t wdt_err = esp_task_wdt_delete(NULL);
@@ -917,7 +910,7 @@ static void enter_deep_sleep(void)
  * SECTION 8: Backoff Timer Wrapper (for FSM action)
  * ========================================================================== */
 
-static void start_backoff_timer(void)
+void start_backoff_timer(void)
 {
     int delay_ms = reconnect_backoff_delay_ms();
     ESP_LOGW(TAG, "Starting backoff timer: %d ms (attempt %d)",

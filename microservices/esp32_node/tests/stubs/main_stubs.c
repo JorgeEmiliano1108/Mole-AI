@@ -9,6 +9,7 @@
 #include "nvs.h"
 
 void ble_provisioning_start(void) { fprintf(stderr, "stub: ble_provisioning_start\n"); }
+bool nvs_load_token(void)              { fprintf(stderr, "stub: nvs_load_token (no creds)\n"); return false; }
 void ble_publish_live_frame(void) { fprintf(stderr, "stub: ble_publish_live_frame\n"); }
 void ble_live_stop(void)          { fprintf(stderr, "stub: ble_live_stop\n"); }
 void start_captive_portal(void)   { fprintf(stderr, "stub: start_captive_portal (would restart)\n"); exit(0); }

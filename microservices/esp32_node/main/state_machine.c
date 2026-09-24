@@ -22,8 +22,9 @@
 #include "freertos/semphr.h"
 #include "mole_config.h"
 #include "state_machine.h"
+#include "fw_hooks.h"
 #include "offline_buffer.h"
-#include "sensor_frame.h"
+#include "ble_provisioning.h"
 #include "mole_ntp.h"
 #include "ble_provisioning.h"
 
@@ -59,18 +60,7 @@ static void act_nvs_check(fsm_context_t *ctx)
 {
     fsm_load_nvs(ctx);
 
-    /* Check NVS for credentials */
-    nvs_handle_t h;
-    bool has_token = false;
-    if (nvs_open(MOLE_NVS_NAMESPACE, NVS_READONLY, &h) == ESP_OK) {
-        char buf[8] = {0};
-        size_t sz = sizeof(buf);
-        has_token = (nvs_get_str(h, MOLE_NVS_KEY_TOKEN, buf, &sz) == ESP_OK
-                     && sz > 1);
-        nvs_close(h);
-    }
-
-    if (has_token) {
+    if (nvs_load_token()) {
         ESP_LOGI(TAG, "NVS: credentials found");
         post_event(ctx, EV_CREDS_FOUND);
     } else {

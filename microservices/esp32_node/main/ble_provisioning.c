@@ -390,7 +390,7 @@ void ble_live_stop(void)
     if (!s_live_mode) return;
     int rc = ble_gap_adv_stop();
     if (rc != 0 && rc != BLE_HS_EALREADY) {
-        ESP_LOGW(TAG, "ble_gap_adv_stop rc=%d", rc);
+        ESP_LOGW(BLE_TAG, "ble_gap_adv_stop rc=%d", rc);
     }
     s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 }

@@ -8,8 +8,11 @@
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y
 
-# ── NVS Encryption (Zero-Trust: protect Ed25519 private key) ─────────────────
-CONFIG_NVS_ENCRYPTION=y
+# ── NVS Encryption ───────────────────────────────────────────────────────────
+# Deshabilitado: el esquema HMAC exige quemar una llave eFuse en fábrica y la
+# app usa nvs_flash_init() (sin cipher). Al implementar secure init en
+# producción: CONFIG_NVS_ENCRYPTION=y + flash del eFuse HMAC key block.
+# CONFIG_NVS_ENCRYPTION is not set
 
 # ── SNTP (ETSI EN 303 645 Anti-Replay) ───────────────────────────────────────
 CONFIG_LWIP_SNTP_MAX_SERVERS=3
