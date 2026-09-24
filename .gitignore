@@ -91,4 +91,4 @@ staticfiles/
 media/
 dump.rdb
 
-skills-main/
+skills-main/*.elf
