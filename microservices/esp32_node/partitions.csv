@@ -1,9 +1,12 @@
 # Name,   Type, SubType, Offset,  Size,   Flags
 # =============================================================================
 # Mole.AI — Custom Partition Table
-# Includes encrypted NVS for Ed25519 private key storage (Zero-Trust)
+# NVS sin cifrar: NVS_ENCRYPTION=n (sdkconfig.defaults) y la app usa
+# nvs_flash_init() plano. Path producción: nvs_flash_secure_init + eFuse HMAC
+# (ver ADR pendiente, issue 18). nvs_keys se conserva reservada (4 KB) para no
+# mover offsets al activar el cifrado en el futuro.
 # =============================================================================
-nvs,        data, nvs,     0x9000,  0x6000,  encrypted
+nvs,        data, nvs,     0x9000,  0x6000,
 phy_init,   data, phy,     0xf000,  0x1000,
 factory,    app,  factory, 0x10000, 0x1E0000,
 nvs_keys,   data, nvs_keys,0x1F0000,0x1000,

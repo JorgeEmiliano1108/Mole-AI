@@ -138,14 +138,62 @@ static void generate_and_store_ltk(void)
 
     nvs_handle_t nvs_handle;
     esp_err_t err = nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(BLE_TAG, "Failed to open NVS to store LTK (0x%x)", err);
+        return;
+    }
+    err = nvs_set_blob(nvs_handle, "ltk", ltk, sizeof(ltk));
+    if (err == ESP_OK) err = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
     if (err == ESP_OK) {
-        nvs_set_blob(nvs_handle, "ltk", ltk, sizeof(ltk));
-        nvs_commit(nvs_handle);
-        nvs_close(nvs_handle);
         ESP_LOGI(BLE_TAG, "LTK generated and stored in NVS");
     } else {
-        ESP_LOGE(BLE_TAG, "Failed to open NVS to store LTK");
+        ESP_LOGE(BLE_TAG, "Failed to store LTK (0x%x)", err);
     }
+}
+
+/* Valida y persiste credenciales de provisioning. Retorna true solo si
+ * ssid+pass+token están presentes/no-vacíos y el commit a NVS fue OK.
+ * Todo o nada: con NVS a medias no se señaliza provisioning completo. */
+static bool provision_save_credentials(cJSON *root)
+{
+    cJSON *ssid     = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_SSID);
+    cJSON *pass     = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_PASS);
+    cJSON *token    = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_TOKEN);
+    cJSON *interval = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_INTERVAL);
+
+    if (!ssid || !cJSON_IsString(ssid) || !ssid->valuestring || ssid->valuestring[0] == '\0' ||
+        !pass || !cJSON_IsString(pass) || !pass->valuestring || pass->valuestring[0] == '\0' ||
+        !token || !cJSON_IsString(token) || !token->valuestring || token->valuestring[0] == '\0') {
+        ESP_LOGE(BLE_TAG, "Provisioning JSON missing required ssid/pass/token");
+        return false;
+    }
+
+    uint32_t ri = MOLE_REPORT_INTERVAL_DEFAULT;
+    if (interval && cJSON_IsNumber(interval)) {
+        ri = (uint32_t)interval->valuedouble;
+        if (ri < 1) ri = 1;
+        if (ri > 120) ri = 120;
+    }
+
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(BLE_TAG, "Failed to open NVS for credentials (0x%x)", err);
+        return false;
+    }
+    err = nvs_set_str(nvs_handle, "wifi_ssid", ssid->valuestring);
+    if (err == ESP_OK) err = nvs_set_str(nvs_handle, "wifi_pass", pass->valuestring);
+    if (err == ESP_OK) err = nvs_set_str(nvs_handle, MOLE_NVS_KEY_TOKEN, token->valuestring);
+    if (err == ESP_OK) err = nvs_set_u32(nvs_handle, "telemetry_int", ri);
+    if (err == ESP_OK) err = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(BLE_TAG, "Failed to persist credentials (0x%x)", err);
+        return false;
+    }
+    ESP_LOGI(BLE_TAG, "BLE credentials saved to NVS");
+    return true;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -165,41 +213,27 @@ static int gatt_chr_access_cb(uint16_t conn_handle, uint16_t attr_handle,
 
                 /* Parse JSON payload — expected format:
                  * {"ssid":"...","pass":"...","token":"...","interval":5}
+                 * El payload lleva secretos: se loguea solo la longitud.
                  */
                 cJSON *root = cJSON_Parse(buf);
+                bool provisioned = false;
                 if (root) {
-                    nvs_handle_t nvs_handle;
-                    if (nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &nvs_handle) == ESP_OK) {
-                        cJSON *ssid     = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_SSID);
-                        cJSON *pass     = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_PASS);
-                        cJSON *token    = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_TOKEN);
-                        cJSON *interval = cJSON_GetObjectItem(root, MOLE_BLE_PROV_KEY_INTERVAL);
-
-                        if (ssid     && cJSON_IsString(ssid)     && ssid->valuestring)
-                            nvs_set_str(nvs_handle, "wifi_ssid", ssid->valuestring);
-                        if (pass     && cJSON_IsString(pass)     && pass->valuestring)
-                            nvs_set_str(nvs_handle, "wifi_pass", pass->valuestring);
-                        if (token    && cJSON_IsString(token)    && token->valuestring)
-                            nvs_set_str(nvs_handle, MOLE_NVS_KEY_TOKEN, token->valuestring);
-                        if (interval && cJSON_IsNumber(interval))
-                            nvs_set_u32(nvs_handle, "telemetry_int",
-                                        (uint32_t)interval->valuedouble);
-
-                        nvs_commit(nvs_handle);
-                        nvs_close(nvs_handle);
-                        ESP_LOGI(BLE_TAG, "BLE credentials saved to NVS");
-                    }
+                    provisioned = provision_save_credentials(root);
                     cJSON_Delete(root);
                 } else {
-                    ESP_LOGE(BLE_TAG, "Invalid BLE provisioning JSON: %s", buf);
+                    ESP_LOGE(BLE_TAG, "Invalid BLE provisioning JSON");
                 }
 
                 free(buf);
 
-                /* Signal main task (triggers reboot from start_captive_portal) */
-                generate_and_store_ltk();
-                if (g_provision_sem) {
-                    xSemaphoreGive(g_provision_sem);
+                if (provisioned) {
+                    /* Signal main task (triggers reboot from start_captive_portal) */
+                    generate_and_store_ltk();
+                    if (g_provision_sem) {
+                        xSemaphoreGive(g_provision_sem);
+                    }
+                } else {
+                    return BLE_ATT_ERR_VALUE_NOT_ALLOWED;
                 }
             } else {
                 ESP_LOGE(BLE_TAG, "Out of memory allocating payload buffer");
