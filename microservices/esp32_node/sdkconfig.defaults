@@ -26,6 +26,13 @@ CONFIG_MBEDTLS_PK_WRITE_C=y
 CONFIG_MBEDTLS_ENTROPY_C=y
 CONFIG_MBEDTLS_CTR_DRBG_C=y
 
+# ── ESP32 clásico: IRAM 128 KB (vs S3). NimBLE+WiFi+HTTPD lo saturan.
+# -Os libera varios KB de IRAM sin cambiar comportamiento observable.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+# WiFi IRAM opt OFF: ahorra >10 KB IRAM (overflow era 5.5 KB). El nodo envía
+# payloads pequeños; la pérdida de throughput WiFi es irrelevante.
+# CONFIG_ESP_WIFI_IRAM_OPT is not set
+
 # ── FreeRTOS ─────────────────────────────────────────────────────────────────
 CONFIG_FREERTOS_HZ=1000
 
