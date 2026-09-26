@@ -31,6 +31,9 @@ const _adminEntries = [
   _Entry('Métricas', Icons.insights_outlined, '/admin/metricas'),
   _Entry('Base conocimiento', Icons.library_books_outlined, '/admin/knowledge'),
   _Entry('Usuarios', Icons.group_outlined, '/admin/usuarios'),
+  _Entry('Dispositivos', Icons.router_outlined, '/admin/dispositivos'),
+  _Entry('Auditoría', Icons.history_outlined, '/admin/auditoria'),
+  _Entry('Centro de fallas', Icons.warning_amber_outlined, '/admin/fallas'),
 ];
 
 class AppDrawer extends ConsumerWidget {

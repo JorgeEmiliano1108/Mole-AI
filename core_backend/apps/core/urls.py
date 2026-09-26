@@ -64,6 +64,8 @@ urlpatterns = [
     path('admin/users/<int:user_id>/', admin_views.admin_user_detail_view, name='admin_user_detail'),
     path('admin/live-alerts', admin_views.live_alerts_view, name='live_alerts'),
     path('admin/system-events', admin_views.system_events_view, name='system_events'),
+    path('admin/audit-log', admin_views.audit_log_view, name='audit_log'),
+    path('admin/devices/', admin_views.admin_devices_view, name='admin_devices'),
     path('admin/reports/generate', admin_views.master_report_view, name='admin_report_generate'),
     path('admin/reports/<str:job_id>/status', admin_views.master_report_status_view, name='admin_report_status'),
     

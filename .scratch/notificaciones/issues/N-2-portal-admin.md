@@ -1,6 +1,6 @@
 # Issue N-2: Portal admin (Dispositivos, Auditoría, Centro de fallas)
 
-Status: needs-triage
+Status: ready-for-human
 Sev: P0 · Área: mobile+backend · Fase: N-2 · Bloqueado por: N-0
 
 ## Problema
@@ -18,4 +18,11 @@ Admin sin portal único ni fallas del sistema en tiempo real (vulns incluidas).
 `Superadmin` solo tocado por superadmin (existe); auditoría append-only intacta.
 
 ## Comments
-(none)
+Resuelto: backend `admin/audit-log` (filtros+paginado, con IP por propósito de
+seguridad) + `admin/devices/` (envelope results, sin tokens); app con
+Centro de fallas (4 secciones), Dispositivos, Auditoría + panel/drawer/rutas
+con doble gate; test de redirección botánico. Reportes maestro diferido:
+flujo idéntico a /reportes vía proxy ya probado. Hallazgos: getJson exige
+objeto (envelope, no array top-level); Override no exportado en Riverpod 3
+(helper devuelve ProviderScope); Semantics fusiona labels (exclude + asserts
+contains). Evidencia: backend 16/16, Flutter 102/102, analyze 0 nuevos.

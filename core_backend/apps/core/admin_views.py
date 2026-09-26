@@ -389,3 +389,57 @@ def system_events_view(request):
                                        "status": "down", "msg": f"{svc} inalcanzable"})
 
     return Response(events)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def audit_log_view(request):
+    """
+    GET /api/v1/admin/audit-log?action=&user_id=&page=
+    Auditoría legible solo-admin (issue N-2): feed paginado del AuditLog
+    append-only. Incluye IP por propósito de seguridad (portal de fallas).
+    """
+    from apps.core.models import AuditLog
+    from django.core.paginator import Paginator
+
+    qs = AuditLog.objects.all().order_by('-timestamp')
+    action = (request.GET.get('action') or '').strip()
+    if action:
+        qs = qs.filter(action__icontains=action)
+    user_id = (request.GET.get('user_id') or '').strip()
+    if user_id.isdigit():
+        qs = qs.filter(user_id=int(user_id))
+
+    page = Paginator(qs, 50).get_page(request.GET.get('page') or 1)
+    return Response({
+        "results": [{
+            "id": log.id,
+            "action": log.action,
+            "user_id": log.user_id,
+            "ip_address": log.ip_address,
+            "details": log.details,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+        } for log in page.object_list],
+        "page": page.number,
+        "num_pages": page.paginator.num_pages,
+        "count": page.paginator.count,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def admin_devices_view(request):
+    """
+    GET /api/v1/admin/devices/
+    Flota para el portal admin (issue N-2): id, nombre, estado, last_seen,
+    dueño. Sin tokens (el Bearer jamás sale por API).
+    """
+    from apps.core.models import Device
+    devices = (Device.objects.select_related("owner").filter(is_active=True)
+               .order_by('name')[:200])
+    return Response({"results": [{
+        "id": str(d.id),
+        "name": d.name,
+        "status": d.status,
+        "last_seen": d.last_seen.isoformat() if d.last_seen else None,
+        "owner": d.owner.username if d.owner else None,
+    } for d in devices]})

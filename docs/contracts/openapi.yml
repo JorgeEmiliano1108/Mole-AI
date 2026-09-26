@@ -1406,6 +1406,29 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/v1/admin/audit-log:
+    get:
+      operationId: v1_admin_audit_log_retrieve
+      description: |-
+        Feed paginado del AuditLog append-only, solo admin (issue N-2).
+        Filtros action (icontains) y user_id. Incluye IP por propósito
+        de seguridad del portal de fallas.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/devices/:
+    get:
+      operationId: v1_admin_devices_retrieve
+      description: |-
+        Flota para el portal admin (issue N-2): id, nombre, estado,
+        last_seen, dueño. Sin tokens (el Bearer jamás sale por API).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
   /api/v1/weather/current/:
     get:
       operationId: v1_weather_current_retrieve

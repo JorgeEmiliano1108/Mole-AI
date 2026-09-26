@@ -12,7 +12,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:mole_ai/features/admin/admin_metrics.dart';
+import 'package:mole_ai/features/admin/audit_screen.dart';
+import 'package:mole_ai/features/admin/devices_screen.dart';
 import 'package:mole_ai/features/admin/knowledge_screen.dart';
+import 'package:mole_ai/features/admin/system_events_screen.dart';
 import 'package:mole_ai/features/admin/users_screen.dart';
 import 'package:mole_ai/features/alerts/alerts_screen.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
@@ -149,6 +152,18 @@ GoRouter buildRouter(WidgetRef ref) {
       GoRoute(
         path: '/admin/usuarios',
         builder: (context, state) => const UsersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/dispositivos',
+        builder: (context, state) => const DevicesScreen(),
+      ),
+      GoRoute(
+        path: '/admin/auditoria',
+        builder: (context, state) => const AuditScreen(),
+      ),
+      GoRoute(
+        path: '/admin/fallas',
+        builder: (context, state) => const SystemEventsScreen(),
       ),
     ],
   );

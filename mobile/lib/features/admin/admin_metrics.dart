@@ -58,6 +58,33 @@ class AdminPanelScreen extends StatelessWidget {
               onTap: () => context.go('/admin/usuarios'),
             ),
           ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.router_outlined),
+              title: const Text('Dispositivos'),
+              subtitle: const Text('Flota: estado y dueño, sin tokens'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/admin/dispositivos'),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.history_outlined),
+              title: const Text('Auditoría'),
+              subtitle: const Text('Registro inmutable de acciones'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/admin/auditoria'),
+            ),
+          ),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.warning_amber_outlined),
+              title: const Text('Centro de fallas'),
+              subtitle: const Text('Seguridad, nodos, telemetría, servicios'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go('/admin/fallas'),
+            ),
+          ),
         ],
       ),
     );
