@@ -18,6 +18,7 @@ app_name = "user_plants"
 
 urlpatterns = [
     path("my-collection/", views.my_collection_view, name="my_collection"),
+    path("my-alerts/", views.my_alerts_view, name="my_alerts"),
     path("", views.plant_list_view, name="plant_list"),
     # NOTA: "favorites/" va ANTES de "<uuid:plant_id>/" por claridad.
     # (Django lo resolvía igual: el conversor UUID rechaza "favorites",

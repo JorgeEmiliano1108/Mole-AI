@@ -28,6 +28,23 @@ except ImportError:
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
+
+def _env_first(*names, default=None):
+    """Primera variable de entorno definida y no vacía.
+
+    Convención .env genérica: el nombre canónico va primero y los legados
+    (AWS_*, SUPABASE_*, POSTGRES_*, USE_S3…) después, como fallback de
+    transición. No asumir: vacío cuenta como ausente.
+
+    Definido antes del bloque fail-fast (el import bug de e2e): settings debe
+    importarse sin NameError en producción (DEBUG=False).
+    """
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return default
+
 # Fail-fast checks for production environment: ensure critical secrets present
 if not DEBUG:
     
@@ -63,19 +80,6 @@ def _split_env_list(var_name, default=None):
         return [x.strip() for x in (default or '').split(',') if x.strip()]
     return [x.strip() for x in raw.split(',') if x.strip()]
 
-
-def _env_first(*names, default=None):
-    """Primera variable de entorno definida y no vacía.
-
-    Convención .env genérica: el nombre canónico va primero y los legados
-    (AWS_*, SUPABASE_*, POSTGRES_*, USE_S3…) después, como fallback de
-    transición. No asumir: vacío cuenta como ausente.
-    """
-    for name in names:
-        value = os.getenv(name)
-        if value:
-            return value
-    return default
 
 # Lista de hosts internos necesarios para healthchecks y proxy reverso
 INTERNAL_HOSTS = ['localhost', '127.0.0.1', 'django-backend']

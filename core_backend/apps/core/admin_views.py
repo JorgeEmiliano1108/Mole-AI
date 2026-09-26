@@ -305,59 +305,87 @@ def live_alerts_view(request):
     estructurados para la app (issue 16).
     """
     from apps.core.models import AmbientReading, SoilReading
+    from apps.core.alerting import push_soil_alerts, push_ambient_alerts, stable_info
     alerts = []
-
-    def push(tipo, msg, source, recorded_at, device_id=None, plant_id=None):
-        alerts.append({
-            "tipo": tipo, "msg": msg, "source": source,
-            "recorded_at": recorded_at.isoformat() if recorded_at else None,
-            "device_id": str(device_id) if device_id else None,
-            "plant_id": str(plant_id) if plant_id else None,
-        })
 
     soils = (SoilReading.objects.select_related("binding__device", "binding__plant")
              .order_by('-recorded_at')[:20])
-    for s in soils:
-        dev = s.binding.device if s.binding else None
-        pid = s.binding.plant_id if s.binding else None
-        if s.soil_humidity is not None and s.soil_humidity < 20.0:
-            push("error", f"Humedad por debajo del umbral crítico ({s.soil_humidity}%)",
-                 "soil", s.recorded_at, getattr(dev, 'id', None), pid)
-        elif s.soil_humidity is not None and s.soil_humidity < 35.0:
-            push("warn", f"Humedad baja detectada ({s.soil_humidity}%)",
-                 "soil", s.recorded_at, getattr(dev, 'id', None), pid)
+    push_soil_alerts(alerts, soils)
 
     ambients = AmbientReading.objects.select_related("device").order_by('-recorded_at')[:20]
-    for a in ambients:
-        if a.air_temperature is not None and a.air_temperature > 30.0:
-            push("warn", f"Fluctuación térmica detectada ({a.air_temperature}°C)",
-                 "ambient", a.recorded_at, a.device_id)
-        if a.uv_index is not None and a.uv_index > 8.0:
-            push("error", f"Índice UV peligroso detectado ({a.uv_index})",
-                 "ambient", a.recorded_at, a.device_id)
+    push_ambient_alerts(alerts, ambients)
 
     if not alerts:
         # Fallback legacy: SensorLog congelado (A3) para flotas viejas.
-        for log in SensorLog.objects.order_by('-recorded_at')[:5]:
-            if log.soil_humidity is not None and log.soil_humidity < 20.0:
-                push("error", f"Humedad por debajo del umbral crítico ({log.soil_humidity}%)",
-                     "sensorlog", log.recorded_at, None, str(log.plant_id))
-            elif log.soil_humidity is not None and log.soil_humidity < 35.0:
-                push("warn", f"Humedad baja detectada ({log.soil_humidity}%)",
-                     "sensorlog", log.recorded_at, None, str(log.plant_id))
-            if log.air_temperature is not None and log.air_temperature > 30.0:
-                push("warn", f"Fluctuación térmica detectada ({log.air_temperature}°C)",
-                     "sensorlog", log.recorded_at, None, str(log.plant_id))
-            if log.uv_index is not None and log.uv_index > 8.0:
-                push("error", f"Índice UV peligroso detectado ({log.uv_index})",
-                     "sensorlog", log.recorded_at, None, str(log.plant_id))
+        logs = list(SensorLog.objects.order_by('-recorded_at')[:5])
+        push_soil_alerts(alerts, logs, source="sensorlog")
+        push_ambient_alerts(alerts, logs, source="sensorlog")
 
     # Si no hay alertas críticas/warnings, proveer información de estado
     if not alerts:
-        alerts.append({
-            "msg": "Monitor Vital estable. Biomasa operando dentro de umbrales.",
-            "tipo": "info"
-        })
+        alerts.append(stable_info())
 
     # Limitar la salida a los primeros 5 eventos más relevantes
     return Response({"alerts": alerts[:5]})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def system_events_view(request):
+    """
+    GET /api/v1/admin/system-events
+    Portal de fallas del sistema (solo admin, issue N-0). Agrega cuatro
+    secciones: seguridad (AuditLog), dispositivos (liveness), telemetría
+    (mismos umbrales que live-alerts) y salud de microservicios (probe).
+    Sin PII: de AuditLog se expone action/timestamp/user_id (nunca IP).
+    """
+    from apps.core.models import AuditLog, Device, AmbientReading, SoilReading
+    from apps.core.alerting import push_soil_alerts, push_ambient_alerts
+
+    events = {"security": [], "devices": [], "telemetry": [], "services": []}
+
+    sec_actions = ["PASSWORD_RESET_REQUESTED", "PASSWORD_RESET_CONFIRMED",
+                   "PASSWORD_CHANGED", "DELETE_ACCOUNT_ARCO"]
+    sec_logs = list(AuditLog.objects.filter(action__in=sec_actions)
+                    .order_by('-timestamp')[:10])
+    sec_logs += list(AuditLog.objects.filter(action__startswith="ADMIN")
+                     .order_by('-timestamp')[:10])
+    for log in sorted(sec_logs, key=lambda l: l.timestamp, reverse=True)[:20]:
+        events["security"].append({
+            "tipo": "warn" if log.action.startswith("ADMIN") else "info",
+            "action": log.action,
+            "user_id": log.user_id,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+        })
+
+    for d in (Device.objects.filter(is_active=True, status__in=["warning", "offline"])
+              .order_by('name')[:20]):
+        events["devices"].append({
+            "tipo": "error" if d.status == "offline" else "warn",
+            "msg": f"Nodo '{d.name}' en estado {d.status}",
+            "device_id": str(d.id),
+            "last_seen": d.last_seen.isoformat() if d.last_seen else None,
+        })
+
+    tele = []
+    soils = (SoilReading.objects.select_related("binding__device", "binding__plant")
+             .order_by('-recorded_at')[:20])
+    push_soil_alerts(tele, soils)
+    ambients = (AmbientReading.objects.select_related("device")
+                .order_by('-recorded_at')[:20])
+    push_ambient_alerts(tele, ambients)
+    events["telemetry"] = tele[:10]
+
+    for svc, url in (("ms1_vision", "http://ms1_vision:8001/metrics"),
+                     ("ms2_chat", "http://ms2_chat:8002/metrics"),
+                     ("ms3_reports", "http://ms3_reports:8003/metrics")):
+        try:
+            r = requests.get(url, timeout=2)
+            if r.status_code != 200:
+                raise ValueError(f"HTTP {r.status_code}")
+            events["services"].append({"tipo": "info", "service": svc, "status": "up"})
+        except Exception as exc:
+            logger.warning("system-events probe %s falló: %s", svc, exc)
+            events["services"].append({"tipo": "error", "service": svc,
+                                       "status": "down", "msg": f"{svc} inalcanzable"})
+
+    return Response(events)

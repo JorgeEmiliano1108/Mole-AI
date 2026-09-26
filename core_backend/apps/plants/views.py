@@ -253,3 +253,45 @@ class SpeciesViewSet(viewsets.ModelViewSet):
         # Prefer soft-delete strategy if telemetries reference species.
         # Currently SpeciesCatalog has no is_deleted flag; perform hard delete.
         instance.delete()
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_alerts_view(request):
+    """
+    GET /api/v1/user-plants/my-alerts/
+    Avisos de las plantas del usuario autenticado (botánico y admin, issue N-0):
+    mismos umbrales que live-alerts pero filtrados por propiedad
+    (binding__plant__user / device__owner) + liveness de sus dispositivos.
+    """
+    from apps.core.models import AmbientReading, SoilReading, Device
+    from apps.core.alerting import push_soil_alerts, push_ambient_alerts, stable_info
+
+    alerts = []
+    soils = (SoilReading.objects
+             .select_related("binding__device", "binding__plant")
+             .filter(binding__plant__user=request.user)
+             .order_by('-recorded_at')[:20])
+    push_soil_alerts(alerts, soils)
+
+    ambients = (AmbientReading.objects.select_related("device")
+                .filter(device__owner=request.user)
+                .order_by('-recorded_at')[:20])
+    push_ambient_alerts(alerts, ambients)
+
+    for d in (Device.objects.filter(owner=request.user, is_active=True,
+                                    status__in=["warning", "offline"])
+              .order_by('name')[:10]):
+        alerts.append({
+            "tipo": "error" if d.status == "offline" else "warn",
+            "msg": f"Tu nodo '{d.name}' está {d.status}",
+            "source": "liveness",
+            "recorded_at": d.last_seen.isoformat() if d.last_seen else None,
+            "device_id": str(d.id),
+            "plant_id": None,
+        })
+
+    if not alerts:
+        alerts.append(stable_info())
+
+    return Response({"alerts": alerts[:20]})

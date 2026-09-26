@@ -1382,6 +1382,30 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/v1/user-plants/my-alerts/:
+    get:
+      operationId: v1_user_plants_my_alerts_retrieve
+      description: |-
+        Avisos de las plantas del usuario autenticado (issue N-0): mismos
+        umbrales que admin/live-alerts filtrados por propiedad
+        (binding__plant__user / device__owner) + liveness de sus dispositivos.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/admin/system-events:
+    get:
+      operationId: v1_admin_system_events_retrieve
+      description: |-
+        Portal de fallas del sistema, solo admin (issue N-0): secciones
+        security (AuditLog sin PII), devices (liveness), telemetry (umbrales)
+        y services (probe /metrics ms1:8001, ms2:8002, ms3:8003).
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
   /api/v1/weather/current/:
     get:
       operationId: v1_weather_current_retrieve
