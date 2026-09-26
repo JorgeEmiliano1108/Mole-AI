@@ -1,6 +1,6 @@
 # Issue N-3: Cierre a11y/offline por pantalla
 
-Status: needs-triage
+Status: ready-for-human
 Sev: P1 · Área: mobile · Fase: N-3
 
 ## Problema
@@ -16,4 +16,8 @@ dashboard weather silencioso; knowledge sin polling de indexado.
 RNF-UX01/02 del plan (AA, 48dp, sin info solo-color, offline declarado).
 
 ## Comments
-(none)
+Resuelto: mapa con Semantics por marcador (especie+severidad en texto) y mensaje
+de vacío; plant_detail con reintento + chip offline (usa el flag de latestCached
+que se descartaba) + error con liveRegion; knowledge con polling transitorio
+(PENDING/UPLOADING/UPLOADED/INDEXING, máx 6 con backoff) + helper testeable.
+5 tests nuevos; suite 107/107, analyze 0.

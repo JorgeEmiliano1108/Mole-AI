@@ -5,6 +5,8 @@
 /// `IsAdminUser`; 403 si no).
 library;
 
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,8 +34,21 @@ String _mimeFor(String path) {
   };
 }
 
+/// Estados transitorios del ciclo de vida del asset (backend
+/// ProcessingStatus): mientras haya alguno, la lista se re-sondea.
+bool isIndexingTransient(String status) => const {
+      'PENDING',
+      'UPLOADING',
+      'UPLOADED',
+      'INDEXING'
+    }.contains(status.toUpperCase());
+
 class KnowledgeScreen extends ConsumerStatefulWidget {
-  const KnowledgeScreen({super.key});
+  const KnowledgeScreen(
+      {super.key, this.pollInterval = const Duration(seconds: 5)});
+
+  /// Inyectable en tests (Timer real impediría pumpAndSettle).
+  final Duration pollInterval;
 
   @override
   ConsumerState<KnowledgeScreen> createState() => _KnowledgeScreenState();
@@ -45,11 +60,35 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
   bool _uploading = false;
   String? _error;
   String? _notice;
+  Timer? _pollTimer;
+  int _pollTries = 0;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(_load);
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Re-sondea la lista mientras haya assets en estado transitorio
+  /// (máx 6 intentos con backoff simple); el backend indexa en 2.º plano.
+  void _schedulePoll() {
+    _pollTimer?.cancel();
+    if (!mounted ||
+        _pollTries >= 6 ||
+        !_docs.any((d) => isIndexingTransient(d.status))) {
+      _pollTries = 0;
+      return;
+    }
+    _pollTries++;
+    _pollTimer = Timer(widget.pollInterval * _pollTries, () {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
@@ -61,6 +100,7 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
           _docs = docs;
           _loading = false;
         });
+        _schedulePoll();
       }
     } catch (e) {
       if (mounted) {

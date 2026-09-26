@@ -99,7 +99,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     final center = _hotspots.isNotEmpty
         ? LatLng(_hotspots.first.lat, _hotspots.first.lng)
         : _defaultCenter;
-    return FlutterMap(
+    final map = FlutterMap(
       options: MapOptions(initialCenter: center, initialZoom: 11),
       children: [
         TileLayer(
@@ -114,15 +114,44 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                 point: LatLng(h.lat, h.lng),
                 width: 40,
                 height: 40,
-                child: Tooltip(
-                  message:
-                      '${h.species ?? 'Hotspot'} (${h.severity})',
-                  child: Icon(Icons.location_on,
-                      color: _severityColor(h.severity, context), size: 36),
+                child: Semantics(
+                  // Severidad también en texto (RNF-UX01): el color solo
+                  // no informa a lector de pantalla ni a daltónicos.
+                  excludeSemantics: true,
+                  label:
+                      '${h.species ?? 'Hotspot'}, severidad ${h.severity}',
+                  child: Tooltip(
+                    message:
+                        '${h.species ?? 'Hotspot'} (${h.severity})',
+                    child: Icon(Icons.location_on,
+                        color: _severityColor(h.severity, context),
+                        size: 36),
+                  ),
                 ),
               ),
           ],
         ),
+      ],
+    );
+    return Stack(
+      children: [
+        map,
+        if (_hotspots.isEmpty)
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 24,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Sin hotspots en esta zona. Mapa de CDMX sin marcadores.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
