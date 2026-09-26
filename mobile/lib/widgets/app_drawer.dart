@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:mole_ai/features/auth/auth_controller.dart';
+import 'package:mole_ai/features/alerts/alerts.dart';
 
 class _Entry {
   const _Entry(this.label, this.icon, this.route);
@@ -74,6 +75,19 @@ class AppDrawer extends ConsumerWidget {
               child: Text('MONITOREO'),
             ),
             for (final e in _userEntries) tile(e),
+            Consumer(builder: (context, ref, _) {
+              final unread = ref.watch(unreadAlertsProvider);
+              return ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Mis avisos'),
+                trailing: unread > 0 ? Badge.count(count: unread) : null,
+                selected: loc == '/avisos',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go('/avisos');
+                },
+              );
+            }),
             if (auth.isAdmin) ...[
               const Divider(),
               const Padding(

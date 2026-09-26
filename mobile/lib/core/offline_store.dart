@@ -73,6 +73,7 @@ class OfflineStore {
   static String speciesKey(String q) => 'mole_cache_species:$q';
   static String collectionKey() => 'mole_cache_collection';
   static String telemetryKey(String plantId) => 'mole_cache_tele:$plantId';
+  static String alertsKey() => 'mole_cache_alerts';
 
   static Duration get speciesTtl => _ttlSpecies;
   static Duration get collectionTtl => _ttlCollection;

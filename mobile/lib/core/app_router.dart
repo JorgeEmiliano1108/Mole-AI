@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:mole_ai/features/admin/admin_metrics.dart';
 import 'package:mole_ai/features/admin/knowledge_screen.dart';
 import 'package:mole_ai/features/admin/users_screen.dart';
+import 'package:mole_ai/features/alerts/alerts_screen.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
 import 'package:mole_ai/features/auth/auth_screens.dart';
 import 'package:mole_ai/features/auth/forgot_password.dart';
@@ -116,6 +117,10 @@ GoRouter buildRouter(WidgetRef ref) {
       GoRoute(
         path: '/chat',
         builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: '/avisos',
+        builder: (context, state) => const AlertsScreen(),
       ),
       GoRoute(
         path: '/mapa',
