@@ -33,3 +33,4 @@ bool offline_buffer_init(int capacity)         { (void)capacity; return true; }
 int  offline_buffer_count(void)                { return 0; }
 bool offline_buffer_pop(sensor_frame_t *frame) { (void)frame; return false; }
 void transport_send_frame_from_buffer(const sensor_frame_t *frame) { (void)frame; }
+void buffer_current_sample(void) { fprintf(stderr, "stub: buffer_current_sample\n"); }

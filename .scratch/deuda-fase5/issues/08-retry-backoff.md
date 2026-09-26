@@ -1,6 +1,6 @@
 # Issue 08: Cablear retry/backoff o eliminar config muerta
 
-Status: ready-for-agent
+Status: ready-for-human
 Sev: P1 · Área: firmware · Fase: C
 
 ## Evidencia
@@ -21,4 +21,6 @@ Config defensiva-sin-efecto; riesgo de saturación RF/backend ante 429/5xx.
 Eficiencia RF (IFT-016): no saturar el medio ante errores.
 
 ## Comments
-(none)
+
+## Comments
+Resuelto (opción implementar): transport_send reintenta con backoff exponencial+jitter desde t_cfg (401 no se reintenta; evento terminal único). Decisión por defecto del plan, sin veto.

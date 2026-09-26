@@ -1,6 +1,6 @@
 # Issue 06: ESP_ERROR_CHECK en rutas runtime → degradado
 
-Status: ready-for-agent
+Status: ready-for-human
 Sev: P1 · Área: firmware · Fase: C
 
 ## Evidencia
@@ -22,4 +22,6 @@ Error recuperable convertido en panic; contradice el diseño degradado del nodo.
 Fail-safe antes que abort (nodo rural sin operador).
 
 ## Comments
-(none)
+
+## Comments
+Resuelto: captive_post_handler retorna HTTP 500 sin abort; sensor_init_all degrada por canal (i2c/dht/adc → NULL + dg). Soil null-safe vía init. Build esp32 0 warnings.

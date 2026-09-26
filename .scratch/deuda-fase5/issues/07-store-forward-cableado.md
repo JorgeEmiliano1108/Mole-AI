@@ -1,6 +1,6 @@
 # Issue 07: Cablear Store&Forward (offline_buffer_push muerto)
 
-Status: ready-for-agent
+Status: ready-for-human
 Sev: P0-funcional · Área: firmware · Fase: C
 
 ## Evidencia
@@ -21,4 +21,6 @@ Viola guardrail AGENTS.md (SQLite/Store&Forward ante fallo); pérdida de datos r
 Guardrail Store&Forward (AGENTS.md).
 
 ## Comments
-(none)
+
+## Comments
+Resuelto: hook buffer_current_sample() (edge→raw, respeta s_frame_ready) + act_buffer_sample sincroniza buffered_count; drop-oldest ya existía. Test host OFFLINE_BUFFER añadido (13/13 behavior). Hallazgo al implementar: push directo de edge_frame_t era type-error (warning lo delató) — reconversión explícita.

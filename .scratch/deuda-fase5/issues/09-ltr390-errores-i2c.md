@@ -1,6 +1,6 @@
 # Issue 09: Propagar errores I2C en LTR390
 
-Status: ready-for-agent
+Status: ready-for-human
 Sev: P1 · Área: firmware · Fase: C
 
 ## Evidencia
@@ -20,4 +20,6 @@ Fallo I2C silencioso → `lux/uv` fantasma aguas abajo.
 Integridad del dato (bits de validez honestos).
 
 ## Comments
-(none)
+
+## Comments
+Resuelto: read_20bit/init/read propagan esp_err_t; fallo → bits apagados. Sin efecto en MOCK (issue 11, needs-info).

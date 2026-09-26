@@ -10,7 +10,10 @@
  */
 #include <string.h>
 #include <stdlib.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_http_client.h"
 #include "transport_layer.h"
 
@@ -134,6 +137,17 @@ fail:
     return result;
 }
 
+/* Backoff exponencial con jitter (±20 %): base_ms * 2^attempt. */
+static void transport_backoff_delay(int base_ms, int attempt)
+{
+    uint32_t delay = (uint32_t)base_ms << (attempt > 5 ? 5 : attempt);
+    if (delay > 30000) delay = 30000;
+    int32_t jitter = (int32_t)(esp_random() % (delay / 5 + 1)) - (int32_t)(delay / 10);
+    int32_t final_delay = (int32_t)delay + jitter;
+    if (final_delay < 100) final_delay = 100;
+    vTaskDelay(pdMS_TO_TICKS((uint32_t)final_delay));
+}
+
 transport_result_t transport_send(transport_handle_t *t,
                                    const char *payload, int len)
 {
@@ -143,72 +157,97 @@ transport_result_t transport_send(transport_handle_t *t,
         return result;
     }
 
-    esp_http_client_config_t http_cfg = {
-        .url                = t->cfg.uri,
-        .method             = HTTP_METHOD_POST,
-        .timeout_ms         = t->cfg.timeout_ms,
-        .event_handler      = http_event_handler,
-        .skip_cert_common_name_check = false,
-        .cert_pem           = lab_ca_pem_start,
-    };
+    /* Issue C-08: los campos retry_* de t_cfg ahora se leen de verdad. */
+    int attempts = t->cfg.retry_max > 0 ? t->cfg.retry_max : 1;
+    int base_ms  = t->cfg.retry_backoff_base_ms > 0 ? t->cfg.retry_backoff_base_ms : 1000;
 
-    esp_http_client_handle_t client = esp_http_client_init(&http_cfg);
-    if (!client) {
-        result.status = TRANSPORT_ERROR;
-        goto fail;
-    }
+    int last_code = 0;
+    char last_resp[128] = {0};
+    bool transport_failed = false;
 
-    /* Headers */
-    char auth_header[160];
-    snprintf(auth_header, sizeof(auth_header), "Bearer %s", t->cfg.bearer_token);
-    esp_http_client_set_header(client, "Authorization", auth_header);
-    esp_http_client_set_header(client, "Content-Type", "application/json");
+    for (int attempt = 0; attempt < attempts; attempt++) {
+        esp_http_client_config_t http_cfg = {
+            .url                = t->cfg.uri,
+            .method             = HTTP_METHOD_POST,
+            .timeout_ms         = t->cfg.timeout_ms,
+            .event_handler      = http_event_handler,
+            .skip_cert_common_name_check = false,
+            .cert_pem           = lab_ca_pem_start,
+        };
 
-    /* Body */
-    esp_http_client_set_post_field(client, payload, len);
-
-    esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        int status_code = esp_http_client_get_status_code(client);
-
-        /* Read response body (truncated for diagnostics) */
-        char resp_buf[128] = {0};
-        int read_len = esp_http_client_read(client, resp_buf, sizeof(resp_buf) - 1);
-        if (read_len > 0) {
-            resp_buf[read_len] = '\0';
-        }
-
-        ESP_LOGI(TAG, "POST %s → HTTP %d", t->cfg.uri, status_code);
-
-        result.http_code = status_code;
-        strncpy(result.response, resp_buf, sizeof(result.response) - 1);
-
-        if (status_code == 200 || status_code == 201) {
-            result.status = TRANSPORT_OK;
-            t->connected = true;
-        } else if (status_code == 401) {
-            result.status = TRANSPORT_AUTH_FAILED;
-            t->connected = false;
-            push_event(t, TRANSPORT_EVT_AUTH_FAIL, status_code, resp_buf);
-        } else if (status_code == 429) {
-            result.status = TRANSPORT_ERROR;  /* rate limit — caller should backoff */
-            push_event(t, TRANSPORT_EVT_ERROR, status_code, resp_buf);
-        } else {
+        esp_http_client_handle_t client = esp_http_client_init(&http_cfg);
+        if (!client) {
             result.status = TRANSPORT_ERROR;
-            push_event(t, TRANSPORT_EVT_ERROR, status_code, resp_buf);
+            transport_failed = true;
+            break;
         }
-    } else {
-        ESP_LOGW(TAG, "POST failed: %s", esp_err_to_name(err));
-        result.status = TRANSPORT_DISCONNECTED;
-        t->connected = false;
-        push_event(t, TRANSPORT_EVT_DISCONNECTED, 0, esp_err_to_name(err));
+
+        /* Headers */
+        char auth_header[160];
+        snprintf(auth_header, sizeof(auth_header), "Bearer %s", t->cfg.bearer_token);
+        esp_http_client_set_header(client, "Authorization", auth_header);
+        esp_http_client_set_header(client, "Content-Type", "application/json");
+
+        /* Body */
+        esp_http_client_set_post_field(client, payload, len);
+
+        esp_err_t err = esp_http_client_perform(client);
+        if (err == ESP_OK) {
+            int status_code = esp_http_client_get_status_code(client);
+
+            /* Read response body (truncated for diagnostics) */
+            char resp_buf[128] = {0};
+            int read_len = esp_http_client_read(client, resp_buf, sizeof(resp_buf) - 1);
+            if (read_len > 0) {
+                resp_buf[read_len] = '\0';
+            }
+
+            ESP_LOGI(TAG, "POST %s → HTTP %d (attempt %d/%d)",
+                     t->cfg.uri, status_code, attempt + 1, attempts);
+
+            result.http_code = status_code;
+            strncpy(result.response, resp_buf, sizeof(result.response) - 1);
+
+            if (status_code == 200 || status_code == 201) {
+                result.status = TRANSPORT_OK;
+                t->connected = true;
+                esp_http_client_cleanup(client);
+                return result;
+            }
+            if (status_code == 401) {
+                /* Auth no se reintenta: el token no se arregla solo. */
+                result.status = TRANSPORT_AUTH_FAILED;
+                t->connected = false;
+                push_event(t, TRANSPORT_EVT_AUTH_FAIL, status_code, resp_buf);
+                esp_http_client_cleanup(client);
+                return result;
+            }
+            /* 429/5xx/otros: reintentable, se guarda el último para el evento final. */
+            last_code = status_code;
+            strncpy(last_resp, resp_buf, sizeof(last_resp) - 1);
+            transport_failed = false;
+        } else {
+            ESP_LOGW(TAG, "POST failed: %s (attempt %d/%d)",
+                     esp_err_to_name(err), attempt + 1, attempts);
+            transport_failed = true;
+        }
+
+        esp_http_client_cleanup(client);
+
+        if (attempt + 1 < attempts) {
+            transport_backoff_delay(base_ms, attempt);
+        }
     }
 
-    esp_http_client_cleanup(client);
-    return result;
-
-fail:
-    result.status = TRANSPORT_ERROR;
+    /* Evento terminal único (antes se emitía por intento). */
+    t->connected = false;
+    if (transport_failed && last_code == 0) {
+        result.status = TRANSPORT_DISCONNECTED;
+        push_event(t, TRANSPORT_EVT_DISCONNECTED, 0, "send failed");
+    } else {
+        result.status = TRANSPORT_ERROR;
+        push_event(t, TRANSPORT_EVT_ERROR, last_code, last_resp);
+    }
     return result;
 }
 

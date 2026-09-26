@@ -65,12 +65,15 @@ static esp_err_t read_reg(i2c_master_dev_handle_t dev,
     return i2c_master_transmit_receive(dev, &reg, 1, out, len, 100);
 }
 
-static uint32_t read_20bit(i2c_master_dev_handle_t dev, uint8_t reg_low)
+static esp_err_t read_20bit(i2c_master_dev_handle_t dev, uint8_t reg_low,
+                            uint32_t *out)
 {
     uint8_t buf[3] = {0};
-    read_reg(dev, reg_low, buf, 3);
-    return (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
+    esp_err_t err = read_reg(dev, reg_low, buf, 3);
+    if (err != ESP_OK) return err;
+    *out = (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
            (((uint32_t)buf[2] & 0x0F) << 16);
+    return ESP_OK;
 }
 
 esp_err_t sensor_ltr390_init(i2c_master_bus_handle_t bus,
@@ -89,7 +92,12 @@ esp_err_t sensor_ltr390_init(i2c_master_bus_handle_t bus,
 
     /* Verify part ID */
     uint8_t part_id = 0;
-    read_reg(s->dev, LTR390_REG_PART_ID, &part_id, 1);
+    err = read_reg(s->dev, LTR390_REG_PART_ID, &part_id, 1);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Part ID read failed (0x%x)", err);
+        free(s);
+        return err;
+    }
     if ((part_id >> 4) != 0x0B) {
         ESP_LOGE(TAG, "Part ID mismatch: 0x%02X (expected 0xBx)", part_id);
         free(s);
@@ -97,8 +105,13 @@ esp_err_t sensor_ltr390_init(i2c_master_bus_handle_t bus,
     }
 
     /* Configure gain and resolution */
-    write_reg(s->dev, LTR390_REG_GAIN, LTR390_GAIN_3X);
-    write_reg(s->dev, LTR390_REG_MEAS, LTR390_RES_16BIT);
+    err = write_reg(s->dev, LTR390_REG_GAIN, LTR390_GAIN_3X);
+    if (err == ESP_OK) err = write_reg(s->dev, LTR390_REG_MEAS, LTR390_RES_16BIT);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Config write failed (0x%x)", err);
+        free(s);
+        return err;
+    }
 
     ESP_LOGI(TAG, "LTR390 initialized at 0x%02X (gain=3x, 16-bit)",
              LTR390_ADDR);
@@ -112,20 +125,27 @@ esp_err_t sensor_ltr390_read(sensor_ltr390_handle_t handle,
     if (!handle || !lux || !uv_index) return ESP_ERR_INVALID_ARG;
 
     /* ── ALS mode ──────────────────────────────────────────────────── */
-    write_reg(handle->dev, LTR390_REG_CTRL, LTR390_MODE_ALS);
+    esp_err_t err = write_reg(handle->dev, LTR390_REG_CTRL, LTR390_MODE_ALS);
+    if (err != ESP_OK) return err;
     vTaskDelay(pdMS_TO_TICKS(100));
 
     uint8_t status = 0;
-    read_reg(handle->dev, LTR390_REG_STATUS, &status, 1);
-    uint32_t raw_als = read_20bit(handle->dev, LTR390_REG_ALS_L);
+    err = read_reg(handle->dev, LTR390_REG_STATUS, &status, 1);
+    uint32_t raw_als = 0;
+    if (err == ESP_OK) err = read_20bit(handle->dev, LTR390_REG_ALS_L, &raw_als);
+    if (err != ESP_OK) return err;
     *lux = (status & LTR390_STATUS_READY) ? (float)raw_als * ALS_LUX_FACTOR : -1.0f;
 
     /* ── UVS mode ──────────────────────────────────────────────────── */
-    write_reg(handle->dev, LTR390_REG_CTRL, LTR390_MODE_UVS);
+    err = write_reg(handle->dev, LTR390_REG_CTRL, LTR390_MODE_UVS);
+    if (err != ESP_OK) return err;
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    read_reg(handle->dev, LTR390_REG_STATUS, &status, 1);
-    uint32_t raw_uvs = read_20bit(handle->dev, LTR390_REG_UVS_L);
+    status = 0;
+    err = read_reg(handle->dev, LTR390_REG_STATUS, &status, 1);
+    uint32_t raw_uvs = 0;
+    if (err == ESP_OK) err = read_20bit(handle->dev, LTR390_REG_UVS_L, &raw_uvs);
+    if (err != ESP_OK) return err;
     *uv_index = (status & LTR390_STATUS_READY) ? (float)raw_uvs * UVS_UVI_FACTOR : -1.0f;
 
     ESP_LOGD(TAG, "lux=%.1f uv=%.2f (raw_als=%lu raw_uvs=%lu)",

@@ -48,6 +48,10 @@ void enter_deep_sleep(void);
 /* SECTION Drain: envía una trama bufferizada (Store&Forward) */
 void transport_send_frame_from_buffer(const sensor_frame_t *frame);
 
+/* SECTION Buffer: muestrea (si hace falta) y guarda la muestra actual en el
+ * buffer offline (drop-oldest si está lleno). No bloquea. */
+void buffer_current_sample(void);
+
 #ifdef __cplusplus
 }
 #endif

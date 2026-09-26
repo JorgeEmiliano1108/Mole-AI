@@ -157,9 +157,9 @@ static void act_enter_reconnecting(fsm_context_t *ctx)
 
 static void act_buffer_sample(fsm_context_t *ctx)
 {
-    ctx->buffered_count++;
+    buffer_current_sample();
+    ctx->buffered_count = offline_buffer_count();
     ESP_LOGI(TAG, "Buffered sample (%d stored)", ctx->buffered_count);
-    (void)ctx;
 }
 
 static void act_drain_and_sleep(fsm_context_t *ctx)

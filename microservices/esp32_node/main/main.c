@@ -415,16 +415,26 @@ static esp_err_t captive_post_handler(httpd_req_t *req)
     wifi_config_t wifi_cfg = {0};
     strncpy((char *)wifi_cfg.sta.ssid, ssid, sizeof(wifi_cfg.sta.ssid) - 1);
     strncpy((char *)wifi_cfg.sta.password, pass, sizeof(wifi_cfg.sta.password) - 1);
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
 
-    nvs_handle_t handle;
-    ESP_ERROR_CHECK(nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &handle));
-    ESP_ERROR_CHECK(nvs_set_str(handle, MOLE_NVS_KEY_TOKEN, token));
-    ESP_ERROR_CHECK(nvs_set_str(handle, "wifi_ssid", ssid));
-    ESP_ERROR_CHECK(nvs_set_str(handle, "wifi_pass", pass));
-    ESP_ERROR_CHECK(nvs_set_u32(handle, "telemetry_int", interval_min));
-    ESP_ERROR_CHECK(nvs_commit(handle));
-    nvs_close(handle);
+    /* Sin abort: un fallo NVS/WiFi en este handler HTTP debe ser 500, no panic. */
+    esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg);
+    nvs_handle_t handle = 0;
+    bool nvs_opened = false;
+    if (err == ESP_OK) {
+        err = nvs_open(MOLE_NVS_NAMESPACE, NVS_READWRITE, &handle);
+        nvs_opened = (err == ESP_OK);
+    }
+    if (err == ESP_OK) err = nvs_set_str(handle, MOLE_NVS_KEY_TOKEN, token);
+    if (err == ESP_OK) err = nvs_set_str(handle, "wifi_ssid", ssid);
+    if (err == ESP_OK) err = nvs_set_str(handle, "wifi_pass", pass);
+    if (err == ESP_OK) err = nvs_set_u32(handle, "telemetry_int", interval_min);
+    if (err == ESP_OK) err = nvs_commit(handle);
+    if (nvs_opened) nvs_close(handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Provisioning save failed (0x%x)", err);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Save failed");
+        return ESP_FAIL;
+    }
     ESP_LOGI(TAG, "Device Token, WiFi SSID/Pass & Interval (%lu min) saved to NVS.", interval_min);
 
     const char *resp = "<html><body style='background:#0a0f14;color:#00ffc8;"
@@ -706,9 +716,17 @@ void sensor_init_all(void)
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_cfg, &s_i2c_bus));
+    /* Sin abort: cada canal degrada por separado (bitmask dg); el nodo
+     * arranca aunque falte hardware (placa desnuda → provisioning igual). */
+    if (i2c_new_master_bus(&bus_cfg, &s_i2c_bus) != ESP_OK) {
+        ESP_LOGE(TAG, "I2C bus init failed — ambient sensors unavailable");
+        s_i2c_bus = NULL;
+    }
 
-    ESP_ERROR_CHECK(sensor_dht20_init(s_i2c_bus, &s_dht20));
+    if (s_i2c_bus == NULL || sensor_dht20_init(s_i2c_bus, &s_dht20) != ESP_OK) {
+        ESP_LOGE(TAG, "DHT20 init failed — temp/hum unavailable");
+        s_dht20 = NULL;
+    }
 
     esp_err_t err_ltr = sensor_ltr390_init(s_i2c_bus, &s_ltr390);
     if (err_ltr != ESP_OK) {
@@ -719,7 +737,10 @@ void sensor_init_all(void)
     adc_oneshot_unit_init_cfg_t unit_cfg = {
         .unit_id = ADC_UNIT_1,
     };
-    ESP_ERROR_CHECK(adc_oneshot_new_unit(&unit_cfg, &s_adc1));
+    if (adc_oneshot_new_unit(&unit_cfg, &s_adc1) != ESP_OK) {
+        ESP_LOGE(TAG, "ADC1 init failed — soil sensors unavailable");
+        s_adc1 = NULL;
+    }
 
     const int soil_pins[] = MOLE_ACTIVE_SOIL_PINS;
     for (int i = 0; i < MOLE_NUM_ACTIVE_SOIL_PINS; i++) {
@@ -859,6 +880,38 @@ void transport_send_payload(void)
                 xQueueSend(s_fsm_queue, &ev, 0);
             }
             break;
+    }
+}
+
+/* Guarda la muestra actual en el buffer offline (issue C-07). El buffer guarda
+ * tramas crudas (sensor_frame_t) y el drenado las convierte al enviar, así que
+ * aquí se reconvierte el edge_frame actual. Si el FSM ya muestreó
+ * (BLE_PUBLISH), se reutiliza; si no, se muestrea. No toca s_frame_ready:
+ * el path servidor decide por su cuenta. Drop-oldest si lleno. */
+void buffer_current_sample(void)
+{
+    if (!s_frame_ready) {
+        build_edge_frame();
+    }
+    sensor_frame_t raw;
+    memset(&raw, 0, sizeof(raw));
+    raw.ts = s_edge_frame.ts;
+    raw.report_interval_minutes = s_edge_frame.report_interval_minutes;
+    raw.ambient.t = s_edge_frame.ambient.t;
+    raw.ambient.h = s_edge_frame.ambient.h;
+    raw.ambient.l = s_edge_frame.ambient.l;
+    raw.ambient.u = s_edge_frame.ambient.u;
+    raw.ambient_valid = s_edge_frame.ambient_valid;
+    raw.soil_count = 0;
+    for (int i = 0; i < s_edge_frame.soil_count && i < SENSOR_FRAME_MAX_SOIL_PINS; i++) {
+        strncpy(raw.soil[i].pin, s_edge_frame.soil_pin_storage[i], sizeof(raw.soil[i].pin) - 1);
+        raw.soil[i].adc_raw = s_edge_frame.soil[i].adc_raw;
+        raw.soil_count++;
+    }
+    if (offline_buffer_push(&raw)) {
+        ESP_LOGI(TAG, "Sample buffered (%d stored)", offline_buffer_count());
+    } else {
+        ESP_LOGW(TAG, "Sample buffer push failed");
     }
 }
 

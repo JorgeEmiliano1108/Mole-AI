@@ -7,6 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include "state_machine.h"
+#include "offline_buffer.h"
 
 static int s_pass = 0, s_fail = 0;
 
@@ -147,6 +148,24 @@ static void test_ble_publish_stage(void)
     END_TEST("PARTIAL → BLE_PUBLISH");
 }
 
+/* ─── Store&Forward cableado (issue C-07): RECONNECTING → OFFLINE_BUFFER ───
+ * act_buffer_sample invoca el hook buffer_current_sample (stub) y sincroniza
+ * buffered_count con offline_buffer_count (stub → 0). */
+static void test_offline_buffer_stage(void)
+{
+    fsm_context_t *ctx = fsm_init();
+    ctx->current = FSM_RECONNECTING;
+
+    fsm_dispatch(ctx, EV_RECONNECT_EXCEEDED);
+    TEST("RECONNECTING + EV_RECONNECT_EXCEEDED → FSM_OFFLINE_BUFFER")
+        ok = (ctx->current == FSM_OFFLINE_BUFFER);
+    END_TEST("RECONNECTING → OFFLINE_BUFFER");
+
+    TEST("buffered_count sincronizado con offline_buffer_count")
+        ok = (ctx->buffered_count == offline_buffer_count());
+    END_TEST("buffered_count sync");
+}
+
 /* ─── Summary ─────────────────────────────────────────────────────────── */
 int main(void)
 {
@@ -158,6 +177,7 @@ int main(void)
     test_creds_found_transition();
     test_unknown_event();
     test_ble_publish_stage();
+    test_offline_buffer_stage();
 
     printf("\n=== Results: %d passed, %d failed ===\n\n", s_pass, s_fail);
     return s_fail > 0 ? 1 : 0;
