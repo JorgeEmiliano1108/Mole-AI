@@ -1,6 +1,6 @@
 # Issue 04: ADR riesgo MQTT + precondiciones Fase 2
 
-Status: ready-for-agent
+Status: ready-for-human
 Sev: P0-doc · Área: infra · Fase: B
 
 ## Evidencia

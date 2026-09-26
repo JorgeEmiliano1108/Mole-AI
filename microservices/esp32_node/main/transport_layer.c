@@ -16,6 +16,10 @@
 
 static const char *TAG = "TRANSPORT";
 
+/* Ancla CA de laboratorio embebida (EMBED_TXTFILES certs/lab_ca.pem, issue B-03).
+ * Solo se usa cuando la URI es https; en http se ignora (flujo lab intacto). */
+extern const char lab_ca_pem_start[] asm("_binary_lab_ca_pem_start");
+
 /* ── Internal handle ──────────────────────────────────────────────────────── */
 struct transport_layer {
     transport_config_t    cfg;
@@ -82,7 +86,11 @@ transport_result_t transport_connect(transport_handle_t *t, int timeout_ms)
         .method             = HTTP_METHOD_HEAD,
         .timeout_ms         = timeout_ms > 0 ? timeout_ms : t->cfg.timeout_ms,
         .event_handler      = http_event_handler,
-        .skip_cert_common_name_check = true,  /* TODO: enable cert validation in production */
+        /* Guardrail TLS: CN validado contra el bundle + ancla lab (issue B-03).
+         * En http el cert se ignora; en https sin handshake el perform falla
+         * y el FSM cae a Fail-Safe/Store&Forward, nunca a plano. */
+        .skip_cert_common_name_check = false,
+        .cert_pem           = lab_ca_pem_start,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&http_cfg);
@@ -140,7 +148,8 @@ transport_result_t transport_send(transport_handle_t *t,
         .method             = HTTP_METHOD_POST,
         .timeout_ms         = t->cfg.timeout_ms,
         .event_handler      = http_event_handler,
-        .skip_cert_common_name_check = true,
+        .skip_cert_common_name_check = false,
+        .cert_pem           = lab_ca_pem_start,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&http_cfg);

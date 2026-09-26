@@ -13,6 +13,9 @@ menu "Mole.AI Node Configuration"
         help
             HTTP REST endpoint for edge-batch telemetry upload.
             Format: http://<host>:<port>/api/v1/sensor-data/edge-batch/
+            Con esquema https el CN se valida contra el bundle + ancla lab
+            (main/certs/lab_ca.pem, nginx 443; issue B-03). Ej. lab:
+            https://mole-edge.local:8443/api/v1/sensor-data/edge-batch/
 
     config MOLE_I2C_SDA
         int "I2C SDA GPIO"

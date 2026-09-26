@@ -37,6 +37,13 @@ infrastructure/mosquitto/log/
 infrastructure/mosquitto/certs/*.pem
 infrastructure/mosquitto/certs/*.key
 !infrastructure/mosquitto/certs/.gitkeep
+# Lab TLS (issue B-03): claves + cert de servidor locales; solo el ancla CA
+# pública del firmware se versiona (lab_ca.pem).
+infrastructure/nginx/certs/*.pem
+infrastructure/nginx/certs/*.key
+infrastructure/nginx/certs/*.crt
+infrastructure/nginx/certs/*.srl
+!infrastructure/nginx/certs/.gitkeep
 
 # Named volumes / Local data mounts
 **/data/
@@ -92,3 +99,7 @@ media/
 dump.rdb
 
 skills-main/*.elf
+
+# Lab TLS (issue B-03): el ancla CA pública del firmware SÍ se versiona
+# (debe ir después del *.pem global para que la negación aplique).
+!microservices/esp32_node/main/certs/lab_ca.pem
