@@ -157,4 +157,27 @@ void main() {
       expect((await store.pending()), hasLength(1));
     });
   });
+
+  group('Consejos offline por clase (PVU/S5)', () {
+    test('put/getAdvice roundtrip', () async {
+      final dir = await Directory.systemTemp.createTemp('mole_adv');
+      final store = await memStore(dir.path);
+      await store.putAdvice('mildiu', 'Aplicar azufre solo al atardecer.');
+      expect(await store.getAdvice('mildiu'),
+          'Aplicar azufre solo al atardecer.');
+      expect(await store.getAdvice('roya'), isNull);
+    });
+
+    test('LRU mantiene máximo 50 entradas', () async {
+      final dir = await Directory.systemTemp.createTemp('mole_adv_lru');
+      final store = await memStore(dir.path);
+      for (var i = 0; i < 50; i++) {
+        await store.putAdvice('clase_$i', 'consejo $i');
+      }
+      await store.getAdvice('clase_0'); // refresca uso de la más vieja.
+      await store.putAdvice('clase_nueva', 'nuevo');
+      expect(await store.getAdvice('clase_0'), isNotNull);
+      expect(await store.getAdvice('clase_1'), isNull);
+    });
+  });
 }

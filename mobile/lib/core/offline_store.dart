@@ -120,7 +120,9 @@ class OfflineStore {
 
   /// Encola una foto. Retorna el id del pendiente.
   Future<String> enqueueDiagnosis(List<int> bytes, String filename,
-      {String? plantId, String modelType = 'disease_detection'}) async {
+      {String? plantId,
+      String modelType = 'disease_detection',
+      String? pvuReason}) async {
     final dir = _filesDir;
     if (dir == null) throw StateError('OfflineStore sin filesDir');
     final id = DateTime.now().toUtc().microsecondsSinceEpoch.toString();
@@ -132,6 +134,7 @@ class OfflineStore {
       'filename': filename,
       'plant_id': plantId,
       'model_type': modelType,
+      'pvu_reason': pvuReason,
       'created_at': DateTime.now().toUtc().toIso8601String(),
       'tries': 0,
     });
@@ -167,4 +170,11 @@ class OfflineStore {
   }
 
   Future<void> bumpTries(String id) => _ready.bumpQueueTries(id);
+
+  // ── Consejos offline por clase (PVU/S5) ─────────────────────────
+
+  Future<void> putAdvice(String cls, String text) =>
+      _ready.putAdvice(cls, text);
+
+  Future<String?> getAdvice(String cls) => _ready.getAdvice(cls);
 }

@@ -3,6 +3,7 @@
 /// Contenido (sin Scaffold): el [HomeShell] provee AppBar.
 library;
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,9 +11,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/core/notify.dart';
 import 'package:mole_ai/core/offline_store.dart';
-import 'package:mole_ai/features/vision/edge_ai.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
+import 'package:mole_ai/features/vision/edge_ai.dart';
 import 'package:mole_ai/features/vision/vision.dart';
+import 'package:mole_ai/pvu/routing.dart';
 
 final visionRepositoryProvider = Provider<VisionRepository>(
     (ref) => VisionRepository(ref.watch(apiClientProvider)));
@@ -33,6 +35,7 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
   String? _message;
   VisionStatus? _status;
   EdgeVerdict? _edge;
+  String? _advice;
   int _pending = 0;
 
   bool get _busy => _phase == 'uploading' || _phase == 'polling';
@@ -68,6 +71,66 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
     }
   }
 
+  Future<ConnectivityStatus> _currentConnectivity() async {
+    final results = await Connectivity().checkConnectivity();
+    if (results.isEmpty) return ConnectivityStatus.offline;
+    final result = results.first;
+    return switch (result) {
+      ConnectivityResult.wifi || ConnectivityResult.ethernet =>
+        ConnectivityStatus.online,
+      ConnectivityResult.mobile => ConnectivityStatus.metered,
+      _ => ConnectivityStatus.offline,
+    };
+  }
+
+  Future<void> _submitToCloud(List<int> bytes, String filename) async {
+    setState(() => _message = 'Enviando al servidor…');
+    final taskId = await ref
+        .read(visionRepositoryProvider)
+        .submitDiagnosis(bytes, filename);
+    if (!mounted) return;
+    setState(() {
+      _phase = 'polling';
+      _message = 'Analizando…';
+    });
+    final status =
+        await ref.read(visionRepositoryProvider).pollStatus(taskId);
+    if (!mounted) return;
+    setState(() {
+      _phase = status.isFailure ? 'error' : 'done';
+      _status = status;
+      _message =
+          status.isFailure ? (status.error ?? 'Falló el análisis.') : null;
+    });
+    if (status.isSuccess) {
+      final d = status.diagnosis;
+      await NotifyService.show('Diagnóstico listo',
+          d?.speciesCommon ?? 'Revisa el resultado en la app.');
+    }
+  }
+
+  Future<void> _showEdgeResult(EdgeVerdict edge, PvuRoute route,
+      List<int> bytes, String filename) async {
+    String? advice;
+    try {
+      final store = await ref.read(offlineStoreProvider.future);
+      // Encolar resultado edge con la razón PVU para telemetría.
+      await store.enqueueDiagnosis(bytes, filename,
+          pvuReason: route.reason);
+      advice = await store.getAdvice(edge.topClass.toString());
+      await _refreshPending();
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() {
+      _phase = 'done';
+      _edge = edge;
+      _advice = advice;
+      _message = null;
+    });
+    await NotifyService.show('Diagnóstico listo (edge)',
+        'Clase ${edge.topClass} · ${(edge.confidence * 100).toStringAsFixed(0)}% · ${edge.latencyMs.toStringAsFixed(0)}ms en dispositivo.');
+  }
+
   Future<void> _pick(ImageSource source) async {
     final img = await ImagePicker().pickImage(
         source: source, maxWidth: 1600, imageQuality: 85);
@@ -83,47 +146,42 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
     try {
       final bytes = await img.readAsBytes();
       rawBytes = bytes;
-      // MRF02 hito 2: edge-first; si duda → flujo servidor existente.
+
+      // PVU: decidir ruta ANTES de gastar batería/RAM en inferencia.
+      final net = await _currentConnectivity();
+      final pvuRoute = await route(net: net, batteryPct: 1.0, wifi: null);
+
+      if (pvuRoute is CloudRoute) {
+        await _submitToCloud(bytes, imgName);
+        return;
+      }
+
+      // Local o Hybrid: intentar edge primero.
       EdgeVerdict? edge;
       try {
         edge = await EdgeAiService().diagnose(bytes);
       } catch (_) {
-        edge = null; // TFLite no disponible: servidor directo.
+        edge = null; // TFLite no disponible.
       }
       if (!mounted) return;
+
       if (edge != null && edge.local) {
-        setState(() {
-          _phase = 'done';
-          _edge = edge;
-          _message = null;
-        });
-        await NotifyService.show('Diagnóstico listo (edge)',
-            'Clase ${edge.topClass} · ${(edge.confidence * 100).toStringAsFixed(0)}% · ${edge.latencyMs.toStringAsFixed(0)}ms en dispositivo.');
+        await _showEdgeResult(edge, pvuRoute, bytes, imgName);
         return;
       }
-      setState(() => _message = 'Enviando al servidor…');
-      final taskId = await ref
-          .read(visionRepositoryProvider)
-          .submitDiagnosis(bytes, imgName);
-      if (!mounted) return;
-      setState(() {
-        _phase = 'polling';
-        _message = 'Analizando…';
-      });
-      final status =
-          await ref.read(visionRepositoryProvider).pollStatus(taskId);
-      if (!mounted) return;
-      setState(() {
-        _phase = status.isFailure ? 'error' : 'done';
-        _status = status;
-        _message =
-            status.isFailure ? (status.error ?? 'Falló el análisis.') : null;
-      });
-      if (status.isSuccess) {
-        final d = status.diagnosis;
-        await NotifyService.show('Diagnóstico listo',
-            d?.speciesCommon ?? 'Revisa el resultado en la app.');
+
+      if (pvuRoute is LocalRoute) {
+        // Sin red: mostramos el veredicto edge aunque sea incierto y encolamos.
+        if (edge != null) {
+          await _showEdgeResult(edge, pvuRoute, bytes, imgName);
+        } else {
+          setState(() => _message = 'No se pudo analizar sin conexión.');
+        }
+        return;
       }
+
+      // Hybrid con edge incierto/no disponible → nube.
+      await _submitToCloud(bytes, imgName);
     } catch (e) {
       if (!mounted) return;
       final queued = rawBytes;
@@ -258,6 +316,13 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
                       Text(d.disclaimer!,
                           style: Theme.of(context).textTheme.bodySmall),
                     ],
+                  ],
+                  if (_advice != null) ...[
+                    const SizedBox(height: 12),
+                    Text('Recomendación offline:',
+                        style: Theme.of(context).textTheme.titleSmall),
+                    Text(_advice!,
+                        style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ],
               ),

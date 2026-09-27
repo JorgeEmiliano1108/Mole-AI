@@ -30,6 +30,10 @@ abstract class OfflineDb {
   Future<void> insertQueue(Map<String, Object?> row);
   Future<void> deleteQueue(String id);
   Future<void> bumpQueueTries(String id);
+
+  // Consejos offline por clase (PVU/S5)
+  Future<void> putAdvice(String cls, String text, {int maxEntries = 50});
+  Future<String?> getAdvice(String cls);
 }
 
 /// Genera una contraseña de 256 bits en base64 (para `mole_db_key`).
@@ -53,7 +57,8 @@ class SqfliteOfflineDb implements OfflineDb {
 
   static const _schema = [
     'CREATE TABLE telemetry_cache(key TEXT PRIMARY KEY, cached_at TEXT NOT NULL, payload TEXT NOT NULL)',
-    'CREATE TABLE diag_queue(id TEXT PRIMARY KEY, path TEXT NOT NULL, filename TEXT NOT NULL, plant_id TEXT, model_type TEXT NOT NULL, created_at TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0)',
+    'CREATE TABLE diag_queue(id TEXT PRIMARY KEY, path TEXT NOT NULL, filename TEXT NOT NULL, plant_id TEXT, model_type TEXT NOT NULL, pvu_reason TEXT, created_at TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0)',
+    'CREATE TABLE offline_advice(class TEXT PRIMARY KEY, text TEXT NOT NULL, used_at TEXT NOT NULL)',
   ];
 
   Future<Database> _openEncrypted(String path) => openDatabase(
@@ -172,12 +177,49 @@ class SqfliteOfflineDb implements OfflineDb {
     await db.rawUpdate(
         'UPDATE diag_queue SET tries = tries + 1 WHERE id = ?', [id]);
   }
+
+  @override
+  Future<void> putAdvice(String cls, String text,
+      {int maxEntries = 50}) async {
+    final db = await _ready;
+    final now = DateTime.now().toUtc().toIso8601String();
+    await db.insert(
+      'offline_advice',
+      {'class': cls, 'text': text, 'used_at': now},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    final count = (await db.rawQuery('SELECT COUNT(*) AS c FROM offline_advice'))
+        .first['c'] as int;
+    if (count > maxEntries) {
+      final toDrop = count - maxEntries;
+      await db.rawDelete(
+        'DELETE FROM offline_advice WHERE rowid IN (SELECT rowid FROM offline_advice ORDER BY used_at ASC LIMIT ?)',
+        [toDrop],
+      );
+    }
+  }
+
+  @override
+  Future<String?> getAdvice(String cls) async {
+    final db = await _ready;
+    final rows = await db.query('offline_advice',
+        columns: ['text'], where: 'class = ?', whereArgs: [cls], limit: 1);
+    if (rows.isEmpty) return null;
+    await db.update(
+      'offline_advice',
+      {'used_at': DateTime.now().toUtc().toIso8601String()},
+      where: 'class = ?',
+      whereArgs: [cls],
+    );
+    return rows.first['text'] as String?;
+  }
 }
 
 /// En memoria para tests (misma semántica, sin nativo).
 class MemoryOfflineDb implements OfflineDb {
   final _cache = <String, ({String cachedAtIso, String payloadJson})>{};
   final _queue = <String, Map<String, Object?>>{};
+  final _advice = <String, ({String text, DateTime usedAt})>{};
 
   @override
   Future<void> putCache(
@@ -208,5 +250,26 @@ class MemoryOfflineDb implements OfflineDb {
   Future<void> bumpQueueTries(String id) async {
     final row = _queue[id];
     if (row != null) row['tries'] = ((row['tries'] as int?) ?? 0) + 1;
+  }
+
+  @override
+  Future<void> putAdvice(String cls, String text,
+      {int maxEntries = 50}) async {
+    _advice[cls] = (text: text, usedAt: DateTime.now().toUtc());
+    if (_advice.length > maxEntries) {
+      final sorted = _advice.entries.toList()
+        ..sort((a, b) => a.value.usedAt.compareTo(b.value.usedAt));
+      for (final e in sorted.take(_advice.length - maxEntries)) {
+        _advice.remove(e.key);
+      }
+    }
+  }
+
+  @override
+  Future<String?> getAdvice(String cls) async {
+    final entry = _advice[cls];
+    if (entry == null) return null;
+    _advice[cls] = (text: entry.text, usedAt: DateTime.now().toUtc());
+    return entry.text;
   }
 }
