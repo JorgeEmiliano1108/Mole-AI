@@ -201,6 +201,19 @@ class FeedbackTicket(models.Model):
     def __str__(self):
         return f"[{self.topic}] {self.user} — {self.status}"
 
+class AuditLogQuerySet(models.QuerySet):
+    """QuerySet restringido: AuditLog es append-only e inmutable."""
+
+    def delete(self):
+        raise PermissionError("AuditLog is append-only: QuerySet.delete() is forbidden.")
+
+    def update(self, **kwargs):
+        raise PermissionError("AuditLog is append-only: QuerySet.update() is forbidden.")
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise PermissionError("AuditLog is append-only: bulk_update() is forbidden.")
+
+
 class AuditLog(models.Model):
     """
     Tabla Inmutable de Auditoría para trazabilidad de acciones críticas 
@@ -212,6 +225,8 @@ class AuditLog(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     details = models.TextField(blank=True)
+
+    objects = AuditLogQuerySet.as_manager()
 
     class Meta:
         db_table = 'audit_logs'
