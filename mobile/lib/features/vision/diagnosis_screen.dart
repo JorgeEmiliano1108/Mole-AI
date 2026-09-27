@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/core/notify.dart';
 import 'package:mole_ai/core/offline_store.dart';
+import 'package:mole_ai/core/safety_block_banner.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
 import 'package:mole_ai/features/vision/edge_ai.dart';
 import 'package:mole_ai/features/vision/vision.dart';
@@ -33,6 +34,8 @@ class DiagnosisScreen extends ConsumerStatefulWidget {
 class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
   String? _phase; // picked|uploading|polling|done|error
   String? _message;
+  String? _errorCode;
+  int? _errorStatusCode;
   VisionStatus? _status;
   EdgeVerdict? _edge;
   String? _advice;
@@ -67,6 +70,7 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
       await _refreshPending();
     } catch (e) {
       if (!mounted) return;
+      _recordError(e);
       setState(() => _message = _friendly(e));
     }
   }
@@ -81,6 +85,16 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
       ConnectivityResult.mobile => ConnectivityStatus.metered,
       _ => ConnectivityStatus.offline,
     };
+  }
+
+  void _recordError(Object e) {
+    if (e is ApiException) {
+      _errorStatusCode = e.statusCode;
+      _errorCode = e.details is Map ? (e.details as Map)['code']?.toString() : null;
+    } else {
+      _errorStatusCode = null;
+      _errorCode = null;
+    }
   }
 
   Future<void> _submitToCloud(List<int> bytes, String filename) async {
@@ -199,6 +213,7 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
           return;
         } catch (_) {}
       }
+      _recordError(e);
       setState(() {
         _phase = 'error';
         _message = _friendly(e);
@@ -262,9 +277,14 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
             if (_phase == 'error' && _message != null) ...[
               Semantics(
                 liveRegion: true,
-                child: Text(_message!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error)),
+                child: _errorStatusCode == 403
+                    ? SafetyBlockBanner(
+                        reason: _message!,
+                        code: _errorCode,
+                      )
+                    : Text(_message!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
