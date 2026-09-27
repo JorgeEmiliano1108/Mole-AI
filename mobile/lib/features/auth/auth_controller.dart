@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mole_ai/core/api_client.dart';
 import 'package:mole_ai/core/errors.dart';
+import 'package:mole_ai/core/lab_ca.dart';
 import 'package:mole_ai/core/session_store.dart';
 import 'auth_repository.dart';
 
@@ -38,8 +39,15 @@ class AuthState {
 final sessionStoreProvider =
     Provider<SessionStore>((_) => SecureSessionStore());
 
-final apiClientProvider = Provider<ApiClient>(
-    (ref) => ApiClient(session: ref.watch(sessionStoreProvider)));
+final apiClientProvider = Provider<ApiClient>((ref) {
+  // S1 pinning opt-in: MOLE_LAB_CA=1 confía además en la CA de laboratorio
+  // (mobile/lib/core/lab_ca.dart). Prod por defecto: solo bundle del sistema.
+  const labTls =
+      String.fromEnvironment('MOLE_LAB_CA', defaultValue: '');
+  return ApiClient(
+      session: ref.watch(sessionStoreProvider),
+      labCaPem: labTls == '1' ? kLabCaPem : null);
+});
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository(
     ref.watch(apiClientProvider), ref.watch(sessionStoreProvider)));

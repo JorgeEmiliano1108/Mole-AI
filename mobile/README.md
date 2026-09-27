@@ -22,11 +22,15 @@ RUN="docker run --rm -e HOME=/tmp -e PUB_CACHE=/tmp/.pub-cache \
 # Análisis + tests
 $RUN "flutter analyze; flutter test; chown -R 1000:1000 /project"
 
-# APK release (firmado release si existe key.properties; si no, debug-keys)
+# APK release (firmado release; S1 fail-closed sin key.properties)
 $RUN "flutter build apk --release \
-  --dart-define=API_BASE_URL=https://TU-HOST/api/v1/; \
+  --dart-define=API_BASE_URL=https://TU-HOST/api/v1/ \
+  --dart-define=MOLE_LAB_CA=1 \
+  --obfuscate --split-debug-info=build/debug-info; \
   chown -R 1000:1000 /project"
 # Artefacto: mobile/build/app/outputs/flutter-apk/app-release.apk (ignorado por git)
+# MOLE_LAB_CA=1: solo laboratorio (confía en lab_ca.pem además del bundle).
+# Prod: omitirlo (solo bundle del sistema) + https obligatorio (fail-closed).
 ```
 
 Firma release (una vez por máquina):
@@ -38,7 +42,9 @@ Firma release (una vez por máquina):
 - PKCS12 no admite passwords distintos de store y key: ambos iguales.
 - El build en Docker necesita montar el keystore:
   `-v /home/paul/.mole-android:/home/paul/.mole-android:ro`.
-- Sin `key.properties` (CI) el build usa debug-keys automáticamente.
+- Sin `key.properties` el build release FALLA a propósito (S1 MASVS-CODE:
+  antes firmaba con debug-keys, clave pública conocida). Dev local usa
+  `flutter run` (debug, sin este requisito).
 
 Notas:
 - Los contenedores corren como root: el `chown` final devuelve la propiedad.

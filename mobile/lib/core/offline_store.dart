@@ -4,22 +4,60 @@
 /// de SharedPreferences. La API pública no cambia: repos y pantallas intactos.
 /// Etapa dev sin usuarios en prod: sin migración de las keys viejas de prefs
 /// (instalación fresca parte de DB vacía).
-/// Nada sensible: sin JWT, sin PII (solo lecturas cacheadas).
+/// S1: telemetría + plant_id + fotos SÍ son datos sensibles (LFPDPPP): la DB va
+/// cifrada (SQLCipher) y excluida de backup; los JPG quedan en dir privado.
 library;
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:mole_ai/core/offline_db.dart';
 
-/// Provider async: resuelve documents dir una sola vez.
+/// Clave AES de la DB offline en keystore (S1 MASVS-STORAGE).
+const dbKeyStorageKey = 'mole_db_key';
+
+/// Seam mínimo para el keystore (testeable sin platform channels).
+abstract class DbKeyStore {
+  Future<String?> readDbKey();
+  Future<void> writeDbKey(String value);
+}
+
+class SecureDbKeyStore implements DbKeyStore {
+  SecureDbKeyStore(
+      [FlutterSecureStorage secure = const FlutterSecureStorage()])
+      : _secure = secure;
+  final FlutterSecureStorage _secure;
+
+  @override
+  Future<String?> readDbKey() => _secure.read(key: dbKeyStorageKey);
+
+  @override
+  Future<void> writeDbKey(String value) =>
+      _secure.write(key: dbKeyStorageKey, value: value);
+}
+
+/// Resuelve la contraseña SQLCipher: la lee del keystore o la genera
+/// (256 bits) y la persiste. Sin platform channels no hay keystore real.
+Future<String> resolveDbPassword({DbKeyStore? store}) async {
+  final s = store ?? SecureDbKeyStore();
+  final existing = await s.readDbKey();
+  if (existing != null && existing.isNotEmpty) return existing;
+  final fresh = generateDbPassword();
+  await s.writeDbKey(fresh);
+  return fresh;
+}
+
+/// Provider async: resuelve documents dir + contraseña una sola vez.
 final offlineStoreProvider = FutureProvider<OfflineStore>((_) async {
   final docs = await getApplicationDocumentsDirectory();
+  final password = await resolveDbPassword();
   return OfflineStore(
-      db: SqfliteOfflineDb(docs.path), filesDir: docs.path);
+      db: SqfliteOfflineDb(docs.path, password: password),
+      filesDir: docs.path);
 });
 
 /// Entrada de caché con timestamp.

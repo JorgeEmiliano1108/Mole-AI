@@ -1,0 +1,28 @@
+/// Ancla CA de laboratorio (S1 pinning MASVS-NETWORK).
+///
+/// Copia exacta de `microservices/esp32_node/main/certs/lab_ca.pem`
+/// (solo certificado público). Regenerar con scripts/gen-lab-tls.sh y
+/// sincronizar ambas copias. Producción usa su propia CA/bundle.
+library;
+
+const String kLabCaPem = '''
+-----BEGIN CERTIFICATE-----
+MIIDETCCAfmgAwIBAgIUKIm1gFvAGJpmHEDoMGrCZpHpIqYwDQYJKoZIhvcNAQEL
+BQAwGDEWMBQGA1UEAwwNTW9sZUFJLUxhYi1DQTAeFw0yNjA5MjYwNTIxMDJaFw0y
+ODEyMjkwNTIxMDJaMBgxFjAUBgNVBAMMDU1vbGVBSS1MYWItQ0EwggEiMA0GCSqG
+SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDc6p7jt2PkPpQi+NLAV81WjAhvNGPguh1s
+k7KKQxKNSRALnrjYRHBUbICbJIklk+AOUeqPom6q6xfb2EPAv2xPCdYNYTGI1xpK
+FIusox4DJO9t8o5DO2+7mEgPhLJg6wRQLJNCCw4KUfxJgicjpbDGnt+aBRcwd3no
+Dqr5qhsOxyPlMz7ZLl2HOPDC7TY/Zf7DxoqyLPjbfpX1DEqs29DRmfdJoY2FxVZm
+2aOuqtLoQib2AKlJXY+TJtWlpY03O/fWSnw0QCih0k6p8SRyRogLLqym9KgYeC+V
+dGY3RYv1jolwvd+8TtQs9g7nyjOtRNDYioiBWqGHbKnUCvpGC1R7AgMBAAGjUzBR
+MB0GA1UdDgQWBBR8Z8LPoV7jXOKjrA9DSKnvMW/7HzAfBgNVHSMEGDAWgBR8Z8LP
+oV7jXOKjrA9DSKnvMW/7HzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUA
+A4IBAQCdiQa7GBshdcqxjRYgn+hrPIZrMEFmdn/zuprIg+ME2/LBiZY4G0i0F8On
+BP6zRGMSkIgNIe4jJGZhthzRxIZLM7FaAX5VjwllCKZKmEB+Ja67bus2fz/trbn1
+KWwIWFjpIyyCovcmDMqzv8UzILJDW/wqgiXxZ5fqcUu76BAXT58hMUjji32oFT0T
+UdYtACDRbOlWJ878elU4yrYgzwDAsm7nQxwpmsHNXUEcVg4FqMywHwnCqpuiJJKb
+qLeHRR346p1WWReoxmcc448MbfVYKX9otoQ3JrbuA+gm2WXDiOmKcvjGlzq/fBbm
+e9Hlx/InW+ndFAwUO7/1j8TZVlcu
+-----END CERTIFICATE-----
+''';

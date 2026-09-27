@@ -3,12 +3,24 @@
 /// - `telemetry_cache(key, cached_at, payload)`: último dato conocido.
 /// - `diag_queue(id, path, filename, plant_id, model_type, created_at, tries)`:
 ///   fotos pendientes de subida.
+///
+/// S1 (MASVS-STORAGE): `mole_offline.db` va cifrado con SQLCipher (AES-256);
+/// la contraseña vive en `flutter_secure_storage` (`mole_db_key`), nunca en
+/// código ni prefs. Instalaciones con DB en plano migran con respaldo
+/// (export → recrear cifrado → reimportar); si la migración falla, wipe
+/// limpio documentado. Los JPGs quedan en dir privado + fuera de backup
+/// (residual documentado: cifrado de ficheros en fase posterior).
+///
 /// Diseño testeable: [OfflineDb] abstracto; [SqfliteOfflineDb] productivo;
 /// [MemoryOfflineDb] para tests (sin platform channels).
 library;
 
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart';
 
 /// Contrato de persistencia offline (inyectable).
 abstract class OfflineDb {
@@ -20,28 +32,92 @@ abstract class OfflineDb {
   Future<void> bumpQueueTries(String id);
 }
 
-/// SQLite real (`mole_offline.db` en documents).
+/// Genera una contraseña de 256 bits en base64 (para `mole_db_key`).
+/// Función pura: testeable sin platform channels.
+String generateDbPassword([Random? random]) {
+  final r = random ?? Random.secure();
+  final bytes = List<int>.generate(32, (_) => r.nextInt(256));
+  return base64UrlEncode(bytes);
+}
+
+/// SQLite real cifrado (`mole_offline.db` en documents, SQLCipher AES-256).
 class SqfliteOfflineDb implements OfflineDb {
-  SqfliteOfflineDb(this._dirPath);
+  SqfliteOfflineDb(this._dirPath, {required this.password});
 
   final String _dirPath;
+
+  /// Contraseña resuelta por el llamador (secure storage). Vacía = sin cifrar
+  /// (solo tests locales; producción siempre la exige vía provider).
+  final String password;
   Database? _db;
+
+  static const _schema = [
+    'CREATE TABLE telemetry_cache(key TEXT PRIMARY KEY, cached_at TEXT NOT NULL, payload TEXT NOT NULL)',
+    'CREATE TABLE diag_queue(id TEXT PRIMARY KEY, path TEXT NOT NULL, filename TEXT NOT NULL, plant_id TEXT, model_type TEXT NOT NULL, created_at TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0)',
+  ];
+
+  Future<Database> _openEncrypted(String path) => openDatabase(
+        path,
+        password: password,
+        version: 1,
+        onCreate: (d, _) async {
+          for (final ddl in _schema) {
+            await d.execute(ddl);
+          }
+        },
+      );
+
+  static bool _isPlainDatabase(DatabaseException e) =>
+      isNotADatabaseMessage(e.toString());
+
+  /// Predicado puro (testeable): SQLCipher reporta así un fichero en plano.
+  static bool isNotADatabaseMessage(String message) =>
+      message.contains('not a database');
+
+  /// Migración plano→cifrado con respaldo: exporta filas, borra el fichero,
+  /// recrea cifrado y reimporta. Si algo falla, wipe limpio (documentado).
+  Future<void> _migratePlainToEncrypted(String path) async {
+    final plain = await openDatabase(path, version: 1);
+    List<Map<String, Object?>> cache = [];
+    List<Map<String, Object?>> queue = [];
+    try {
+      cache = await plain.query('telemetry_cache');
+      queue = await plain.query('diag_queue');
+    } finally {
+      await plain.close();
+    }
+    await File(path).delete();
+    final fresh = await _openEncrypted(path);
+    try {
+      for (final row in cache) {
+        await fresh.insert('telemetry_cache', Map<String, Object?>.from(row),
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      for (final row in queue) {
+        // Las rutas de JPG migran tal cual (residual: ficheros en claro).
+        await fresh.insert('diag_queue', Map<String, Object?>.from(row),
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    } catch (_) {
+      await fresh.close();
+      await File(path).delete();
+      rethrow;
+    }
+    await fresh.close();
+  }
 
   Future<Database> get _ready async {
     final db = _db;
     if (db != null && db.isOpen) return db;
-    final created = await openDatabase(
-      p.join(_dirPath, 'mole_offline.db'),
-      version: 1,
-      onCreate: (d, _) async {
-        await d.execute(
-            'CREATE TABLE telemetry_cache(key TEXT PRIMARY KEY, cached_at TEXT NOT NULL, payload TEXT NOT NULL)');
-        await d.execute(
-            'CREATE TABLE diag_queue(id TEXT PRIMARY KEY, path TEXT NOT NULL, filename TEXT NOT NULL, plant_id TEXT, model_type TEXT NOT NULL, created_at TEXT NOT NULL, tries INTEGER NOT NULL DEFAULT 0)');
-      },
-    );
-    _db = created;
-    return created;
+    final path = p.join(_dirPath, 'mole_offline.db');
+    try {
+      _db = await _openEncrypted(path);
+    } on DatabaseException catch (e) {
+      if (!_isPlainDatabase(e)) rethrow;
+      await _migratePlainToEncrypted(path);
+      _db = await _openEncrypted(path);
+    }
+    return _db!;
   }
 
   @override

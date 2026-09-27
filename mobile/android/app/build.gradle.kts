@@ -20,27 +20,24 @@ android {
     }
 
     // Firma release: lee mobile/android/key.properties (gitignored).
-    // Sin ese archivo (dev/CI) se usa debug-keys, sin romper el build.
+    // S1 MASVS-CODE: fail-closed. Sin key.properties el build release FALLA
+    // (antes firmaba con debug-keys, clave pública conocida). Dev local usa
+    // `flutter run` (buildType debug, sin este bloque).
     val keystoreProperties = Properties()
     val keystoreFile = rootProject.file("key.properties")
-    if (keystoreFile.exists()) {
-        keystoreProperties.load(FileInputStream(keystoreFile))
+    if (!keystoreFile.exists()) {
+        throw GradleException(
+            "Falta mobile/android/key.properties: el release no se firma "
+            + "con debug-keys. Ver mobile/README.md (firma release).")
     }
+    keystoreProperties.load(FileInputStream(keystoreFile))
 
     signingConfigs {
         create("release") {
-            if (keystoreFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
-            } else {
-                // Fallback dev: mismas keys debug del template.
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-                storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-                storePassword = "android"
-            }
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
         }
     }
 
@@ -58,6 +55,13 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // S1 MASVS-CODE: binario no trivialmente reversable.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

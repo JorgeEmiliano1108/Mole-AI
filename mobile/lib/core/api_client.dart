@@ -11,8 +11,11 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 
 import 'errors.dart';
 import 'session_store.dart';
@@ -42,15 +45,38 @@ String? roleFromJwt(String token) {
 }
 
 class ApiClient {
-  ApiClient._(this._session, this._dio, String? baseUrl) {
+  ApiClient._(this._session, this._dio, String? baseUrl,
+      {bool enforceHttps = kReleaseMode, String? labCaPem})
+      : _pinned = labCaPem != null {
+    final resolved = withSlash(
+      baseUrl ??
+          const String.fromEnvironment(
+            'API_BASE_URL',
+            defaultValue: 'http://10.0.2.2:8000/api/v1/',
+          ),
+    );
+    // S1 MASVS-NETWORK fail-closed: en release (o si se exige) un baseUrl
+    // http es error de configuración, no degradación silenciosa a plano.
+    if (enforceHttps && resolved.startsWith('http://')) {
+      throw StateError(
+          'API_BASE_URL en texto plano bloqueada (S1 pinning): usa https.');
+    }
+    if (labCaPem != null) {
+      // Pinning por CA (S1): bundle del sistema + ancla lab. La validación
+      // de cadena + CN/SAN es la default de HttpClient sobre este contexto;
+      // no se instala callback permisivo alguno. Opt-in explícito para no
+      // romper adapters de test ni ampliar trust en prod por defecto.
+      _dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final ctx = SecurityContext(withTrustedRoots: true);
+          ctx.setTrustedCertificatesBytes(
+              Uint8List.fromList(utf8.encode(labCaPem)));
+          return HttpClient(context: ctx);
+        },
+      );
+    }
     _dio.options = BaseOptions(
-      baseUrl: withSlash(
-        baseUrl ??
-            const String.fromEnvironment(
-              'API_BASE_URL',
-              defaultValue: 'http://10.0.2.2:8000/api/v1/',
-            ),
-      ),
+      baseUrl: resolved,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
       sendTimeout: const Duration(seconds: 30),
@@ -94,8 +120,13 @@ class ApiClient {
   }
 
   factory ApiClient(
-          {required SessionStore session, Dio? dio, String? baseUrl}) =>
-      ApiClient._(session, dio ?? Dio(), baseUrl);
+          {required SessionStore session,
+          Dio? dio,
+          String? baseUrl,
+          bool enforceHttps = kReleaseMode,
+          String? labCaPem}) =>
+      ApiClient._(session, dio ?? Dio(), baseUrl,
+          enforceHttps: enforceHttps, labCaPem: labCaPem);
 
   /// Normaliza un path al contrato: `/` final salvo que la ruta del backend
   /// sea exacta sin slash (ej. MS3 `/api/v1/reports/generate`).
@@ -107,6 +138,10 @@ class ApiClient {
 
   final SessionStore _session;
   final Dio _dio;
+
+  /// True cuando se instaló el adapter con ancla lab (pinning S1 activo).
+  final bool _pinned;
+  bool get httpAdapterIsPinned => _pinned;
 
   /// Endpoints que nunca llevan Bearer (login/register crean la sesión).
   static bool _isPublicAuth(String path) =>
