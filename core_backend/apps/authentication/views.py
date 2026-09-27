@@ -190,6 +190,7 @@ def logout_view(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def register_view(request):
     """
     POST /api/v1/auth/register/
@@ -256,6 +257,7 @@ def register_view(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def login_view(request):
     """
     POST /api/v1/auth/login/
@@ -500,6 +502,7 @@ def password_reset_request_view(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([AnonRateThrottle])
 def password_reset_confirm_view(request):
     """
     POST /api/v1/auth/password-reset/confirm/

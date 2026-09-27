@@ -184,6 +184,11 @@ def device_health_view(request, id):
     except Device.DoesNotExist:
         return Response({'error': 'Device not found.'}, status=404)
 
+    # S2 BOLA: solo el dueño o staff; 404 para no oracular existencia.
+    if device.owner_id != request.user.id and not (
+            request.user.is_staff or request.user.is_superuser):
+        return Response({'error': 'Device not found.'}, status=404)
+
     now = timezone.now()
     delta_seconds = 0
     if device.last_seen:
@@ -280,6 +285,12 @@ def device_bindings_view(request, id):
     try:
         device = Device.objects.get(id=id)
     except Device.DoesNotExist:
+        return Response({'error': 'Device not found.'}, status=404)
+
+    # S2 BOLA: lectura de bindings solo dueño o staff (el POST/DELETE ya
+    # exigen staff vía SRE; el GET filtraba por dispositivo sin dueño).
+    if device.owner_id != request.user.id and not (
+            request.user.is_staff or request.user.is_superuser):
         return Response({'error': 'Device not found.'}, status=404)
 
     if request.method == 'GET':

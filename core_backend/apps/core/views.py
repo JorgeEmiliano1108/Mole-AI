@@ -211,6 +211,7 @@ def sensor_batch_view(request):
 @api_view(['PATCH'])
 @authentication_classes([HardwareAPIKeyAuthentication])
 @permission_classes([HardwareOnlyPermission])
+@throttle_classes([SensorDataThrottle])
 def sensor_data_patch_view(request, pk):
     try:
         log = SensorLog.objects.get(pk=pk)
