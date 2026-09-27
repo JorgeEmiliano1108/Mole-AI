@@ -61,6 +61,7 @@ urlpatterns = [
     path('fichas/', views.fichas_public_view, name='fichas_public'),
     path('history/', views.consolidated_history_view, name='consolidated_history'),
     path('feedback/', views.feedback_create_view, name='feedback_create'),
+    path('safety/validate/', views.safety_validate_view, name='safety_validate'),
 
     # Admin Panel (Estadísticas y Reportes)
     path('admin/statistics', admin_views.admin_stats_view, name='admin_stats'),

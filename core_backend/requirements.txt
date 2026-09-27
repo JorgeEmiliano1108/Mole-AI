@@ -64,3 +64,7 @@ paho-mqtt>=2.0.0
 
 # Observabilidad B6 (opcional: sin SENTRY_DSN es no-op)
 sentry-sdk>=2.0.0
+
+# Safety / Legal Domain Validation (Hito 3 - S5)
+jsonschema>=4.26.0
+PyYAML>=6.0.0

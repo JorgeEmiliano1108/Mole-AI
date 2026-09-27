@@ -84,6 +84,7 @@ from .serializers import (
     SensorDataPatchSerializer,
     SensorReadingSerializer,
 )
+from .services.safety_validator import SafetyValidator
 from .throttles import DiagnosticsThrottle, LLMChatThrottle, SensorDataThrottle
 
 # Cliente MoleAI (RAG)
@@ -456,12 +457,23 @@ def download_diagnostic_pdf(request, id):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def diagnostic_patch_pvu_reason_view(request, id):
-    """PATCH /api/v1/diagnostics/<id>/ — actualiza pvu_reason post-ruta."""
+    """PATCH /api/v1/diagnostics/<id>/ — actualiza pvu_reason post-ruta.
+
+    El SafetyValidator intercepta cualquier motivo que mencione especies
+    protegidas por NOM-059 antes de persistirlo (fail-closed).
+    """
     reason = request.data.get('pvu_reason')
     if reason is None:
         return Response({"error": "pvu_reason requerido."}, status=status.HTTP_400_BAD_REQUEST)
+    reason_text = str(reason)[:30]
+    safety = SafetyValidator().validate({"pvu_reason": reason_text})
+    if not safety.safe:
+        return Response(
+            {"error": safety.reason, "code": safety.code},
+            status=safety.status_code,
+        )
     updated = AIDiagnostic.objects.filter(id=id, user=request.user).update(
-        pvu_reason=str(reason)[:30]
+        pvu_reason=reason_text
     )
     if updated == 0:
         return Response({"error": "Diagnóstico no encontrado."}, status=status.HTTP_404_NOT_FOUND)
@@ -738,3 +750,23 @@ def plant_knowledge_view(request):
 @permission_classes([IsAuthenticated])
 def sensor_log_view(request):
     return Response({"status": "created"}, status=201)
+
+
+# --- DOMINIO LEGAL / SAFETY GATE ---
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def safety_validate_view(request):
+    """POST /api/v1/safety/validate/ — Gate de dominio legal.
+
+    Valida texto o prescripción de agroquímico contra los contratos
+    docs/safety/*.json y safety_rules.yaml. Devuelve 403 cuando el
+    SafetyValidator detecta una violación (fail-closed).
+    """
+    payload = request.data or {}
+    safety = SafetyValidator().validate(payload)
+    if safety.safe:
+        return Response({"safe": True, "code": safety.code})
+    return Response(
+        {"safe": False, "code": safety.code, "reason": safety.reason},
+        status=safety.status_code,
+    )
