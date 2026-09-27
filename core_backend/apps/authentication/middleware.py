@@ -17,16 +17,15 @@ Contains:
   • JwtAuthMiddleware  — WebSocket (Django Channels) JWT auth via query string.
   • JwtHttpMiddleware  — HTTP request JWT validation for IoT ingest endpoints.
 """
-import json
 import logging
+from urllib.parse import parse_qs
 
 import jwt
+from channels.db import database_sync_to_async
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.http import JsonResponse
-from channels.db import database_sync_to_async
-from urllib.parse import parse_qs
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +43,11 @@ _IOT_PROTECTED_PATHS = (
 
 @database_sync_to_async
 def get_user(token):
+    User = get_user_model()
     try:
         from apps.authentication.jwks import get_verification_key
         
         # Get local JWT verification key (HS256 only)
-        from apps.authentication.jwks import get_verification_key
         verification_key, algorithms = get_verification_key(token)
         
         payload = jwt.decode(
@@ -64,20 +63,26 @@ def get_user(token):
         
         user_id = payload.get('sub')
         email = payload.get('email')
-        
-        if not user_id or not email:
+
+        # S3 minimización: los JWT locales solo portan sub (sin email).
+        # Se acepta sub solo; email opcional (compat Supabase).
+        if not user_id:
             return AnonymousUser()
-            
-        User = get_user_model()
-        user, created = User.objects.get_or_create(
+
+        # sub numérico = pk local: resolver directo (sin duplicar usuarios).
+        try:
+            return User.objects.get(pk=int(user_id))
+        except (User.DoesNotExist, ValueError, TypeError):
+            pass
+        user, _created = User.objects.get_or_create(
             username=user_id,
             defaults={
-                'email': email,
+                'email': email or '',
                 'is_active': True,
             }
         )
         return user
-    except Exception:
+    except (jwt.InvalidTokenError, jwt.ExpiredSignatureError, User.DoesNotExist, ValueError, TypeError):
         return AnonymousUser()
 
 class JwtAuthMiddleware:
@@ -103,7 +108,7 @@ class JwtAuthMiddleware:
                 scope['user'] = AnonymousUser()
                 # logger.info("WS Auth: Anonymous (No token)")
                 
-        except Exception as e:
+        except Exception:  # noqa: BLE001
             # logger.error(f"WS Auth Error: {e}")
             scope['user'] = AnonymousUser()
             
@@ -186,10 +191,11 @@ class JwtHttpMiddleware:
             sub = payload.get("sub")
             email = payload.get("email")
 
-            if not sub or not email:
-                logger.warning("JWT missing sub/email claims on IoT ingest")
+            # S3 minimización: basta sub (email opcional, compat Supabase).
+            if not sub:
+                logger.warning("JWT missing sub claim on IoT ingest")
                 return JsonResponse(
-                    {"error": "JWT payload missing required claims (sub, email)."},
+                    {"error": "JWT payload missing required claim (sub)."},
                     status=401,
                 )
 
@@ -214,11 +220,9 @@ class JwtHttpMiddleware:
             return JsonResponse(
                 {"error": f"Invalid token: {exc}"}, status=401
             )
-        except Exception as exc:
+        except Exception:
             logger.exception(
-                "Unexpected error validating IoT JWT path=%s: %s",
-                request.path,
-                exc,
+                "Unexpected error validating IoT JWT path=%s", request.path
             )
             return JsonResponse(
                 {"error": "Token validation error."}, status=401

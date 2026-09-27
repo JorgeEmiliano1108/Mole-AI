@@ -1,0 +1,26 @@
+# .coveragerc — Scope de cobertura para el backend Django.
+# G0/S4: el umbral 80% aplica al código de aplicación ejecutable en la suite
+# unitaria local. Se excluyen migraciones, comandos de management, consumidores
+# Channels, routing ASGI y tests que pytest ignora por dependencias externas
+# (Docker compose / paquetes a mover).
+[run]
+source = apps
+omit =
+    */migrations/*
+    */management/*
+    */consumers.py
+    */routing.py
+    */tests/test_celery_beat_schedule_contains_reminder.py
+    */tests/test_otel_trace_id_propagation.py
+    */tests/test_device_revocation.py
+
+[report]
+show_missing = true
+skip_covered = false
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:

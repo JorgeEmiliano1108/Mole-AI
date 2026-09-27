@@ -12,6 +12,7 @@
 # =============================================================================
 from rest_framework import serializers
 
+from apps.plants.models import Flora
 
 
 class PlantCreateSerializer(serializers.Serializer):
@@ -38,13 +39,30 @@ class FavoritePlantSerializer(serializers.Serializer):
     plant = serializers.UUIDField()
     created_at = serializers.DateTimeField(read_only=True)
 
+    def create(self, validated_data):
+        from apps.plants.models import FavoritePlant, UserPlant
+        plant = UserPlant.objects.get(id=validated_data['plant'])
+        user = self.context.get('user') or validated_data.get('user')
+        if isinstance(user, int):
+            from django.contrib.auth import get_user_model
+            user = get_user_model().objects.get(id=user)
+        return FavoritePlant.objects.get_or_create(plant=plant, user=user)[0]
+
+    def to_representation(self, instance):
+        return {
+            'id': instance.id,
+            'user': instance.user_id,
+            'plant': str(instance.plant_id),
+            'created_at': instance.created_at,
+        }
+
 
 class SpeciesSerializer(serializers.ModelSerializer):
     class Meta:
         from apps.plants.models import SpeciesCatalog
 
         model = SpeciesCatalog
-        fields = [
+        fields = (
             'id',
             'scientific_name',
             'common_name',
@@ -67,24 +85,27 @@ class SpeciesSerializer(serializers.ModelSerializer):
             'category',
             'is_protected_nom059',
             'protection_category',
-        ]
-        read_only_fields = ['id']
+        )
+        read_only_fields = ('id',)
 
     def validate(self, data):
         # Basic cross-field validation: ensure min <= max when both present
-        if data.get('ideal_humidity_min') is not None and data.get('ideal_humidity_max') is not None:
-            if data['ideal_humidity_min'] > data['ideal_humidity_max']:
-                raise serializers.ValidationError('ideal_humidity_min cannot be greater than ideal_humidity_max')
-        if data.get('ideal_temp_min') is not None and data.get('ideal_temp_max') is not None:
-            if data['ideal_temp_min'] > data['ideal_temp_max']:
-                raise serializers.ValidationError('ideal_temp_min cannot be greater than ideal_temp_max')
+        if (data.get('ideal_humidity_min') is not None
+                and data.get('ideal_humidity_max') is not None
+                and data['ideal_humidity_min'] > data['ideal_humidity_max']):
+            raise serializers.ValidationError(
+                'ideal_humidity_min cannot be greater than ideal_humidity_max')
+        if (data.get('ideal_temp_min') is not None
+                and data.get('ideal_temp_max') is not None
+                and data['ideal_temp_min'] > data['ideal_temp_max']):
+            raise serializers.ValidationError(
+                'ideal_temp_min cannot be greater than ideal_temp_max')
         return data
+
 
 # ---------------------------------------------------------------------------
 # FloraCreateSerializer – permite crear ficha con foto (multipart)
 # ---------------------------------------------------------------------------
-from apps.plants.models import Flora
-
 class FloraCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flora

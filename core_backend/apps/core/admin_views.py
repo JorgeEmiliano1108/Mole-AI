@@ -1,12 +1,13 @@
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.response import Response
-from rest_framework import status
 import logging
+from datetime import timedelta
+
 import requests
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from datetime import timedelta
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +85,7 @@ def admin_report_text_view(request):
     """
     active_users = User.objects.filter(is_active=True).count()
     inactive_users = User.objects.filter(is_active=False).count()
-    total_plants = UserPlant.objects.count()
-    # Identificar plantas críticas (por ejemplo, con un sensor log reciente reportando baja humedad)
+    # Identificar plantas críticas (sensor log reciente reportando baja humedad)
     from apps.core.models import SensorLog
     plantas_criticas = SensorLog.objects.filter(soil_humidity__lt=20).values('plant_id').distinct().count()
     
@@ -120,15 +120,15 @@ def master_report_view(request):
     """
     try:
         resp = requests.post(
-            'http://ms3_reports:8003/api/v1/reports/generate', 
-            json={"date_range_days": 90, "sensors": []}, 
+            'http://ms3_reports:8003/api/v1/reports/generate',
+            json={"date_range_days": 90, "sensors": []},
             timeout=5
         )
         if resp.status_code == 200:
             return Response({"job_id": resp.json().get("job_id"), "status": "processing"}, status=status.HTTP_202_ACCEPTED)
         return Response({"job_id": None, "status": "failed"}, status=500)
-    except Exception as e:
-        logger.error(f"Error calling ms3: {e}")
+    except (requests.RequestException, ConnectionError) as exc:
+        logger.error("Error calling ms3: %s", exc)
         return Response({"job_id": None, "status": "failed"}, status=500)
 
 @api_view(['GET'])
@@ -150,8 +150,8 @@ def master_report_status_view(request, job_id):
                 return Response({"status": "failed"})
             return Response({"status": "processing"})
         return Response({"status": "failed"}, status=500)
-    except Exception as e:
-        logger.exception("Error checking status ms3: %s", e)
+    except (requests.RequestException, ConnectionError):
+        logger.exception("Error checking status ms3")
         return Response({"status": "failed"}, status=500)
 
 @api_view(['POST'])
@@ -276,6 +276,11 @@ def admin_user_detail_view(request, user_id):
     if role is not None:
         if role not in ('Operador', 'Admin', 'Superadmin'):
             return Response({"error": "Rol inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        # S2: ni siquiera degradar un Superadmin sin serlo (el guard anterior
+        # solo cubría otorgar Superadmin e is_active, no la degradación).
+        if user.is_superuser and not request.user.is_superuser:
+            return Response({"error": "Solo Superadmin toca Superadmin."},
+                            status=status.HTTP_403_FORBIDDEN)
         if role == 'Superadmin' and not request.user.is_superuser:
             return Response({"error": "Solo Superadmin otorga Superadmin."},
                             status=status.HTTP_403_FORBIDDEN)
@@ -304,8 +309,8 @@ def live_alerts_view(request):
     si está vacío, cae a `SensorLog` legacy. Cada alerta lleva identificadores
     estructurados para la app (issue 16).
     """
+    from apps.core.alerting import push_ambient_alerts, push_soil_alerts, stable_info
     from apps.core.models import AmbientReading, SoilReading
-    from apps.core.alerting import push_soil_alerts, push_ambient_alerts, stable_info
     alerts = []
 
     soils = (SoilReading.objects.select_related("binding__device", "binding__plant")
@@ -338,8 +343,8 @@ def system_events_view(request):
     (mismos umbrales que live-alerts) y salud de microservicios (probe).
     Sin PII: de AuditLog se expone action/timestamp/user_id (nunca IP).
     """
-    from apps.core.models import AuditLog, Device, AmbientReading, SoilReading
-    from apps.core.alerting import push_soil_alerts, push_ambient_alerts
+    from apps.core.alerting import push_ambient_alerts, push_soil_alerts
+    from apps.core.models import AmbientReading, AuditLog, Device, SoilReading
 
     events = {"security": [], "devices": [], "telemetry": [], "services": []}
 
@@ -396,7 +401,7 @@ def _probe_service(svc, url):
         if r.status_code != 200:
             raise ValueError(f"HTTP {r.status_code}")
         return {"tipo": "info", "service": svc, "status": "up"}
-    except Exception as exc:
+    except (requests.RequestException, ValueError) as exc:
         logger.warning("system-events probe %s falló: %s", svc, exc)
         return {"tipo": "error", "service": svc,
                 "status": "down", "msg": f"{svc} inalcanzable"}
@@ -409,8 +414,9 @@ def audit_log_view(request):
     Auditoría legible solo-admin (issue N-2): feed paginado del AuditLog
     append-only. Incluye IP por propósito de seguridad (portal de fallas).
     """
-    from apps.core.models import AuditLog
     from django.core.paginator import Paginator
+
+    from apps.core.models import AuditLog
 
     qs = AuditLog.objects.all().order_by('-timestamp')
     action = (request.GET.get('action') or '').strip()

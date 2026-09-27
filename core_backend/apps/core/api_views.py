@@ -19,7 +19,6 @@ Sprint 4: async def views — non-blocking I/O via ASGI
 import logging
 import random
 
-from asgiref.sync import sync_to_async
 from django.http import JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import (
@@ -30,7 +29,7 @@ from rest_framework.decorators import (
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from apps.authentication.infrastructure.authentication import SupabaseAuthentication
+from apps.authentication.infrastructure.local_jwt_auth import LocalJWTAuthentication
 from apps.core.models import SensorLog
 from apps.core.serializers import SensorReadingSerializer
 from apps.plants.models import UserPlant
@@ -95,9 +94,9 @@ def telemetry_latest_view(request):
 # ── IoT Ingest — JWT-Protected (Sprint 2, Zero-Trust) ───────────────────────
 
 @api_view(['POST'])
-@authentication_classes([SupabaseAuthentication])
+@authentication_classes([LocalJWTAuthentication])
 @permission_classes([IsAuthenticated])
-async def sensors_ingest_view(request):
+def sensors_ingest_view(request):
     """
     POST /api/v1/sensors/ingest
     JWT-protected endpoint for IoT sensor data ingestion.
@@ -111,10 +110,7 @@ async def sensors_ingest_view(request):
     """
     serializer = SensorReadingSerializer(data=request.data)
 
-    is_valid = await sync_to_async(
-        serializer.is_valid, thread_sensitive=True
-    )()
-    if not is_valid:
+    if not serializer.is_valid():
         return Response(
             {"error": "Invalid payload", "details": serializer.errors},
             status=400,
@@ -137,26 +133,19 @@ async def sensors_ingest_view(request):
                 status=403,
             )
 
-    plant_exists = await sync_to_async(
-        lambda: UserPlant.objects.filter(id=v_data["plant_id"]).exists(),
-        thread_sensitive=True,
-    )()
-    if not plant_exists:
+    if not UserPlant.objects.filter(id=v_data["plant_id"]).exists():
         return Response({"error": "plant_id not registered"}, status=404)
 
     try:
-        await sync_to_async(
-            lambda: SensorLog.objects.create(
-                plant_id=v_data["plant_id"],
-                recorded_at=v_data.get("recorded_at"),
-                soil_humidity=v_data.get("soil_humidity"),
-                air_temperature=v_data.get("air_temperature"),
-                uv_index=v_data.get("uv_index"),
-                light_level=v_data.get("light_level"),
-                ph_level=v_data.get("ph_level"),
-            ),
-            thread_sensitive=True,
-        )()
+        SensorLog.objects.create(
+            plant_id=v_data["plant_id"],
+            recorded_at=v_data.get("recorded_at"),
+            soil_humidity=v_data.get("soil_humidity"),
+            air_temperature=v_data.get("air_temperature"),
+            uv_index=v_data.get("uv_index"),
+            light_level=v_data.get("light_level"),
+            ph_level=v_data.get("ph_level"),
+        )
         return Response({"status": "success", "registered": 1}, status=201)
     except Exception as exc:
         logger.exception("Sensor ingest failed")

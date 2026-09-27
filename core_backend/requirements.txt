@@ -46,8 +46,8 @@ django-axes>=6.1
 tenacity>=8.2
 bleach>=6.1
 
-# PDF generation (we use WeasyPrint in ms3_reports; ReportLab removed)
-# reportlab>=4.0
+# PDF generation (generate_pdf_async lo importa en runtime; S4 lo testea)
+reportlab>=4.0
 
 # Swagger
 drf-spectacular~=0.27
@@ -57,6 +57,7 @@ pydantic>=2.5.0
 langsmith>=0.1.0
 locust>=2.24.0
 pytest-django>=4.7.0
+pytest-cov>=5.0.0
 psycopg2-binary>=2.9.9
 dj-database-url>=2.1.0
 paho-mqtt>=2.0.0
