@@ -10,8 +10,9 @@
 # Cualquier uso no autorizado será perseguido conforme a la Ley Federal
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
-from django.db import models
+# ruff: noqa: RUF012
 from django.contrib.auth import get_user_model
+from django.db import models
 from pgvector.django import VectorField
 
 User = get_user_model()
@@ -228,6 +229,29 @@ class ModelPerformance(models.Model):
     
     def __str__(self):
         return f"{self.model_name} v{self.model_version} - {self.metrics_date}"
+
+
+class PvuRouteLog(models.Model):
+    """Evento de conmutación PVU para métricas (Gamma/S5)."""
+
+    ROUTE_CHOICES = [
+        ('local', 'Local'),
+        ('cloud', 'Cloud'),
+        ('hybrid', 'Hybrid'),
+    ]
+
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    route = models.CharField(max_length=10, choices=ROUTE_CHOICES)
+    reason = models.CharField(max_length=30, blank=True)
+    net = models.CharField(max_length=10, blank=True)
+    battery_pct = models.FloatField(null=True, blank=True)
+    wifi_rssi = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'pvu_route_logs'
+        ordering = ['-created_at']
 
 
 class AIModelConfiguration(models.Model):

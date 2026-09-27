@@ -1,39 +1,42 @@
 # =============================================================================
 # Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
 # =============================================================================
-import json
-import os
-import math
 import logging
-import random
-import uuid
+import os
+from typing import Any, cast
+
 import requests
-from datetime import datetime, timedelta
-from typing import Any, Dict, cast, List
-
-from django.shortcuts import render
-from django.db import transaction
-from django.core.cache import cache
 from django.conf import settings
-from django.utils import timezone
+from django.db import transaction
 from django.http import HttpResponse
-
-from rest_framework.views import APIView
-from rest_framework import authentication
-from rest_framework.decorators import api_view, permission_classes, throttle_classes, authentication_classes
-from rest_framework.permissions import BasePermission, IsAuthenticated, AllowAny
+from django.shortcuts import render
+from django.utils import timezone
+from rest_framework import authentication, status
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+    throttle_classes,
+)
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from asgiref.sync import async_to_sync
+from rest_framework.views import APIView
+
+from apps.ai_models.models import LLMRequest
+from apps.authentication.infrastructure.authentication import (
+    HardwareAPIKeyAuthentication,
+)
+from apps.plants.models import UserPlant
 
 # Repositorios y Modelos
 from .models import (
-    SensorLog, BotanicalKnowledge, AIDiagnostic, 
-    DiagnosticoGeolocalizado, FeedbackTicket, Device
+    AIDiagnostic,
+    Device,
+    DiagnosticoGeolocalizado,
+    FeedbackTicket,
+    SensorLog,
 )
-from apps.plants.models import UserPlant
-from apps.ai_models.models import LLMRequest
-from apps.authentication.infrastructure.authentication import HardwareAPIKeyAuthentication
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
@@ -73,18 +76,20 @@ def rotate_device_token(request, id):
     return Response({"auth_token": new_token, "expires_at": device.auth_token_expires_at}, status=200)
 
 # Servicios y Serializers
-from .throttles import LLMChatThrottle, DiagnosticsThrottle, SensorDataThrottle
 from .serializers import (
-    DiagnosticRequestSerializer, LLMChatRequestSerializer, 
-    SensorReadingSerializer, SensorBatchSerializer,
-    FeedbackTicketCreateSerializer, FeedbackTicketResponseSerializer,
-    SensorDataPatchSerializer, PlantKnowledgeQuerySerializer
+    DiagnosticRequestSerializer,
+    FeedbackTicketCreateSerializer,
+    FeedbackTicketResponseSerializer,
+    SensorBatchSerializer,
+    SensorDataPatchSerializer,
+    SensorReadingSerializer,
 )
+from .throttles import DiagnosticsThrottle, LLMChatThrottle, SensorDataThrottle
 
 # Cliente MoleAI (RAG)
 try:
     from apps.ai_models.services import MoleAIClient, MoleAIServiceError
-except Exception:
+except Exception:  # noqa: BLE001
     MoleAIClient = None
     MoleAIServiceError = Exception
 
@@ -123,9 +128,10 @@ class DeviceBearerPermission(BasePermission):
     message = 'Device not found or unauthorized'
 
     def has_permission(self, request, view):
-        from .models import Device
         from django.utils import timezone
         from rest_framework import exceptions
+
+        from .models import Device
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
         if not token:
             raise exceptions.AuthenticationFailed(self.message)
@@ -157,7 +163,7 @@ def sensor_data_view(request):
         return Response({"error": "Payload inválido", "details": serializer.errors}, status=400)
 
     # Cast explícito para silenciar el error de "type empty"
-    v_data = cast(Dict[str, Any], serializer.validated_data)
+    v_data = cast(dict[str, Any], serializer.validated_data)
     
     # [RF-IOTSEC-001] Protección Anti-Replay (ETSI EN 303 645)
     recorded_at = v_data.get('recorded_at')
@@ -182,7 +188,7 @@ def sensor_data_view(request):
             ph_level=v_data.get('ph_level'),
         )
         return Response({"status": "success", "registered": 1}, status=201)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
@@ -192,8 +198,8 @@ def sensor_data_view(request):
 def sensor_batch_view(request):
     serializer = SensorBatchSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    v_data = cast(Dict[str, Any], serializer.validated_data)
-    batch = cast(List[Dict[str, Any]], v_data['batch'])
+    v_data = cast(dict[str, Any], serializer.validated_data)
+    batch = cast(list[dict[str, Any]], v_data['batch'])
     
     # [RF-IOTSEC-001] Protección Anti-Replay para Lotes
     if batch and 'recorded_at' in batch[0]:
@@ -232,13 +238,14 @@ class EdgeNodeIngestView(APIView):
     Auth: DeviceBearerPermission (Bearer por dispositivo + expiración).
     DeviceBearerScheme declara el esquema para que las denegaciones sean 401.
     """
-    authentication_classes = [DeviceBearerScheme]
-    permission_classes = [DeviceBearerPermission]
-    throttle_classes = [SensorDataThrottle]
+    authentication_classes = (DeviceBearerScheme,)
+    permission_classes = (DeviceBearerPermission,)
+    throttle_classes = (SensorDataThrottle,)
 
     def post(self, request):
-        from .serializers import EdgeFrameSerializer
         from apps.core.services.edge_ingest import ingest_frame
+
+        from .serializers import EdgeFrameSerializer
 
         # ── Auth: Device resuelto por DeviceBearerPermission ───────────────
         device = getattr(request, 'device', None)
@@ -285,15 +292,16 @@ class SyncBatchView(APIView):
     motivo (server-wins documentado: lo aceptado manda).
     """
 
-    authentication_classes = [DeviceBearerScheme]
-    permission_classes = [DeviceBearerPermission]
-    throttle_classes = [SensorDataThrottle]
+    authentication_classes = (DeviceBearerScheme,)
+    permission_classes = (DeviceBearerPermission,)
+    throttle_classes = (SensorDataThrottle,)
 
     METHOD = "sync.telemetry"
 
     def post(self, request):
-        from .serializers import EdgeFrameSerializer
         from apps.core.services.edge_ingest import ingest_frame
+
+        from .serializers import EdgeFrameSerializer
 
         device = getattr(request, 'device', None)
         if device is None:
@@ -375,8 +383,6 @@ def diagnostic_view(request):
              "code": "CONSENT_REQUIRED"},
             status=status.HTTP_403_FORBIDDEN,
         )
-    import tempfile
-    import os
     from apps.ai_models.tasks import analyze_vision_async
     from utils.uploads import safe_temp_path
 
@@ -394,8 +400,7 @@ def diagnostic_view(request):
     )
     
     with open(temp_path, 'wb+') as f:
-        for chunk in image_file.chunks():
-            f.write(chunk)
+        f.writelines(image_file.chunks())
     
     auth_header = request.headers.get('Authorization', '')
     task = analyze_vision_async.delay(
@@ -446,6 +451,22 @@ def download_diagnostic_pdf(request, id):
         "message": "PDF en generación. Consulta el estado en poll_url.",
         "poll_url": f"/api/v1/tasks/status/{task.id}/",
     }, status=202)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def diagnostic_patch_pvu_reason_view(request, id):
+    """PATCH /api/v1/diagnostics/<id>/ — actualiza pvu_reason post-ruta."""
+    reason = request.data.get('pvu_reason')
+    if reason is None:
+        return Response({"error": "pvu_reason requerido."}, status=status.HTTP_400_BAD_REQUEST)
+    updated = AIDiagnostic.objects.filter(id=id, user=request.user).update(
+        pvu_reason=str(reason)[:30]
+    )
+    if updated == 0:
+        return Response({"error": "Diagnóstico no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+    return Response({"status": "updated"})
+
 
 # --- MAPAS Y HOTSPOTS ---
 @api_view(['GET'])
@@ -630,7 +651,7 @@ def llm_chat_view(request):
         status_code = e.response.status_code
         try:
             err_detail = e.response.json()
-        except Exception:
+        except Exception:  # noqa: BLE001
             err_detail = e.response.text
         logger.error(f"Error HTTP {status_code} desde MS2 Chat: {err_detail}")
         return Response({"error": "Error en motor de IA", "details": err_detail}, status=status_code)
@@ -675,7 +696,7 @@ def task_status_view(request, task_id):
 
         return Response(response_data)
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return Response(
             {"error": "Task status fetch failed", "details": str(exc)},
             status=500,
@@ -699,7 +720,7 @@ def fichas_public_view(request):
 def feedback_create_view(request):
     serializer = FeedbackTicketCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    v_data = cast(Dict[str, Any], serializer.validated_data)
+    v_data = cast(dict[str, Any], serializer.validated_data)
     ticket = FeedbackTicket.objects.create(user=request.user, **v_data)
     return Response(FeedbackTicketResponseSerializer(ticket).data, status=201)
 

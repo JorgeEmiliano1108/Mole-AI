@@ -2,12 +2,18 @@
 # Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
 # =============================================================================
 from django.urls import path
-from . import views
+
 from apps.core import admin_views
 from apps.core.api_views import (
-    mock_sensor_data, telemetry_latest_view, sensors_ingest_view,
-    device_health_view, device_bindings_view, device_binding_delete_view,
+    device_binding_delete_view,
+    device_bindings_view,
+    device_health_view,
+    mock_sensor_data,
+    sensors_ingest_view,
+    telemetry_latest_view,
 )
+
+from . import views
 
 app_name = 'core'
 
@@ -32,6 +38,7 @@ urlpatterns = [
     # IA y Diagnósticos
     path('diagnostics/', views.diagnostic_view, name='diagnostic'),
     path('diagnostics/history/', views.diagnostic_history_view, name='diagnostic_history'),
+    path('diagnostics/<uuid:id>/', views.diagnostic_patch_pvu_reason_view, name='diagnostic_patch'),
     path('diagnostics/<uuid:id>/download/', views.download_diagnostic_pdf, name='diagnostic_download'),
     
     # Mapas

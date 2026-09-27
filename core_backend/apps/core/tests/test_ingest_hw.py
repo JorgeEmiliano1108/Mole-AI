@@ -1,8 +1,11 @@
+from datetime import datetime, timedelta, timezone
 from typing import ClassVar
 
+import jwt
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.utils import timezone
+from django.utils import timezone as django_timezone
 from rest_framework.test import APIClient
 
 from apps.core.models import Device, SensorLog
@@ -12,6 +15,19 @@ from apps.plants.models import UserPlant
 class IngestHwTests(TestCase):
     """POST /api/v1/sensors/ingest — JWT + anti-replay (issue S4)."""
 
+    def _mint_jwt(self, user):
+        key = getattr(settings, 'JWT_SECRET_KEY', None) or settings.SECRET_KEY
+        now = datetime.now(timezone.utc)
+        payload = {
+            'sub': str(user.id),
+            'aud': 'authenticated',
+            'role': 'user',
+            'exp': now + timedelta(minutes=20),
+            'iat': now,
+            'jti': 'jti-hw',
+        }
+        return jwt.encode(payload, key, algorithm='HS256')
+
     def setUp(self):
         User = get_user_model()
         self.user = User.objects.create_user(username='hw', password='x')
@@ -19,16 +35,12 @@ class IngestHwTests(TestCase):
         self.device = Device.objects.create(
             owner=self.user, name='d', auth_token='tok-hw-123')
         self.client = APIClient()
-        resp = self.client.post('/api/v1/auth/login/',
-                                {'username': 'hw', 'password': 'x'},
-                                format='json')
-        assert resp.status_code == 200, resp.content[:200]
         self.client.credentials(
-            HTTP_AUTHORIZATION=f"Bearer {resp.json()['token']}")
+            HTTP_AUTHORIZATION=f'Bearer {self._mint_jwt(self.user)}')
 
     def _payload(self, **kw):
         base = {'plant_id': str(self.plant.id),
-                'recorded_at': timezone.now().isoformat(),
+                'recorded_at': django_timezone.now().isoformat(),
                 'soil_humidity': 42.0}
         base.update(kw)
         return base
@@ -49,7 +61,7 @@ class IngestHwTests(TestCase):
 
     def test_stale_timestamp_rejected(self):
         from datetime import timedelta
-        old = (timezone.now() - timedelta(hours=2)).isoformat()
+        old = (django_timezone.now() - timedelta(hours=2)).isoformat()
         resp = self.client.post(
             '/api/v1/sensors/ingest', data=self._payload(recorded_at=old),
             format='json')

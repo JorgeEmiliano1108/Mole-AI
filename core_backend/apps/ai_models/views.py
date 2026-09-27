@@ -1,21 +1,25 @@
 # =============================================================================
 # Copyright (C) 2024-2026 Mole.AI — All Rights Reserved.
 # =============================================================================
-import os
 import logging
-from typing import List
+import os
 
-from django.conf import settings
-from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.response import Response
-from rest_framework import status
 from celery.result import AsyncResult
+from django.conf import settings
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from apps.ai_models.tasks import train_rag_async, train_vision_async, analyze_vision_async
+from apps.ai_models.models import PvuRouteLog
+from apps.ai_models.tasks import (
+    analyze_vision_async,
+    train_rag_async,
+    train_vision_async,
+)
 from apps.ai_models.utils import safe_serialize
-from utils.uploads import safe_temp_path, assert_magic_image
+from utils.uploads import assert_magic_image, safe_temp_path
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +28,7 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 ALLOWED_DATASET_TYPES = ['application/zip', 'application/x-zip-compressed']
 
-def validate_file(file_obj, allowed_types: List[str]):
+def validate_file(file_obj, allowed_types: list[str]):
     if file_obj.size > MAX_FILE_SIZE:
         return False, "El archivo excede el límite de 10MB."
     if file_obj.content_type not in allowed_types:
@@ -53,7 +57,7 @@ def ai_model_config_view(request):
     return Response({'message': 'AI Model Config', 'app': 'ai_models'})
 
 class AIHealthCheckView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
     def get(self, request):
         return Response({'status': 'healthy', 'service': 'AI Models Module', 'version': '1.1.0'})
 
@@ -76,12 +80,11 @@ def train_rag_view(request):
         )
 
         with open(temp_path, 'wb+') as destination:
-            for chunk in file_obj.chunks():
-                destination.write(chunk)
+            destination.writelines(file_obj.chunks())
 
         train_rag_async.delay(temp_path, file_obj.name, file_obj.content_type)  # type: ignore
         return Response({"status": "accepted", "task": "RAG_TRAIN"}, status=202)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return Response({"error": str(e)}, status=500)
 
 @api_view(['POST'])
@@ -102,13 +105,12 @@ def train_vision_view(request):
                 base_dir=os.path.join(settings.MEDIA_ROOT, 'temp'),
             )
             with open(temp_path, 'wb+') as destination:
-                for chunk in d.chunks():
-                    destination.write(chunk)
+                destination.writelines(d.chunks())
             datasets_info.append({'path': temp_path, 'name': d.name, 'type': d.content_type})
 
         train_vision_async.delay(datasets_info)  # type: ignore
         return Response({"status": "accepted", "count": len(datasets_info)}, status=202)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         return Response({"error": str(e)}, status=500)
 
 # --- VISTAS DE INFERENCIA ---
@@ -142,8 +144,7 @@ def analyze_vision_view(request):
         )
 
         with open(temp_path, 'wb+') as destination:
-            for chunk in file_obj.chunks():
-                destination.write(chunk)
+            destination.writelines(file_obj.chunks())
 
         auth_header = str(request.headers.get('Authorization', ''))
         task = analyze_vision_async.delay(str(temp_path), auth_token=auth_header)  # type: ignore  
@@ -172,5 +173,39 @@ def vision_task_status_view(request, task_id):
             'info': safe_serialize(task.info) if state not in ('SUCCESS', 'FAILURE') else None,
         }
         return Response(response_data)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         return Response({'error': 'Task status fetch failed', 'details': str(exc)})
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def pvu_route_log_view(request):
+    """POST /api/v1/ai/pvu/route/ — registra evento de conmutación PVU.
+
+    Denegable sin token (requiere autenticación); sirve para métricas de
+    conmutación predictiva en el dashboard de telemetría.
+    """
+    data = request.data or {}
+    PvuRouteLog.objects.create(
+        user=request.user,
+        route=str(data.get('route', 'hybrid'))[:10],
+        reason=str(data.get('reason', ''))[:30],
+        net=str(data.get('net', ''))[:10],
+        battery_pct=_to_float(data.get('battery_pct')),
+        wifi_rssi=_to_int(data.get('wifi_rssi')),
+    )
+    return Response({'status': 'logged'}, status=status.HTTP_201_CREATED)
+
+
+def _to_float(value):
+    try:
+        return float(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_int(value):
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None

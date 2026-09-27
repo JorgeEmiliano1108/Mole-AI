@@ -11,6 +11,7 @@
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
 from django.urls import path
+
 from . import views
 
 app_name = 'ai_models'
@@ -38,4 +39,7 @@ urlpatterns = [
     # AI Vision End-to-End endpoints
     path('vision/analyze/', views.analyze_vision_view, name='analyze_vision'),
     path('vision/status/<str:task_id>/', views.vision_task_status_view, name='vision_task_status'),
+
+    # PVU telemetry
+    path('pvu/route/', views.pvu_route_log_view, name='pvu_route_log'),
 ]

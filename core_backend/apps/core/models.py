@@ -10,11 +10,11 @@
 # Cualquier uso no autorizado será perseguido conforme a la Ley Federal
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
-from django.db import models
+# ruff: noqa: RUF012
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.utils import timezone
 from pgvector.django import VectorField
-from .fields import EncryptedCharField
 
 User = get_user_model()
 
@@ -79,6 +79,7 @@ class AIDiagnostic(models.Model):
     image_path = models.TextField(null=True, blank=True)
     diagnosis_label = models.TextField(null=True, blank=True)
     confidence_score = models.FloatField(null=True, blank=True)
+    pvu_reason = models.CharField(max_length=30, null=True, blank=True)
     metadata = models.JSONField(null=True, blank=True)
     
     class Meta:
@@ -233,7 +234,6 @@ class AuditLog(models.Model):
 # ---------------------------------------------------------------------------
 import uuid
 
-from django.conf import settings
 
 class Device(models.Model):
     # Owner of the physical ESP32 device
@@ -280,6 +280,7 @@ class Device(models.Model):
         """Rota el Bearer token con expiración (RNF-02). Invalida el anterior."""
         import secrets
         from datetime import timedelta
+
         from django.utils import timezone
         self.auth_token = secrets.token_urlsafe(48)
         self.auth_token_expires_at = timezone.now() + timedelta(days=days)
@@ -377,10 +378,10 @@ class TelemetryArchive(models.Model):
 # Signals – reminder on high‑urgency diagnostics
 # ---------------------------------------------------------------------------
 
+import logging
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
-import logging
 
 logger = logging.getLogger(__name__)
 
