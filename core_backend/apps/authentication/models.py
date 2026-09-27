@@ -42,6 +42,15 @@ class User(AbstractUser):
         blank=True,
         help_text="Fecha y hora en que se otorgó el consentimiento.",
     )
+    ai_consent = models.BooleanField(
+        default=False,
+        help_text="Consentimiento separado para inferencia IA (diagnóstico por foto, chat RAG). Sin esto, los endpoints IA responden 403.",
+    )
+    ai_consent_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha y hora en que se otorgó el consentimiento de IA.",
+    )
 
     # Verificación de correo electrónico (NOM-024 / LFPDPPP Art. 7)
     is_email_verified = models.BooleanField(

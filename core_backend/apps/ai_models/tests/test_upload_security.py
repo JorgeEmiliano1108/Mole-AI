@@ -60,6 +60,8 @@ class TestAnalyzeVisionUploadSecurity:
     def test_filename_traversal_no_escapa(self):
         User = get_user_model()
         user = User.objects.create_user(username="u_trav", password="x")
+        user.ai_consent = True
+        user.save(update_fields=["ai_consent"])
         client = APIClient()
         client.force_authenticate(user=user)
         evil = SimpleUploadedFile(
@@ -79,6 +81,8 @@ class TestAnalyzeVisionUploadSecurity:
     def test_binario_camuflado_400(self):
         User = get_user_model()
         user = User.objects.create_user(username="u_bin", password="x")
+        user.ai_consent = True
+        user.save(update_fields=["ai_consent"])
         client = APIClient()
         client.force_authenticate(user=user)
         fake = SimpleUploadedFile(

@@ -88,8 +88,11 @@ class AuthRepository {
   }
 
   /// Consentimiento LFPDPPP. `granted=true` registra CONSENT_GRANTED (+AuditLog).
-  Future<Map<String, dynamic>> setConsent(bool granted) =>
-      _api.postJson('auth/consent/', data: {'consent': granted});
+  Future<Map<String, dynamic>> setConsent(bool granted, {bool? aiConsent}) {
+    final data = <String, Object?>{'consent': granted, 'ai_consent': aiConsent};
+    data.removeWhere((_, v) => v == null);
+    return _api.postJson('auth/consent/', data: data);
+  }
 
   Future<bool> hasConsented() async {
     try {

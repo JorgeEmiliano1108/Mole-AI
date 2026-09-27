@@ -368,6 +368,13 @@ def diagnostic_view(request):
     Envía imagen a MS1 de forma asíncrona via Celery.
     No bloquea el request - el frontend hace polling del task_id.
     """
+    from apps.authentication.consent import require_ai_consent
+    if not require_ai_consent(request.user):
+        return Response(
+            {"error": "Se requiere consentimiento de IA.",
+             "code": "CONSENT_REQUIRED"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     import tempfile
     import os
     from apps.ai_models.tasks import analyze_vision_async
@@ -565,6 +572,13 @@ def chat_history_view(request):
 @permission_classes([IsAuthenticated])
 @throttle_classes([LLMChatThrottle])
 def llm_chat_view(request):
+    from apps.authentication.consent import require_ai_consent
+    if not require_ai_consent(request.user):
+        return Response(
+            {"error": "Se requiere consentimiento de IA.",
+             "code": "CONSENT_REQUIRED"},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     question = request.data.get('question', '').strip()
     if not question:
         question = request.data.get('message', '').strip()

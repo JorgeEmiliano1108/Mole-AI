@@ -115,6 +115,13 @@ def train_vision_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def analyze_vision_view(request):
+    from apps.authentication.consent import require_ai_consent
+    if not require_ai_consent(request.user):
+        return Response(
+            {"error": "Se requiere consentimiento de IA.",
+             "code": "CONSENT_REQUIRED"},
+            status=403,
+        )
     file_obj = request.FILES.get('image') or request.FILES.get('file')
     if not file_obj:
         return Response({"error": "No image provided"}, status=400)

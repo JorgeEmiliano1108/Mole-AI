@@ -54,11 +54,17 @@ def user_profile_view(request):
             "is_premium": getattr(user, "is_premium", False),
             "data_consent": getattr(user, "data_consent", False),
             "data_consent_date": getattr(user, "data_consent_date", None),
+            "ai_consent": getattr(user, "ai_consent", False),
+            "ai_consent_date": getattr(user, "ai_consent_date", None),
         })
 
     if request.method == "DELETE":
         user_id = user.id
         ip_addr = request.META.get("REMOTE_ADDR")
+        # S3 GDPR real: cascada + purga antes del anonimizado. AuditLog se
+        # conserva (deber legal de trazabilidad, documentado en el ADR).
+        from apps.authentication.erasure import purge_user_data
+        purged = purge_user_data(user)
         # Wipe PII before deletion for LFPDPPP compliance (Derecho de Cancelación)
         user.first_name = ""
         user.last_name = ""
@@ -79,7 +85,7 @@ def user_profile_view(request):
             user_id=user_id,
             action="DELETE_ACCOUNT_ARCO",
             ip_address=ip_addr,
-            details=f"Account {user_id} deleted and PII wiped."
+            details=f"Account {user_id} deleted and PII wiped. Purged: {purged}."
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -101,6 +107,18 @@ def user_profile_view(request):
     return Response({"status": "updated", "fields": updated})
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def profile_export_view(request):
+    """
+    GET /api/v1/auth/profile/export/ — Portabilidad GDPR (S3): dump legible
+    de los datos del usuario autenticado (perfil, plantas, dispositivos,
+    diagnósticos, chat, documentos). Sin datos de otros usuarios.
+    """
+    from apps.authentication.erasure import profile_export_data
+    return Response(profile_export_data(request.user))
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def consent_view(request):
@@ -108,9 +126,11 @@ def consent_view(request):
     POST /api/v1/auth/consent/ — Registra el consentimiento explícito de
     tratamiento de datos personales (LFPDPPP Art. 8, BR-02).
     Body: {"consent": true} para otorgar, {"consent": false} para revocar.
+    S3: {"ai_consent": true|false} opcional, consentimiento IA separado
+    (diagnóstico por foto, chat RAG). Sin ai_consent, la IA responde 403.
     Persiste `data_consent` + `data_consent_date` (NULL al revocar) y audita.
     """
-    from apps.authentication.consent import record_consent
+    from apps.authentication.consent import record_ai_consent, record_consent
     consent = request.data.get("consent", None)
     if consent is not True and consent is not False:
         return Response(
@@ -119,10 +139,15 @@ def consent_view(request):
         )
     user = request.user
     record_consent(user, consent, ip_address=request.META.get("REMOTE_ADDR"))
+    ai_consent = request.data.get("ai_consent", None)
+    if ai_consent is True or ai_consent is False:
+        record_ai_consent(user, ai_consent, ip_address=request.META.get("REMOTE_ADDR"))
     return Response({
         "status": "recorded",
         "data_consent": user.data_consent,
         "data_consent_date": user.data_consent_date,
+        "ai_consent": user.ai_consent,
+        "ai_consent_date": user.ai_consent_date,
     })
 
 
@@ -238,8 +263,11 @@ def register_view(request):
     user.is_email_verified = False
     user.save(update_fields=["is_active", "is_email_verified"])
 
-    from apps.authentication.consent import record_consent
+    from apps.authentication.consent import record_ai_consent, record_consent
     record_consent(user, True, ip_address=request.META.get("REMOTE_ADDR"))
+    # S3: consentimiento IA opcional y separado al alta (default False).
+    if request.data.get("ai_consent", None) is True:
+        record_ai_consent(user, True, ip_address=request.META.get("REMOTE_ADDR"))
 
     # Enqueue tarea de verificación de correo (Celery)
     try:
@@ -307,9 +335,9 @@ def login_view(request):
     signing_alg = getattr(settings, 'JWT_ALGORITHM', 'HS256')
     
     payload = {
+        # S3 minimización (GDPR/LFPDPPP): solo sub/role/aud/exp/iat/jti.
+        # username/email ya no viajan en cada request (la app solo usa role).
         "sub": str(user.id),
-        "username": user.username,
-        "email": user.email,
         "role": role,
         "aud": "authenticated",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=getattr(settings, 'JWT_TTL_MINUTES', 20)),

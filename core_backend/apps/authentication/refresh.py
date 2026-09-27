@@ -37,9 +37,8 @@ def refresh_view(request):
     ttl = getattr(settings, "JWT_TTL_MINUTES", 20)
 
     payload = {
+        # S3 minimización: ver login_view.
         "sub": str(user.id),
-        "username": user.username,
-        "email": user.email,
         "role": role,
         "aud": "authenticated",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=ttl),

@@ -83,16 +83,25 @@ class LocalJWTAuthentication(authentication.BaseAuthentication):
         if is_denied(payload.get('jti')):
             raise exceptions.AuthenticationFailed('Token has been revoked.')
 
-        # Get user from payload
-        username = payload.get('username')
-        if not username:
-            raise exceptions.AuthenticationFailed('Invalid token: missing username.')
-        
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            logger.error("User not found for token: %s", username)
-            raise exceptions.AuthenticationFailed('User not found.')
+        # S3 minimización: el token local solo porta sub/role (sin username ni
+        # email). Se resuelve por pk; tokens legacy con username siguen
+        # funcionando durante su vida restante (≤JWT_TTL_MINUTES).
+        user = None
+        sub = payload.get('sub')
+        if sub is not None:
+            try:
+                user = User.objects.get(pk=sub)
+            except (User.DoesNotExist, ValueError, TypeError):
+                user = None
+        if user is None:
+            username = payload.get('username')
+            if not username:
+                raise exceptions.AuthenticationFailed('Invalid token: missing subject.')
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                logger.error("User not found for token: %s", username)
+                raise exceptions.AuthenticationFailed('User not found.')
         
         if not user.is_active:
             raise exceptions.AuthenticationFailed('User is inactive.')

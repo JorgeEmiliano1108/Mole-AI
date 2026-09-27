@@ -32,6 +32,7 @@ urlpatterns = [
 
     # User Profile endpoints
     path('profile/', views.user_profile_view, name='user_profile'),
+    path('profile/export/', views.profile_export_view, name='profile_export'),
 
     # LFPDPPP consentimiento explícito (BR-02)
     path('consent/', views.consent_view, name='consent'),

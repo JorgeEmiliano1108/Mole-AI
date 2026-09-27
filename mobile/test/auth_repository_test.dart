@@ -3,11 +3,15 @@ library;
 
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mole_ai/core/api_client.dart';
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/core/session_store.dart';
+import 'package:mole_ai/features/auth/auth_controller.dart';
 import 'package:mole_ai/features/auth/auth_repository.dart';
+import 'package:mole_ai/features/auth/auth_screens.dart';
 
 import 'species_test.dart' show FakeAdapter, clientWith, jsonBody;
 
@@ -64,6 +68,19 @@ void main() {
       }), session: session);
       await AuthRepository(api, session).setConsent(true);
       expect((sent as Map)['consent'], isTrue);
+      expect((sent as Map).containsKey('ai_consent'), isFalse);
+    });
+
+    test('consentimiento IA viaja separado y opcional (S3)', () async {
+      Object? sent;
+      final session = MemorySessionStore();
+      final api = clientWith(FakeAdapter((o) {
+        sent = o.data;
+        return jsonBody({'status': 'recorded'}, 200);
+      }), session: session);
+      await AuthRepository(api, session).setConsent(true, aiConsent: true);
+      expect((sent as Map)['consent'], isTrue);
+      expect((sent as Map)['ai_consent'], isTrue);
     });
   });
 
@@ -149,4 +166,30 @@ void main() {
       expect((sent as Map)['new_password'], 'Nueva123!');
     });
   });
+
+group('ConsentScreen IA (S3)', () {
+  testWidgets('checkbox IA viaja en el grant', (t) async {
+    Object? sent;
+    final session = MemorySessionStore();
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        apiClientProvider.overrideWithValue(clientWith(FakeAdapter((o) {
+          sent = o.data;
+          return jsonBody({'status': 'recorded'}, 200);
+        }), session: session)),
+        sessionStoreProvider.overrideWithValue(session),
+      ],
+      child: const MaterialApp(home: Scaffold(body: ConsentScreen())),
+    ));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+    await t.tap(find.text('Acepto el uso de IA en mis diagnósticos y chat'));
+    await t.pump();
+    await t.tap(find.text('Acepto el uso de mis datos'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+    expect((sent as Map)['consent'], isTrue);
+    expect((sent as Map)['ai_consent'], isTrue);
+  });
+});
 }

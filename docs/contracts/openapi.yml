@@ -366,7 +366,8 @@ paths:
         POST /api/v1/auth/consent/ — Registra el consentimiento explícito de
         tratamiento de datos personales (LFPDPPP Art. 8, BR-02).
         Body: {"consent": true} para otorgar, {"consent": false} para revocar.
-        Persiste `data_consent` + `data_consent_date` (NULL al revocar) y audita.
+        S3: {"ai_consent": true|false} opcional, consentimiento IA separado
+        (diagnóstico por foto, chat RAG). Persiste fechas y audita.
       tags:
       - v1
       responses:
@@ -498,13 +499,25 @@ paths:
         GET    /api/v1/auth/profile/ — Return the authenticated user's profile.
         PATCH  /api/v1/auth/profile/ — Update mutable profile fields.
         DELETE /api/v1/auth/profile/ — Derecho ARCO: eliminación de cuenta.
-               Anonimiza PII y elimina el usuario. Los registros científicos
-               (SensorLog, AIDiagnostic) se conservan con user_id/plant_id = NULL
-               gracias a on_delete=SET_NULL en las FK relacionadas.
+               S3: borrado en cascada real (plantas, lecturas, diagnósticos,
+               chat, documentos+MinIO, dispositivos, Redis) + anonimizado;
+               AuditLog se conserva (deber legal).
       tags:
       - v1
       responses:
-        '204':
+        '200':
+          description: No response body
+  /api/v1/auth/profile/export/:
+    get:
+      operationId: v1_auth_profile_export_retrieve
+      description: |-
+        GET /api/v1/auth/profile/export/ — Portabilidad GDPR (S3): dump
+        legible de perfil, plantas, dispositivos, diagnósticos, chat y
+        documentos del usuario autenticado. Sin datos de terceros.
+      tags:
+      - v1
+      responses:
+        '200':
           description: No response body
   /api/v1/auth/refresh/:
     post:

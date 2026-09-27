@@ -157,11 +157,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
 /// Consentimiento de datos personales (LFPDPPP, contrato §1/§10).
 /// Sin registro de consentimiento no se usa telemetría personal.
-class ConsentScreen extends ConsumerWidget {
+class ConsentScreen extends ConsumerStatefulWidget {
   const ConsentScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConsentScreen> createState() => _ConsentScreenState();
+}
+
+class _ConsentScreenState extends ConsumerState<ConsentScreen> {
+  /// Consentimiento IA separado (S3): diagnóstico por foto y chat RAG.
+  /// Sin esto, la IA responde 403 CONSENT_REQUIRED.
+  var _aiConsent = false;
+
+  @override
+  Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Privacidad')),
@@ -186,13 +195,29 @@ class ConsentScreen extends ConsumerWidget {
                           color: Theme.of(context).colorScheme.error)),
                 ),
               ],
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              Semantics(
+                label:
+                    'Consentimiento para inteligencia artificial: diagnóstico por foto y chat',
+                child: CheckboxListTile(
+                  value: _aiConsent,
+                  onChanged: (v) =>
+                      setState(() => _aiConsent = v ?? false),
+                  title: const Text(
+                      'Acepto el uso de IA en mis diagnósticos y chat'),
+                  subtitle: const Text(
+                      'Opcional. Sin esto, la IA responde con error y el resto funciona igual.'),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(height: 16),
               FilledButton(
                 style: FilledButton.styleFrom(
                     minimumSize: const Size(double.infinity, 48)),
                 onPressed: () => ref
                     .read(authControllerProvider.notifier)
-                    .grantConsent(true),
+                    .grantConsent(true, aiConsent: _aiConsent),
                 child: const Text('Acepto el uso de mis datos'),
               ),
               const SizedBox(height: 8),

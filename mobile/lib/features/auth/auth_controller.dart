@@ -158,9 +158,9 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<void> grantConsent(bool granted) async {
+  Future<void> grantConsent(bool granted, {bool? aiConsent}) async {
     try {
-      await _repo.setConsent(granted);
+      await _repo.setConsent(granted, aiConsent: aiConsent);
       final store = ref.read(sessionStoreProvider);
       state = AuthState(
         status: AuthStatus.authenticated,
