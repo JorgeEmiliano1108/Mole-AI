@@ -375,20 +375,31 @@ def system_events_view(request):
     push_ambient_alerts(tele, ambients)
     events["telemetry"] = tele[:10]
 
-    for svc, url in (("ms1_vision", "http://ms1_vision:8001/metrics"),
-                     ("ms2_chat", "http://ms2_chat:8002/metrics"),
-                     ("ms3_reports", "http://ms3_reports:8003/metrics")):
-        try:
-            r = requests.get(url, timeout=2)
-            if r.status_code != 200:
-                raise ValueError(f"HTTP {r.status_code}")
-            events["services"].append({"tipo": "info", "service": svc, "status": "up"})
-        except Exception as exc:
-            logger.warning("system-events probe %s falló: %s", svc, exc)
-            events["services"].append({"tipo": "error", "service": svc,
-                                       "status": "down", "msg": f"{svc} inalcanzable"})
+    from concurrent.futures import ThreadPoolExecutor
+
+    probes = (("ms1_vision", "http://ms1_vision:8001/metrics"),
+              ("ms2_chat", "http://ms2_chat:8002/metrics"),
+              ("ms3_reports", "http://ms3_reports:8003/metrics"))
+    # Paralelo: la resolución DNS de un MS caído tarda segundos y getaddrinfo
+    # no respeta timeouts; en serie el portal tardaría ~24 s (issue N-4).
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for result in pool.map(lambda p: _probe_service(*p), probes):
+            events["services"].append(result)
 
     return Response(events)
+
+
+def _probe_service(svc, url):
+    """Probe único con timeout corto; NUNCA bloquea el portal."""
+    try:
+        r = requests.get(url, timeout=2)
+        if r.status_code != 200:
+            raise ValueError(f"HTTP {r.status_code}")
+        return {"tipo": "info", "service": svc, "status": "up"}
+    except Exception as exc:
+        logger.warning("system-events probe %s falló: %s", svc, exc)
+        return {"tipo": "error", "service": svc,
+                "status": "down", "msg": f"{svc} inalcanzable"}
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
