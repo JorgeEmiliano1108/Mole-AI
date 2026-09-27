@@ -1,0 +1,20 @@
+[
+  {
+    "id": "lophophora_williamsii",
+    "scientific_name": "Lophophora williamsii",
+    "common_names": ["Peyote", "Jícore"],
+    "protection_status": "endangered",
+    "category": "P",
+    "source_url": "https://www.gob.mx/semarnat/documentos/nom-059-semarnat-2010",
+    "warning": "Especie protegida por la NOM-059-SEMARNAT. La extracción, tráfico o daño de esta planta está penado conforme a la LGEEPA."
+  },
+  {
+    "id": "mammillaria_herrerae",
+    "scientific_name": "Mammillaria herrerae",
+    "common_names": ["Biznaga", "Cacto arcoíris"],
+    "protection_status": "threatened",
+    "category": "A",
+    "source_url": "https://www.gob.mx/semarnat/documentos/nom-059-semarnat-2010",
+    "warning": "Especie amenazada bajo la NOM-059-SEMARNAT. Está prohibida su recolección, comercialización o daño en medio silvestre."
+  }
+]

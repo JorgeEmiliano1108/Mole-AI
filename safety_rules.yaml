@@ -1,0 +1,56 @@
+# =============================================================================
+# Mole.AI Safety Rules v1
+# Directivas booleanas del motor de validación de dominio legal.
+# =============================================================================
+
+version: "1.0.0"
+last_updated: "2026-09-27"
+applicable_regulations:
+  - "NOM-059-SEMARNAT-2010"
+  - "LGEEPA"
+  - "Ley Federal de Sanidad Vegetal"
+
+directives:
+  block_on_max_dose_exceeded: true
+  block_on_max_applications_exceeded: true
+  block_on_missing_agrochemical_data: true
+  block_on_nom059_protected: true
+  block_on_unauthorized_combination: true
+  block_on_restricted_crop: true
+  log_all_safety_blocks: true
+  fallback_block_when_data_missing: true
+
+  # Código HTTP estándar para bloqueos de seguridad (Forbidden).
+  safety_response_code: 403
+
+  # Longitud máxima permitida para el campo pvu_reason cuando se adjunta
+  # contexto de bloqueo.
+  max_allowed_reason_length: 512
+
+  # Acción por defecto cuando no se puede determinar la seguridad:
+  # "block" = rechazo seguro (fail-closed); "warn" = solo advertencia.
+  default_action: "block"
+
+unauthorized_combinations:
+  - agrochemical_ids:
+      - "sulfato_de_cobre"
+      - "caldo_borholes"
+    reason: "Mezcla inactivada por incompatibilidad química."
+  - agrochemical_ids:
+      - "glifosato_isopropilamina"
+      - "paraquat"
+    reason: "Sinergia toxológica no permitida."
+
+# Lista de regiones donde cualquier agroquímico del catálogo queda bloqueado
+# por defecto (capa de seguridad geográfica adicional).
+forbidden_regions_global:
+  - "área natural protegida federal"
+  - "zona núcleo de reserva de la biosfera"
+
+# Mapeo de códigos de error internos a mensajes de respuesta.
+error_codes:
+  SAFETY_DOSE_EXCEEDED: "La dosis solicitada excede el límite regulatorio."
+  SAFETY_APPLICATIONS_EXCEEDED: "Se excede el número máximo de aplicaciones por ciclo."
+  SAFETY_NOM059_PROTECTED: "Especie protegida por NOM-059-SEMARNAT."
+  SAFETY_UNAUTHORIZED_COMBINATION: "Combinación de agroquímicos no autorizada."
+  SAFETY_DATA_MISSING: "Faltan datos de seguridad; el recurso ha sido bloqueado por política."

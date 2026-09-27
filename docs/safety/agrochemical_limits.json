@@ -1,0 +1,30 @@
+[
+  {
+    "id": "sulfato_de_cobre",
+    "name": "Sulfato de cobre",
+    "active_ingredient": "Sulfato de cobre pentahidratado",
+    "category": "fungicide",
+    "max_dose_per_hectare": 2500,
+    "unit": "g/ha",
+    "max_applications_per_cycle": 4,
+    "reentry_interval_hours": 24,
+    "phi_days": 14,
+    "restricted_crops": ["tomate en invernadero orgánico"],
+    "forbidden_regions": ["zona de recarga de acuíferos"],
+    "notes": "No mezclar con productos alcalinos. Ejemplo de esqueleto validable."
+  },
+  {
+    "id": "glifosato_isopropilamina",
+    "name": "Glifosato (sal isopropilamina)",
+    "active_ingredient": "Glifosato",
+    "category": "herbicide",
+    "max_dose_per_hectare": 2.0,
+    "unit": "l/ha",
+    "max_applications_per_cycle": 2,
+    "reentry_interval_hours": 12,
+    "phi_days": 7,
+    "restricted_crops": ["maíz nativo", "áreas orgánicas certificadas"],
+    "forbidden_regions": ["zonas vedadas por CONABIO"],
+    "notes": "Uso restringido en cultivos sensibles. Ejemplo de esqueleto validable."
+  }
+]
