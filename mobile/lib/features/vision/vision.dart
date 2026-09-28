@@ -52,23 +52,42 @@ class Diagnosis {
 }
 
 class VisionStatus {
-  VisionStatus(
-      {required this.status, this.state, this.diagnosis, this.error, this.info});
+  VisionStatus({
+    required this.status,
+    this.state,
+    this.diagnosis,
+    this.error,
+    this.info,
+    this.isSafetyBlocked = false,
+    this.safetyCode,
+    this.safetyReason,
+  });
 
   factory VisionStatus.fromJson(Map<String, dynamic> j) {
     final result = j['result'];
     Map<String, dynamic>? diagJson;
+    bool blocked = false;
+    String? safetyCode;
+    String? safetyReason;
     if (result is Map<String, dynamic>) {
+      blocked = result['blocked'] == true;
+      final sb = result['safety_block'];
+      if (sb is Map<String, dynamic>) {
+        safetyCode = sb['code']?.toString();
+        safetyReason = sb['reason']?.toString();
+      }
       final d = result['diagnosis'];
       if (d is Map<String, dynamic>) diagJson = d;
     }
     return VisionStatus(
       status: '${j['status']}',
       state: j['state'] as String?,
-      diagnosis:
-          diagJson != null ? Diagnosis.fromJson(diagJson) : null,
+      diagnosis: diagJson != null ? Diagnosis.fromJson(diagJson) : null,
       error: j['error']?.toString(),
       info: j['info']?.toString(),
+      isSafetyBlocked: blocked,
+      safetyCode: safetyCode,
+      safetyReason: safetyReason,
     );
   }
 
@@ -77,10 +96,13 @@ class VisionStatus {
   final Diagnosis? diagnosis;
   final String? error;
   final String? info;
+  final bool isSafetyBlocked;
+  final String? safetyCode;
+  final String? safetyReason;
 
   bool get isPending => status == 'pending';
-  bool get isSuccess => status == 'success';
-  bool get isFailure => status == 'failure';
+  bool get isSuccess => status == 'success' && !isSafetyBlocked;
+  bool get isFailure => status == 'failure' || isSafetyBlocked;
 }
 
 class VisionRepository {

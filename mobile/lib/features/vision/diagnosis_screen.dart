@@ -110,6 +110,16 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
     final status =
         await ref.read(visionRepositoryProvider).pollStatus(taskId);
     if (!mounted) return;
+
+    if (status.isSafetyBlocked) {
+      setState(() {
+        _phase = 'done';
+        _status = status;
+        _message = null;
+      });
+      return;
+    }
+
     setState(() {
       _phase = status.isFailure ? 'error' : 'done';
       _status = status;
@@ -292,10 +302,19 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
                       setState(() => _phase = null),
                   child: const Text('Reintentar')),
             ],
-            if (_phase == 'done' && (_edge != null || d != null))
+            if (_phase == 'done' &&
+                (_edge != null || d != null || _status?.isSafetyBlocked == true))
               Expanded(
                 child: ListView(
                   children: [
+                    if (_status?.isSafetyBlocked == true) ...[
+                      SafetyBlockBanner(
+                        reason: _status!.safetyReason ??
+                            'Contenido bloqueado por seguridad.',
+                        code: _status!.safetyCode,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     if (_edge != null) ...[
                       Chip(
                         avatar: const Icon(Icons.memory, size: 18),
