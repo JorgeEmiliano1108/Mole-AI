@@ -1,12 +1,35 @@
-import os
+import json
 import logging
-import requests
+import os
 import time
+
+import requests
 from celery import shared_task
-from celery.exceptions import Retry, MaxRetriesExceededError
 from django.conf import settings
 
+from apps.core.services.safety_validator import SafetyValidator
+
 logger = logging.getLogger(__name__)
+
+
+def _log_safety_block(*, user_id, safety_result, task_id, source):
+    """Persiste un bloqueo de seguridad en AuditLog (append-only)."""
+    from apps.core.models import AuditLog
+
+    AuditLog.objects.create(
+        user_id=user_id,
+        action=f"SAFETY_BLOCK_{safety_result.code}",
+        details=json.dumps(
+            {
+                "source": source,
+                "task_id": task_id,
+                "code": safety_result.code,
+                "reason": safety_result.reason,
+            },
+            default=str,
+        ),
+    )
+
 
 # --- TAREA DE LIMPIEZA AUTOMÁTICA (GARBAGE COLLECTOR) ---
 @shared_task(name="cleanup_temp_files")
@@ -29,7 +52,7 @@ def cleanup_temp_files():
             try:
                 os.remove(f_path)
                 deleted_count += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(f"Error deleting temp file {f_path}: {e}")
 
     return f"Cleanup finished. Deleted {deleted_count} files."
@@ -59,7 +82,7 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
     Guarda resultado en AIDiagnostic para trazabilidad.
     """
     import uuid
-    from django.utils import timezone
+
     
     try:
         if not os.path.exists(file_path):
@@ -78,15 +101,34 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
             response.raise_for_status()
         
         result = response.json()
-        
+
+        # Gate de dominio legal: escanear JSON completo de MS1 (fail-closed).
+        safety = SafetyValidator().validate({"text": json.dumps(result)})
+        if not safety.safe:
+            _log_safety_block(
+                user_id=user_id,
+                safety_result=safety,
+                task_id=self.request.id,
+                source="vision",
+            )
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            return {
+                "blocked": True,
+                "safety_block": {
+                    "code": safety.code,
+                    "reason": safety.reason,
+                },
+            }
+
         # Guardar resultado en base de datos (trazabilidad LFPDPPP)
         if user_id:
             try:
-                from apps.core.models import AIDiagnostic
                 from apps.authentication.models import User
-                
+                from apps.core.models import AIDiagnostic
+
                 user = User.objects.get(id=user_id)
-                
+
                 diagnostic = AIDiagnostic.objects.create(
                     user=user,
                     plant_id=plant_id or uuid.uuid4(),
@@ -101,10 +143,10 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
                     }
                 )
                 logger.info(f"AIDiagnostic saved: {diagnostic.id} for user {user_id}")
-                
+
                 # Agregar task_id al resultado para polling
                 result["diagnostic_id"] = str(diagnostic.id)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.error(f"Failed to save AIDiagnostic: {e}")
 
         if os.path.exists(file_path): os.remove(file_path)
@@ -129,6 +171,7 @@ def train_vision_async(self, datasets_info):
     datasets_info: list of dicts with 'path', 'name', 'type'
     """
     import json as _json
+
     import redis as _redis
     from django.conf import settings as _settings
 
