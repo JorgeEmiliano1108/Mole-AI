@@ -288,3 +288,19 @@ Cambios vs v1.0: RF-07 backend y RNF-07 backend pasan a ✅/⚠️ (validación 
 | H4-06 | Flutter renderiza `SafetyBlockBanner` ante bloqueo de visión | ✅ | `mobile/lib/features/vision/vision.dart`, `mobile/lib/features/vision/diagnosis_screen.dart`, `mobile/test/vision_safety_block_test.dart` |
 | H4-07 | Cobertura backend ≥ 80% y linters limpios | ✅ | 245 passed, 83.32% coverage; ruff limpio en archivos tocados |
 | H4-08 | Tests Flutter verdes | ✅ | 129 passed; `flutter analyze` solo infos preexistentes en `admin.dart` |
+
+---
+
+## Adenda 2026-09-28 — Hito 5: Seguridad en Interacciones Generativas (Chat RAG)
+
+| ID | Claim | Veredicto | Evidencia |
+|---|---|---|---|
+| H5-01 | Módulo `safety_audit.py` centraliza `log_safety_block` reutilizable | ✅ | `apps/core/services/safety_audit.py`; refactor de visión sin regresiones |
+| H5-02 | Safety gate en `llm_chat_view` (síncrono) post-MS2, pre-persistencia | ✅ | `apps/core/views.py:607-680`, 403 + `AuditLog(source='chat')` |
+| H5-03 | Safety gate en `chat_async` (fallback asíncrono) | ✅ | `apps/core/tasks.py:87-148`, retorna `{blocked, safety_block}` |
+| H5-04 | Red-Team chat: respuesta con "peyote" → 403 + AuditLog + 0 `LLMRequest` | ✅ | `apps/core/tests/test_chat_safety_gate.py` |
+| H5-05 | Respuesta segura → 200 + `LLMRequest` + 0 AuditLog safety | ✅ | `apps/core/tests/test_chat_safety_gate.py` |
+| H5-06 | Flutter mapea 403 a turno de chat con `SafetyBlockBanner` | ✅ | `mobile/lib/features/chat/chat.dart`, `mobile/lib/features/chat/chat_screen.dart`, `mobile/test/chat_safety_block_test.dart` |
+| H5-07 | Contrato actualizado: 403 de chat en `mobile-contract.md` y `openapi.yml` | ✅ | `docs/mobile-contract.md §6`, `docs/contracts/openapi.yml:883` |
+| H5-08 | Cobertura backend ≥ 80% y linters limpios | ✅ | 252 passed, 84.11% coverage; ruff limpio |
+| H5-09 | Tests Flutter verdes | ✅ | 134 passed; `flutter analyze` solo infos preexistentes |

@@ -1,6 +1,6 @@
 # 05-cierre-auditoria
 
-Status: pending
+Status: completed
 
 ## Título
 Cierre Hito 5: contrato, ADR, audit-matrix y tabla Pasa/Falla
