@@ -273,3 +273,18 @@ Cambios vs v1.0: RF-07 backend y RNF-07 backend pasan a ✅/⚠️ (validación 
 5. **Hallazgo ambiental**: Django 4.2 no renderiza templates en Python 3.14
    (`Context.__copy__`; verificado OK en 3.12 de CI/compose) → tests de render
    admin con `skipif`, permisos validados sin render en local.
+
+---
+
+## Adenda 2026-09-27 — Hito 4: Trazabilidad y Cierre de Seguridad
+
+| ID | Claim | Veredicto | Evidencia |
+|---|---|---|---|
+| H4-01 | `AuditLog` append-only a nivel ORM (update/delete/bulk lanzan excepción) | ✅ | `apps/core/models.py:204-230`, `apps/core/tests/test_auditlog_append_only.py` |
+| H4-02 | `AuditLog` inmutable a nivel de base de datos (trigger PG) | ✅ | `apps/core/migrations/0016_auditlog_immutable_trigger.py`, raw SQL UPDATE/DELETE lanza en tests |
+| H4-03 | Safety gate post-inferencia en worker Celery sin acoplar MS1 | ✅ | `apps/ai_models/tasks.py:80-110`, validación dentro de `analyze_vision_async` |
+| H4-04 | Bloqueo NOM-059 en visión genera `AuditLog` y no persiste `AIDiagnostic` | ✅ | `apps/ai_models/tests/test_vision_safety_gate.py` |
+| H4-05 | Contrato de polling extiende `result.blocked` + `result.safety_block` | ✅ | `docs/mobile-contract.md §5`, `docs/contracts/openapi.yml:344` |
+| H4-06 | Flutter renderiza `SafetyBlockBanner` ante bloqueo de visión | ✅ | `mobile/lib/features/vision/vision.dart`, `mobile/lib/features/vision/diagnosis_screen.dart`, `mobile/test/vision_safety_block_test.dart` |
+| H4-07 | Cobertura backend ≥ 80% y linters limpios | ✅ | 245 passed, 83.32% coverage; ruff limpio en archivos tocados |
+| H4-08 | Tests Flutter verdes | ✅ | 129 passed; `flutter analyze` solo infos preexistentes en `admin.dart` |

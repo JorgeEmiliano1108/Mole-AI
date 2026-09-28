@@ -1,6 +1,6 @@
 # 04-cierre-auditoria
 
-Status: pending
+Status: completed
 
 ## Título
 Cierre Hito 4: ADR, audit-matrix y tabla Pasa/Falla
