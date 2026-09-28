@@ -118,6 +118,10 @@ Nodos en deep-sleep: `last_seen_delta_seconds` + `status` gobiernan la UI ("durm
    severity:low|medium|high|critical, confidence 0-1, ph_predicted 0-14,
    immediate_actions[], disclaimer}`. Si `result` no trae `diagnosis`, la UI
    muestra `state/info` sin inventar campos.
+   **Bloqueo de seguridad (Hito 4):** si el SafetyValidator detecta una especie
+   protegida por NOM-059 en la respuesta de MS1, `result.blocked=true` y
+   `result.safety_block={code, reason}`; la UI debe renderizar el banner rojo
+   (`SafetyBlockBanner`) y no persistir el diagnóstico localmente.
 3. `GET diagnostics/history/?limit=20` → `{results:[{id,plant_id,condition,analyzed_at}]}`;
    `GET diagnostics/<id>/download/` → `202 {task_id, poll_url:/api/v1/tasks/status/<id>/}`.
 4. Fallo MS1 (caída NVIDIA): `status:failure + error` explícito — la UI lo muestra,

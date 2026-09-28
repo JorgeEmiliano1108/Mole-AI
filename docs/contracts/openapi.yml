@@ -348,6 +348,8 @@ paths:
         Contrato unificado con `task_status_view` (core): `status` minúsculas
         (pending|success|failure) + `state` crudo Celery + `result`/`error`/`info`
         serializados. Los clientes (web/Flutter) leen `status`.
+        Si el SafetyValidator bloquea la inferencia (NOM-059), `result.blocked=true`
+        y `result.safety_block` contiene `code` y `reason`.
       parameters:
       - in: path
         name: task_id
@@ -358,7 +360,40 @@ paths:
       - v1
       responses:
         '200':
-          description: No response body
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [pending, success, failure]
+                  state:
+                    type: string
+                  result:
+                    type: object
+                    nullable: true
+                    properties:
+                      blocked:
+                        type: boolean
+                      safety_block:
+                        type: object
+                        nullable: true
+                        properties:
+                          code:
+                            type: string
+                          reason:
+                            type: string
+                      diagnosis:
+                        type: object
+                        nullable: true
+                  error:
+                    type: string
+                    nullable: true
+                  info:
+                    type: string
+                    nullable: true
   /api/v1/auth/consent/:
     post:
       operationId: v1_auth_consent_create
