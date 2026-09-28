@@ -138,6 +138,10 @@ Nodos en deep-sleep: `last_seen_delta_seconds` + `status` gobiernan la UI ("durm
 
 - **Chat:** `POST llm/chat/` `{question|message|prompt}` sync → `{response,sources,disclaimer}`
   (`core/views.py:521-570`, 60/min) + `GET chat/history/`; disclaimer COFEPRIS obligatorio.
+  **Bloqueo de seguridad (Hito 5):** si la respuesta del LLM menciona una especie
+  protegida por NOM-059 o un agroquímico catalogado, el endpoint responde `403`
+  con `{error, code, source: 'chat'}`; la UI renderiza un `SafetyBlockBanner` en
+  el historial y no guarda el turno en `LLMRequest`.
 - **Mapa:** `GET map/hotspots/` (`IsAuthenticated`, `{hotspots:[{lat,lng,severity,species}]}`,
   `core/views.py:401-417`) + `GET weather/current/?lat&lon` (público) + tiles
   `GET weather/tile/<layer>/<z>/<x>/<y>.png` (público; `core/views.py:419-457`).

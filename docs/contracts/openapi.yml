@@ -883,11 +883,43 @@ paths:
   /api/v1/llm/chat/:
     post:
       operationId: v1_llm_chat_create
+      description: |-
+        Chat RAG síncrono vía MS2. Si la respuesta del LLM viola una regla de
+        seguridad (NOM-059 o agroquímico catalogado), retorna 403 con
+        `{error, code, source: 'chat'}` en lugar del mensaje del asistente.
       tags:
       - v1
       responses:
         '200':
-          description: No response body
+          description: Respuesta segura del asistente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  sources:
+                    type: array
+                    items:
+                      type: object
+                  disclaimer:
+                    type: string
+                    nullable: true
+        '403':
+          description: Bloqueo de seguridad
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                  source:
+                    type: string
+                    enum: [chat]
   /api/v1/map/hotspots/:
     get:
       operationId: v1_map_hotspots_retrieve
