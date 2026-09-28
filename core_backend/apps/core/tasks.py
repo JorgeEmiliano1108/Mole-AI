@@ -14,6 +14,8 @@ from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
+from apps.core.services.safety_audit import log_safety_block
+from apps.core.services.safety_validator import SafetyValidator
 from apps.plants.models import UserPlant
 
 
@@ -40,8 +42,9 @@ def generate_master_report_task(user_id=None):
     os.makedirs(media_dir, exist_ok=True)
     file_path = os.path.join(media_dir, report_filename)
 
-    from apps.core.models import SensorLog
     from django.db.models import Avg
+
+    from apps.core.models import SensorLog
 
     aggs = SensorLog.objects.aggregate(
         avg_hum=Avg("soil_humidity"),
@@ -100,8 +103,8 @@ def chat_async(self, question, user_id, session_id):
     in the database — never forwarded to external services in clear.
     """
     import logging
+
     from asgiref.sync import async_to_sync
-    from django.utils import timezone
 
     logger = logging.getLogger(__name__)
 
@@ -114,6 +117,23 @@ def chat_async(self, question, user_id, session_id):
             user_id=user_id,
             session_id=session_id,
         )
+
+        # Gate de seguridad sobre la salida del LLM (fail-closed).
+        safety = SafetyValidator().validate({"text": result.get("respuesta")})
+        if not safety.safe:
+            log_safety_block(
+                user_id=user_id,
+                safety_result=safety,
+                task_id=self.request.id,
+                source="chat_fallback",
+            )
+            return {
+                "blocked": True,
+                "safety_block": {
+                    "code": safety.code,
+                    "reason": safety.reason,
+                },
+            }
 
         logger.info(
             "chat_async_completed",
@@ -164,9 +184,8 @@ def generate_pdf_async(self, diagnostic_id, user_id):
 
     user_id is hashed for the S3 key — no PII in object storage.
     """
-    import io
     import logging
-    from django.utils import timezone
+
 
     logger = logging.getLogger(__name__)
 
@@ -230,7 +249,7 @@ def generate_pdf_async(self, diagnostic_id, user_id):
             "s3_key": s3_key,
         }
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.error(
             "generate_pdf_async_failed",
             extra={
@@ -255,7 +274,9 @@ def check_device_liveness():
     """
     import logging
     from datetime import timedelta
+
     from django.utils import timezone
+
     from apps.core.models import Device
 
     logger = logging.getLogger(__name__)
@@ -303,12 +324,18 @@ def downsample_telemetry():
     """
     import logging
     from datetime import timedelta
-    from django.utils import timezone
-    from django.db.models import Avg, Min, Max, Count
+
+    from django.db.models import Avg, Count, Max, Min
     from django.db.models.functions import TruncHour
+    from django.utils import timezone
+
     from apps.core.models import (
-        Device, SoilReading, AmbientReading,
-        HourlySoilAggregate, HourlyAmbientAggregate, HardwareBinding,
+        AmbientReading,
+        Device,
+        HardwareBinding,
+        HourlyAmbientAggregate,
+        HourlySoilAggregate,
+        SoilReading,
     )
 
     logger = logging.getLogger(__name__)
@@ -395,12 +422,17 @@ def archive_telemetry_to_s3():
     import logging
     import tempfile
     from datetime import timedelta
-    from django.utils import timezone
-    from django.conf import settings as django_settings
+
     import boto3
+    from django.conf import settings as django_settings
+    from django.utils import timezone
+
     from apps.core.models import (
-        Device, SoilReading, AmbientReading,
-        HardwareBinding, TelemetryArchive,
+        AmbientReading,
+        Device,
+        HardwareBinding,
+        SoilReading,
+        TelemetryArchive,
     )
 
     logger = logging.getLogger(__name__)
@@ -492,11 +524,17 @@ def purge_raw_telemetry():
     """
     import logging
     from datetime import timedelta
-    from django.utils import timezone
+
     from django.db import transaction
+    from django.utils import timezone
+
     from apps.core.models import (
-        Device, SoilReading, AmbientReading,
-        HardwareBinding, TelemetryArchive, AuditLog,
+        AmbientReading,
+        AuditLog,
+        Device,
+        HardwareBinding,
+        SoilReading,
+        TelemetryArchive,
     )
 
     logger = logging.getLogger(__name__)
