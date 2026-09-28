@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mole_ai/core/errors.dart';
+import 'package:mole_ai/core/safety_block_banner.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
 import 'package:mole_ai/features/chat/chat.dart';
 import 'package:mole_ai/features/chat/chat_sources.dart';
@@ -129,24 +130,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(t.answer.response),
-                                        if (t.answer.sources.isNotEmpty)
-                                          TextButton.icon(
-                                            onPressed: () =>
-                                                ChatSourcesSheet.show(context,
-                                                    t.answer.sources),
-                                            icon: const Icon(
-                                                Icons.library_books_outlined,
-                                                size: 18),
-                                            label: Text(
-                                                'Fuentes (${t.answer.sources.length})'),
-                                          ),
-                                        if (t.answer.disclaimer != null) ...[
-                                          const SizedBox(height: 6),
-                                          Text(t.answer.disclaimer!,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall),
+                                        if (t.answer.isSafetyBlocked)
+                                          SafetyBlockBanner(
+                                            reason: t.answer.safetyReason ??
+                                                'Contenido bloqueado por seguridad.',
+                                            code: t.answer.safetyCode,
+                                          )
+                                        else ...[
+                                          Text(t.answer.response),
+                                          if (t.answer.sources.isNotEmpty)
+                                            TextButton.icon(
+                                              onPressed: () =>
+                                                  ChatSourcesSheet.show(context,
+                                                      t.answer.sources),
+                                              icon: const Icon(
+                                                  Icons.library_books_outlined,
+                                                  size: 18),
+                                              label: Text(
+                                                  'Fuentes (${t.answer.sources.length})'),
+                                            ),
+                                          if (t.answer.disclaimer != null) ...[
+                                            const SizedBox(height: 6),
+                                            Text(t.answer.disclaimer!,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall),
+                                          ],
                                         ],
                                       ],
                                     ),
