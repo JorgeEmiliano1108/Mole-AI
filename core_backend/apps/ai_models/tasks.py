@@ -7,28 +7,10 @@ import requests
 from celery import shared_task
 from django.conf import settings
 
+from apps.core.services.safety_audit import log_safety_block
 from apps.core.services.safety_validator import SafetyValidator
 
 logger = logging.getLogger(__name__)
-
-
-def _log_safety_block(*, user_id, safety_result, task_id, source):
-    """Persiste un bloqueo de seguridad en AuditLog (append-only)."""
-    from apps.core.models import AuditLog
-
-    AuditLog.objects.create(
-        user_id=user_id,
-        action=f"SAFETY_BLOCK_{safety_result.code}",
-        details=json.dumps(
-            {
-                "source": source,
-                "task_id": task_id,
-                "code": safety_result.code,
-                "reason": safety_result.reason,
-            },
-            default=str,
-        ),
-    )
 
 
 # --- TAREA DE LIMPIEZA AUTOMÁTICA (GARBAGE COLLECTOR) ---
@@ -105,7 +87,7 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
         # Gate de dominio legal: escanear JSON completo de MS1 (fail-closed).
         safety = SafetyValidator().validate({"text": json.dumps(result)})
         if not safety.safe:
-            _log_safety_block(
+            log_safety_block(
                 user_id=user_id,
                 safety_result=safety,
                 task_id=self.request.id,

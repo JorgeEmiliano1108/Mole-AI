@@ -84,6 +84,7 @@ from .serializers import (
     SensorDataPatchSerializer,
     SensorReadingSerializer,
 )
+from .services.safety_audit import log_safety_block
 from .services.safety_validator import SafetyValidator
 from .throttles import DiagnosticsThrottle, LLMChatThrottle, SensorDataThrottle
 
@@ -644,8 +645,22 @@ def llm_chat_view(request):
         )
         response.raise_for_status()
         data = response.json()
-        ai_response = data.get("respuesta", "Sin respuesta.")
-        
+        ai_response = data.get("respuesta") or "Sin respuesta."
+
+        # Gate de seguridad sobre la salida del LLM (fail-closed).
+        safety = SafetyValidator().validate({"text": ai_response})
+        if not safety.safe:
+            log_safety_block(
+                user_id=request.user.id,
+                safety_result=safety,
+                task_id=None,
+                source="chat",
+            )
+            return Response(
+                {"error": safety.reason, "code": safety.code, "source": "chat"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         # Guardar en el historial de Django
         LLMRequest.objects.create(
             user=request.user,

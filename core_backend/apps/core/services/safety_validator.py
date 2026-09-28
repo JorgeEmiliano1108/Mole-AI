@@ -144,6 +144,37 @@ class SafetyValidator:
                     )
         return SafetyResult.ok()
 
+    def check_agrochemical_mention(self, text: str | None) -> SafetyResult:
+        """Detecta menciones a agroquímicos catalogados en texto libre.
+
+        Capa fail-closed para respuestas generativas (chat RAG) donde no se
+        dispone de un `agrochemical_id` estructurado. Bloquea cualquier
+        mención de nombre comercial o ingrediente activo conocido.
+        """
+        if not text:
+            return SafetyResult.ok()
+
+        normalized = self._normalize(text)
+        for item in self.agrochemicals.values():
+            needles = {
+                self._normalize(item["name"]),
+                self._normalize(item["active_ingredient"]),
+                self._normalize(item["id"].replace("_", " ")),
+            }
+            for needle in needles:
+                if len(needle) >= 3 and needle in normalized:
+                    return SafetyResult(
+                        safe=False,
+                        code="SAFETY_AGROCHEMICAL_MENTION",
+                        reason=(
+                            f"El texto menciona '{item['name']}', un agroquímico "
+                            "catalogado. Las recomendaciones de agroquímicos requieren "
+                            "validación estructurada de dosis y cultivo."
+                        ),
+                        status_code=self._block_code,
+                    )
+        return SafetyResult.ok()
+
     def validate_agrochemical(
         self,
         agrochemical_id: str | None,
@@ -243,6 +274,10 @@ class SafetyValidator:
         """Punto de entrada genérico. Evalua texto NOM-059 y agroquímicos."""
         text = payload.get("text") or payload.get("reason") or payload.get("pvu_reason")
         result = self.check_nom059_violation(text)
+        if not result.safe:
+            return result
+
+        result = self.check_agrochemical_mention(text)
         if not result.safe:
             return result
 
