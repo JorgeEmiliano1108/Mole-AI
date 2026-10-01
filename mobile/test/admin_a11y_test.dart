@@ -77,6 +77,26 @@ void main() {
       expect(find.text('Sin usuarios.'), findsOneWidget);
       expect(t.takeException(), isNull);
     });
+
+    testWidgets('renderiza sin Scaffold externo (como lo monta el router)',
+        (t) async {
+      // Regresión por Issue 08: la pantalla negra en dispositivo se debió a
+      // que UsersScreen no tenía Scaffold propio. En test se reproducía solo
+      // si no se envolvía con Scaffold.
+      await t.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+              useMaterial3: true),
+          home: usersScope(const UsersScreen()),
+        ),
+      );
+      await t.pumpAndSettle();
+      expect(find.text('Usuarios'), findsOneWidget);
+      expect(find.text('Buscar usuario o correo'), findsOneWidget);
+      expect(find.text('Sin usuarios.'), findsOneWidget);
+      expect(t.takeException(), isNull);
+    });
   });
 
   group('KnowledgeScreen a11y', () {

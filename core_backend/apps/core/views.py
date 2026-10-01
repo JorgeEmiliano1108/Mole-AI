@@ -385,8 +385,9 @@ def diagnostic_view(request):
              "code": "CONSENT_REQUIRED"},
             status=status.HTTP_403_FORBIDDEN,
         )
-    from apps.ai_models.tasks import analyze_vision_async
     from utils.uploads import safe_temp_path
+
+    from apps.ai_models.tasks import analyze_vision_async
 
     serializer = DiagnosticRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)

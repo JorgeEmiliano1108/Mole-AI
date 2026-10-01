@@ -13,7 +13,7 @@ class AdminViewsTests(APITestCase):
         self.client.force_authenticate(user=self.admin)
 
     def test_statistics_shape(self):
-        resp = self.client.get('/api/v1/admin/statistics')
+        resp = self.client.get('/api/v1/admin/statistics/')
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
         for k in ('users', 'regs', 'health', 'total_plants'):
@@ -24,7 +24,7 @@ class AdminViewsTests(APITestCase):
     def test_statistics_forbidden_botanist(self):
         self.client.force_authenticate(user=self.bot)
         self.assertEqual(
-            self.client.get('/api/v1/admin/statistics').status_code, 403)
+            self.client.get('/api/v1/admin/statistics/').status_code, 403)
 
     def test_users_crud(self):
         # create
@@ -64,5 +64,5 @@ class AdminViewsTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
 
     def test_report_text(self):
-        resp = self.client.get('/api/v1/admin/report-text')
+        resp = self.client.get('/api/v1/admin/report-text/')
         self.assertEqual(resp.status_code, 200)

@@ -210,10 +210,10 @@ class AdminRepository {
   final ApiClient _api;
 
   Future<SystemMetrics> statistics() async =>
-      SystemMetrics.fromJson(await _api.getJson('admin/statistics'));
+      SystemMetrics.fromJson(await _api.getJson('admin/statistics/'));
 
   Future<List<Map<String, dynamic>>> liveAlerts() async {
-    final body = await _api.getJson('admin/live-alerts');
+    final body = await _api.getJson('admin/live-alerts/');
     return ((body['alerts'] as List?) ?? const [])
         .whereType<Map<String, dynamic>>()
         .toList();
@@ -221,7 +221,7 @@ class AdminRepository {
 
   /// Centro de fallas (issue N-2): 4 secciones del backend.
   Future<SystemEvents> systemEvents() async =>
-      SystemEvents.fromJson(await _api.getJson('admin/system-events'));
+      SystemEvents.fromJson(await _api.getJson('admin/system-events/'));
 
   /// Flota para el portal (issue N-2). Sin tokens (el backend no los expone).
   Future<List<ManagedDevice>> devices() async {
@@ -233,7 +233,7 @@ class AdminRepository {
 
   /// Auditoría paginada con filtros (issue N-2).
   Future<AuditPage> auditLog({String? action, String? userId}) async =>
-      AuditPage.fromJson(await _api.getJson('admin/audit-log', query: {
+      AuditPage.fromJson(await _api.getJson('admin/audit-log/', query: {
         if (action?.isNotEmpty == true) 'action': action!,
         if (userId?.isNotEmpty == true) 'user_id': userId!,
       }));
@@ -257,7 +257,9 @@ class AdminRepository {
   Future<ManagedUser> updateUser(dynamic id,
       {String? role, bool? isActive}) async {
     final body = await _api.patchJson('admin/users/$id/', data: {
+      // ignore: use_null_aware_elements
       if (role != null) 'role': role,
+      // ignore: use_null_aware_elements
       if (isActive != null) 'is_active': isActive,
     });
     return ManagedUser.fromJson(<String, dynamic>{
@@ -285,6 +287,7 @@ class KnowledgeRepository {
       'original_name': filename,
       'content_type': contentType,
       'file_size': fileSize,
+      // ignore: use_null_aware_elements
       if (category != null) 'category': category,
     });
   }

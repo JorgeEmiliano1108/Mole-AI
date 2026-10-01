@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 
 class AdminIntegrationTests(APITestCase):
@@ -11,7 +11,7 @@ class AdminIntegrationTests(APITestCase):
         self.client = APIClient()
 
     def test_admin_stats_requires_admin(self):
-        url = '/api/v1/admin/statistics'
+        url = '/api/v1/admin/statistics/'
 
         # Unauthenticated should be rejected (401 or 403 depending on config)
         resp = self.client.get(url)
@@ -34,7 +34,7 @@ class AdminIntegrationTests(APITestCase):
         self.assertIn('regs', data)
 
     def test_live_alerts_requires_admin(self):
-        url = '/api/v1/admin/live-alerts'
+        url = '/api/v1/admin/live-alerts/'
 
         # Unauthenticated
         resp = self.client.get(url)

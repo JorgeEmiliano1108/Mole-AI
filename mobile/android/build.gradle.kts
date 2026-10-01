@@ -19,6 +19,10 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Tolerancia a plugins con target JVM distinto (tflite_flutter Java 11 vs app 17);
+// el fix definitivo es alinear todos los subproyectos, pero para el APK debug de
+// prueba se reduce a warning vía kotlin.jvm.target.validation.mode en gradle.properties.
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }

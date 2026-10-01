@@ -194,6 +194,15 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.error)),
                 ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48)),
+                  onPressed: () => ref
+                      .read(authControllerProvider.notifier)
+                      .logout(),
+                  child: const Text('Volver a iniciar sesión'),
+                ),
               ],
               const SizedBox(height: 16),
               Semantics(

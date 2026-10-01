@@ -49,3 +49,25 @@ class TrainingUploadTests(APITestCase):
     def test_list_documents_requires_auth(self):
         resp = self.client.get('/api/v1/training/documents/')
         self.assertIn(resp.status_code, (401, 403))
+
+    def test_list_documents_requires_admin(self):
+        self.client.force_authenticate(user=self.bot)
+        resp = self.client.get('/api/v1/training/documents/')
+        self.assertEqual(resp.status_code, 403)
+
+    def test_list_documents_includes_record_id(self):
+        from apps.training_data.models import TrainingDocument
+        rec = TrainingDocument.objects.create(
+            uploaded_by=self.admin,
+            s3_key='k',
+            s3_bucket='b',
+            original_name='x.pdf',
+            content_type='application/pdf',
+            file_size=1,
+            status='PENDING',
+        )
+        self.client.force_authenticate(user=self.admin)
+        resp = self.client.get('/api/v1/training/documents/')
+        self.assertEqual(resp.status_code, 200)
+        item = resp.json()['results'][0]
+        self.assertEqual(str(item['record_id']), str(rec.id))

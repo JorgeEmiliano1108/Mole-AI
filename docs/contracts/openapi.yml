@@ -266,8 +266,8 @@ paths:
       tags:
       - v1
       responses:
-        '204':
-          description: No response body
+        '200':
+          description: User deactivated successfully
   /api/v1/admin/users/create/:
     post:
       operationId: v1_admin_users_create_create

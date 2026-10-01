@@ -167,6 +167,12 @@ class AuthController extends Notifier<AuthState> {
         role: await store.readRole(),
       );
       _scheduleRefresh();
+    } on UnauthorizedException {
+      // LFPDPPP/ISO 25000: sesión expirada durante el flujo de consentimiento.
+      // No se salta el consentimiento; se cierra sesión y se pide re-login.
+      await ref.read(sessionStoreProvider).clear();
+      _cancelRefresh();
+      state = const AuthState(status: AuthStatus.unauthenticated);
     } on ApiException catch (e) {
       state = state.copyWith(error: e.message);
     }

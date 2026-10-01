@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mole_ai/features/admin/admin.dart';
 import 'package:mole_ai/features/admin/audit_screen.dart';
 import 'package:mole_ai/features/admin/devices_screen.dart';
 import 'package:mole_ai/features/admin/system_events_screen.dart';
@@ -125,6 +126,29 @@ void main() {
       await t.pump(const Duration(milliseconds: 100));
       expect(find.text('INICIO'), findsOneWidget);
       expect(find.text('Centro de fallas'), findsNothing);
+    });
+  });
+
+  group('Contrato trailing slash admin (Issue 10)', () {
+    test('todas las rutas admin usan / final', () async {
+      final paths = <String>[];
+      final api = clientWith(FakeAdapter((o) {
+        paths.add(o.path);
+        return jsonBody({'count': 0, 'results': []}, 200);
+      }));
+      final repo = AdminRepository(api);
+
+      await repo.statistics();
+      await repo.liveAlerts();
+      await repo.systemEvents();
+      await repo.devices();
+      await repo.auditLog();
+      await repo.users();
+
+      for (final p in paths) {
+        expect(p, endsWith('/'),
+            reason: 'La ruta "$p" debe terminar en / por contrato §0');
+      }
     });
   });
 }

@@ -107,7 +107,7 @@ def document_upload_request_view(request):
     except Exception as e:
         logger.exception("document_upload_request_failed")
         return Response(
-            {'error': f'Error generando URL presignada: {str(e)}'},
+            {'error': f'Error generando URL presignada: {e!s}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -174,7 +174,7 @@ def image_upload_request_view(request):
     except Exception as e:
         logger.exception("image_upload_request_failed")
         return Response(
-            {'error': f'Error generando URL presignada: {str(e)}'},
+            {'error': f'Error generando URL presignada: {e!s}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -253,7 +253,7 @@ def upload_confirm_view(request):
     except Exception as e:
         logger.exception("upload_confirm_failed")
         return Response(
-            {'error': f'Error confirmando subida: {str(e)}'},
+            {'error': f'Error confirmando subida: {e!s}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -262,7 +262,7 @@ def upload_confirm_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def list_training_documents_view(request):
     """List all training documents with optional status filter."""
     qs = TrainingDocument.objects.all()
@@ -274,7 +274,7 @@ def list_training_documents_view(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def list_training_images_view(request):
     """List all training images with optional status/disease filter."""
     qs = TrainingImage.objects.all()

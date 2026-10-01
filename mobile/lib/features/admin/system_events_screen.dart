@@ -19,7 +19,7 @@ IconData _icon(String severity) => switch (severity) {
 
 Color _color(String severity, ColorScheme c) => switch (severity) {
       'error' || 'critical' => c.error,
-      'warn' => Colors.orange,
+      'warn' => c.secondary,
       _ => c.primary,
     };
 
@@ -97,10 +97,13 @@ class _SystemEventsScreenState extends ConsumerState<SystemEventsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(e.severity.toUpperCase(),
-                      style: TextStyle(
-                          color: _color(e.severity, scheme),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12)),
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(
+                            color: _color(e.severity, scheme),
+                            fontWeight: FontWeight.bold,
+                          )),
                   if (e.detail.isNotEmpty) Text(e.detail),
                   if (e.timestamp.isNotEmpty) Text(e.timestamp),
                 ],

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/features/admin/admin.dart';
+import 'package:mole_ai/features/admin/admin_error_panel.dart';
 import 'package:mole_ai/features/admin/admin_metrics.dart';
 
 class AuditScreen extends ConsumerStatefulWidget {
@@ -67,7 +68,6 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Auditoría')),
       body: RefreshIndicator(
@@ -100,15 +100,7 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
                   ]),
                 ),
                 if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Semantics(
-                        liveRegion: true,
-                        excludeSemantics: true,
-                        label: 'Error: $_error',
-                        child: Text(_error!,
-                            style: TextStyle(color: scheme.error))),
-                  )
+                  AdminErrorPanel(message: _error!, onRetry: _load)
                 else if (_page.results.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(32),

@@ -64,21 +64,21 @@ urlpatterns = [
     path('safety/validate/', views.safety_validate_view, name='safety_validate'),
 
     # Admin Panel (Estadísticas y Reportes)
-    path('admin/statistics', admin_views.admin_stats_view, name='admin_stats'),
-    path('admin/report-text', admin_views.admin_report_text_view, name='admin_report_text'),
+    path('admin/statistics/', admin_views.admin_stats_view, name='admin_stats'),
+    path('admin/report-text/', admin_views.admin_report_text_view, name='admin_report_text'),
     path('admin/users/create/', admin_views.admin_users_create_view, name='admin_users_create'),
     # Admin usuarios CRUD (issue 16; SuperAdmin o staff queda fuera: IsAdminUser)
     path('admin/users/', admin_views.admin_users_list_view, name='admin_users_list'),
     path('admin/users/<int:user_id>/', admin_views.admin_user_detail_view, name='admin_user_detail'),
-    path('admin/live-alerts', admin_views.live_alerts_view, name='live_alerts'),
-    path('admin/system-events', admin_views.system_events_view, name='system_events'),
-    path('admin/audit-log', admin_views.audit_log_view, name='audit_log'),
+    path('admin/live-alerts/', admin_views.live_alerts_view, name='live_alerts'),
+    path('admin/system-events/', admin_views.system_events_view, name='system_events'),
+    path('admin/audit-log/', admin_views.audit_log_view, name='audit_log'),
     path('admin/devices/', admin_views.admin_devices_view, name='admin_devices'),
-    path('admin/reports/generate', admin_views.master_report_view, name='admin_report_generate'),
-    path('admin/reports/<str:job_id>/status', admin_views.master_report_status_view, name='admin_report_status'),
-    
+    path('admin/reports/generate/', admin_views.master_report_view, name='admin_report_generate'),
+    path('admin/reports/<str:job_id>/status/', admin_views.master_report_status_view, name='admin_report_status'),
+
     # Reportes
-    path('reports/users', admin_views.intercepted_reports_view, name='reports_users'),
+    path('reports/users/', admin_views.intercepted_reports_view, name='reports_users'),
     path('reports/plants', views.sensor_log_view, name='reports_plants'),
 
     # Polling genérico de tareas asíncronas (Fase 2)

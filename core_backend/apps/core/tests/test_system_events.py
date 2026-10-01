@@ -1,10 +1,11 @@
-from apps.core.models import AuditLog, Device
 from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
+from apps.core.models import AuditLog, Device
+
 
 class SystemEventsTests(APITestCase):
-    """GET /api/v1/admin/system-events — solo admin (issue N-0)."""
+    """GET /api/v1/admin/system-events/ — solo admin (issue N-0)."""
 
     def setUp(self):
         User = get_user_model()
@@ -12,12 +13,12 @@ class SystemEventsTests(APITestCase):
         self.bot = User.objects.create_user(username='bot', password='x')
 
     def test_system_events_requires_authentication(self):
-        resp = self.client.get('/api/v1/admin/system-events')
+        resp = self.client.get('/api/v1/admin/system-events/')
         self.assertIn(resp.status_code, (401, 403))
 
     def test_system_events_forbidden_for_botanist(self):
         self.client.force_authenticate(user=self.bot)
-        resp = self.client.get('/api/v1/admin/system-events')
+        resp = self.client.get('/api/v1/admin/system-events/')
         self.assertEqual(resp.status_code, 403)
 
     def test_system_events_sections_for_admin(self):
@@ -27,7 +28,7 @@ class SystemEventsTests(APITestCase):
                                   auth_token='tok-off', status='offline')
 
         self.client.force_authenticate(user=self.admin)
-        resp = self.client.get('/api/v1/admin/system-events')
+        resp = self.client.get('/api/v1/admin/system-events/')
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         for section in ('security', 'devices', 'telemetry', 'services'):

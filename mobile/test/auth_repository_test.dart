@@ -191,5 +191,38 @@ group('ConsentScreen IA (S3)', () {
     expect((sent as Map)['consent'], isTrue);
     expect((sent as Map)['ai_consent'], isTrue);
   });
+
+  testWidgets('token expirado durante consentimiento cierra sesión (Issue 09)',
+      (t) async {
+    final session = MemorySessionStore()
+      ..token = 'EXPIRED'
+      ..role = 'user';
+    await t.pumpWidget(ProviderScope(
+      overrides: [
+        apiClientProvider.overrideWithValue(clientWith(FakeAdapter((o) {
+          if (o.path.contains('profile') || o.path.contains('consent')) {
+            return jsonBody({'detail': 'Token has expired.'}, 401);
+          }
+          return jsonBody({'status': 'ok'}, 200);
+        }), session: session)),
+        sessionStoreProvider.overrideWithValue(session),
+      ],
+      child: const MaterialApp(home: Scaffold(body: ConsentScreen())),
+    ));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.text('Acepto el uso de mis datos'), findsOneWidget);
+
+    await t.tap(find.text('Acepto el uso de mis datos'));
+    await t.pump();
+    await t.pump(const Duration(milliseconds: 100));
+
+    // LFPDPPP: no se salta consentimiento; se exige re-login.
+    expect(await session.readToken(), isNull);
+    final container =
+        ProviderScope.containerOf(t.element(find.byType(ConsentScreen)));
+    expect(container.read(authControllerProvider).status,
+        AuthStatus.unauthenticated);
+  });
 });
 }

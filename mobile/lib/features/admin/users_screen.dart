@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/features/admin/admin.dart';
+import 'package:mole_ai/features/admin/admin_error_panel.dart';
 import 'package:mole_ai/features/admin/admin_metrics.dart'
     show adminRepositoryProvider;
 
@@ -88,6 +89,11 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           .read(adminRepositoryProvider)
           .updateUser(u.id, role: next);
       await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Rol de ${u.username} actualizado a $next')),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,6 +125,12 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
           .read(adminRepositoryProvider)
           .updateUser(u.id, isActive: !u.isActive);
       await _load();
+      if (mounted) {
+        final msg = u.isActive
+            ? 'Usuario ${u.username} desactivado'
+            : 'Usuario ${u.username} reactivado';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -129,104 +141,129 @@ class _UsersScreenState extends ConsumerState<UsersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _search,
-                    decoration: const InputDecoration(
-                        labelText: 'Buscar usuario o correo'),
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => _load(),
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Usuarios'),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _search,
+                      decoration: const InputDecoration(
+                        labelText: 'Buscar usuario o correo',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => _load(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
+                  const SizedBox(width: 8),
+                  FilledButton(
                     style: FilledButton.styleFrom(
-                        minimumSize: const Size(64, 48)),
+                      minimumSize: const Size(64, 48),
+                    ),
                     onPressed: _loading ? null : _load,
-                    child: const Text('Ver')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Semantics(
-                                liveRegion: true,
-                                child: Text(_error!,
-                                    style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .error)),
-                              ),
-                              const SizedBox(height: 12),
-                              OutlinedButton(
-                                  onPressed: _load,
-                                  child: const Text('Reintentar')),
-                            ],
-                          ),
-                        )
-                      : _users.isEmpty
-                          ? const Center(
-                              child: Text('Sin usuarios.'))
-                          : RefreshIndicator(
-                              onRefresh: _load,
-                              child: ListView.builder(
-                                itemCount: _users.length,
-                                itemBuilder: (context, i) {
-                                  final u = _users[i];
-                                  return Card(
-                                    child: ListTile(
-                                      leading: Icon(
-                                          u.isActive
-                                              ? Icons.person
-                                              : Icons.person_off,
-                                          color: u.isActive
-                                              ? null
-                                              : Theme.of(context)
-                                                  .colorScheme
-                                                  .error),
-                                      title: Text(u.username),
-                                      subtitle: Text(
-                                          '${u.role ?? '—'}${u.email != null ? ' · ${u.email}' : ''}'),
-                                      trailing: PopupMenuButton<String>(
-                                        onSelected: (v) {
-                                          if (v == 'rol') {
-                                            _changeRole(u);
-                                          } else {
-                                            _toggleActive(u);
-                                          }
-                                        },
-                                        itemBuilder: (context) => [
-                                          const PopupMenuItem(
-                                              value: 'rol',
-                                              child:
-                                                  Text('Cambiar rol')),
-                                          PopupMenuItem(
-                                              value: 'activo',
-                                              child: Text(u.isActive
-                                                  ? 'Desactivar'
-                                                  : 'Reactivar')),
-                                        ],
-                                      ),
+                    child: const Text('Ver'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                        ? AdminErrorPanel(
+                            message: _error!, onRetry: _load)
+                        : _users.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.people_outline,
+                                        size: 48,
+                                        color: theme.colorScheme.outline),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Sin usuarios.',
+                                      style: theme.textTheme.titleMedium,
                                     ),
-                                  );
-                                },
+                                  ],
+                                ),
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _load,
+                                child: ListView.builder(
+                                  itemCount: _users.length,
+                                  itemBuilder: (context, i) {
+                                    final u = _users[i];
+                                    return Card(
+                                      child: Semantics(
+                                        label:
+                                            "${u.username}, rol ${u.role ?? 'sin rol'}, ${u.isActive ? 'activo' : 'inactivo'}",
+                                        child: ListTile(
+                                          leading: Icon(
+                                              u.isActive
+                                                  ? Icons.person
+                                                  : Icons.person_off,
+                                              color: u.isActive
+                                                  ? null
+                                                  : theme.colorScheme.error),
+                                          title: Text(u.username),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                  '${u.role ?? '—'}${u.email != null ? ' · ${u.email}' : ''}'),
+                                              if (!u.isActive)
+                                                Chip(
+                                                  avatar: const Icon(
+                                                      Icons.cancel_outlined,
+                                                      size: 16),
+                                                  label: const Text('Inactivo'),
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                ),
+                                            ],
+                                          ),
+                                          trailing: PopupMenuButton<String>(
+                                            onSelected: (v) {
+                                              if (v == 'rol') {
+                                                _changeRole(u);
+                                              } else {
+                                                _toggleActive(u);
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                  value: 'rol',
+                                                  child: Text('Cambiar rol')),
+                                              PopupMenuItem(
+                                                  value: 'activo',
+                                                  child: Text(u.isActive
+                                                      ? 'Desactivar'
+                                                      : 'Reactivar')),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

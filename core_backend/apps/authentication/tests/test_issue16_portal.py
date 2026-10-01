@@ -58,8 +58,6 @@ class TestPasswordReset:
         assert r.status_code == 400
 
     def test_confirm_ok_rota_e_invalida(self):
-        from datetime import timedelta
-        from django.utils import timezone
         user = User.objects.create_user(username="u2", password="Vieja123!",
                                         email="u2@x.mx")
         c = APIClient()
@@ -86,8 +84,9 @@ class TestPasswordReset:
     def test_confirm_password_debil_400(self):
         user = User.objects.create_user(username="u3", password="Vieja123!",
                                         email="u3@x.mx")
-        from apps.authentication.tasks import generate_password_reset_token
         from django.utils import timezone
+
+        from apps.authentication.tasks import generate_password_reset_token
         user.password_reset_token = generate_password_reset_token(user.id)
         user.password_reset_sent_at = timezone.now()
         user.save()
@@ -183,7 +182,8 @@ class TestFloraEndemica:
 
     def test_live_alerts_lee_esquema_vivo(self):
         from django.utils import timezone
-        from apps.core.models import Device, AmbientReading, HardwareBinding
+
+        from apps.core.models import AmbientReading, Device, HardwareBinding
         from apps.plants.models import UserPlant
         owner = User.objects.create_user(username="own", password="x")
         plant = UserPlant.objects.create(user=owner, nickname="P")
@@ -193,7 +193,7 @@ class TestFloraEndemica:
         AmbientReading.objects.create(device=dev, recorded_at=now,
                                       air_temperature=35.0)
         c = _admin_client()
-        r = c.get("/api/v1/admin/live-alerts")
+        r = c.get("/api/v1/admin/live-alerts/")
         assert r.status_code == 200
         alerts = r.json()["alerts"]
         assert any(a["tipo"] == "warn" and a["source"] == "ambient"

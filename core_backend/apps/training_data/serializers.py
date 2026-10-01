@@ -11,11 +11,9 @@ Two flows:
 from rest_framework import serializers
 
 from apps.training_data.models import (
-    ProcessingStatus,
     TrainingDocument,
     TrainingImage,
 )
-
 
 # ── Upload Request Serializers ───────────────────────────────────────────
 
@@ -90,27 +88,29 @@ class UploadConfirmResponseSerializer(serializers.Serializer):
 
 class TrainingDocumentSerializer(serializers.ModelSerializer):
     uploaded_by_email = serializers.EmailField(source='uploaded_by.email', read_only=True, default=None)
+    record_id = serializers.UUIDField(source='id', read_only=True)
 
     class Meta:
         model = TrainingDocument
-        fields = [
-            'id', 'original_name', 's3_key', 'content_type', 'file_size',
+        fields = (
+            'id', 'record_id', 'original_name', 's3_key', 'content_type', 'file_size',
             'category', 'language', 'description', 'status', 'error_message',
             'uploaded_by_email', 'created_at', 'processed_at',
-        ]
+        )
         read_only_fields = fields
 
 
 class TrainingImageSerializer(serializers.ModelSerializer):
     uploaded_by_email = serializers.EmailField(source='uploaded_by.email', read_only=True, default=None)
     species_name = serializers.CharField(source='species.scientific_name', read_only=True, default=None)
+    record_id = serializers.UUIDField(source='id', read_only=True)
 
     class Meta:
         model = TrainingImage
-        fields = [
-            'id', 'original_name', 's3_key', 'content_type', 'file_size',
+        fields = (
+            'id', 'record_id', 'original_name', 's3_key', 'content_type', 'file_size',
             'species_name', 'disease_label', 'severity', 'geo_location',
             'description', 'status', 'error_message',
             'uploaded_by_email', 'created_at', 'processed_at',
-        ]
+        )
         read_only_fields = fields

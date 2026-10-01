@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/features/admin/admin.dart';
+import 'package:mole_ai/features/admin/admin_error_panel.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
 
 final knowledgeRepositoryProvider = Provider<KnowledgeRepository>(
@@ -175,46 +176,44 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
               const SizedBox(height: 8),
               Text(_notice!),
             ],
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Semantics(
-                liveRegion: true,
-                child: Text(_error!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.error)),
-              ),
-            ],
             const SizedBox(height: 8),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _docs.isEmpty
-                      ? const Center(
-                          child: Text('Sin documentos todavía.'))
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          child: ListView.builder(
-                            itemCount: _docs.length,
-                            itemBuilder: (context, i) {
-                              final d = _docs[i];
-                              return Card(
-                                child: ListTile(
-                                  leading: const Icon(
-                                      Icons.description_outlined),
-                                  title: Text(d.recordId.length > 13
-                                      ? '${d.recordId.substring(0, 13)}…'
-                                      : d.recordId),
-                                  subtitle:
-                                      Text('Estado: ${d.status}'),
-                                  trailing: d.fileSize != null
-                                      ? Text(
-                                          '${(d.fileSize! / 1024).toStringAsFixed(0)} KB')
-                                      : null,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
+                  : _error != null
+                      ? AdminErrorPanel(
+                          message: _error!, onRetry: _load)
+                      : _docs.isEmpty
+                          ? const Center(
+                              child: Text('Sin documentos todavía.'))
+                          : RefreshIndicator(
+                              onRefresh: _load,
+                              child: ListView.builder(
+                                itemCount: _docs.length,
+                                itemBuilder: (context, i) {
+                                  final d = _docs[i];
+                                  return Card(
+                                    child: Semantics(
+                                      label:
+                                          'Documento ${d.recordId}, estado ${d.status}',
+                                      child: ListTile(
+                                        leading: const Icon(
+                                            Icons.description_outlined),
+                                        title: Text(d.recordId.length > 13
+                                            ? '${d.recordId.substring(0, 13)}…'
+                                            : d.recordId),
+                                        subtitle:
+                                            Text('Estado: ${d.status}'),
+                                        trailing: d.fileSize != null
+                                            ? Text(
+                                                '${(d.fileSize! / 1024).toStringAsFixed(0)} KB')
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
             ),
           ],
         ),
