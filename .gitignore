@@ -107,3 +107,11 @@ skills-main/*.elf
 # Lab TLS (issue B-03): el ancla CA pública del firmware SÍ se versiona
 # (debe ir después del *.pem global para que la negación aplique).
 !microservices/esp32_node/main/certs/lab_ca.pem
+
+# Toolchain local y documentos generados
+.tools/
+docs/thesis/
+
+# Toolchain local y documentos generados
+.tools/
+docs/thesis/
