@@ -303,9 +303,14 @@ HARDWARE_API_KEY = os.getenv('HARDWARE_API_KEY', '')
 MCP_ENABLED = os.getenv('MCP_ENABLED', 'False').lower() == 'true'
 MCP_CHAT_URL = os.getenv('MCP_CHAT_URL', 'http://ms2_chat:8002/mcp')
 MCP_TIMEOUT = int(os.getenv('MCP_TIMEOUT', '60'))
+MCP_POOL_SIZE = int(os.getenv('MCP_POOL_SIZE', '3'))
 
 # Secret compartido para endpoints internos Django ↔ microservicios.
 INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', '')
+
+# Clave HMAC-SHA256 para anonimización de datasets de entrenamiento (Track B).
+# Obligatoria en producción; en desarrollo puede estar vacía si la feature no se usa.
+ANONIMIZACION_KEY = os.getenv('ANONIMIZACION_KEY', '')
 
 # 11. Redis & Celery
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')

@@ -18,6 +18,13 @@ from django.conf import settings
 from django.db import models
 
 
+class AnonymizationStatus(models.TextChoices):
+    """Estado de vida del registro anonimizado."""
+    PENDING = 'PENDING', 'Pendiente'
+    ANONYMIZED = 'ANONYMIZED', 'Anonimizado'
+    EXCLUDED = 'EXCLUDED', 'Excluido por política'
+
+
 class ProcessingStatus(models.TextChoices):
     """State machine for training asset lifecycle."""
     PENDING   = 'PENDING',   'Pendiente de subida'
@@ -212,3 +219,66 @@ class TrainingImage(models.Model):
     def __str__(self):
         label = self.disease_label or 'unlabeled'
         return f"[{self.status}] {self.original_name} ({label})"
+
+
+class TrainingDatasetAnon(models.Model):
+    """Tabla espejo de entrenamiento sin PII (Track B - Anonimización).
+
+    Derivada del payload de diagnóstico (AIDiagnostic). Se omite:
+      - user FK
+      - image_path (ruta potencialmente identificable)
+      - cualquier otro campo sensible.
+
+    El `subject_hash` permite agrupar registros del mismo sujeto (planta +
+    contexto) sin revelar identidad, usando HMAC-SHA256 con clave inyectada por
+    variable de entorno (`ANONIMIZACION_KEY`).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record_type = models.CharField(
+        max_length=50,
+        default='diagnostic',
+        db_index=True,
+        help_text='Tipo de registro de entrenamiento, e.g. diagnostic, sensor.',
+    )
+    source_fingerprint = models.CharField(
+        max_length=128,
+        blank=True,
+        db_index=True,
+        help_text='HMAC-SHA256 del ID de fuente (no reversible).',
+    )
+    subject_hash = models.CharField(
+        max_length=128,
+        db_index=True,
+        help_text='HMAC-SHA256 del par usuario+planta para agrupar series temporales.',
+    )
+    feature_payload = models.JSONField(
+        default=dict,
+        help_text='Datos de entrenamiento sin PII (diagnóstico, confianza, metadatos).',
+    )
+    label = models.TextField(
+        blank=True,
+        help_text='Etiqueta supervisada para entrenamiento (e.g. diagnosis_label).',
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=AnonymizationStatus.choices,
+        default=AnonymizationStatus.ANONYMIZED,
+        db_index=True,
+    )
+    anonymized_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'training_dataset_anon'
+        ordering = ['-anonymized_at']
+        indexes = [
+            models.Index(fields=['record_type', 'subject_hash']),
+            models.Index(fields=['status', 'anonymized_at']),
+        ]
+        verbose_name = 'Training Dataset Anonymized Record'
+        verbose_name_plural = 'Training Dataset Anonymized Records'
+
+    def __str__(self):
+        return f"[{self.record_type}] {self.subject_hash[:16]}... @ {self.anonymized_at}"
