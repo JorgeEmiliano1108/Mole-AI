@@ -1,14 +1,14 @@
-"""Scaffold del servidor MCP para mole_chat.
+"""Servidor MCP para mole_chat.
 
 Expone un endpoint SSE bajo /mcp/v1/sse y un endpoint POST para mensajes.
-Por ahora registra:
+Tools:
 - ping: health-check del servidor MCP.
 - get_sensor_context: lectura del contexto de sensores almacenado en Redis.
-Las tools reales de contexto dinámico (diagnósticos históricos, telemetría
-granular, etc.) se añaden en iteraciones posteriores.
+- chat: caso de uso RAG+CAG+LLM con validación fail-closed vía SafetyValidator.
 """
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -23,14 +23,21 @@ logger = logging.getLogger(__name__)
 # Servidor MCP con nombre canónico. Se importa explícitamente para tests.
 mcp_server = Server("mole_chat")
 
-# Dependencia inyectada desde el lifespan de FastAPI.
+# Dependencias inyectadas desde el lifespan de FastAPI.
 _redis_adapter: Any | None = None
+_chat_adapter: Any | None = None
 
 
 def set_redis_adapter(adapter: Any) -> None:
     """Inyecta el adaptador de caché de sensores usado por las tools MCP."""
     global _redis_adapter
     _redis_adapter = adapter
+
+
+def set_chat_adapter(adapter: Any) -> None:
+    """Inyecta el adaptador que ejecuta el caso de uso de chat."""
+    global _chat_adapter
+    _chat_adapter = adapter
 
 
 @mcp_server.list_tools()
@@ -56,6 +63,33 @@ async def _list_tools() -> list[Tool]:
                 "required": ["user_id"],
             },
         ),
+        Tool(
+            name="chat",
+            description="Responde una pregunta agronómica usando RAG, contexto de sensores y LLM. "
+                        "La salida del LLM es validada por el SafetyValidator antes de devolverse.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "string",
+                        "description": "Identificador del usuario.",
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Pregunta del usuario.",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "ID de sesión de chat (opcional).",
+                    },
+                    "plant_id": {
+                        "type": "string",
+                        "description": "ID de planta/sitio (opcional).",
+                    },
+                },
+                "required": ["user_id", "message"],
+            },
+        ),
     ]
 
 
@@ -76,11 +110,31 @@ async def _call_tool(name: str, arguments: dict | None = None) -> list[TextConte
         context = await _redis_adapter.get_context(str(user_id))
         return [TextContent(type="text", text=str(context))]
 
+    if name == "chat":
+        if _chat_adapter is None:
+            raise RuntimeError("Chat adapter no inicializado")
+        user_id = arguments.get("user_id")
+        message = arguments.get("message")
+        if not user_id or not message:
+            raise ValueError("chat requiere 'user_id' y 'message'")
+        result = await _chat_adapter.chat(
+            user_id=str(user_id),
+            message=str(message),
+            session_id=arguments.get("session_id"),
+            plant_id=arguments.get("plant_id"),
+        )
+        return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
+
     raise ValueError(f"Tool desconocida: {name}")
 
 
 def create_mcp_app() -> Starlette:
-    """Factory de la sub-aplicación ASGI que expone el transporte SSE."""
+    """Factory de la sub-aplicación ASGI que expone el transporte SSE.
+
+    Nota: las rutas NO llevan el prefijo /mcp; ese prefijo se añade al hacer
+    `app.mount("/mcp", create_mcp_app())` en `main.py`. El endpoint visible
+    final es `/mcp/v1/sse`.
+    """
     sse = SseServerTransport("/mcp/v1/sse/messages/")
 
     async def handle_sse(request):
@@ -100,9 +154,9 @@ def create_mcp_app() -> Starlette:
 
     return Starlette(
         routes=[
-            Route("/mcp/v1/sse", endpoint=handle_sse),
+            Route("/v1/sse", endpoint=handle_sse),
             Route(
-                "/mcp/v1/sse/messages/",
+                "/v1/sse/messages/",
                 endpoint=handle_messages,
                 methods=["POST"],
             ),

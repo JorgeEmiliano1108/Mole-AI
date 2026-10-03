@@ -298,6 +298,15 @@ MOLE_AI_API_KEY = _env_first('EDGE_API_KEY', 'MOLE_AI_API_KEY', default='')
 # C3 FIX: Sin default vacío — si no está definida, la autenticación IoT falla silenciosamente
 HARDWARE_API_KEY = os.getenv('HARDWARE_API_KEY', '')
 
+# Model Context Protocol (MCP) — host Django ↔ servidor mole_chat (SSE).
+# Feature flag: si es False, el chat sigue usando REST directo.
+MCP_ENABLED = os.getenv('MCP_ENABLED', 'False').lower() == 'true'
+MCP_CHAT_URL = os.getenv('MCP_CHAT_URL', 'http://ms2_chat:8002/mcp')
+MCP_TIMEOUT = int(os.getenv('MCP_TIMEOUT', '60'))
+
+# Secret compartido para endpoints internos Django ↔ microservicios.
+INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', '')
+
 # 11. Redis & Celery
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 CACHES = {

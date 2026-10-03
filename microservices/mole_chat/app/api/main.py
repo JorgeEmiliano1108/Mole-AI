@@ -40,7 +40,8 @@ async def lifespan(app: FastAPI):
     from app.infrastructure.adapters.citation_manager import CitationManager
     redis_adapter = RedisSensorCacheAdapter(settings.REDIS_URL)
     app.state.redis_adapter = redis_adapter
-    app.state.citation_manager = CitationManager()
+    citation_manager = CitationManager()
+    app.state.citation_manager = citation_manager
     logging.info("Redis + CitationManager initialized")
 
     # 4. RAG Listener (non-blocking)
@@ -84,9 +85,23 @@ app.include_router(router)
 # Feature flag MCP_ENABLED. El servidor se monta como sub-aplicación ASGI
 # bajo /mcp sin afectar las rutas REST existentes.
 if settings.MCP_ENABLED:
-    from app.infrastructure.mcp.server import create_mcp_app, set_redis_adapter
+    from app.infrastructure.adapters.safety_client import SafetyClient
+    from app.infrastructure.mcp.chat_adapter import MCPChatAdapter
+    from app.infrastructure.mcp.server import (
+        create_mcp_app,
+        set_redis_adapter,
+        set_chat_adapter,
+    )
 
     set_redis_adapter(redis_adapter)
+    chat_adapter = MCPChatAdapter(
+        redis_adapter=redis_adapter,
+        vector_store=pgvector_store,
+        llm_client=llm_client,
+        citation_manager=citation_manager,
+        safety_client=SafetyClient(),
+    )
+    set_chat_adapter(chat_adapter)
     app.mount("/mcp", create_mcp_app())
     logging.info("MCP server mounted at /mcp")
 

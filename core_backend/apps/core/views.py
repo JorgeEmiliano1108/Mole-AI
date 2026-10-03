@@ -22,6 +22,8 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from asgiref.sync import async_to_sync
+
 from apps.ai_models.models import LLMRequest
 from apps.authentication.infrastructure.authentication import (
     HardwareAPIKeyAuthentication,
@@ -85,7 +87,7 @@ from .serializers import (
     SensorReadingSerializer,
 )
 from .services.safety_audit import log_safety_block
-from .services.safety_validator import SafetyValidator
+from .services.safety_validator import SafetyResult, SafetyValidator
 from .throttles import DiagnosticsThrottle, LLMChatThrottle, SensorDataThrottle
 
 # Cliente MoleAI (RAG)
@@ -603,6 +605,37 @@ def chat_history_view(request):
     qs = LLMRequest.objects.filter(user=request.user).order_by('-created_at')[:50]
     return Response({'results': [{'prompt': e.prompt, 'response': e.response} for e in qs]})
 
+def _call_ms2_chat_sync(user_id: str, question: str, session_id: str | None = None, auth_header: str = "") -> dict[str, Any]:
+    """Llama al microservicio de chat vía MCP o REST según settings.MCP_ENABLED.
+
+    Si MCP está habilitado y falla, cae al camino REST para no dejar al usuario
+    sin respuesta.
+    """
+    if settings.MCP_ENABLED:
+        try:
+            from apps.ai_models.infrastructure.mcp_client import MCPChatClient
+            client = MCPChatClient()
+            return async_to_sync(client.chat)(
+                user_id=user_id,
+                message=question,
+                session_id=session_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("MCP chat failed, falling back to REST: %s", exc)
+
+    # REST fallback (anterior).
+    headers = {"Authorization": auth_header, "Content-Type": "application/json"}
+    payload = {"user_id": user_id, "message": question}
+    response = requests.post(
+        f"{settings.MOLE_AI_SERVICE_URL}/api/v1/mole-ai/chat",
+        json=payload,
+        headers=headers,
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 @throttle_classes([LLMChatThrottle])
@@ -637,18 +670,33 @@ def llm_chat_view(request):
     }
 
     try:
-        # Llama al microservicio MS2 Chat
-        response = requests.post(
-            'http://ms2_chat:8002/api/v1/mole-ai/chat',
-            json=payload,
-            headers=headers,
-            timeout=60
+        # MCP o REST hacia MS2 Chat
+        data = _call_ms2_chat_sync(
+            user_id=str(request.user.id),
+            question=question,
+            session_id=request.session.session_key,
+            auth_header=auth_header,
         )
-        response.raise_for_status()
-        data = response.json()
         ai_response = data.get("respuesta") or "Sin respuesta."
 
-        # Gate de seguridad sobre la salida del LLM (fail-closed).
+        # Gate de seguridad fail-closed (también cubre el camino REST).
+        if data.get("blocked"):
+            log_safety_block(
+                user_id=request.user.id,
+                safety_result=SafetyResult(
+                    safe=False,
+                    code=data.get("block_code", "SAFETY_BLOCKED"),
+                    reason=data.get("block_reason", "Respuesta bloqueada por política de seguridad."),
+                    status_code=403,
+                ),
+                task_id=None,
+                source="chat",
+            )
+            return Response(
+                {"error": data.get("block_reason"), "code": data.get("block_code"), "source": "chat"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         safety = SafetyValidator().validate({"text": ai_response})
         if not safety.safe:
             log_safety_block(
@@ -668,7 +716,7 @@ def llm_chat_view(request):
             prompt=question,
             response=ai_response
         )
-        
+
         return Response({
             "response": ai_response,
             "sources": data.get("sources", []),
@@ -681,11 +729,14 @@ def llm_chat_view(request):
             err_detail = e.response.json()
         except Exception:  # noqa: BLE001
             err_detail = e.response.text
-        logger.error(f"Error HTTP {status_code} desde MS2 Chat: {err_detail}")
+        logger.error("Error HTTP %s desde MS2 Chat: %s", status_code, err_detail)
         return Response({"error": "Error en motor de IA", "details": err_detail}, status=status_code)
     except requests.exceptions.RequestException as e:
-        logger.error(f"Fallo de red al contactar MS2 Chat: {e}")
+        logger.error("Fallo de red al contactar MS2 Chat: %s", e)
         return Response({"error": "No se pudo comunicar con el motor de IA.", "details": str(e)}, status=503)
+    except Exception as e:  # noqa: BLE001
+        logger.error("Error inesperado en chat: %s", e)
+        return Response({"error": "Error en motor de IA", "details": str(e)}, status=500)
 
 # --- POLLING GENÉRICO DE TAREAS ---
 @api_view(['GET'])
