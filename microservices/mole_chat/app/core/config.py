@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     ORCHESTRATOR_ENABLED: bool = False
     ORCHESTRATOR_TIMEOUT_S: float = 30.0
 
+    # ── Model Context Protocol (MCP) ───────────────────────
+    # Feature flag para exponer el servidor MCP sobre Streamable HTTP/SSE.
+    MCP_ENABLED: bool = False
+
     # ── Redis Connection Timeouts ────────────────────────
     REDIS_SOCKET_TIMEOUT: int = 2
     REDIS_SOCKET_CONNECT_TIMEOUT: int = 2

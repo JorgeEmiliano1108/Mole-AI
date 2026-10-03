@@ -80,6 +80,16 @@ instrumentator.instrument(app).expose(app)
 
 app.include_router(router)
 
+# ── Model Context Protocol (MCP) ─────────────────────────────────────────────
+# Feature flag MCP_ENABLED. El servidor se monta como sub-aplicación ASGI
+# bajo /mcp sin afectar las rutas REST existentes.
+if settings.MCP_ENABLED:
+    from app.infrastructure.mcp.server import create_mcp_app, set_redis_adapter
+
+    set_redis_adapter(redis_adapter)
+    app.mount("/mcp", create_mcp_app())
+    logging.info("MCP server mounted at /mcp")
+
 _origen = settings.ORIGEN_PERMITIDO
 if _origen:
     _allow_origins = [o.strip() for o in _origen.split(',') if o.strip()]
