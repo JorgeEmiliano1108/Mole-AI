@@ -135,29 +135,27 @@ def create_mcp_app() -> Starlette:
     `app.mount("/mcp", create_mcp_app())` en `main.py`. El endpoint visible
     final es `/mcp/v1/sse`.
     """
-    sse = SseServerTransport("/mcp/v1/sse/messages/")
+    sse = SseServerTransport("/v1/sse/messages/")
 
-    async def handle_sse(request):
-        async with sse.connect_session(
-            request.scope, request.receive, request._send
-        ) as (read_stream, write_stream):
-            await mcp_server.run(
-                read_stream,
-                write_stream,
-                mcp_server.create_initialization_options(),
-            )
+    class _SSEEndpoint:
+        async def __call__(self, scope, receive, send):
+            async with sse.connect_sse(scope, receive, send) as (read_stream, write_stream):
+                await mcp_server.run(
+                    read_stream,
+                    write_stream,
+                    mcp_server.create_initialization_options(),
+                )
 
-    async def handle_messages(request):
-        await sse.handle_post_message(
-            request.scope, request.receive, request._send
-        )
+    class _MessagesEndpoint:
+        async def __call__(self, scope, receive, send):
+            await sse.handle_post_message(scope, receive, send)
 
     return Starlette(
         routes=[
-            Route("/v1/sse", endpoint=handle_sse),
+            Route("/v1/sse", endpoint=_SSEEndpoint()),
             Route(
                 "/v1/sse/messages/",
-                endpoint=handle_messages,
+                endpoint=_MessagesEndpoint(),
                 methods=["POST"],
             ),
         ],
