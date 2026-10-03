@@ -3,7 +3,7 @@
 # =============================================================================
 from django.urls import path
 
-from apps.core import admin_views, internal_views
+from apps.core import admin_views
 from apps.core.api_views import (
     device_binding_delete_view,
     device_bindings_view,
@@ -57,7 +57,6 @@ urlpatterns = [
     path('chat/history/', views.chat_history_view, name='chat_history'),
     
     # Sistema
-    path('internal/v1/safety/validate/', internal_views.validate_safety_view, name='internal_safety_validate'),
     path('health/', views.health_check_view, name='health_check'),
     path('fichas/', views.fichas_public_view, name='fichas_public'),
     path('history/', views.consolidated_history_view, name='consolidated_history'),

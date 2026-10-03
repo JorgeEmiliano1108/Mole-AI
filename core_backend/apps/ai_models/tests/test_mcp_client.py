@@ -1,8 +1,8 @@
 """Tests del cliente MCP de Django hacia mole_chat.
 
-Se mockea el SDK de cliente MCP para evitar levantar el microservicio.
+Se mockea MCPConnectionPool para evitar levantar el microservicio.
 """
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 from django.test import TestCase, override_settings
 
@@ -28,32 +28,28 @@ class MCPChatClientTests(TestCase):
         parsed = _parse_tool_result(fake)
         self.assertEqual(parsed["respuesta"], "hola")
 
-    @patch("apps.ai_models.infrastructure.mcp_client.sse_client")
-    @patch("apps.ai_models.infrastructure.mcp_client.ClientSession")
-    def test_chat_success(self, mock_session_cls, mock_sse_client):
-        mock_read = MagicMock()
-        mock_write = MagicMock()
-        mock_sse_client.return_value.__aenter__ = AsyncMock(return_value=(mock_read, mock_write))
-        mock_sse_client.return_value.__aexit__ = AsyncMock(return_value=False)
+    @patch("apps.ai_models.infrastructure.mcp_client.MCPConnectionPool")
+    def test_chat_success(self, mock_pool_cls):
+        mock_pool = MagicMock()
+        mock_result = MagicMock()
+        mock_result.content = [MagicMock(text='{"respuesta": "ok", "sources": []}')]
+        mock_pool.call_tool.return_value = mock_result
+        mock_pool_cls.return_value = mock_pool
 
-        mock_session = MagicMock()
-        mock_session.initialize = AsyncMock()
-        mock_session.call_tool = AsyncMock(return_value={"respuesta": "ok", "sources": []})
-        mock_session_cls.return_value.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session_cls.return_value.__aexit__ = AsyncMock(return_value=False)
-
-        import asyncio
         client = MCPChatClient()
-        result = asyncio.run(client.chat(user_id="u1", message="hola"))
+        result = client.chat(user_id="u1", message="hola")
         self.assertEqual(result["respuesta"], "ok")
+        mock_pool.call_tool.assert_called_once_with("chat", {
+            "user_id": "u1",
+            "message": "hola",
+        })
 
-    @patch("apps.ai_models.infrastructure.mcp_client.sse_client")
-    @patch("apps.ai_models.infrastructure.mcp_client.ClientSession")
-    def test_chat_raises_mole_ai_service_error(self, mock_session_cls, mock_sse_client):
-        mock_sse_client.return_value.__aenter__ = AsyncMock(side_effect=ConnectionError("boom"))
-        mock_sse_client.return_value.__aexit__ = AsyncMock(return_value=False)
+    @patch("apps.ai_models.infrastructure.mcp_client.MCPConnectionPool")
+    def test_chat_raises_mole_ai_service_error(self, mock_pool_cls):
+        mock_pool = MagicMock()
+        mock_pool.call_tool.side_effect = ConnectionError("boom")
+        mock_pool_cls.return_value = mock_pool
 
-        import asyncio
         client = MCPChatClient()
         with self.assertRaises(MoleAIServiceError):
-            asyncio.run(client.chat(user_id="u1", message="hola"))
+            client.chat(user_id="u1", message="hola")

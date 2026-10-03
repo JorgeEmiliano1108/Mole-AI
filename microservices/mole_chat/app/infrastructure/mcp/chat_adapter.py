@@ -1,7 +1,8 @@
 """Adaptador para invocar el caso de uso de chat desde el servidor MCP.
 
-Orquesta: sanitizar pregunta (PII), ejecutar RAG+LLM, validar salida contra
-el SafetyValidator de Django y devolver un dict serializable para MCP.
+Orquesta: sanitizar pregunta (PII), ejecutar RAG+LLM y devolver un dict
+serializable para MCP. La validación de seguridad vive en el host Django
+(middleware de salida), no aquí.
 """
 from __future__ import annotations
 
@@ -12,7 +13,6 @@ from app.application.use_cases.chat_usecase import MoleAIChatUseCase
 from app.domain.protocols import LLMClientPort, VectorStorePort, RedisAdapterPort, CitationManagerPort
 from app.domain.schemas import ChatRequest, ChatResponse, COFEPRIS_DISCLAIMER
 from app.infrastructure.adapters.prompt_loader import load_prompt
-from app.infrastructure.adapters.safety_client import SafetyClient
 
 logger = logging.getLogger(__name__)
 
@@ -27,13 +27,11 @@ class MCPChatAdapter:
         vector_store: VectorStorePort,
         llm_client: LLMClientPort,
         citation_manager: CitationManagerPort,
-        safety_client: SafetyClient,
     ):
         self.redis_adapter = redis_adapter
         self.vector_store = vector_store
         self.llm_client = llm_client
         self.citation_manager = citation_manager
-        self.safety_client = safety_client
 
     async def chat(
         self,
@@ -61,34 +59,9 @@ class MCPChatAdapter:
 
         response: ChatResponse = await use_case.ainvoke(request)
 
-        # Fail-closed: validar salida del LLM contra SafetyValidator de Django.
-        safety = await self.safety_client.validate(response.respuesta, user_id=user_id)
-        if not safety.safe:
-            logger.warning(
-                "MCP chat safety block",
-                code=safety.code,
-                reason=safety.reason,
-                user_id=user_id,
-            )
-            return {
-                "respuesta": (
-                    "No puedo proporcionar esa información porque podría violar "
-                    "nuestras políticas de seguridad o normativa ambiental aplicable."
-                ),
-                "sources": [],
-                "disclaimer": COFEPRIS_DISCLAIMER,
-                "generated_by": "Mole.AI",
-                "blocked": True,
-                "block_code": safety.code,
-                "block_reason": safety.reason,
-            }
-
         return {
             "respuesta": response.respuesta,
             "sources": [s.model_dump() for s in response.sources],
             "disclaimer": COFEPRIS_DISCLAIMER,
             "generated_by": response.generated_by,
-            "blocked": False,
-            "block_code": "",
-            "block_reason": "",
         }

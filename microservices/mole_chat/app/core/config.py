@@ -95,14 +95,6 @@ class Settings(BaseSettings):
     # Feature flag para exponer el servidor MCP sobre Streamable HTTP/SSE.
     MCP_ENABLED: bool = False
 
-    # ── Safety Validation (delegado a Django host) ──────────
-    # Endpoint interno de Django para validar la salida del LLM (fail-closed).
-    SAFETY_VALIDATOR_URL: str = Field(
-        default="http://django-backend:8000/internal/v1/safety/validate/",
-        validation_alias=AliasChoices("SAFETY_VALIDATOR_URL", "DJANGO_SAFETY_URL"),
-    )
-    INTERNAL_API_KEY: str = Field(default="", validation_alias=AliasChoices("INTERNAL_API_KEY", "EDGE_API_KEY"))
-
     # ── Redis Connection Timeouts ────────────────────────
     REDIS_SOCKET_TIMEOUT: int = 2
     REDIS_SOCKET_CONNECT_TIMEOUT: int = 2

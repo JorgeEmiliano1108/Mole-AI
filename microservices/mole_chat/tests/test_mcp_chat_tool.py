@@ -1,7 +1,7 @@
 """Tests de la tool `chat` del servidor MCP.
 
 No requieren levantar el endpoint SSE; prueban directamente el dispatcher de
-tools con adaptadores falsos.
+tools con un adaptador falso. La validación de seguridad vive en el host Django.
 """
 import json
 
@@ -26,30 +26,12 @@ class FakeChatAdapter:
 
 
 @pytest.fixture
-def safe_adapter():
+def fake_adapter():
     adapter = FakeChatAdapter({
         "respuesta": "Usa compostaje.",
         "sources": [{"autor": "Test", "url": "http://test", "confianza": 0.95}],
         "disclaimer": "Aviso legal.",
         "generated_by": "Mole.AI",
-        "blocked": False,
-        "block_code": "",
-        "block_reason": "",
-    })
-    set_chat_adapter(adapter)
-    return adapter
-
-
-@pytest.fixture
-def blocked_adapter():
-    adapter = FakeChatAdapter({
-        "respuesta": "",
-        "sources": [],
-        "disclaimer": "Aviso legal.",
-        "generated_by": "Mole.AI",
-        "blocked": True,
-        "block_code": "SAFETY_NOM059_PROTECTED",
-        "block_reason": "Especie protegida.",
     })
     set_chat_adapter(adapter)
     return adapter
@@ -63,7 +45,7 @@ async def test_mcp_list_tools_includes_chat():
 
 
 @pytest.mark.asyncio
-async def test_mcp_chat_tool_returns_json_payload(safe_adapter):
+async def test_mcp_chat_tool_returns_json_payload(fake_adapter):
     result = await _call_tool("chat", {
         "user_id": "user-42",
         "message": "¿cómo fertilizo?",
@@ -73,25 +55,13 @@ async def test_mcp_chat_tool_returns_json_payload(safe_adapter):
     assert len(result) == 1
     payload = json.loads(result[0].text)
     assert payload["respuesta"] == "Usa compostaje."
-    assert payload["blocked"] is False
     assert payload["sources"][0]["autor"] == "Test"
-    assert safe_adapter.calls == [{
+    assert fake_adapter.calls == [{
         "user_id": "user-42",
         "message": "¿cómo fertilizo?",
         "session_id": "session-1",
         "plant_id": "plant-7",
     }]
-
-
-@pytest.mark.asyncio
-async def test_mcp_chat_tool_returns_blocked_payload(blocked_adapter):
-    result = await _call_tool("chat", {
-        "user_id": "user-42",
-        "message": "¿dónde vendo biznagas?",
-    })
-    payload = json.loads(result[0].text)
-    assert payload["blocked"] is True
-    assert payload["block_code"] == "SAFETY_NOM059_PROTECTED"
 
 
 @pytest.mark.asyncio

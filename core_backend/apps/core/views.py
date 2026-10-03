@@ -22,8 +22,6 @@ from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from asgiref.sync import async_to_sync
-
 from apps.ai_models.models import LLMRequest
 from apps.authentication.infrastructure.authentication import (
     HardwareAPIKeyAuthentication,
@@ -87,7 +85,7 @@ from .serializers import (
     SensorReadingSerializer,
 )
 from .services.safety_audit import log_safety_block
-from .services.safety_validator import SafetyResult, SafetyValidator
+from .services.safety_validator import SafetyValidator
 from .throttles import DiagnosticsThrottle, LLMChatThrottle, SensorDataThrottle
 
 # Cliente MoleAI (RAG)
@@ -614,8 +612,7 @@ def _call_ms2_chat_sync(user_id: str, question: str, session_id: str | None = No
     if settings.MCP_ENABLED:
         try:
             from apps.ai_models.infrastructure.mcp_client import MCPChatClient
-            client = MCPChatClient()
-            return async_to_sync(client.chat)(
+            return MCPChatClient().chat(
                 user_id=user_id,
                 message=question,
                 session_id=session_id,
@@ -679,24 +676,8 @@ def llm_chat_view(request):
         )
         ai_response = data.get("respuesta") or "Sin respuesta."
 
-        # Gate de seguridad fail-closed (también cubre el camino REST).
-        if data.get("blocked"):
-            log_safety_block(
-                user_id=request.user.id,
-                safety_result=SafetyResult(
-                    safe=False,
-                    code=data.get("block_code", "SAFETY_BLOCKED"),
-                    reason=data.get("block_reason", "Respuesta bloqueada por política de seguridad."),
-                    status_code=403,
-                ),
-                task_id=None,
-                source="chat",
-            )
-            return Response(
-                {"error": data.get("block_reason"), "code": data.get("block_code"), "source": "chat"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
+        # Gate de seguridad fail-closed: el SafetyValidator vive en el host Django
+        # y actúa como middleware de salida hacia el dispositivo móvil.
         safety = SafetyValidator().validate({"text": ai_response})
         if not safety.safe:
             log_safety_block(
