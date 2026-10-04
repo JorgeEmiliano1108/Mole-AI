@@ -115,3 +115,5 @@ docs/thesis/
 # Toolchain local y documentos generados
 .tools/
 docs/thesis/
+# Reportes del harness empírico (Track C): preliminares, no versionar
+.scratch/harness-empirico/reports/
