@@ -2,6 +2,12 @@
 
 **Ámbito de la auditoría**: se evaluó exclusivamente el código fuente, la configuración, la arquitectura, los pipelines de CI/CD, las pruebas y la documentación.  No se consideraron componentes de hardware, cables, fuentes de alimentación ni certificaciones eléctricas.
 
+**Alcance honesto (2026-10-04, PoC para cumplimiento normativo):** los porcentajes
+miden mecanismos verificados en código, no cobertura regulatoria real. El sistema
+opera con Catálogos Semilla Demostrativos, ingesta RAG manual (sin Web Mining),
+llave HMAC estática (sin rotación) y UX con silent-compliance (sin menciones
+normativas al usuario). Ver adenda H8 en `audit-matrix.md`.
+
 ## Cumplimiento por norma (software)
 
 | Norma | Filas total | Cumple | Parcial | No cumple | % de cumplimiento* |

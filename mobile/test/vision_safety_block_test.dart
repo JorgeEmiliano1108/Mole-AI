@@ -10,15 +10,17 @@ void main() {
         'result': {
           'blocked': true,
           'safety_block': {
-            'code': 'SAFETY_NOM059_PROTECTED',
-            'reason': 'Especie protegida por NOM-059-SEMARNAT.',
+            'code': 'SAFETY_BLOCKED',
+            'reason':
+                'Contenido bloqueado por directrices de seguridad interna.',
           },
         },
       });
 
       expect(status.isSafetyBlocked, isTrue);
-      expect(status.safetyCode, 'SAFETY_NOM059_PROTECTED');
-      expect(status.safetyReason, 'Especie protegida por NOM-059-SEMARNAT.');
+      expect(status.safetyCode, 'SAFETY_BLOCKED');
+      expect(status.safetyReason,
+          'Contenido bloqueado por directrices de seguridad interna.');
       expect(status.isSuccess, isFalse);
       expect(status.isFailure, isTrue);
       expect(status.diagnosis, isNull);

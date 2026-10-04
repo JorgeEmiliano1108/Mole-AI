@@ -77,9 +77,7 @@ async def analyze_vision(
                     "title": "Solicitud prohibida",
                     "status": 403,
                     "detail": (
-                        "Esta consulta involucra una especie protegida por la "
-                        "NOM-059-SEMARNAT. Para información oficial, consulte "
-                        "la lista SEMARNAT."
+                        "Contenido bloqueado por directrices de seguridad interna."
                     ),
                 },
             )

@@ -48,7 +48,9 @@ def test_nom059_regex_blocks_illegal_requests(malicious_prompt):
     response = client.post("/api/v1/mole-ai/chat", json={"message": malicious_prompt, "user_id": "test-user"}, headers=headers)
     assert response.status_code == 403
     data = response.json()
-    assert "NOM-059" in data.get("detail", "") or "prohibido" in data.get("detail", "").lower()
+    assert "directrices de seguridad interna" in data.get("detail", "")
+    assert "NOM-059" not in data.get("detail", "")
+    assert "SEMARNAT" not in data.get("detail", "")
 
 @pytest.mark.parametrize("malicious_prompt", LLM_BLOCKED_PROMPTS)
 def test_nom059_llm_blocks_illegal_requests(malicious_prompt):

@@ -332,3 +332,17 @@ Cambios vs v1.0: RF-07 backend y RNF-07 backend pasan a ✅/⚠️ (validación 
 | H7-05 | Instrumentación Edge/Batería lista (código + protocolo, sin SDK verificado → revisión manual) | ✅ | `mobile/lib/features/vision/edge_benchmark.dart`, canal `mole.ai/battery`, `PROTOCOLO-C3.md`; parche JNI por rango |
 | H7-06 | Tasa de alucinación live <5 % (RNF) | ⏳ Pendiente de Ejecución en Producción | Requiere llave de pago (`LLM_API_KEY`) y corrida `--mode live`; script de parsing listo |
 | H7-07 | Latencia Edge <850 ms y batería <4.5 %/h en hardware real | ⏳ Pendiente de Ejecución en Producción | `PROTOCOLO-C3.md` + `integration_test/edge_benchmark_test.dart`; corridas manuales pendientes de dispositivos |
+
+---
+
+## Adenda 2026-10-04 — Hito 8: Estabilización P0 + Fin del Teatro de Cumplimiento
+
+| ID | Claim | Veredicto | Evidencia |
+|---|---|---|---|
+| H8-01 | Escrituras redirigidas de `sensor_logs` (FREEZE) a `AmbientReading/SoilReading` vía binding; PATCH responde 410 | ✅ | `apps/core/services/legacy_ingest.py`, `views.py`, `api_views.py`, `mqtt_listener.py`; tests reescritos |
+| H8-02 | `chat_async`/`analyze_vision_async`/`train_vision_async` ruteados a cola consumida (`celery`); `chat_queue`/`vision_queue` sin consumidor documentadas | ✅ | `mole_ai_backend/settings.py` + comentario de deuda |
+| H8-03 | Tokens reset/verify hasheados con pepper (dump ≠ takeover); expiración y un solo uso intactos | ✅ | `apps/authentication/tasks.py::hash_auth_token`, `views.py`, tests portal |
+| H8-04 | Claim `role` jamás otorga staff/superuser; fallback HS256 exige `aud`; fix de shadowing `get_user_model` | ✅ | `infrastructure/authentication.py`, tests `test_role_claim_never_escalates` + `test_fallback_rejects_missing_audience` |
+| H8-05 | Gateway edge con atribución fail-closed (binding único o rechazo); pérdida de suelo/pH visible en logs | ✅ | `edge_node/openclaw_gateway.py::resolve_plant_for_pubkey`, `store_forward_daemon.py` |
+| H8-06 | Silent-compliance: UX sin menciones normativas; detalle real solo en AuditLog; PDFs conservan escudo genérico | ✅ | `apps/core/services/safety_presentation.py`, disclaimers/prompts neutralizados, contratos actualizados |
+| H8-07 | Alcance honesto: PoC para cumplimiento (catálogos semilla, RAG manual, sin rotación HMAC, sin mTLS interno) | ✅ | `docs/anexos/*` notas de alcance, `.scratch/traceabilidad/issues/33-alcance-poc-cumplimiento.md`, ADR-0012 §1.5 |

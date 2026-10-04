@@ -49,10 +49,11 @@ class SpeciesCatalog(models.Model):
         help_text="Categoría taxonómica para filtrado en la Wiki.",
     )
 
-    # NOM-059: Protección de flora silvestre mexicana
+    # Protección de flora silvestre (catálogo semilla PoC; silent-compliance:
+    # el nombre de la norma no se expone en UX, solo el flag + advertencia genérica)
     is_protected_nom059 = models.BooleanField(
         default=False,
-        help_text="Indica si la especie está protegida por NOM-059-SEMARNAT.",
+        help_text="Indica si la especie está bajo protección ambiental especial (catálogo semilla PoC).",
     )
     # Portal público (issue 18): marca de endemismo mexicano para filtrar
     # fichas de flora endémica. Backfill vía seeds curados (revisión humana).

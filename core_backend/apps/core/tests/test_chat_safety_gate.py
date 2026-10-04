@@ -60,8 +60,9 @@ class TestChatSafetyGate:
 
         assert resp.status_code == 403
         body = resp.json()
-        assert body["code"] == "SAFETY_NOM059_PROTECTED"
-        assert "NOM-059" in body["error"]
+        # Silent-compliance: código/motivo genéricos al usuario; el real vive en AuditLog.
+        assert body["code"] == "SAFETY_BLOCKED"
+        assert "NOM-059" not in body["error"]
         assert body["source"] == "chat"
         assert AuditLog.objects.filter(action__startswith="SAFETY_BLOCK").count() == 1
         assert LLMRequest.objects.count() == 0
@@ -78,7 +79,7 @@ class TestChatSafetyGate:
 
         assert resp.status_code == 403
         body = resp.json()
-        assert body["code"] == "SAFETY_AGROCHEMICAL_MENTION"
+        assert body["code"] == "SAFETY_BLOCKED"
         assert LLMRequest.objects.count() == 0
 
     def test_safe_response_saves_llm_request(self, auth_client, chat_user):

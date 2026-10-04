@@ -52,10 +52,11 @@ directo a login. Rotación dispositivos IoT (`POST devices/<id>/rotate/` → `{a
 | `GET/POST plants/species/` + `GET/PUT/PATCH/DELETE plants/species/<pk>/` | lectura pública, escritura staff (`IsSuperuserOrReadOnly`, `apps/plants/views.py:222-237`) | lista paginada `{count,next,previous,results:[Species]}` (`PAGE_SIZE=50`, `settings.py:204-209`); `Species` 22 campos (`scientific_name,common_name,description,ideal_humidity_min/max,ideal_temp_min/max,ideal_ph_min/max/optimal,habitat,soil_type,irrigation,uses,uv_rays,soil_humidity_min/max,image_url,category,is_protected_nom059,protection_category`) | `apps/plants/serializers.py:42-71`, `views.py:232` |
 | `POST plants/flora/` | `IsAuthenticated` multipart | `Flora {id,user,common_name,scientific_name,family,treatment,image}` | `apps/plants/views.py:208-219`, `serializers.py:88-92` |
 
-**Obligación NOM-059 (LGEEPA, `enforce-compliance` Guardrail C):** si `is_protected_nom059==true`,
+**Obligación de advertencia (silent-compliance):** si `is_protected_nom059==true`,
 la UI **debe** renderizar el `protection_warning` en contenedor de advertencia
 (`bg-red-500/10 border-red-500/30` en web → equivalente `ThemeData` error-container en Flutter).
-Prohibido ocultar o resumir el texto legal. Cubierto por test widget obligatorio.
+El texto es genérico por diseño (sin nombres de normas); prohibido ocultarlo o resumirlo.
+Cubierto por test widget obligatorio.
 
 ## 3. Mis plantas — `apps/plants/urls_user.py` (montado en `user-plants/`)
 
@@ -118,10 +119,11 @@ Nodos en deep-sleep: `last_seen_delta_seconds` + `status` gobiernan la UI ("durm
    severity:low|medium|high|critical, confidence 0-1, ph_predicted 0-14,
    immediate_actions[], disclaimer}`. Si `result` no trae `diagnosis`, la UI
    muestra `state/info` sin inventar campos.
-   **Bloqueo de seguridad (Hito 4):** si el SafetyValidator detecta una especie
-   protegida por NOM-059 en la respuesta de MS1, `result.blocked=true` y
-   `result.safety_block={code, reason}`; la UI debe renderizar el banner rojo
-   (`SafetyBlockBanner`) y no persistir el diagnóstico localmente.
+   **Bloqueo de seguridad (Hito 4 + silent-compliance):** si el SafetyValidator
+   bloquea la respuesta de MS1, `result.blocked=true` y
+   `result.safety_block={code:'SAFETY_BLOCKED', reason:<genérico>}`; la UI debe
+   renderizar el banner rojo (`SafetyBlockBanner`) y no persistir el diagnóstico
+   localmente. El motivo/código reales solo viven en `AuditLog`.
 3. `GET diagnostics/history/?limit=20` → `{results:[{id,plant_id,condition,analyzed_at}]}`;
    `GET diagnostics/<id>/download/` → `202 {task_id, poll_url:/api/v1/tasks/status/<id>/}`.
 4. Fallo MS1 (caída NVIDIA): `status:failure + error` explícito — la UI lo muestra,
@@ -137,12 +139,12 @@ Nodos en deep-sleep: `last_seen_delta_seconds` + `status` gobiernan la UI ("durm
 ## 6. Chat, mapa y reportes (implementados Fase D)
 
 - **Chat:** `POST llm/chat/` `{question|message|prompt}` sync → `{response,sources,disclaimer}`
-  (`core/views.py:521-570`, 60/min) + `GET chat/history/`; disclaimer COFEPRIS obligatorio.
+  (`core/views.py:521-570`, 60/min) + `GET chat/history/`; disclaimer legal genérico obligatorio.
   Transporte interno transparente para el móvil: REST directo o MCP con pool SSE
   persistente cuando `MCP_ENABLED=true` (ADR-0011); el envelope y los códigos no cambian.
-  **Bloqueo de seguridad (Hito 5):** si la respuesta del LLM menciona una especie
-  protegida por NOM-059 o un agroquímico catalogado, el endpoint responde `403`
-  con `{error, code, source: 'chat'}`; la UI renderiza un `SafetyBlockBanner` en
+  **Bloqueo de seguridad (Hito 5 + silent-compliance):** si el SafetyValidator
+  bloquea la respuesta, el endpoint responde `403`
+  con `{error:<genérico>, code:'SAFETY_BLOCKED', source: 'chat'}`; la UI renderiza un `SafetyBlockBanner` en
   el historial y no guarda el turno en `LLMRequest`.
 - **Mapa:** `GET map/hotspots/` (`IsAuthenticated`, `{hotspots:[{lat,lng,severity,species}]}`,
   `core/views.py:401-417`) + `GET weather/current/?lat&lon` (público) + tiles
@@ -202,7 +204,7 @@ El gate `schema-diff` (§11) bloquea CI ante cualquier cambio de paths/métodos 
 
 - **LFPDPPP:** consentimiento registrado antes de telemetría personal; ARCO (`DELETE profile/`);
   token solo en `flutter_secure_storage`, jamás en logs ni prefs.
-- **NOM-059/LGEEPA:** disclaimer §2 obligatorio + test widget.
+- **Advertencias de protección:** banner §2 obligatorio + test widget (textos genéricos, silent-compliance).
 - **IFT-016/TLS:** APK solo HTTPS (excepción: setup local); ingesta edge intacta por TLS/Store&Forward.
 - **Uploads:** `safe_join` + magic-bytes ya en backend; el APK valida tamaño/tipo antes de subir.
 

@@ -40,7 +40,7 @@ def test_chat_async_blocks_nom059_in_response():
         )
 
     assert result["blocked"] is True
-    assert result["safety_block"]["code"] == "SAFETY_NOM059_PROTECTED"
+    assert result["safety_block"]["code"] == "SAFETY_BLOCKED"
     assert AuditLog.objects.filter(
         action="SAFETY_BLOCK_SAFETY_NOM059_PROTECTED"
     ).exists()
@@ -60,7 +60,7 @@ def test_chat_async_blocks_agrochemical_mention():
         )
 
     assert result["blocked"] is True
-    assert result["safety_block"]["code"] == "SAFETY_AGROCHEMICAL_MENTION"
+    assert result["safety_block"]["code"] == "SAFETY_BLOCKED"
 
 
 @pytest.mark.django_db

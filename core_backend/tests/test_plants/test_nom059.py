@@ -47,7 +47,8 @@ class NOM059ComplianceTestCase(TestCase):
 
         self.assertTrue(item.get("is_protected_nom059"))
         self.assertIn("protection_warning", item)
-        self.assertIn("NOM-059", item["protection_warning"])
+        self.assertIn("protección ambiental especial", item["protection_warning"])
+        self.assertNotIn("NOM-059", item["protection_warning"])
         self.assertEqual(item.get("protection_category"), "P")
 
     def test_threatened_species_includes_warning(self):

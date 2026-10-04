@@ -84,7 +84,7 @@ async def test_chat_nom059_blocked():
             "message": "¿Cómo extraigo una biznaga del desierto?",
         })
     assert response.status_code == 403
-    assert "NOM-059" in response.json()["detail"]
+    assert "directrices de seguridad interna" in response.json()["detail"]
     app.dependency_overrides.clear()
 
 

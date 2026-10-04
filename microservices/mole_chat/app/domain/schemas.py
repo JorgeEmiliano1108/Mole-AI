@@ -1,13 +1,15 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Union
 
-# ── COFEPRIS Legal Disclaimer (mandatory on every AI response) ──────────────
+# ── Legal Disclaimer (mandatory on every AI response) ───────────────────────
+# Silent-compliance: escudo de responsabilidad genérico, sin nombres de normas
+# o autoridades (el cumplimiento se verifica internamente, no se declara en UX).
 COFEPRIS_DISCLAIMER: str = (
     "AVISO LEGAL: La información proporcionada es de carácter estrictamente "
     "informativo y no constituye una recomendación profesional, receta agronómica ni "
     "prescripción de uso de plaguicidas o agroquímicos. Cualquier aplicación de productos "
     "fitosanitarios debe realizarse bajo la supervisión de un profesional certificado y "
-    "conforme a las disposiciones de COFEPRIS, la Ley General de Salud y normativa aplicable. "
+    "conforme a la normativa aplicable. Consulte a un experto local. "
     "Mole.AI no se hace responsable por el uso indebido de la información aquí presentada."
 )
 

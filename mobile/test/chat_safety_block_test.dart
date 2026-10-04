@@ -13,12 +13,13 @@ void main() {
   group('ChatAnswer safety block', () {
     test('factory safetyBlock marca respuesta bloqueada', () {
       final answer = ChatAnswer.safetyBlock(
-        code: 'SAFETY_NOM059_PROTECTED',
-        reason: 'Especie protegida.',
+        code: 'SAFETY_BLOCKED',
+        reason: 'Contenido bloqueado por directrices de seguridad interna.',
       );
       expect(answer.isSafetyBlocked, isTrue);
-      expect(answer.safetyCode, 'SAFETY_NOM059_PROTECTED');
-      expect(answer.safetyReason, 'Especie protegida.');
+      expect(answer.safetyCode, 'SAFETY_BLOCKED');
+      expect(answer.safetyReason,
+          'Contenido bloqueado por directrices de seguridad interna.');
       expect(answer.response, '');
     });
 
@@ -36,14 +37,14 @@ void main() {
   group('ChatRepository.send safety block', () {
     test('mapea 403 del backend a ChatAnswer bloqueada', () async {
       final api = clientWith(FakeAdapter((o) => jsonBody({
-            'error': 'Especie protegida por NOM-059-SEMARNAT.',
-            'code': 'SAFETY_NOM059_PROTECTED',
+            'error': 'Contenido bloqueado por directrices de seguridad interna.',
+            'code': 'SAFETY_BLOCKED',
             'source': 'chat',
           }, 403)));
       final answer = await ChatRepository(api).send('¿cómo cuido peyote?');
       expect(answer.isSafetyBlocked, isTrue);
-      expect(answer.safetyCode, 'SAFETY_NOM059_PROTECTED');
-      expect(answer.safetyReason, contains('NOM-059'));
+      expect(answer.safetyCode, 'SAFETY_BLOCKED');
+      expect(answer.safetyReason, contains('seguridad interna'));
     });
 
     test('re-lanza excepciones que no son 403', () async {
@@ -63,15 +64,16 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: SafetyBlockBanner(
-              reason: 'Dosis excedida.',
-              code: 'SAFETY_DOSE_EXCEEDED',
+              reason: 'Contenido bloqueado por directrices de seguridad interna.',
+              code: 'SAFETY_BLOCKED',
             ),
           ),
         ),
       );
       expect(find.byKey(const Key('safety_block_banner')), findsOneWidget);
-      expect(find.text('Dosis excedida.'), findsOneWidget);
-      expect(find.text('Código: SAFETY_DOSE_EXCEEDED'), findsOneWidget);
+      expect(find.text('Contenido bloqueado por directrices de seguridad interna.'),
+          findsOneWidget);
+      expect(find.text('Código: SAFETY_BLOCKED'), findsOneWidget);
     });
   });
 }

@@ -39,8 +39,9 @@ class Nom059Warning extends StatelessWidget {
             Expanded(
               child: Text(
                 species.protectionWarning ??
-                    'Especie protegida por NOM-059-SEMARNAT. '
-                        'Recolección sin autorización es ilegal.',
+                    'Especie bajo protección ambiental especial. '
+                        'Recolección sin autorización es ilegal. '
+                        'Consulte a un experto local.',
                 style: Theme.of(context)
                     .textTheme
                     .bodyMedium

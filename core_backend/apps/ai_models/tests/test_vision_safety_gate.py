@@ -62,8 +62,8 @@ def test_blocked_nom059_species_no_diagnostic_no_audit_other(
         )
 
     assert result["blocked"] is True
-    assert result["safety_block"]["code"] == "SAFETY_NOM059_PROTECTED"
-    assert "NOM-059" in result["safety_block"]["reason"]
+    assert result["safety_block"]["code"] == "SAFETY_BLOCKED"
+    assert "NOM-059" not in result["safety_block"]["reason"]
     assert AIDiagnostic.objects.count() == 0
     assert AuditLog.objects.filter(
         action="SAFETY_BLOCK_SAFETY_NOM059_PROTECTED", user_id=vision_user.id
@@ -87,7 +87,7 @@ def test_blocked_species_in_immediate_actions(vision_user, temp_image):
         )
 
     assert result["blocked"] is True
-    assert result["safety_block"]["code"] == "SAFETY_NOM059_PROTECTED"
+    assert result["safety_block"]["code"] == "SAFETY_BLOCKED"
     assert AIDiagnostic.objects.count() == 0
 
 

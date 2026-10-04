@@ -103,9 +103,10 @@ def species_search_view(request):
             item.update({
                 "is_protected_nom059": True,
                 "protection_warning": (
-                    f"ATENCIÓN: Especie protegida por NOM-059-SEMARNAT "
+                    f"ATENCIÓN: Especie bajo protección ambiental especial "
                     f"({category_labels.get(cat, 'protegida')}). "
-                    f"Recolección sin autorización es ilegal."
+                    f"Recolección sin autorización es ilegal. "
+                    f"Consulte a un experto local."
                 ),
                 "protection_category": cat,
             })

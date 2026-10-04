@@ -348,8 +348,9 @@ paths:
         Contrato unificado con `task_status_view` (core): `status` minúsculas
         (pending|success|failure) + `state` crudo Celery + `result`/`error`/`info`
         serializados. Los clientes (web/Flutter) leen `status`.
-        Si el SafetyValidator bloquea la inferencia (NOM-059), `result.blocked=true`
-        y `result.safety_block` contiene `code` y `reason`.
+        Si el SafetyValidator bloquea la inferencia, `result.blocked=true`
+        y `result.safety_block` contiene `code:'SAFETY_BLOCKED'` y motivo genérico
+        (silent-compliance; el detalle real solo vive en `AuditLog`).
       parameters:
       - in: path
         name: task_id
@@ -886,9 +887,9 @@ paths:
       description: |-
         Chat RAG síncrono vía MS2 (transporte interno REST o MCP con pool SSE
         persistente según `MCP_ENABLED`; transparente para el cliente, ver ADR-0011).
-        Si la respuesta del LLM viola una regla de seguridad (NOM-059 o
-        agroquímico catalogado), retorna 403 con `{error, code, source: 'chat'}`
-        en lugar del mensaje del asistente.
+        Si el SafetyValidator bloquea la respuesta, retorna 403 con
+        `{error:<genérico>, code:'SAFETY_BLOCKED', source: 'chat'}`
+        en lugar del mensaje del asistente (silent-compliance).
       tags:
       - v1
       responses:
@@ -1675,7 +1676,7 @@ components:
             * `enfermedad` - Enfermedad
         is_protected_nom059:
           type: boolean
-          description: Indica si la especie está protegida por NOM-059-SEMARNAT.
+          description: Indica si la especie está bajo protección ambiental especial (catálogo semilla PoC).
         protection_category:
           oneOf:
           - $ref: '#/components/schemas/ProtectionCategoryEnum'
@@ -1771,7 +1772,7 @@ components:
             * `enfermedad` - Enfermedad
         is_protected_nom059:
           type: boolean
-          description: Indica si la especie está protegida por NOM-059-SEMARNAT.
+          description: Indica si la especie está bajo protección ambiental especial (catálogo semilla PoC).
         protection_category:
           oneOf:
           - $ref: '#/components/schemas/ProtectionCategoryEnum'

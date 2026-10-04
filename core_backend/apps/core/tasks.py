@@ -127,13 +127,9 @@ def chat_async(self, question, user_id, session_id):
                 task_id=self.request.id,
                 source="chat_fallback",
             )
-            return {
-                "blocked": True,
-                "safety_block": {
-                    "code": safety.code,
-                    "reason": safety.reason,
-                },
-            }
+            from apps.core.services.safety_presentation import public_safety_block
+            # Silent-compliance: motivo/código reales solo en AuditLog.
+            return public_safety_block()
 
         logger.info(
             "chat_async_completed",

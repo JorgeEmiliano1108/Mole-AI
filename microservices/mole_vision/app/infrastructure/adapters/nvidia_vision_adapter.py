@@ -51,7 +51,7 @@ Rules:
 4. Progression must match visible symptom coverage.
 5. Recommendations must be actionable, specific, and in Spanish.
 6. ph_predicted: analyze leaf colorimetry + visible soil. null if undetectable.
-7. NOM-059-SEMARNAT COMPLIANCE: If the identified species is a protected/cactaceae/endangered species under NOM-059, set affliction_name="ESPECIE_PROTEGIDA", affliction_type="UNKNOWN", and include in immediate_actions: ["Consulta la lista oficial SEMARNAT. Esta especie está protegida por la NOM-059."]
+7. SPECIES PROTECTION COMPLIANCE: If the identified species is a protected/cactaceae/endangered species under applicable environmental regulations, set affliction_name="ESPECIE_PROTEGIDA", affliction_type="UNKNOWN", and include in immediate_actions: ["Consulta fuentes oficiales. Esta especie está bajo protección ambiental especial."]. NEVER mention regulation names, laws or authorities in the output.
 Respond with JSON only. No other text."""
 
 _SEVERITY_MAP = {

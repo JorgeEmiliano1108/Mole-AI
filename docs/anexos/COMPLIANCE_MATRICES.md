@@ -2,6 +2,13 @@
 
 > **Nota**: Esta matriz cubre normativas LFPDPPP, NOM-059, ISO/IEC 25000 y MoproSoft.
 > Para la matriz detallada de **licencias de dependencias de software**, consultar `microservices/mole_chat/docs/README.md` (sección 11. Cumplimiento de licencias).
+>
+> **Alcance honesto (2026-10-04, Prueba de Concepto para cumplimiento normativo):**
+> los mecanismos de seguridad (SafetyValidator fail-closed, AuditLog inmutable,
+> HMAC-SHA256) son reales y testeados, pero operan sobre **Catálogos Semilla
+> Demostrativos** (2 sustancias, 2 especies) y **Proceso de Ingesta RAG Manual
+> (Sin Web Mining)**. Sin rotación de llave HMAC, sin Codex/OMRI y sin mTLS
+> interno: ver adenda H8 en `audit-matrix.md` y `.scratch/traceabilidad/issues/33-alcance-poc-cumplimiento.md`.
 
 Cada fila sigue la plantilla requerida:
 
@@ -89,7 +96,7 @@ Norma	Área	Requisito	Estado	Evidencia	Cómo cumple / cómo refactorizar	Priorid
 | ISO/IEC 25000 – Confiabilidad | CI/CD | Pruebas de carga y estrés | No cumple | No hay scripts de carga (Locust). | Implementar `locustfile.py` con escenarios representativos y ejecutarlo como stage "load test" en CI. | **Alta** |
 | ISO/IEC 25000 – Seguridad | CI/CD | Scanning de vulnerabilidades de dependencias (SCA) | No cumple | No hay Dependabot, Snyk o similares. | Activar Dependabot alerts y añadir paso `snyk test` (o herramienta equivalente) al workflow. | **Alta** |
 | MoproSoft | Pruebas | Cobertura mínima del 80 % | Parcial | Cobertura actual ≈ 82 % en mole_chat. | Añadir `coverage run` y `coverage xml` al CI; configurar `fail‑under = 80` para que el build falle si no se alcanza. | Media |
-| ISO/IEC 25000 – Seguridad | CI/CD | Gate de licencias para dependencias (pip-licenses --fail-on) | Cumple | `.github/workflows/system-tests.yml` (job `license-check`) | Mantener; verificar que el job se ejecute en cada PR. | **Alta** |
+| ISO/IEC 25000 – Seguridad | CI/CD | Gate de licencias para dependencias (pip-licenses --fail-on) | Parcial | `.github/workflows/system-tests.yml` (job `license-check`, alcance solo mole_chat) | Ampliar el gate a `core_backend` y demás microservicios (nota: `psycopg2-binary` LGPLv3 fallaría el criterio actual); workflows de visión/reportes fuera de `.github/workflows` no se ejecutan. | **Alta** |
 | ISO/IEC 25000 – Mantenibilidad | Pruebas | Tests de regresión UI (Cypress) | No cumple | No existen tests end‑to‑end para la UI. | Crear carpeta `frontend/e2e/` con pruebas Cypress que cubran login, aparición del banner, aceptación del consentimiento y envío de datos. | Media |
 
 ---

@@ -64,9 +64,11 @@ async def chat_endpoint(
         re.IGNORECASE
     )
     if NOM059_PATTERN.search(chat_request.message):
+        # Silent-compliance: el motivo normativo real queda en logs; al
+        # usuario solo mensaje genérico (sin menciones a normas).
         raise HTTPException(
             status_code=403,
-            detail="Solicitud prohibida: esta consulta viola la NOM-059-SEMARNAT. Para información oficial, consulte la lista SEMARNAT."
+            detail="Contenido bloqueado por directrices de seguridad interna."
         )
     
     try:

@@ -95,13 +95,9 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
             )
             if os.path.exists(file_path):
                 os.remove(file_path)
-            return {
-                "blocked": True,
-                "safety_block": {
-                    "code": safety.code,
-                    "reason": safety.reason,
-                },
-            }
+            from apps.core.services.safety_presentation import public_safety_block
+            # Silent-compliance: motivo/código reales solo en AuditLog.
+            return public_safety_block()
 
         # Guardar resultado en base de datos (trazabilidad LFPDPPP)
         if user_id:
