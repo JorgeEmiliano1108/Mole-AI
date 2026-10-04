@@ -8,7 +8,9 @@ daphne~=4.1
 channels-redis~=4.2
 
 # Database (PostgreSQL + pgvector)
-psycopg2-binary~=2.9
+# NOTA LICENCIAS: psycopg2 desde fuente (no -binary) + enlace dinámico.
+# LGPL permite uso en software privativo por enlace dinámico; ver NOTICE.
+psycopg2~=2.9
 pgvector~=0.3
 
 # Authentication & Security
@@ -59,7 +61,7 @@ langsmith>=0.1.0
 locust>=2.24.0
 pytest-django>=4.7.0
 pytest-cov>=5.0.0
-psycopg2-binary>=2.9.9
+psycopg2>=2.9.9
 dj-database-url>=2.1.0
 paho-mqtt>=2.0.0
 

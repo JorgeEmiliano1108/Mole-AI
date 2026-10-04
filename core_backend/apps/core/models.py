@@ -322,23 +322,31 @@ class AmbientReading(models.Model):
     """Telemetría del entorno físico (DHT22 / LTR390)"""
     id = models.BigAutoField(primary_key=True)
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='ambient_readings')
-    recorded_at = models.DateTimeField(default=timezone.now)
+    recorded_at = models.DateTimeField(default=timezone.now, db_index=True)
     air_temperature = models.FloatField(null=True, blank=True)
     air_humidity = models.FloatField(null=True, blank=True)
     light_level = models.FloatField(null=True, blank=True)
     uv_index = models.FloatField(null=True, blank=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['device', 'recorded_at']),
+        ]
+
 class SoilReading(models.Model):
     """Telemetría específica de una Planta (Suelo) enrutada a través de un Pin"""
     id = models.BigAutoField(primary_key=True)
     binding = models.ForeignKey(HardwareBinding, on_delete=models.CASCADE, related_name='soil_readings')
-    recorded_at = models.DateTimeField(default=timezone.now)
+    recorded_at = models.DateTimeField(default=timezone.now, db_index=True)
     soil_humidity = models.FloatField()
     ph_level = models.FloatField(null=True, blank=True)
 
     class Meta:
         db_table = 'soil_readings'
         ordering = ['-recorded_at']
+        indexes = [
+            models.Index(fields=['binding', 'recorded_at']),
+        ]
 
 # ---------------------------------------------------------------------------
 # DATA LIFECYCLE MANAGEMENT -- Hourly Aggregates (DLM-01)

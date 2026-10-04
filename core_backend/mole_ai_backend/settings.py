@@ -355,7 +355,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'dlm_pipeline',
         'schedule': crontab(hour=3, minute=0),
     },
+    'purge-old-rag-chunks-weekly': {
+        'task': 'purge_old_rag_chunks',
+        'schedule': crontab(hour=4, minute=0, day_of_week=0),
+    },
 }
+
+# Retención de chunks RAG de MS2 (días). Ver purge_old_rag_chunks.
+CHUNK_RETENTION_DAYS = int(os.getenv('CHUNK_RETENTION_DAYS', '365'))
 
 # 12. Logging con PII Filter
 LOGGING = {
@@ -445,31 +452,19 @@ SPECTACULAR_SETTINGS = {
     'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
 }
 
-# --- ENRUTAMIENTO AISLADO DE CELERY ---
+# --- ENRUTAMIENTO CELERY (worker único: consume `celery` + `training_queue`) ---
+# Sin workers dedicados (overhead de memoria): todo lo no listado va a la cola
+# por defecto `celery`. Las colas `chat_queue`/`vision_queue` no tienen
+# consumidor en compose — NO rutear nada hacia ellas. Aislamiento por colas
+# dedicadas, pendiente de workers propios (ver .scratch/deuda-fase5).
 CELERY_TASK_ROUTES = {
-    # Tareas de limpieza se quedan en Django (cola por defecto)
-    'apps.ai_models.tasks.cleanup_temp_files': {'queue': 'celery'},
-    'apps.core.tasks.refresh_admin_stats_task': {'queue': 'celery'},
-    'apps.core.tasks.check_device_liveness': {'queue': 'celery'},
-    
-    # Tareas de Visión (MS1) — a la cola `celery` (consumida por el worker).
-    # `vision_queue` no tiene consumidor en compose: ruteo dedicado pendiente
-    # de un worker propio. Ver .scratch/deuda-fase5 (endurecimiento).
-    'apps.ai_models.tasks.analyze_vision_async': {'queue': 'celery'},
-    'apps.ai_models.tasks.train_vision_async': {'queue': 'celery'},
-    
     # Tareas de Reportes y MLOps (MS3) - Asignamos a una cola dedicada
     'apps.core.tasks.generate_master_report_task': {'queue': 'reports_queue'},
     'apps.core.tasks.generate_pdf_async': {'queue': 'reports_queue'},
-    
+
     # Tareas de Training Data Pipeline (Fase 3 - MLOps)
     'apps.training_data.tasks.notify_training_asset': {'queue': 'training_queue'},
     'apps.training_data.tasks.update_training_status': {'queue': 'training_queue'},
-
-    # Chat RAG async — a la cola `celery` (consumida por el worker).
-    # `chat_queue` no tiene consumidor en compose: tareas encoladas ahí jamás
-    # se procesaban. Aislamiento por cola dedicada, pendiente de worker propio.
-    'apps.core.tasks.chat_async': {'queue': 'celery'},
 }
 
 WHITENOISE_MANIFEST_STRICT = False

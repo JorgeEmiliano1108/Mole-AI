@@ -1,0 +1,33 @@
+# NOTICE — Avisos de terceros (Mole.AI)
+
+Este software privativo (ver LICENSE) utiliza dependencias de código abierto.
+Cada dependencia se rige por su propia licencia; el gate de CI
+(`license-check` en `.github/workflows/system-tests.yml`) bloquea cualquier
+dependencia GPL/AGPL/LGPL no exceptuada explícitamente aquí.
+
+## Excepción explícita y documentada
+
+- **psycopg2 (adaptador PostgreSQL, LGPL-3.0 con excepciones)**: se instala
+  **desde fuente** (`psycopg2`, nunca `psycopg2-binary`) y se **enlaza
+  dinámicamente** (`libpq` del sistema). La LGPL permite expresamente el uso
+  en software privativo bajo enlace dinámico, siempre que el usuario pueda
+  sustituir la librería — condición que se cumple al compilar desde fuente
+  contra la `libpq` del entorno. Por ello el gate lo excluye vía
+  `--ignore-packages psycopg2`. Re-evaluar esta excepción si el adaptador
+  cambia (p. ej. a un driver con licencia permisiva como `asyncpg`/BSD para
+  paths async, o si Django soporta un backend permisivo para el ORM).
+
+## Dependencias permisivas (sin acción requerida)
+
+Adaptadores y librerías bajo Apache-2.0 / MIT / BSD / MPL-2.0 / PSF, entre otras:
+`asyncpg` (Apache-2.0, microservicios), `pgvector` (Apache-2.0), `pikepdf`
+(MPL-2.0, sustituye al antiguo `pypdf` LGPL), `Django` (BSD), `FastAPI`,
+`httpx`, `pydantic` (MIT), `cryptography` (Apache/BSD), `reportlab` (BSD).
+
+## Firmware ESP32
+
+Las dependencias ESP-IDF se descargan vía `idf.py` (mayoritariamente
+Apache-2.0, Espressif) y quedan fuera del gate `pip-licenses` (solo Python).
+El directorio `microservices/esp32_node/LEGACY/` (Arduino, LGPLv2.1) está
+muerto y debe archivarse antes de cualquier distribución de binarios
+(ver `.scratch/deuda-fase5/issues/12-ci-firmware-esp32.md`).

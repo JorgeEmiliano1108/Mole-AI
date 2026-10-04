@@ -1,0 +1,20 @@
+Mole.AI — Licencia de Software Privativo
+Copyright (C) 2024-2026 Mole.AI — Todos los derechos reservados.
+
+AVISO DE PROPIEDAD INTELECTUAL (Ley Federal del Derecho de Autor, México,
+y tratados internacionales aplicables):
+
+Este repositorio y todo su contenido (código fuente, documentación, modelos
+de datos, prompts y activos asociados) es propiedad exclusiva de Mole.AI y
+sus autores originales. Queda estrictamente prohibida la copia, modificación,
+distribución, sublicenciamiento o uso comercial, total o parcial, sin la
+autorización expresa y por escrito de los titulares del Copyright.
+
+Cualquier uso no autorizado será perseguido conforme a la legislación aplicable.
+
+EXCEPCIONES:
+- Los directorios `skills-main/` y `edge_node/` pueden contener componentes
+  con licencias propias; ver sus archivos LICENSE/NOTICE respectivos.
+- Las dependencias de terceros se rigen por sus propias licencias; ver NOTICE.
+
+Contacto: equipo interno DevOps (ver README.md, sección Support).

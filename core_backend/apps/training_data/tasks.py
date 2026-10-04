@@ -142,3 +142,32 @@ def update_training_status(self, record_id: str, asset_type: str, new_status: st
             extra={'record_id': record_id, 'error': str(exc)},
         )
         raise self.retry(exc=exc, countdown=5)
+
+
+@shared_task(bind=True, max_retries=3, name="purge_old_rag_chunks")
+def purge_old_rag_chunks(self):
+    """Retención de chunks RAG (MS2 `rag_knowledge_chunks`).
+
+    Elimina chunks con `created_at` anterior a `CHUNK_RETENTION_DAYS`
+    (default 365). Sin este job la tabla crece sin límite. Corre en beat
+    semanal; idempotente por fecha de corte.
+    """
+    from datetime import timedelta
+
+    from django.conf import settings
+    from django.db import connection
+
+    retention_days = int(getattr(settings, "CHUNK_RETENTION_DAYS", 365))
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM rag_knowledge_chunks WHERE created_at < %s",
+                [cutoff],
+            )
+            deleted = cursor.rowcount
+        logger.info("rag_chunks_purged", extra={"cutoff": cutoff.isoformat(), "deleted": deleted})
+        return {"status": "purged", "deleted": deleted, "cutoff": cutoff.isoformat()}
+    except Exception as exc:  # noqa: BLE001
+        logger.error("rag_chunks_purge_failed", extra={"error": str(exc)})
+        raise self.retry(exc=exc, countdown=60)
