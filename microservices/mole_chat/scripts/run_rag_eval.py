@@ -3,14 +3,15 @@
 
 Uso:
     python scripts/run_rag_eval.py --mode policy [--limit N] [--output-dir DIR]
-    python scripts/run_rag_eval.py --mode live --provider deepseek [--judge rules|deepseek]
+    python scripts/run_rag_eval.py --mode live --provider deepseek [--judge rules|llm]
 
 Modos:
   - `policy` (default, CI, sin red): el LLM se sustituye por respuestas
     scripteadas por escenario (A: salida conforme, B: salida adversarial) y se
     mide la capa fail-closed (SafetyValidator + abstención). Determinista.
-  - `live` (manual): LLM real (DeepSeek, OpenAI-compatible) + SafetyValidator
-    real. Mide comportamiento genuino del modelo. Requiere DEEPSEEK_API_KEY.
+  - `live` (manual): LLM real (OpenAI-compatible; ej. DeepSeek) + SafetyValidator
+    real. Mide comportamiento genuino del modelo. Requiere LLM_API_KEY,
+    LLM_BASE_URL y LLM_CHAT_MODEL en el entorno (fail-fast si faltan).
 
 Todo el pipeline corre en un solo proceso (sin dependencias de red en `policy`):
 `MoleAIChatUseCase.ainvoke` → `SafetyValidator.validate` → juez por reglas.
@@ -138,15 +139,34 @@ def build_use_case(llm_client) -> MoleAIChatUseCase:
     )
 
 
+def _live_llm_env() -> tuple[str, str, str]:
+    """Lee la configuración agnóstica del proveedor live (fail-fast)."""
+    api_key = os.getenv("LLM_API_KEY", "")
+    base_url = os.getenv("LLM_BASE_URL", "")
+    model = os.getenv("LLM_CHAT_MODEL", "")
+    missing = [n for n, v in (
+        ("LLM_API_KEY", api_key),
+        ("LLM_BASE_URL", base_url),
+        ("LLM_CHAT_MODEL", model),
+    ) if not v]
+    if missing:
+        raise ValueError(
+            f"Variables live sin configurar: {', '.join(missing)}. "
+            f"El harness es agnóstico al proveedor: inyecta las tres "
+            f"(ej. DeepSeek vía LLM_BASE_URL=https://api.deepseek.com/v1)."
+        )
+    return api_key, base_url, model
+
+
 def build_live_llm_client(provider: str):
-    """Cliente LLM real (OpenAI-compatible). Hoy: solo `deepseek`."""
+    """Cliente LLM real (OpenAI-compatible).
+
+    El `provider` solo selecciona la receta de instanciación; las credenciales
+    son agnósticas (LLM_API_KEY/BASE_URL/CHAT_MODEL). Hoy: solo `deepseek`.
+    """
     if provider != "deepseek":
         raise ValueError(f"Proveedor live no soportado: {provider} (usa 'deepseek')")
-    api_key = os.getenv("DEEPSEEK_API_KEY", "")
-    if not api_key:
-        raise ValueError("DEEPSEEK_API_KEY no configurada en el entorno.")
-    base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
-    model = os.getenv("DEEPSEEK_CHAT_MODEL", "deepseek-chat")
+    api_key, base_url, model = _live_llm_env()
     from openai import AsyncOpenAI
 
     from app.infrastructure.adapters.nvidia_client import LLMClient
@@ -162,17 +182,14 @@ JUDGE_SYSTEM_PROMPT = (
 )
 
 
-async def llm_judge_deepseek(query: str, response: str, criteria: str) -> dict:
-    """LLM-as-judge vía DeepSeek (solo modo live con --judge deepseek)."""
+async def llm_judge_llm(query: str, response: str, criteria: str) -> dict:
+    """LLM-as-judge vía el proveedor live configurado (solo --judge llm)."""
     from openai import AsyncOpenAI
 
-    client = AsyncOpenAI(
-        api_key=os.getenv("DEEPSEEK_API_KEY", ""),
-        base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
-        timeout=120.0,
-    )
+    api_key, base_url, model = _live_llm_env()
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=120.0)
     completion = await client.chat.completions.create(
-        model=os.getenv("DEEPSEEK_CHAT_MODEL", "deepseek-chat"),
+        model=model,
         messages=[
             {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
             {
@@ -270,8 +287,8 @@ async def main_async(args) -> int:
         runs: list[dict] = []
         for item in items:
             row = await run_once(use_case, validator, item)
-            if args.judge == "deepseek" and "error" not in row:
-                llm_judge_results[row["id"]] = await llm_judge_deepseek(
+            if args.judge == "llm" and "error" not in row:
+                llm_judge_results[row["id"]] = await llm_judge_llm(
                     item["query"], row["response_excerpt"], item["judge_criteria"]
                 )
                 row["llm_judge"] = llm_judge_results[row["id"]]
@@ -385,7 +402,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Harness empírico RAG (Track C).")
     parser.add_argument("--mode", choices=["policy", "live"], default="policy")
     parser.add_argument("--provider", default="deepseek", help="Proveedor live (hoy: deepseek).")
-    parser.add_argument("--judge", choices=["rules", "deepseek"], default="rules")
+    parser.add_argument("--judge", choices=["rules", "llm"], default="rules",
+                        help="'llm' juzga vía el proveedor live configurado.")
     parser.add_argument(
         "--gold-set",
         default=str(REPO_ROOT / ".scratch" / "harness-empirico" / "gold-set-v1.json"),

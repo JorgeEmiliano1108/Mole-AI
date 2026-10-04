@@ -318,3 +318,17 @@ Cambios vs v1.0: RF-07 backend y RNF-07 backend pasan a ✅/⚠️ (validación 
 | H6-05 | `generate_embeddings` obsoleto (410 Gone conceptual, sin llamadores) | ✅ | `apps/ai_models/services.py` DeprecationWarning + `MoleAIServiceError` |
 | H6-06 | Tabla espejo `training_dataset_anon` + Repository + HMAC-SHA256 | ⚠️ PARCIAL | Modelo + migración `0002` + servicio + 6 tests ✅; pendientes `export_anonymized_dataset`, purga→anonimizar, `sanitize_original_names` (ADR-0012 §1.5) |
 | H6-07 | Documentación refleja el código (rutas públicas reales, `vector(1024)`, pool MCP, contratos aditivos) | ✅ | `docs/system/01/02/03/04/05`, `mobile-contract.md`, `openapi.yml`, `CONTEXT.md`, `.env.example`, ADR-0011 §7 + ADR-0012 |
+
+---
+
+## Adenda 2026-10-04 — Hito 7: Cierre documental MVP — Harness empírico y vendor-neutralidad
+
+| ID | Claim | Veredicto | Evidencia |
+|---|---|---|---|
+| H7-01 | Harness RAG dual (policy determinista + live estocástico) sin depender de modelos costosos | ✅ | `microservices/mole_chat/scripts/run_rag_eval.py` (`--mode policy\|live`), `app/application/eval/judge.py`, `tests/test_run_rag_eval.py` |
+| H7-02 | Modo Policy: 100/100 pass, 0 escapes inseguros, 0 falsos bloqueos (gold draft v1) | ✅ | `.scratch/harness-empirico/reports/rag_eval_policy_*.json` (preliminar, draft v1); juez por reglas + SafetyValidator real |
+| H7-03 | Gate CI del harness (policy verde, fail-under 5 %) | ✅ | Job `rag-policy-gate` en `.github/workflows/system-tests.yml`; endpoint judge scripteado `X-Fake-Verdict` en `infrastructure/fake-nim/server.py` |
+| H7-04 | Configuración LLM agnóstica al proveedor (sin vendor lock-in) | ✅ | `LLM_API_KEY/BASE_URL/CHAT_MODEL` (fail-fast); `--provider` como único selector; `scripts/parse_live_results.py` omnidireccional |
+| H7-05 | Instrumentación Edge/Batería lista (código + protocolo, sin SDK verificado → revisión manual) | ✅ | `mobile/lib/features/vision/edge_benchmark.dart`, canal `mole.ai/battery`, `PROTOCOLO-C3.md`; parche JNI por rango |
+| H7-06 | Tasa de alucinación live <5 % (RNF) | ⏳ Pendiente de Ejecución en Producción | Requiere llave de pago (`LLM_API_KEY`) y corrida `--mode live`; script de parsing listo |
+| H7-07 | Latencia Edge <850 ms y batería <4.5 %/h en hardware real | ⏳ Pendiente de Ejecución en Producción | `PROTOCOLO-C3.md` + `integration_test/edge_benchmark_test.dart`; corridas manuales pendientes de dispositivos |

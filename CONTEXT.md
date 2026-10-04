@@ -21,6 +21,11 @@ Glosario canónico. Usar estos términos en issues, tests y código nuevo. Evita
 - Un Diagnóstico referencia un Espécimen y puede citar el Catálogo de especies.
 - Una sesión de Chat RAG referencia un Espécimen + su Telemetría reciente.
 
+## Directrices científicas (marco teórico del MVP)
+
+- **Sin LLMs locales en el móvil:** la arquitectura rechaza la inferencia de LLMs en el dispositivo por limitaciones severas de memoria (RAM) y consumo energético/térmico en gamas media/baja. La carga generativa se delega al cloud (proveedor LLM OpenAI-compatible, configurable sin vendor lock-in) y el Edge opera solo visión de bajo consumo (MobileNetV2 INT8, ver `assets/models/README.md`).
+- **Strict claim-level faithfulness:** el RAG se evalúa por fidelidad estricta a nivel de afirmación bajo políticas fail-closed: es alucinación tanto no abstenerse cuando el contexto no alcanza (frase exacta de la REGLA DE ORO) como cualquier afirmación no fundamentada detectada por el juez, incluso en respuestas a consultas válidas. Esto mitiga el sesgo de longitud (verbosity bias) de los jueces genéricos y mide seguridad real, no elocuencia.
+
 ## Ambigüedades resueltas
 
 - `diagnóstico vs identificación`: canónico **Diagnóstico**.
