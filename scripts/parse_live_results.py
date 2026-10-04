@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Resumen estadístico de reportes del harness RAG live (Track C).
 
 Definición ejecutiva de alucinación (omnidireccional, sobre las 50 del gold set):

@@ -266,7 +266,7 @@ paths:
       tags:
       - v1
       responses:
-        '200':
+        '204':
           description: User deactivated successfully
   /api/v1/admin/users/create/:
     post:
@@ -312,6 +312,18 @@ paths:
   /api/v1/ai/performance/:
     get:
       operationId: v1_ai_performance_retrieve
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/ai/pvu/route/:
+    post:
+      operationId: v1_ai_pvu_route_create
+      description: |-
+        POST /api/v1/ai/pvu/route/ — registra evento de conmutación PVU.
+        Denegable sin token (requiere autenticación); sirve para métricas de
+        conmutación predictiva en el dashboard de telemetría.
       tags:
       - v1
       responses:
@@ -541,7 +553,7 @@ paths:
       tags:
       - v1
       responses:
-        '200':
+        '204':
           description: No response body
   /api/v1/auth/profile/export/:
     get:
@@ -804,6 +816,25 @@ paths:
         POST /api/v1/diagnostics/
         Envía imagen a MS1 de forma asíncrona via Celery.
         No bloquea el request - el frontend hace polling del task_id.
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/diagnostics/{id}/:
+    patch:
+      operationId: v1_diagnostics_partial_update
+      description: |-
+        PATCH /api/v1/diagnostics/<id>/ — actualiza pvu_reason post-ruta.
+        El SafetyValidator intercepta motivos inseguros antes de persistirlos
+        (fail-closed). Silent-compliance: sin menciones normativas en respuestas.
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          format: uuid
+          type: string
       tags:
       - v1
       responses:
@@ -1148,6 +1179,20 @@ paths:
     get:
       operationId: v1_reports_users_retrieve
       description: Devuelve los últimos reportes interceptados
+      tags:
+      - v1
+      responses:
+        '200':
+          description: No response body
+  /api/v1/safety/validate/:
+    post:
+      operationId: v1_safety_validate_create
+      description: |-
+        POST /api/v1/safety/validate/ — Gate de dominio legal.
+        Valida texto o prescripción de agroquímico contra los contratos
+        docs/safety/*.json y safety_rules.yaml. Devuelve 403 con código y
+        motivo genéricos cuando el SafetyValidator detecta una violación
+        (fail-closed, silent-compliance).
       tags:
       - v1
       responses:

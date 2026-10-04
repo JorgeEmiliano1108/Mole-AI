@@ -36,18 +36,16 @@ mkdir -p /tmp/opencode
         "$PY" core_backend/manage.py spectacular --file "$TMP_SCHEMA" 2>/dev/null
 )
 
-# Normalizar: la generación incluye títulos con versión que no deben romper el gate.
-if diff -q <(grep -v "^  title:\|^  version:" "$SNAPSHOT") \
-          <(grep -v "^  title:\|^  version:" "$TMP_SCHEMA") > /dev/null; then
-    echo "[OK] Contrato móvil sin cambios (paths/métodos idénticos)."
-    exit 0
-else
-    echo "[FAIL] El schema OpenAPI cambió y el snapshot no se actualizó."
-    echo "--- diff (snapshot vs regenerado) ---"
-    diff <(grep -v "^  title:\|^  version:" "$SNAPSHOT") \
-         <(grep -v "^  title:\|^  version:" "$TMP_SCHEMA") | head -n 60
+# Gate ESTRUCTURAL (no cosmético): compara paths/métodos/operationId/
+# parámetros/códigos ignorando description/summary/tags. Las descripciones a
+# mano del snapshot se preservan intactas — jamás se regenera el archivo.
+# Requiere PyYAML en el Python que corre el gate (venv de core_backend la trae).
+"$PY" "$ROOT/scripts/canonical-openapi.py" "$TMP_SCHEMA" "$SNAPSHOT"
+STATUS=$?
+if [ $STATUS -ne 0 ]; then
     echo "-------------------------------------"
-    echo "Actualiza docs/contracts/openapi.yml + docs/mobile-contract.md"
-    echo "y documenta el cambio en issues/11-contrato-movil-congelado.md"
+    echo "Actualiza docs/contracts/openapi.yml a mano (descripciones intactas)"
+    echo "+ docs/mobile-contract.md y documenta el cambio en"
+    echo "issues/11-contrato-movil-congelado.md"
     exit 1
 fi

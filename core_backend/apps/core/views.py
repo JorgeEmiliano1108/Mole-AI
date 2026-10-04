@@ -466,8 +466,8 @@ def download_diagnostic_pdf(request, id):
 def diagnostic_patch_pvu_reason_view(request, id):
     """PATCH /api/v1/diagnostics/<id>/ — actualiza pvu_reason post-ruta.
 
-    El SafetyValidator intercepta cualquier motivo que mencione especies
-    protegidas por NOM-059 antes de persistirlo (fail-closed).
+    El SafetyValidator intercepta motivos inseguros antes de persistirlos
+    (fail-closed). Silent-compliance: sin menciones normativas en respuestas.
     """
     reason = request.data.get('pvu_reason')
     if reason is None:
@@ -475,8 +475,9 @@ def diagnostic_patch_pvu_reason_view(request, id):
     reason_text = str(reason)[:30]
     safety = SafetyValidator().validate({"pvu_reason": reason_text})
     if not safety.safe:
+        from apps.core.services.safety_presentation import public_safety_error
         return Response(
-            {"error": safety.reason, "code": safety.code},
+            public_safety_error(source="diagnostics"),
             status=safety.status_code,
         )
     updated = AIDiagnostic.objects.filter(id=id, user=request.user).update(

@@ -136,8 +136,9 @@ class TestSafetyRedTeamAPI:
         assert response.status_code == 403
         body = response.json()
         assert body["safe"] is False
-        assert body["code"] == "SAFETY_NOM059_PROTECTED"
-        assert "NOM-059" in body["reason"]
+        # Silent-compliance: código/motivo genéricos en la respuesta.
+        assert body["code"] == "SAFETY_BLOCKED"
+        assert "NOM-059" not in body["reason"]
 
     def test_injected_overdose_blocked_with_403(self, authenticated_client):
         client, _ = authenticated_client
@@ -152,7 +153,7 @@ class TestSafetyRedTeamAPI:
         assert response.status_code == 403
         body = response.json()
         assert body["safe"] is False
-        assert body["code"] == "SAFETY_DOSE_EXCEEDED"
+        assert body["code"] == "SAFETY_BLOCKED"
 
 
 # -----------------------------------------------------------------------------
