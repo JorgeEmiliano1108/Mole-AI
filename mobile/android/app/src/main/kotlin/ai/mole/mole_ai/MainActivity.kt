@@ -27,7 +27,10 @@ class MainActivity : FlutterActivity() {
             if (call.method == "getBatteryPct") {
                 val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
                 val pct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                if (pct == Int.MIN_VALUE) {
+                // Validación de dominio (0-100) en lugar de centinelas MIN_VALUE:
+                // getIntProperty documenta Long.MIN_VALUE como "desconocido",
+                // valor no representable en int (cast indefinido según AOSP).
+                if (pct < 0 || pct > 100) {
                     result.error("UNAVAILABLE", "BatteryManager sin lectura", null)
                 } else {
                     result.success(pct.toDouble())

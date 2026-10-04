@@ -363,6 +363,7 @@ async def main_async(args) -> int:
                 "id", "scenario", "category", "expected_route", "expected_block",
                 "blocked", "block_code", "safety_ok", "abstention_ok",
                 "abstention_detected", "passed", "latency_ms", "error",
+                "response_excerpt",
             ],
             extrasaction="ignore",
         )

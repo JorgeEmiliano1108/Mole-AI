@@ -34,11 +34,18 @@ El test imprime `EDGE_BENCHMARK_JSON: {...}` y guarda copia en el dir temporal
 | Latencia run p95 (solo inferencia) | < 850 ms | `run_p95_ms` |
 | Drenaje batería | < 4.5 %/h | `battery_drain_pct_per_hour` |
 
-**Advertencia metodológica:** con ventanas de minutos, `%Intent.ACTION_BATTERY_CHANGED`/
+**Advertencia metodológica:** con ventanas de minutos,
 `BATTERY_PROPERTY_CAPACITY` reporta en pasos de 1%: el `% /h` extrapolado es
 ruidoso. Si `battery_start_pct == battery_end_pct`, la corrida solo acota el
 drenaje (< 1 % / ventana) y debe repetirse con más iteraciones o workload
 continuo de 15+ min. Registrar siempre `elapsed_seconds` junto al drenaje.
+
+**Riesgo ANR asumido (entorno controlado):** la inferencia TFLite corre
+sincrónica en el isolate principal durante la corrida; si las iteraciones
+superan ~5 s de cómputo continuo, Android puede lanzar ANR. Es aceptable aquí
+porque el objetivo es medir latencia pura sin hilos, pero NO replicar este
+patrón en el flujo productivo (usar isolate de fondo si el benchmark motiva
+un cambio en `EdgeAiService`).
 
 ## Registro de resultados
 
