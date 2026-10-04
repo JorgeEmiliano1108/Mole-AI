@@ -1,5 +1,5 @@
 """FastAPI server que emula NVIDIA NIM para pruebas end-to-end."""
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -14,7 +14,13 @@ class ChatCompletionRequest(BaseModel):
 
 
 @app.post("/v1/chat/completions")
-async def chat_completions(req: ChatCompletionRequest):
+async def chat_completions(req: ChatCompletionRequest, request: Request):
+    # Modo judge scripteado (Track C): si el llamador envía el header
+    # X-Fake-Verdict con un JSON {"verdict": ..., "reason": ...}, se devuelve
+    # tal cual para testear la ruta LLM-as-judge de forma determinista en CI.
+    scripted = request.headers.get("X-Fake-Verdict")
+    if scripted:
+        return {"choices": [{"message": {"content": scripted}}]}
     return {
         "choices": [{"message": {"content": "Respuesta simulada desde fake NIM para pruebas E2E."}}]
     }

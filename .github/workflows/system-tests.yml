@@ -93,6 +93,30 @@ jobs:
             apps/core/tests/test_audit.py \
             -q -p no:cacheprovider
 
+  rag-policy-gate:
+    # Track C: capa fail-closed del RAG (SafetyValidator + abstención).
+    # Modo policy = 100% offline y determinista (LLM scripteado, sin red).
+    runs-on: ubuntu-latest
+    container:
+      image: python:3.11-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install mole_chat dependencies
+        run: |
+          pip install --no-cache-dir -r microservices/mole_chat/requirements.lock pytest pytest-asyncio
+
+      - name: Unit tests del harness (juez + escenarios)
+        working-directory: microservices/mole_chat
+        run: |
+          python -m pytest tests/test_run_rag_eval.py tests/test_mcp_server.py tests/test_mcp_chat_tool.py -q -p no:cacheprovider
+
+      - name: Harness policy (gold set draft v1, fail-under 5%)
+        working-directory: microservices/mole_chat
+        run: |
+          python scripts/run_rag_eval.py --mode policy --fail-under 0.05
+
   mobile-quality:
     runs-on: ubuntu-latest
     container:
