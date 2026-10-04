@@ -45,6 +45,12 @@ class PgVectorAdapter:
             extra_body={"input_type": "query"},
         )
         emb = response.data[0].embedding
+        # Bloqueo preventivo: la tabla es vector(1024) (nv-embedqa-e5-v5).
+        if len(emb) != 1024:
+            raise ValueError(
+                f"Dimensión de embedding inválida en mole_report: se esperaban "
+                f"1024 dimensiones, se recibieron {len(emb)}."
+            )
         return "[" + ",".join(str(v) for v in emb) + "]"
 
     async def search(self, query: str, top_k: int = 5) -> str:

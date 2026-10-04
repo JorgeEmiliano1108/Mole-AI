@@ -312,6 +312,11 @@ INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', '')
 # Obligatoria en producción; en desarrollo puede estar vacía si la feature no se usa.
 ANONIMIZACION_KEY = os.getenv('ANONIMIZACION_KEY', '')
 
+# Dimensión esperada de los embeddings textuales RAG (nvidia/nv-embedqa-e5-v5).
+# Debe coincidir con BotanicalKnowledge.embedding y con
+# MS2 rag_knowledge_chunks.embedding (vector(1024)). Verificado por system check.
+LLM_EMBEDDING_DIMENSION = int(os.getenv('LLM_EMBEDDING_DIMENSION', '1024'))
+
 # 11. Redis & Celery
 REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 CACHES = {

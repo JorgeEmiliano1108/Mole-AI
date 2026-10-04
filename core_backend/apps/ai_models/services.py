@@ -242,21 +242,25 @@ class MoleAIClient:
             raise MoleAIServiceError(f"Failed to generate chat response: {str(e)}")
     
     async def generate_embeddings(self, text: str, **kwargs) -> Dict[str, Any]:
-        try:
-            payload = {
-                'text': text,
-                'model': kwargs.get('model', 'sentence-transformers/all-mpnet-base-v2')
-            }
-            response_data = await self._make_request('/api/v1/embeddings', data=payload)
-            return {
-                'vector': response_data.get('vector'),
-                'dimension': response_data.get('dimension'),
-                'model_used': response_data.get('model_used'),
-                'processing_time_ms': response_data.get('processing_time_ms')
-            }
-        except Exception as e:
-            logger.error(f"Error generating embeddings: {str(e)}")
-            raise MoleAIServiceError(f"Failed to generate embeddings: {str(e)}")
+        """OBSOLETO (HTTP 410 Gone conceptual) — NO USAR.
+
+        El endpoint `/api/v1/embeddings` no existe en MS2 y el modelo por
+        defecto (sentence-transformers) contradice ADR-0004 (solo NVIDIA NIM).
+        El pipeline de embeddings textuales es responsabilidad exclusiva de MS2
+        (`pgvector_store._encode_async` → `rag_knowledge_chunks vector(1024)`).
+        Este método se conserva solo para no romper imports; siempre falla.
+        """
+        import warnings
+        warnings.warn(
+            "MoleAIClient.generate_embeddings está obsoleto (410 Gone). "
+            "El pipeline de embeddings textuales es responsabilidad exclusiva de MS2.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        raise MoleAIServiceError(
+            "Endpoint obsoleto (410 Gone). "
+            "El pipeline de embeddings textuales es responsabilidad exclusiva de MS2."
+        )
     
     async def check_health(self) -> Dict[str, Any]:
         try:

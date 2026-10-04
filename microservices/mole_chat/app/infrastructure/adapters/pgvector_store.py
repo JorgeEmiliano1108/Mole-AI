@@ -94,6 +94,15 @@ class PgVectorStore:
         if self._pool is not None:
             return
 
+        # Fail-fast: la DDL es vector(1024). Un modelo con otra dimensión
+        # rompería INSERT y `<=>` en tiempo de ejecución.
+        if settings.LLM_EMBEDDING_DIMENSION != 1024:
+            raise RuntimeError(
+                f"LLM_EMBEDDING_DIMENSION={settings.LLM_EMBEDDING_DIMENSION} "
+                f"incompatible con rag_knowledge_chunks.embedding vector(1024). "
+                f"Ajusta el modelo o migra la DDL antes de arrancar."
+            )
+
         async with self._init_lock:
             if self._pool is not None:
                 return
@@ -134,6 +143,21 @@ class PgVectorStore:
             )
         return self._embed_client
 
+    def _assert_dimension(self, embedding: List[float], *, where: str) -> None:
+        """Bloqueo preventivo: el vector debe coincidir con la DDL (vector(1024)).
+
+        Si el proveedor devolviera otra dimensión, pgvector fallaría en el
+        INSERT o en `<=>`. Fallar aquí, con contexto, en lugar de en SQL.
+        """
+        expected = settings.LLM_EMBEDDING_DIMENSION
+        if len(embedding) != expected:
+            raise ValueError(
+                f"Dimensión de embedding inválida en {where}: "
+                f"se esperaban {expected} dimensiones "
+                f"(modelo {self._embed_model}), se recibieron {len(embedding)}. "
+                f"Verifica LLM_EMBEDDING_MODEL / LLM_EMBEDDING_DIMENSION."
+            )
+
     async def _encode_async(self, texts: List[str], input_type: str = "query") -> List[List[float]]:
         """Generate embeddings via NVIDIA NIM embeddings endpoint (async, non-blocking)."""
         client = self._get_embed_client()
@@ -143,7 +167,10 @@ class PgVectorStore:
             encoding_format="float",
             extra_body={"input_type": input_type}
         )
-        return [item.embedding for item in response.data]
+        embeddings = [item.embedding for item in response.data]
+        for embedding in embeddings:
+            self._assert_dimension(embedding, where=f"_encode_async[{input_type}]")
+        return embeddings
 
     def warmup(self) -> None:
         """No-op: NVIDIA embeddings require no local warmup."""

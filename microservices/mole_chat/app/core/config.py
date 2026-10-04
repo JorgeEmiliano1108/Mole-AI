@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     NVIDIA_BASE_URL: str = Field(default="https://integrate.api.nvidia.com/v1", validation_alias=AliasChoices("LLM_BASE_URL", "NVIDIA_BASE_URL"))
     NVIDIA_CHAT_MODEL: str = Field(default="meta/llama-3.3-70b-instruct", validation_alias=AliasChoices("LLM_CHAT_MODEL", "NVIDIA_CHAT_MODEL"))
     NVIDIA_EMBEDDING_MODEL: str = Field(default="nvidia/nv-embedqa-e5-v5", validation_alias=AliasChoices("LLM_EMBEDDING_MODEL", "NVIDIA_EMBEDDING_MODEL"))
+    # Dimensión esperada de los vectores del modelo de embeddings configurado.
+    # Debe coincidir con la columna rag_knowledge_chunks.embedding (vector(1024))
+    # y con BotanicalKnowledge.embedding en Django. Fail-fast si difiere.
+    LLM_EMBEDDING_DIMENSION: int = 1024
 
     # ── PDF Ingestion Limits ─────────────────────────────
     MAX_PDF_SIZE: int = 10 * 1024 * 1024   # 10 MiB in bytes

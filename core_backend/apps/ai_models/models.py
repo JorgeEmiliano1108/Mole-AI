@@ -135,7 +135,12 @@ class CNNInference(models.Model):
     
     # Feature extraction
     features_vector = VectorField(dimensions=512, null=True, blank=True)  # CNN features
-    embedding_vector = VectorField(dimensions=1536, null=True, blank=True)  # CLIP embedding
+    # ESPACIO LATENTE DE VISIÓN (p. ej. CLIP) — NO CRUZAR JAMÁS con el espacio
+    # textual RAG de MS2 (botanical_knowledge/rag_knowledge_chunks, 1024-d,
+    # nvidia/nv-embedqa-e5-v5). Los espacios vectoriales no son interoperables:
+    # mezclarlos produce errores de dimensión en pgvector o, peor, similitudes
+    # sin sentido. Este campo conserva su dimensión histórica de forma intencional.
+    embedding_vector: VectorField = VectorField(dimensions=1536, null=True, blank=True)  # CLIP embedding
     # features_vector = models.TextField(null=True, blank=True)  # Temporary field type
     # embedding_vector = models.TextField(null=True, blank=True)  # Temporary field type
     

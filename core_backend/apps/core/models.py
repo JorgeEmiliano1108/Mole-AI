@@ -59,7 +59,9 @@ class BotanicalKnowledge(models.Model):
     content = models.TextField(null=True, blank=True)
     source_url = models.TextField(null=True, blank=True)
     chunk_metadata = models.JSONField(null=True, blank=True)
-    embedding = VectorField(dimensions=1536, null=True, blank=True)
+    # Dimensión canónica del espacio textual RAG: nvidia/nv-embedqa-e5-v5 (1024).
+    # NO cruzar con espacios de visión (CNNInference.embedding_vector, CLIP).
+    embedding = VectorField(dimensions=1024, null=True, blank=True)
     
     class Meta:
         db_table = 'botanical_knowledge'
