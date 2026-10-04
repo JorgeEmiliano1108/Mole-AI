@@ -30,7 +30,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.authentication.infrastructure.local_jwt_auth import LocalJWTAuthentication
-from apps.core.models import SensorLog
 from apps.core.serializers import SensorReadingSerializer
 from apps.plants.models import UserPlant
 
@@ -74,19 +73,38 @@ def telemetry_latest_view(request):
     except UserPlant.DoesNotExist:
         return Response({'error': 'Plant not found or does not belong to the user.'}, status=404)
 
-    log = SensorLog.objects.filter(plant_id=plant_id).order_by('-recorded_at').first()
+    from apps.core.models import HardwareBinding
 
-    if not log:
+    # A3 FREEZE: se lee del esquema 1:N canónico, no del archivo SensorLog.
+    binding = (
+        HardwareBinding.objects.select_related("device")
+        .filter(plant_id=plant_id)
+        .first()
+    )
+    if binding is None:
         return Response({'error': 'No telemetry available for this plant.'}, status=404)
+
+    from apps.core.models import AmbientReading, SoilReading
+
+    soil = SoilReading.objects.filter(binding=binding).order_by('-recorded_at').first()
+    ambient = AmbientReading.objects.filter(device=binding.device).order_by('-recorded_at').first()
+
+    if not soil and not ambient:
+        return Response({'error': 'No telemetry available for this plant.'}, status=404)
+
+    latest_at = None
+    for reading in (soil, ambient):
+        if reading is not None and (latest_at is None or reading.recorded_at > latest_at):
+            latest_at = reading.recorded_at
 
     payload = {
         'plant_id': str(plant_id),
-        'recorded_at': log.recorded_at.isoformat(),
-        'soil_humidity': log.soil_humidity,
-        'air_humidity': log.air_humidity,
-        'air_temperature': log.air_temperature,
-        'uv_index': log.uv_index,
-        'ph_level': log.ph_level,
+        'recorded_at': latest_at.isoformat() if latest_at else None,
+        'soil_humidity': soil.soil_humidity if soil else None,
+        'air_humidity': ambient.air_humidity if ambient else None,
+        'air_temperature': ambient.air_temperature if ambient else None,
+        'uv_index': ambient.uv_index if ambient else None,
+        'ph_level': soil.ph_level if soil else None,
     }
     return Response(payload)
 
@@ -133,20 +151,18 @@ def sensors_ingest_view(request):
                 status=403,
             )
 
-    if not UserPlant.objects.filter(id=v_data["plant_id"]).exists():
-        return Response({"error": "plant_id not registered"}, status=404)
+    from apps.core.services.legacy_ingest import (
+        PlantNotBoundError,
+        ingest_legacy_reading,
+    )
 
     try:
-        SensorLog.objects.create(
-            plant_id=v_data["plant_id"],
-            recorded_at=v_data.get("recorded_at"),
-            soil_humidity=v_data.get("soil_humidity"),
-            air_temperature=v_data.get("air_temperature"),
-            uv_index=v_data.get("uv_index"),
-            light_level=v_data.get("light_level"),
-            ph_level=v_data.get("ph_level"),
-        )
+        # A3 FREEZE: sensor_logs es archivo de solo lectura; se escribe al
+        # esquema 1:N (AmbientReading + SoilReading vía HardwareBinding).
+        ingest_legacy_reading(v_data)
         return Response({"status": "success", "registered": 1}, status=201)
+    except PlantNotBoundError:
+        return Response({"error": "plant_id not registered"}, status=404)
     except Exception as exc:
         logger.exception("Sensor ingest failed")
         return Response({"error": str(exc)}, status=500)

@@ -152,12 +152,14 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
                     token,
                     local_key,
                     algorithms=['HS256'],
-                    options={'verify_exp': True},
+                    audience=getattr(settings, 'JWT_AUDIENCE', 'authenticated'),
+                    options={'verify_aud': True, 'verify_exp': True},
                     leeway=leeway,
                 )
                 # Allow any user with valid local JWT
                 # Check if user exists and is active
-                from django.contrib.auth import get_user_model
+                # (get_user_model ya importado a nivel módulo; un import local
+                # aquí lo sombrearía y rompería la ruta primaria.)
                 User = get_user_model()
                 try:
                     user = User.objects.get(username=payload.get('username'))
@@ -233,24 +235,19 @@ class SupabaseAuthentication(authentication.BaseAuthentication):
         user.supabase_app_metadata = app_metadata
         user.supabase_user_metadata = user_metadata
 
-        # Map Supabase `role` claim into Django `is_staff` / `is_superuser` flags
+        # El claim `role` del token NUNCA otorga privilegios Django: cualquier
+        # JWT válido con role=admin escalaba a superusuario persistente (CVE
+        # interno). `is_staff`/`is_superuser` solo se otorgan vía admin panel.
         try:
             from apps.authentication.infrastructure.logging_filters import get_anonymized_email, get_hashed_user_id
-            
+
             logger = logging.getLogger(__name__)
             resolved_role = (role or 'authenticated').lower()
-            
+
             # Log minimal auth info with PII sanitizado (el filtro lo hace automáticamente, pero usamos helpers por claridad)
             safe_email = get_anonymized_email(email)
             safe_user_id = get_hashed_user_id(user_id)
             logger.info("auth: sub=%s email=%s role=%s", safe_user_id, safe_email, resolved_role)
-
-            # Promote to staff/superuser ONLY for explicitly privileged roles
-            if resolved_role in ('superuser', 'superadmin', 'admin'):
-                if not user.is_staff or not user.is_superuser:
-                    user.is_staff = True
-                    user.is_superuser = True
-                    user.save(update_fields=['is_staff', 'is_superuser'])
         except Exception as e:
             # Don't fail authentication due to DB save issues; log and continue
             logging.getLogger(__name__).exception('Error mapping role to user flags: %s', e)

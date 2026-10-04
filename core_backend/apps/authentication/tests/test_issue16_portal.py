@@ -58,14 +58,22 @@ class TestPasswordReset:
         assert r.status_code == 400
 
     def test_confirm_ok_rota_e_invalida(self):
+        from django.utils import timezone
+
+        from apps.authentication.tasks import (
+            generate_password_reset_token,
+            hash_auth_token,
+        )
         user = User.objects.create_user(username="u2", password="Vieja123!",
                                         email="u2@x.mx")
         c = APIClient()
-        assert c.post("/api/v1/auth/password-reset/request/",
-                      {"email": "u2@x.mx"}, format="json").status_code == 202
-        user.refresh_from_db()
-        token = user.password_reset_token
-        assert token  # task eager o directa lo generó
+        # En DB solo vive el hash con pepper; por el correo viaja el crudo.
+        token = generate_password_reset_token(user.id)
+        user.password_reset_token = hash_auth_token(token)
+        user.password_reset_sent_at = timezone.now()
+        user.save()
+        # En DB jamás vive el crudo (dump ≠ takeover).
+        assert user.password_reset_token != token
         r = c.post("/api/v1/auth/password-reset/confirm/",
                    {"token": token, "new_password": "Nueva123!"},
                    format="json")
@@ -86,13 +94,17 @@ class TestPasswordReset:
                                         email="u3@x.mx")
         from django.utils import timezone
 
-        from apps.authentication.tasks import generate_password_reset_token
-        user.password_reset_token = generate_password_reset_token(user.id)
+        from apps.authentication.tasks import (
+            generate_password_reset_token,
+            hash_auth_token,
+        )
+        token = generate_password_reset_token(user.id)
+        user.password_reset_token = hash_auth_token(token)
         user.password_reset_sent_at = timezone.now()
         user.save()
         c = APIClient()
         r = c.post("/api/v1/auth/password-reset/confirm/",
-                   {"token": user.password_reset_token, "new_password": "abc"},
+                   {"token": token, "new_password": "abc"},
                    format="json")
         assert r.status_code == 400
 

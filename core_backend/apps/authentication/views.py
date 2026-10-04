@@ -411,9 +411,10 @@ def verify_email_view(request, token):
     Verifica el correo electrónico del usuario.
     """
     from .models import User
+    from .tasks import hash_auth_token
 
     try:
-        user = User.objects.get(email_verification_token=token)
+        user = User.objects.get(email_verification_token=hash_auth_token(token))
     except User.DoesNotExist:
         return Response(
             {"error": "Token de verificación inválido o expirado."},
@@ -543,10 +544,13 @@ def password_reset_confirm_view(request):
     from apps.authentication.validators import validate_password_strength
     from apps.core.models import AuditLog
 
+    from .tasks import hash_auth_token
+
     token = request.data.get("token") or ""
     new_password = request.data.get("new_password") or ""
     User = get_user_model()
-    user = User.objects.filter(password_reset_token=token).first() if token else None
+    user = User.objects.filter(
+        password_reset_token=hash_auth_token(token)).first() if token else None
     if user is None or not user.password_reset_sent_at:
         return Response({"error": "Token inválido."}, status=status.HTTP_400_BAD_REQUEST)
     age = (timezone.now() - user.password_reset_sent_at).total_seconds()

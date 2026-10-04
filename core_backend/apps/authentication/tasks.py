@@ -24,11 +24,24 @@ def generate_password_reset_token(user_id: int) -> str:
     """Token de recuperación de un solo uso (ADR-0006).
 
     Reutiliza el mismo esquema hash del token de verificación: SHA-256
-    sobre aleatoriedad + user_id + SECRET_KEY. Jamás se envía el hash
-    crudo fuera del correo; en DB solo vive el hash (aquí idéntico al
-    valor enviado, de un solo uso: se limpia al confirmar).
+    sobre aleatoriedad + user_id + SECRET_KEY. En DB solo vive el hash
+    con pepper (hash_auth_token); el valor crudo solo viaja por correo.
+    De un solo uso: se limpia al confirmar.
     """
     return generate_email_token(user_id)
+
+
+def hash_auth_token(token: str) -> str:
+    """Hash con pepper para almacenar tokens de un solo uso en DB.
+
+    Un dump/SQL-backup nunca debe otorgar takeover directo: en DB solo
+    vive SHA-256(token + SECRET_KEY); la comparación se hace sobre hashes.
+    NOTA de migración: tokens pendientes emitidos antes de este cambio
+    (crudos en DB) dejarán de validar; expiran por TTL (1h/24h).
+    """
+    return hashlib.sha256(
+        f"{token}{settings.SECRET_KEY}".encode()
+    ).hexdigest()
 
 
 @shared_task(name="send_verification_email_task")
@@ -46,7 +59,7 @@ def send_verification_email_task(user_id: int, email: str, username: str):
         return "User not found"
 
     token = generate_email_token(user_id)
-    user.email_verification_token = token
+    user.email_verification_token = hash_auth_token(token)
     user.email_verification_sent_at = timezone.now()
     user.save(update_fields=["email_verification_token", "email_verification_sent_at"])
 
@@ -84,7 +97,7 @@ def verify_email_task(token: str):
     from apps.authentication.models import User
 
     try:
-        user = User.objects.get(email_verification_token=token)
+        user = User.objects.get(email_verification_token=hash_auth_token(token))
         user.is_email_verified = True
         user.email_verification_token = None
         user.save(update_fields=["is_email_verified", "email_verification_token"])
@@ -105,7 +118,7 @@ def send_password_reset_email_task(user_id: int, email: str, username: str):
         return "User not found"
 
     token = generate_password_reset_token(user_id)
-    user.password_reset_token = token
+    user.password_reset_token = hash_auth_token(token)
     user.password_reset_sent_at = timezone.now()
     user.save(update_fields=["password_reset_token", "password_reset_sent_at"])
 

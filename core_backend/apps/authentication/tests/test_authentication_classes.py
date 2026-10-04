@@ -28,6 +28,7 @@ class SupabaseAuthenticationTests(TestCase):
         payload = {
             'sub': str(sub or self.user.id),
             'email': email or self.user.email,
+            'aud': 'authenticated',
             'exp': now + timedelta(minutes=exp_minutes),
             'iat': now,
             'jti': 'jti-1',
@@ -87,6 +88,46 @@ class SupabaseAuthenticationTests(TestCase):
         token = self._mint_local_jwt(username=self.user.username)
         user, _ = SupabaseAuthentication().authenticate(self._request(token))
         self.assertTrue(user.is_superuser)
+
+    @patch('apps.authentication.jwks.get_verification_key')
+    @patch('apps.authentication.infrastructure.authentication.jwt.decode')
+    def test_role_claim_never_escalates(self, mock_decode, mock_get_key):
+        """CVE interno: un JWT verificado con role=admin NO otorga staff/superuser."""
+        mock_get_key.return_value = ('dummy-key', ['HS256'])
+        now = datetime.now(timezone.utc)
+        mock_decode.return_value = {
+            'sub': 'ext-uid-1',
+            'email': 'attacker@x.mx',
+            'role': 'admin',
+            'aud': 'authenticated',
+            'exp': now + timedelta(minutes=10),
+            'iat': now,
+            'jti': 'jti-evil',
+        }
+        user, _ = SupabaseAuthentication().authenticate(self._request('fake.verified.token'))
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+
+    @patch('apps.authentication.jwks.get_verification_key')
+    def test_fallback_rejects_missing_audience(self, mock_get_key):
+        """El fallback HS256 exige aud (fail-closed cross-audience)."""
+        mock_get_key.side_effect = InvalidSignatureError('no jwks in test')
+        now = datetime.now(timezone.utc)
+        payload = {
+            'sub': str(self.user.id),
+            'username': self.user.username,
+            'email': self.user.email,
+            'exp': now + timedelta(minutes=10),
+            'iat': now,
+            'jti': 'jti-noaud',
+        }
+        token = jwt.encode(
+            payload,
+            getattr(settings, 'JWT_SECRET_KEY', None) or settings.SECRET_KEY,
+            algorithm='HS256',
+        )
+        with self.assertRaises(exceptions.AuthenticationFailed):
+            SupabaseAuthentication().authenticate(self._request(token))
 
 
 class HardwareAPIKeyAuthenticationTests(TestCase):

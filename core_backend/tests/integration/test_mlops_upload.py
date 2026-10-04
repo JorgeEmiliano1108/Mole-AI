@@ -311,6 +311,7 @@ def _mint_local_jwt() -> str | None:
             "username": "EmiMole",
             "email": "emimole@mole.ai",
             "role": "superuser",
+            "aud": "authenticated",
             "iat": int(time.time()),
             "exp": int(time.time()) + 3600,  # 1 hour
         }

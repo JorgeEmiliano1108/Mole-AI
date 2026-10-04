@@ -9,7 +9,7 @@ from django.conf import settings
 import paho.mqtt.client as mqtt
 
 from apps.core.serializers import SensorBatchReadingSerializer
-from apps.core.models import SensorLog
+from apps.core.services.legacy_ingest import PlantNotBoundError, ingest_legacy_reading
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +43,14 @@ class Command(BaseCommand):
             # Usar SensorBatchReadingSerializer para validar la lectura individual
             serializer = SensorBatchReadingSerializer(data=payload)
             if serializer.is_valid():
-                with transaction.atomic():
-                    # Crear el registro en PostgreSQL
-                    SensorLog.objects.create(**serializer.validated_data)
-                logger.info(f"Telemetría persistida correctamente (plant_id: {payload.get('plant_id')})")
+                # A3 FREEZE: sensor_logs es archivo de solo lectura; se escribe
+                # al esquema 1:N (AmbientReading + SoilReading vía binding).
+                try:
+                    with transaction.atomic():
+                        ingest_legacy_reading(dict(serializer.validated_data))
+                    logger.info(f"Telemetría persistida correctamente (plant_id: {payload.get('plant_id')})")
+                except PlantNotBoundError:
+                    logger.error(f"Payload MQTT sin binding (plant_id: {payload.get('plant_id')})")
             else:
                 logger.error(f"Payload MQTT rechazado (Validación): {serializer.errors}")
         except json.JSONDecodeError:

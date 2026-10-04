@@ -65,7 +65,6 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # Constantes de Configuración
 # =============================================================================
-DEFAULT_PLANT_ID = "00000000-0000-0000-0000-000000000000"
 
 # Redis configuration (usar variable de entorno con defaults Docker)
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/1")
@@ -439,12 +438,48 @@ async def validate_telemetry(
         logger.warning(f"Rejecting telemetry: invalid Ed25519 signature")
         return False, None
     
-    # (e) Resolver Plant ID desde la clave pública
-    # En implementación full, consultamos DB con pubkey_hex -> plant_id
-    # Por ahora usamos mapeo simple
-    plant_id = DEFAULT_PLANT_ID  # TODO: Implementar lookup real
-    
+    # (e) Resolver plant_id desde la clave pública (fail-closed).
+    # Atribuir telemetría a una planta por defecto corrompe el dataset:
+    # si no hay exactamente un binding para el dispositivo, se rechaza.
+    plant_id = await resolve_plant_for_pubkey(pubkey_hex)
+    if plant_id is None:
+        logger.warning(
+            "Rejecting telemetry: pubkey %s... sin binding único planta-dispositivo",
+            pubkey_hex[:16],
+        )
+        return False, None
+
     return True, plant_id
+
+
+async def resolve_plant_for_pubkey(pubkey_hex: str) -> Optional[str]:
+    """Resuelve plant_id vía dispositivo → HardwareBinding (exactamente uno).
+
+    Retorna None si PG no disponible, el dispositivo no existe o tiene
+    cero/múltiples bindings (atribución ambigua). Fail-closed por diseño.
+    """
+    pool = await get_pg_pool()
+    if pool is None:
+        logger.debug("resolve_plant: pool PG no disponible (modo solo-cache).")
+        return None
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT hb.plant_id FROM hardware_bindings hb "
+                f"JOIN {DEVICES_TABLE} d ON d.id = hb.device_id "
+                f"WHERE d.{DEVICES_PUBKEY_COLUMN} = $1",
+                pubkey_hex,
+            )
+    except asyncpg.PostgresError as exc:
+        logger.error("resolve_plant: error PG para pubkey %s...: %s", pubkey_hex[:16], exc)
+        return None
+    if len(rows) != 1:
+        logger.warning(
+            "resolve_plant: pubkey %s... tiene %d bindings (se requiere 1).",
+            pubkey_hex[:16], len(rows),
+        )
+        return None
+    return str(rows[0]["plant_id"])
 
 
 # =============================================================================

@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.utils import timezone as django_timezone
 from rest_framework.test import APIClient
 
-from apps.core.models import Device, SensorLog
+from apps.core.models import AmbientReading, Device, HardwareBinding, SoilReading
 from apps.plants.models import UserPlant
 
 
@@ -34,6 +34,8 @@ class IngestHwTests(TestCase):
         self.plant = UserPlant.objects.create(user=self.user, nickname='H')
         self.device = Device.objects.create(
             owner=self.user, name='d', auth_token='tok-hw-123')
+        self.binding = HardwareBinding.objects.create(
+            device=self.device, hardware_pin='32', plant=self.plant)
         self.client = APIClient()
         self.client.credentials(
             HTTP_AUTHORIZATION=f'Bearer {self._mint_jwt(self.user)}')
@@ -56,8 +58,20 @@ class IngestHwTests(TestCase):
             '/api/v1/sensors/ingest', data=self._payload(),
             format='json')
         self.assertEqual(resp.status_code, 201)
-        self.assertTrue(SensorLog.objects.filter(
-            plant_id=self.plant.id).exists())
+        # A3 FREEZE: la escritura va al esquema 1:N, no a sensor_logs.
+        self.assertTrue(SoilReading.objects.filter(
+            binding=self.binding).exists())
+        self.assertFalse(
+            AmbientReading.objects.filter(device=self.device).exists())
+
+    def test_unbound_plant_404(self):
+        User = get_user_model()
+        other_user = User.objects.create_user(username='hw2', password='x')
+        orphan = UserPlant.objects.create(user=other_user, nickname='O')
+        resp = self.client.post(
+            '/api/v1/sensors/ingest', data=self._payload(plant_id=str(orphan.id)),
+            format='json')
+        self.assertEqual(resp.status_code, 404)
 
     def test_stale_timestamp_rejected(self):
         from datetime import timedelta

@@ -452,9 +452,11 @@ CELERY_TASK_ROUTES = {
     'apps.core.tasks.refresh_admin_stats_task': {'queue': 'celery'},
     'apps.core.tasks.check_device_liveness': {'queue': 'celery'},
     
-    # Tareas de Visión (MS1) - Asignamos a una cola dedicada
-    'apps.ai_models.tasks.analyze_vision_async': {'queue': 'vision_queue'},
-    'apps.ai_models.tasks.train_vision_async': {'queue': 'vision_queue'},
+    # Tareas de Visión (MS1) — a la cola `celery` (consumida por el worker).
+    # `vision_queue` no tiene consumidor en compose: ruteo dedicado pendiente
+    # de un worker propio. Ver .scratch/deuda-fase5 (endurecimiento).
+    'apps.ai_models.tasks.analyze_vision_async': {'queue': 'celery'},
+    'apps.ai_models.tasks.train_vision_async': {'queue': 'celery'},
     
     # Tareas de Reportes y MLOps (MS3) - Asignamos a una cola dedicada
     'apps.core.tasks.generate_master_report_task': {'queue': 'reports_queue'},
@@ -464,8 +466,10 @@ CELERY_TASK_ROUTES = {
     'apps.training_data.tasks.notify_training_asset': {'queue': 'training_queue'},
     'apps.training_data.tasks.update_training_status': {'queue': 'training_queue'},
 
-    # Chat RAG async (Fase 2 - cola dedicada para aislar latencia LLM)
-    'apps.core.tasks.chat_async': {'queue': 'chat_queue'},
+    # Chat RAG async — a la cola `celery` (consumida por el worker).
+    # `chat_queue` no tiene consumidor en compose: tareas encoladas ahí jamás
+    # se procesaban. Aislamiento por cola dedicada, pendiente de worker propio.
+    'apps.core.tasks.chat_async': {'queue': 'celery'},
 }
 
 WHITENOISE_MANIFEST_STRICT = False

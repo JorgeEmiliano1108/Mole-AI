@@ -336,14 +336,17 @@ class LegacyBackend(Exception):
     """El backend no expone /sync/batch/: usar path legacy."""
 
 
-def build_frame_from_row(row) -> dict | None:
+def build_frame_from_row(row) -> tuple[dict | None, list[str]]:
     """Convierte fila legacy (id, device_id, plant_id, timestamp ISO,
     sensors_json, ph_cnn) a trama edge `{ts, ri, a}`.
 
     Limitación honesta: las filas legacy no guardan pin de suelo, por lo que
-    `s` va vacío (el suelo requiere enqueue con pin — futuro). `ts` en epoch.
-    Retorna None si la fila no es convertible.
+    `s` va vacío (el suelo requiere enqueue con pin — futuro). Los campos de
+    suelo/pH descartados se reportan en la lista `dropped` para que la pérdida
+    sea visible en logs en vez de silenciosa. `ts` en epoch.
+    Retorna (frame|None, dropped).
     """
+    dropped: list[str] = []
     try:
         sensors = json.loads(row[4]) if row[4] else {}
         ts = datetime.fromisoformat(str(row[3]).replace("Z", "+00:00"))
@@ -365,9 +368,13 @@ def build_frame_from_row(row) -> dict | None:
         if ambient:
             frame["a"] = ambient
         frame["s"] = []
-        return frame
+        if sensors.get("soil_humidity") is not None:
+            dropped.append("soil_humidity")
+        if row[5] is not None:
+            dropped.append("ph_cnn")
+        return frame, dropped
     except (ValueError, TypeError, KeyError, OverflowError, OSError):
-        return None
+        return None, ["unparseable_row"]
 
 
 async def sync_jsonrpc(con: sqlite3.Connection) -> str:
@@ -388,12 +395,21 @@ async def sync_jsonrpc(con: sqlite3.Connection) -> str:
         return get_cursor(con) or ""
 
     frames, ids = [], []
+    dropped_total: dict[str, int] = {}
     for r in rows:
-        frame = build_frame_from_row(r)
+        frame, dropped = build_frame_from_row(r)
+        for field in dropped:
+            dropped_total[field] = dropped_total.get(field, 0) + 1
         if frame is None:
             continue
         frames.append(frame)
         ids.append(r[0])
+    if dropped_total:
+        logger.warning(
+            "sync_jsonrpc: campos descartados sin pin de suelo "
+            "(visibles, no silenciosos): %s",
+            dropped_total,
+        )
     if not frames:
         return get_cursor(con) or ""
 

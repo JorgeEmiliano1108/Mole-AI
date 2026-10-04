@@ -7,7 +7,6 @@ from typing import Any, cast
 
 import requests
 from django.conf import settings
-from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -26,7 +25,6 @@ from apps.ai_models.models import LLMRequest
 from apps.authentication.infrastructure.authentication import (
     HardwareAPIKeyAuthentication,
 )
-from apps.plants.models import UserPlant
 
 # Repositorios y Modelos
 from .models import (
@@ -34,7 +32,6 @@ from .models import (
     Device,
     DiagnosticoGeolocalizado,
     FeedbackTicket,
-    SensorLog,
 )
 
 
@@ -176,20 +173,18 @@ def sensor_data_view(request):
             return Response({"error": "Replay attack protection: Timestamp out of sync (> 300s)"}, status=403)
 
     
-    if not UserPlant.objects.filter(id=v_data['plant_id']).exists():
-        return Response({"error": "plant_id no registrado"}, status=404)
+    from apps.core.services.legacy_ingest import (
+        PlantNotBoundError,
+        ingest_legacy_reading,
+    )
 
     try:
-        SensorLog.objects.create(
-            plant_id=v_data['plant_id'],
-            recorded_at=v_data['recorded_at'],
-            soil_humidity=v_data.get('soil_humidity'),
-            air_temperature=v_data.get('air_temperature'),
-            uv_index=v_data.get('uv_index'),
-            light_level=v_data.get('light_level'),
-            ph_level=v_data.get('ph_level'),
-        )
+        ingest_legacy_reading(v_data)
         return Response({"status": "success", "registered": 1}, status=201)
+    except PlantNotBoundError:
+        return Response(
+            {"error": "plant_id no vinculado a ningún dispositivo"}, status=404
+        )
     except Exception as e:  # noqa: BLE001
         return Response({"error": str(e)}, status=500)
 
@@ -211,24 +206,34 @@ def sensor_batch_view(request):
             return Response({"error": "Replay attack protection in batch: Timestamp out of sync (> 300s)"}, status=403)
 
     
-    logs = [SensorLog(**item) for item in batch]
-    with transaction.atomic():
-        created = SensorLog.objects.bulk_create(logs)
-    return Response({"status": "success", "registered": len(created)}, status=201)
+    from apps.core.services.legacy_ingest import ingest_legacy_batch
+
+    # A3 FREEZE: sensor_logs es archivo de solo lectura; el lote se
+    # demultiplexa a AmbientReading + SoilReading (ítems sin binding se omiten).
+    result = ingest_legacy_batch(batch)
+    payload: dict[str, Any] = {
+        "status": "success",
+        "registered": result["accepted"],
+    }
+    if result["skipped"]:
+        payload["skipped_unbound_plants"] = result["skipped"]
+    return Response(payload, status=201)
 
 @api_view(['PATCH'])
 @authentication_classes([HardwareAPIKeyAuthentication])
 @permission_classes([HardwareOnlyPermission])
 @throttle_classes([SensorDataThrottle])
 def sensor_data_patch_view(request, pk):
-    try:
-        log = SensorLog.objects.get(pk=pk)
-        serializer = SensorDataPatchSerializer(log, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response({"status": "updated", "sensor_log_id": log.pk})
-    except SensorLog.DoesNotExist:
-        return Response(status=404)
+    # A3 FREEZE: sensor_logs es archivo de solo lectura (410 Gone). La
+    # inyección de pH post-inferencia debe dirigirse a SoilReading mediante
+    # un endpoint dedicado (pendiente de diseño).
+    return Response(
+        {
+            "error": "Endpoint obsoleto (410 Gone). La tabla sensor_logs es "
+            "archivo de solo lectura; usa el esquema AmbientReading/SoilReading."
+        },
+        status=410,
+    )
 
 class EdgeNodeIngestView(APIView):
     """
@@ -686,8 +691,11 @@ def llm_chat_view(request):
                 task_id=None,
                 source="chat",
             )
+            from apps.core.services.safety_presentation import public_safety_error
+            # Silent-compliance: el motivo/código reales quedan en AuditLog;
+            # al usuario solo mensaje genérico (sin menciones normativas).
             return Response(
-                {"error": safety.reason, "code": safety.code, "source": "chat"},
+                public_safety_error(source="chat"),
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -810,11 +818,17 @@ def safety_validate_view(request):
     docs/safety/*.json y safety_rules.yaml. Devuelve 403 cuando el
     SafetyValidator detecta una violación (fail-closed).
     """
+    from apps.core.services.safety_presentation import (
+        PUBLIC_BLOCK_CODE,
+        PUBLIC_BLOCK_MESSAGE,
+    )
+
     payload = request.data or {}
     safety = SafetyValidator().validate(payload)
     if safety.safe:
         return Response({"safe": True, "code": safety.code})
+    # Silent-compliance: sin menciones normativas en la respuesta.
     return Response(
-        {"safe": False, "code": safety.code, "reason": safety.reason},
+        {"safe": False, "code": PUBLIC_BLOCK_CODE, "reason": PUBLIC_BLOCK_MESSAGE},
         status=safety.status_code,
     )
