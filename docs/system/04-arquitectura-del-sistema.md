@@ -55,13 +55,13 @@ Describir la arquitectura técnica de MOLE‑AI siguiendo la plantilla arc42 y e
 - **Trabajadores en segundo plano** – Ejecución de tareas asíncronas (e.g., embeddings, visión, generación de PDFs).
 
 ## Vista de componentes (C4 – Nivel 3) – ms1_vision
-- **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo y expone el endpoint `/api/v1/vision/analyze/`.
+- **Servicio de visión** – Analiza imágenes de plantas y genera diagnóstico estructurado; consume modelo de visión externo; el endpoint público es `/api/v1/diagnostics/` y el interno MS1 es `/api/v1/vision/analyze`.
   - **Dependencias**: modelo de visión externo (API NVIDIA), almacenamiento temporal en AWS S3, Redis para caché, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad**.
 
 ## Vista de componentes (C4 – Nivel 3) – ms2_chat
-- **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo y expone el endpoint `/api/v1/mole-ai/chat`.
+- **Servicio de chat IA** – Recibe mensajes de usuarios, ejecuta RAG con embeddings almacenados y devuelve respuestas; utiliza un modelo de chat externo; el endpoint público es `/api/v1/llm/chat/` (proxy Django, vía MCP cuando `MCP_ENABLED=true`, ADR-0011) y el interno MS2 es `/api/v1/mole-ai/chat`.
   - **Dependencias**: modelo de chat externo (API NVIDIA), store de embeddings en pgvector (PostgreSQL), AWS S3 para ingestión de PDFs (opcional), Redis para coordinación de tareas RAG, y autorización basada en JWT emitidos por el servicio de **Gestión de identidad**.
-  - **Nota de seguridad**: la ingesta de PDFs (`POST /api/v1/knowledge/ingest-pdf`) procesa el contenido íntegramente en memoria — no escribe a disco. El nombre de archivo es sanitizado para evitar path traversal.
+  - **Nota de seguridad**: la ingesta de PDFs (flujo training-documents; MS2 interno `POST /api/v1/knowledge/ingest-pdf`) procesa el contenido íntegramente en memoria — no escribe a disco. El nombre de archivo es sanitizado para evitar path traversal.
 
 ## Vista de componentes (C4 – Nivel 3) – ms3_reports
 - **Servicio de generación de reportes** – Crea PDFs a partir de datos de sensores bajo demanda, gestiona trabajos asíncronos y provee URLs pre‑firmadas para descarga; expone el endpoint `/api/v1/reports/generate`.

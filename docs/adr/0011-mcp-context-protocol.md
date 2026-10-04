@@ -50,3 +50,12 @@
 - Suite de paridad REST-vs-MCP verde.
 - Latencia del canal MCP no mayor al 110 % de la ruta REST en ambiente de laboratorio.
 - 100 % de tests red-team sobre agroquímicos/especies protegidas pasan vía MCP.
+
+## 7. Addendum 2026-10-04 — Pool persistente + safety solo en host (fuente: código)
+
+1. **Transporte real: solo SSE.** "Streamable HTTP/SSE" (§1.2) queda precisado a **SSE** (`SseServerTransport` en `microservices/mole_chat/app/infrastructure/mcp/server.py`, rutas `/mcp/v1/sse` + `/mcp/v1/sse/messages/`). No hay endpoint Streamable HTTP separado.
+2. **Pool persistente, no conexiones efímeras.** El cliente original abría una sesión SSE por request (agotamiento de canal bajo carga). El diseño vigente es `core_backend/apps/ai_models/infrastructure/mcp_pool.py` (`MCPConnectionPool`): loop asyncio dedicado por worker Gunicorn, `MCP_POOL_SIZE=3` sesiones persistentes (env, default 3), selección **Round-Robin sin locks ni colas de préstamo** en el flujo de inferencia; multiplexación concurrente por `id` JSON-RPC del SDK; reconexión lazy por slot + fallback a sesión efímera. `MCPChatClient` (`mcp_client.py`) es un thin-wrapper síncrono sobre el pool.
+3. **Tools reales implementadas:** `ping`, `get_sensor_context`, `chat`. Las tools planificadas `latest_readings` / `get_diagnosis_context` y el recurso `session://history` quedan como trabajo futuro; no bloquear el flip.
+4. **Safety solo en el host.** El §1.7 y §4 ("gate en resultados de tools") quedan **sustituidos**: mole_chat devuelve la respuesta cruda del LLM y el `SafetyValidator` se ejecuta exclusivamente en Django (`llm_chat_view`, middleware de salida, fail-closed). Se eliminó la dependencia circular (`/internal/v1/safety/validate/` + `SafetyClient`). Ver ADR-0010, que ya prescribe este corte.
+5. **Variables reales:** `MCP_ENABLED` (default `False`), `MCP_CHAT_URL`, `MCP_TIMEOUT`, `MCP_POOL_SIZE`. `MCP_RETRIES` (§3) **no existe** y se descarta.
+6. **Benchmark medido** (servidor real, adaptador mínimo sin inferencia LLM, 20 llamadas): mean 2.27 ms, p50 2.06 ms, p95 3.57 ms; overhead ~0.27 ms vs HTTP POST simple. Criterio de flip (§6): suite de paridad verde + p95 MCP ≤ 110 % REST en laboratorio.

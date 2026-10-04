@@ -66,7 +66,7 @@ Se utilizan **FastAPI** y **Django REST Framework** para describir contratos de 
 **PostgreSQL** almacena los datos transaccionales (usuarios, plantas, sensores).  Se complementa con **pgvector** para almacenar embeddings de texto y habilitar búsquedas semánticas eficientes.
 
 ### pgvector y búsqueda semántica
-Los vectores de 1536 dimensiones generados con el modelo **nvidia/nv-embedqa-e5-v5** se insertan en la tabla `botanical_knowledge`.  Consultas por similitud utilizan índices GIN para garantizar tiempos de respuesta sub‑segundo.
+Los vectores de 1024 dimensiones generados con el modelo **nvidia/nv-embedqa-e5-v5** se insertan en la tabla `rag_knowledge_chunks` de MS2 (ingesta canónica; ver ADR-0012 y `pgvector_store.py`).  La tabla Django `botanical_knowledge.embedding` es `vector(1024)` y no tiene escritores vivos.  Consultas por similitud (`<=>`, coseno) utilizan índices `ivfflat`/`hnsw` (`vector_cosine_ops`) para garantizar tiempos de respuesta sub‑segundo.
 
 ### RAG y CAG
 El flujo de **Retrieval‑Augmented Generation (RAG)** combina los embeddings almacenados con prompts estáticos para producir respuestas contextualizadas.  El **Context‑Augmented Generation (CAG)** se implementa en el motor de chat, añadiendo información de sensores y documentos relevantes al prompt del LLM.

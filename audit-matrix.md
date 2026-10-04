@@ -304,3 +304,17 @@ Cambios vs v1.0: RF-07 backend y RNF-07 backend pasan a ✅/⚠️ (validación 
 | H5-07 | Contrato actualizado: 403 de chat en `mobile-contract.md` y `openapi.yml` | ✅ | `docs/mobile-contract.md §6`, `docs/contracts/openapi.yml:883` |
 | H5-08 | Cobertura backend ≥ 80% y linters limpios | ✅ | 252 passed, 84.11% coverage; ruff limpio |
 | H5-09 | Tests Flutter verdes | ✅ | 134 passed; `flutter analyze` solo infos preexistentes |
+
+---
+
+## Adenda 2026-10-04 — Hito 6: MCP persistente + Embeddings 1024 + Anonimización
+
+| ID | Claim | Veredicto | Evidencia |
+|---|---|---|---|
+| H6-01 | Canal Django↔MS2 vía MCP con pool SSE persistente (daemon loop + round-robin, sin locks en inferencia) | ✅ | `apps/ai_models/infrastructure/mcp_pool.py`, `mcp_client.py` thin-wrapper; `MCP_POOL_SIZE=3`; ADR-0011 §7 |
+| H6-02 | SafetyValidator consolidado como única barrera en host Django (sin dependencia circular MCP→Django) | ✅ | `apps/core/views.py` gate post-MCP; eliminado `/internal/v1/safety/validate/` + `SafetyClient`; ADR-0011 §7.4 |
+| H6-03 | Benchmark transporte MCP real: mean 2.27 ms, p50 2.06 ms, p95 3.57 ms (overhead ~0.27 ms vs HTTP) | ✅ | Medición 2026-10-03 contra `create_mcp_app` real (20 llamadas, pool de 3 sesiones) |
+| H6-04 | Dimensión RAG alineada a 1024 (nv-embedqa-e5-v5) con bloqueos preventivos | ✅ | Migración `0017` (trunca si hay filas basura) + `LLM_EMBEDDING_DIMENSION` + fail-fast MS2 + system check `mole_ai.E001`; `CNNInference` intacto (espacio CLIP) |
+| H6-05 | `generate_embeddings` obsoleto (410 Gone conceptual, sin llamadores) | ✅ | `apps/ai_models/services.py` DeprecationWarning + `MoleAIServiceError` |
+| H6-06 | Tabla espejo `training_dataset_anon` + Repository + HMAC-SHA256 | ⚠️ PARCIAL | Modelo + migración `0002` + servicio + 6 tests ✅; pendientes `export_anonymized_dataset`, purga→anonimizar, `sanitize_original_names` (ADR-0012 §1.5) |
+| H6-07 | Documentación refleja el código (rutas públicas reales, `vector(1024)`, pool MCP, contratos aditivos) | ✅ | `docs/system/01/02/03/04/05`, `mobile-contract.md`, `openapi.yml`, `CONTEXT.md`, `.env.example`, ADR-0011 §7 + ADR-0012 |

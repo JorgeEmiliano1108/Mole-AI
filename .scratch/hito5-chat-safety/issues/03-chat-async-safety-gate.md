@@ -1,6 +1,6 @@
 # 03-chat-async-safety-gate
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 Safety gate en `chat_async` (chat RAG fallback asíncrono)

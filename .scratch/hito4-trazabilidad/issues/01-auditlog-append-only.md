@@ -1,6 +1,6 @@
 # 01-auditlog-append-only
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 Hardening AuditLog: append-only a nivel ORM y trigger PostgreSQL

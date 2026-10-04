@@ -1,6 +1,6 @@
 # 01-safety-audit-module
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 Crear módulo centralizado `apps/core/services/safety_audit.py` y refactorizar visión

@@ -884,9 +884,11 @@ paths:
     post:
       operationId: v1_llm_chat_create
       description: |-
-        Chat RAG síncrono vía MS2. Si la respuesta del LLM viola una regla de
-        seguridad (NOM-059 o agroquímico catalogado), retorna 403 con
-        `{error, code, source: 'chat'}` en lugar del mensaje del asistente.
+        Chat RAG síncrono vía MS2 (transporte interno REST o MCP con pool SSE
+        persistente según `MCP_ENABLED`; transparente para el cliente, ver ADR-0011).
+        Si la respuesta del LLM viola una regla de seguridad (NOM-059 o
+        agroquímico catalogado), retorna 403 con `{error, code, source: 'chat'}`
+        en lugar del mensaje del asistente.
       tags:
       - v1
       responses:

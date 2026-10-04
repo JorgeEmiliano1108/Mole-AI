@@ -9,7 +9,7 @@ Glosario canónico. Usar estos términos en issues, tests y código nuevo. Evita
 - **Telemetría**: lecturas de sensores del ESP32 (`SoilReading`, `AmbientReading`). Evitar: `sensor-data` genérico en contratos nuevos.
 - **Trama edge (EdgeFrame)**: contrato compacto de ingesta `{ts, ri, a:{t,h,l,u}, s:[{p,v}], dg}` (`microservices/esp32_node/main/include/edge_frame.h`). Canónico para ingesta hardware. Evitar: `batch` verbose en contratos nuevos.
 - **Diagnóstico**: resultado de visión IA (`AIDiagnostic`: `diagnosis_label`, `confidence`, `metadata{species,severity,ph_predicted}`). Evitar: `identificación`, `análisis` como entidad.
-- **Chat RAG**: conversación contextual vía MS-2 (`LLMRequest`). Evitar: `chat fallback` como nombre (es la vía única tras Slice 5).
+- **Chat RAG**: conversación contextual vía MS-2 (`LLMRequest`), transporte interno REST o MCP (pool SSE, ADR-0011). La vía asíncrona de respaldo existe como `chat_fallback_view`/`chat_async` (Celery) para indisponibilidad de MS2; no renombrar (estabilidad de interfaces).
 - **Issue tracker**: `.scratch/<feature>/` local (ver `docs/agents/issue-tracker.md`). Evitar: `backlog`.
 - **Issue**: unidad de trabajo (bug, tarea, PRD, slice). Evitar: `ticket`.
 - **Triage role**: `needs-triage / needs-info / ready-for-agent / ready-for-human / wontfix` (ver `docs/agents/triage-labels.md`).
@@ -24,7 +24,7 @@ Glosario canónico. Usar estos términos en issues, tests y código nuevo. Evita
 ## Ambigüedades resueltas
 
 - `diagnóstico vs identificación`: canónico **Diagnóstico**.
-- `sensor-data/batch vs edge-batch`: canónico **Trama edge (`sensor-data/edge-batch/`)** (ADR-0002). `sensor-data/batch/` es alias deprecado.
+- `sensor-data/batch vs edge-batch`: canónico **Trama edge (`sensor-data/edge-batch/`)** (ADR-0002). `sensor-data/batch/` sigue activo como alias legacy (sin header de deprecación; ver docs/system/02 RF-05) — no renombrar rutas en producción.
 - `backlog`: no es término de dominio; usar **Issue tracker**.
 
 ## Deuda canónica (un ID por tema; el resto de docs referencia aquí)

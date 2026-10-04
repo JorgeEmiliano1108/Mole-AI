@@ -1,6 +1,6 @@
 # 01: A1: Redactar ADR-0011 — MCP como protocolo de contexto Django↔mole_chat
 
-Status: ready-for-human
+Status: completed
 
 ## Requisito
 

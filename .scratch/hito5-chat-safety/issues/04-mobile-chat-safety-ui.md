@@ -1,6 +1,6 @@
 # 04-mobile-chat-safety-ui
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 UI Flutter: renderizar `SafetyBlockBanner` en el historial de chat ante bloqueo

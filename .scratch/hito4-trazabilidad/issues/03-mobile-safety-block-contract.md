@@ -1,6 +1,6 @@
 # 03-mobile-safety-block-contract
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 Contrato y UI Flutter para diagnóstico de visión bloqueado por seguridad

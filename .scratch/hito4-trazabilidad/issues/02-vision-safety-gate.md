@@ -1,6 +1,6 @@
 # 02-vision-safety-gate
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 Safety gate post-inferencia en `analyze_vision_async` (MS1)

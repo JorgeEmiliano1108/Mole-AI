@@ -138,6 +138,8 @@ Nodos en deep-sleep: `last_seen_delta_seconds` + `status` gobiernan la UI ("durm
 
 - **Chat:** `POST llm/chat/` `{question|message|prompt}` sync → `{response,sources,disclaimer}`
   (`core/views.py:521-570`, 60/min) + `GET chat/history/`; disclaimer COFEPRIS obligatorio.
+  Transporte interno transparente para el móvil: REST directo o MCP con pool SSE
+  persistente cuando `MCP_ENABLED=true` (ADR-0011); el envelope y los códigos no cambian.
   **Bloqueo de seguridad (Hito 5):** si la respuesta del LLM menciona una especie
   protegida por NOM-059 o un agroquímico catalogado, el endpoint responde `403`
   con `{error, code, source: 'chat'}`; la UI renderiza un `SafetyBlockBanner` en

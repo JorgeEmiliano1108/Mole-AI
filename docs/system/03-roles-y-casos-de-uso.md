@@ -120,11 +120,11 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 **Actores secundarios:** Ninguno.
 **Precondiciones:** JWT válido.
 **Disparador:** Subida de archivo PDF vía UI o API.
-**Flujo principal:** `POST /api/v1/knowledge/ingest-pdf` con archivo PDF.
+**Flujo principal:** `training/documents/upload/request/` + `training/upload/confirm/` con archivo PDF (MS2 interno `POST /api/v1/knowledge/ingest-pdf`).
 **Flujos alternos / excepciones:** Archivo no PDF → `415 Unsupported Media Type`.
 **Postcondiciones:** Documento indexado y disponible para RAG.
 **Requisitos relacionados:** RF-06, RF-07.
-**Endpoint / UI involucrada:** `/api/v1/knowledge/ingest-pdf`.
+**Endpoint / UI involucrada:** flujo training-documents (MS2 interno `/api/v1/knowledge/ingest-pdf`).
 **Evidencia de verificación:** `test_pdf_ingest.py` (Pendiente).
 
 ### UC-08 Consultar agente IA (chat)
@@ -133,11 +133,11 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 **Actores secundarios:** Ninguno.
 **Precondiciones:** JWT válido; usuario tiene planta registrada.
 **Disparador:** Envío de mensaje de chat.
-**Flujo principal:** `POST /api/v1/mole-ai/chat` con mensaje y `user_id`.
+**Flujo principal:** `POST /api/v1/llm/chat/` con mensaje (MS2 interno `POST /api/v1/mole-ai/chat`).
 **Flujos alternos / excepciones:** Mensaje que viola NOM‑059 → `403 Forbidden`.
 **Postcondiciones:** Respuesta de chat devuelta.
 **Requisitos relacionados:** RF-08.
-**Endpoint / UI involucrada:** `/api/v1/mole-ai/chat`.
+**Endpoint / UI involucrada:** `/api/v1/llm/chat/` (MS2 interno `/api/v1/mole-ai/chat`).
 **Evidencia de verificación:** `test_chat_e2e.py` (Automatizado).
 
 ### UC-09 Analizar imagen (visión)
@@ -146,11 +146,11 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 **Actores secundarios:** Ninguno.
 **Precondiciones:** JWT válido; imagen en formato soportado.
 **Disparador:** Envío de imagen para análisis.
-**Flujo principal:** `POST /api/v1/vision/analyze/` con `multipart/form-data`.
+**Flujo principal:** `POST /api/v1/diagnostics/` con `multipart/form-data` (MS1 interno `POST /api/v1/vision/analyze`).
 **Flujos alternos / excepciones:** Imagen corrupta → `400 Bad Request`.
 **Postcondiciones:** Diagnóstico estructurado devuelto.
 **Requisitos relacionados:** RF-09.
-**Endpoint / UI involucrada:** `/api/v1/vision/analyze/`.
+**Endpoint / UI involucrada:** `/api/v1/diagnostics/` (MS1 interno `/api/v1/vision/analyze`).
 **Evidencia de verificación:** `test_vision_api.py` (Automatizado).
 
 ### UC-10 Generar reporte de sensores
@@ -226,7 +226,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 - **Objetivo:** Interactuar con el agente de IA a través del chat visual.
 - **Actores secundarios:** Ninguno.
 - **Precondiciones:** Usuario autenticado accede a la vista de chat.
-- **Flujo principal:** UI envía mensaje a `POST /api/v1/mole-ai/chat` y muestra respuesta.
+- **Flujo principal:** UI envía mensaje a `POST /api/v1/llm/chat/` y muestra respuesta.
 - **Flujos alternos / excepciones:** Mensaje prohibido por NOM‑059 → aviso al usuario.
 - **Postcondiciones:** Conversación mostrada en pantalla.
 - **Requisitos relacionados:** RF-F-03.
@@ -237,7 +237,7 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 - **Objetivo:** Enviar imagen para diagnóstico y visualizar resultados.
 - **Actores secundarios:** Ninguno.
 - **Precondiciones:** Usuario autenticado abre la vista de visión.
-- **Flujo principal:** UI envía imagen a `POST /api/v1/vision/analyze/` y muestra diagnóstico.
+- **Flujo principal:** UI envía imagen a `POST /api/v1/diagnostics/` y muestra diagnóstico.
 - **Flujos alternos / excepciones:** Imagen no soportada → mensaje de error.
 - **Postcondiciones:** Resultado mostrado al usuario.
 - **Requisitos relacionados:** RF-F-04.
@@ -275,9 +275,9 @@ Definir los roles de usuario y los casos de uso principales que el sistema MOLE�
 | UC-04 | Administrador | RF-02, RF-03 | /api/v1/auth/users/* | Implementado | Pendiente |
 | UC-05 | Usuario autenticado | RF-04 | /api/v1/user-plants/* | Implementado | Pendiente |
 | UC-06 | Hardware | RF-05 | POST /api/v1/sensor-data/ | Implementado | test_sensor_data.patch |
-| UC-07 | Usuario autenticado | RF-06, RF-07 | POST /api/v1/knowledge/ingest-pdf | Implementado | Pendiente |
-| UC-08 | Usuario autenticado | RF-08 | POST /api/v1/mole-ai/chat | Implementado | test_chat_e2e.py |
-| UC-09 | Usuario autenticado | RF-09 | POST /api/v1/vision/analyze/ | Implementado | test_vision_api.py |
+| UC-07 | Usuario autenticado | RF-06, RF-07 | training/documents/upload (MS2 interno POST /api/v1/knowledge/ingest-pdf) | Implementado | Pendiente |
+| UC-08 | Usuario autenticado | RF-08 | POST /api/v1/llm/chat/ (MS2 interno POST /api/v1/mole-ai/chat) | Implementado | test_chat_e2e.py |
+| UC-09 | Usuario autenticado | RF-09 | POST /api/v1/diagnostics/ (MS1 interno POST /api/v1/vision/analyze) | Implementado | test_vision_api.py |
 | UC-10 | Usuario autenticado | RF-10 | POST /api/v1/reports/generate | Implementado | test_report_generation.py |
 | UC-11 | Sistema | RF-11 | Proceso interno (sin endpoint público) | Implementado | test_audit.py |
 | UC-12 | Administrador | RF-12 (Futuro) | *Pendiente* | Futuro | Pendiente |

@@ -31,7 +31,10 @@ Definir de forma estructurada el modelo de datos utilizado por MOLE‑AI, descri
 
 | **user_plants** | `id (UUID PK)`, `user_id (FK → users)`, `species_id (FK → species_catalog)`, `nickname`, `created_at`, … | `user_id` → `users`; `species_id` → `species_catalog` | `index(user_id)`, `index(species_id)` |
 | **species_catalog** | `id (PK)`, `scientific_name`, `common_name`, `description`, `category`, `ideal_humidity_min`, `ideal_humidity_max`, `ideal_temp_min`, `ideal_temp_max`, `ideal_ph_min`, `ideal_ph_max`, `is_protected_nom059`, `protection_category` | Ninguna | `unique(scientific_name)` |
-| **botanical_knowledge** | `id (PK)`, `content`, `source_url`, `chunk_metadata (JSON)`, `embedding (vector(1536))` | Ninguna | GIN index on `embedding` (pgvector) |
+| **botanical_knowledge** | `id (PK)`, `content`, `source_url`, `chunk_metadata (JSON)`, `embedding (vector(1024))` | Ninguna | `ivfflat`/`hnsw` (`vector_cosine_ops`). Sin escritores vivos (ingesta canónica en MS2). |
+| **training_documents** | `id (UUID PK)`, `uploaded_by (FK nullable → users)`, `s3_key (unique)`, `category`, `status`, `checksum_sha256` | `uploaded_by` → `users` | `index(status, created_at)`, `index(category, status)` |
+| **training_images** | `id (UUID PK)`, `uploaded_by (FK nullable)`, `s3_key (unique)`, `species (FK nullable)`, `disease_label`, `severity` | `uploaded_by` → `users`; `species` → `species_catalog` | `index(species, disease_label)`, `index(status, created_at)` |
+| **training_dataset_anon** | `id (UUID PK)`, `record_type`, `source_fingerprint (HMAC)`, `subject_hash (HMAC)`, `feature_payload (JSON)`, `label`, `status` | Ninguna (espejo sin PII; ver ADR-0012) | `index(record_type, subject_hash)`, `index(status, anonymized_at)` |
 | **ai_diagnostics** | `id (UUID PK)`, `user_id (FK nullable → users)`, `plant_id (FK → user_plants)`, `analyzed_at`, `image_path`, `diagnosis_label`, `confidence_score`, `metadata (JSON)` | `user_id` → `users` (nullable); `plant_id` → `user_plants` | `index(plant_id)`, `index(analyzed_at)` |
 | **diagnosticos_geolocalizados** | `id (PK)`, `diagnostic_id (FK → ai_diagnostics)`, `user_id (FK nullable)`, `condition_name`, `latitude`, `longitude`, `severity`, `metadata (JSON)`, `created_at` | `diagnostic_id` → `ai_diagnostics` | `index(latitude, longitude)` |
 | **feedback_tickets** | `id (PK)`, `user_id (FK nullable)`, `topic`, `message`, `status`, `created_at` | `user_id` → `users` (nullable) | `index(user_id)`, `index(status)` |
@@ -45,7 +48,7 @@ Definir de forma estructurada el modelo de datos utilizado por MOLE‑AI, descri
 Todos los modelos se materializan en PostgreSQL 13+ con la extensión **pgvector** habilitada.  Los tipos de datos críticos son:
 - `UUID` para identificadores de dispositivos y plantas.
 - `JSONB` para `metadata` en diagnósticos y `chunk_metadata` en conocimiento botánico.
-- `vector(1536)` para embeddings de texto, con índice GIN (`vector_cosine_ops`).
+- `vector(1024)` para embeddings de texto RAG (`nvidia/nv-embedqa-e5-v5`), con índices `ivfflat`/`hnsw` (`vector_cosine_ops`). La tabla de ingesta canónica es `rag_knowledge_chunks` (MS2); `botanical_knowledge.embedding` replica la dimensión y no tiene escritores vivos. El campo `CNNInference.embedding_vector` (1536) pertenece al espacio latente de visión (CLIP) y no debe cruzarse con el espacio textual.
 - `TIMESTAMP WITH TIME ZONE` (UTC) para marcas de tiempo.
 - `BOOLEAN` para flags de consentimiento y verificación de correo.
 
@@ -59,7 +62,7 @@ Todos los modelos se materializan en PostgreSQL 13+ con la extensión **pgvector
 
 
 ## Índices críticos
-- GIN index sobre `botanical_knowledge.embedding` (vector_cosine_ops) para búsquedas semánticas.
+- Índices `ivfflat`/`hnsw` sobre `rag_knowledge_chunks.embedding` (`vector_cosine_ops`) para búsquedas semánticas (MS2 `pgvector_store.py`).
 - Índices compuestos `index(device_id, recorded_at)` y `index(binding_id, recorded_at)` para lecturas de telemetría.
 - Índices únicos en `devices.auth_token`, `species_catalog.scientific_name` y `telemetry_archives.s3_key`.
 - Índice temporal en `audit_logs.timestamp` para consultas de auditoría.

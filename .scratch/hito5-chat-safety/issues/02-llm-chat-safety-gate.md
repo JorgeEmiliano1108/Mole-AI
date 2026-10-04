@@ -1,6 +1,6 @@
 # 02-llm-chat-safety-gate
 
-Status: ready-for-agent
+Status: completed
 
 ## Título
 Safety gate en `llm_chat_view` (chat RAG síncrono)
