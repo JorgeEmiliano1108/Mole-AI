@@ -266,6 +266,11 @@ class TrainingDatasetAnon(models.Model):
         default=AnonymizationStatus.ANONYMIZED,
         db_index=True,
     )
+    purged = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True si el registro se exportó durante el ejercicio del derecho de cancelación (ARCO).",
+    )
     anonymized_at = models.DateTimeField(auto_now_add=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

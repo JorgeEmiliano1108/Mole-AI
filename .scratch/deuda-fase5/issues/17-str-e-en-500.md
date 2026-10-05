@@ -1,6 +1,6 @@
 # Issue 17: str(e) fuera de respuestas + permisos schema/mock
 
-Status: ready-for-agent
+Status: ready-for-human
 Sev: P1 · Área: backend · Fase: D
 
 ## Evidencia
@@ -14,13 +14,14 @@ Sev: P1 · Área: backend · Fase: D
 Fuga de detalle interno; superficie abierta sin dueño.
 
 ## Aceptación
-- Errores tipados con códigos (sin `str(exc)` al cliente; log estructurado interno);
-  retry con backoff en tasks de correo.
-- Schema con auth y `mock_sensor_data` eliminado o tras permiso staff.
-- Ruff + tests de los endpoints tocados en verde.
+- [x] Errores tipados con códigos (sin `str(exc)` al cliente; log estructurado interno).
+- [ ] Retry con backoff en tasks de correo → continúa en `08-retry-backoff.md`.
+- [x] Schema con auth (`SPECTACULAR_SETTINGS.SERVE_PERMISSIONS=IsAuthenticated`).
+- [x] `mock_sensor_data` restringido a staff y retornado `410 Gone`.
+- [x] Ruff + tests de los endpoints tocados en verde.
 
 ## Compliance
 LFPDPPP: no exponer trazas/detalles; mínimo privilegio.
 
 ## Comments
-(none)
+- 2026-10-04 (agente): corregidos 9 `str(e)` en `training_data/views.py`, `ai_models/views.py`, `authentication/views.py`; `mock_sensor_data` pasa a staff+410; schema bajo auth. Tests verdes. Retry de correo queda fuera (issue 08).

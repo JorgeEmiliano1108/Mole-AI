@@ -64,9 +64,8 @@ class AnonymizationServiceTests(TestCase):
         self.assertEqual(rec1.label, "roya")
 
     def test_missing_key_raises(self):
-        with override_settings(ANONIMIZACION_KEY=""):
-            with self.assertRaises(ImproperlyConfigured):
-                AnonymizationService()
+        with override_settings(ANONIMIZACION_KEY=""), self.assertRaises(ImproperlyConfigured):
+            AnonymizationService()
 
 
 @override_settings(ANONIMIZACION_KEY="test-anon-key")

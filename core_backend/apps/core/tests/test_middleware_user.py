@@ -48,8 +48,11 @@ class SpeciesRbacTests(APITestCase):
         resp = self.client.get('/api/v1/plants/species/')
         self.assertEqual(resp.status_code, 200)
 
-    def test_mock_sensor_shape(self):
+    def test_mock_sensor_gone(self):
+        User = get_user_model()
+        admin = User.objects.create_user(
+            username='adm', password='x', is_staff=True
+        )
+        self.client.force_authenticate(user=admin)
         resp = self.client.get('/api/v1/sensor-data/latest/')
-        self.assertEqual(resp.status_code, 200)
-        for k in ('temperature', 'humidity'):
-            self.assertIn(k, resp.json())
+        self.assertEqual(resp.status_code, 410)

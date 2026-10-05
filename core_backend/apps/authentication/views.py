@@ -10,6 +10,7 @@
 # Cualquier uso no autorizado será perseguido conforme a la Ley Federal
 # del Derecho de Autor (México) y tratados internacionales aplicables.
 # =============================================================================
+import logging
 import uuid
 
 from rest_framework import status
@@ -25,6 +26,8 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from .infrastructure.local_jwt_auth import LocalJWTAuthentication
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["GET", "PATCH", "DELETE"])
@@ -373,9 +376,10 @@ def validate_token_view(request):
     auth = SupabaseAuthentication()
     try:
         result = auth.authenticate(request)
-    except Exception as exc:
+    except Exception:
+        logger.exception("validate_token_failed")
         return Response(
-            {"error": str(exc)},
+            {"error": "Token inválido o expirado."},
             status=status.HTTP_401_UNAUTHORIZED,
         )
     

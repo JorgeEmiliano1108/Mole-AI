@@ -1,7 +1,9 @@
+from django.contrib.auth import get_user_model
+from django.test import override_settings
+from rest_framework.test import APITestCase
+
 from apps.core.models import AIDiagnostic, Device, SensorLog
 from apps.plants.models import UserPlant
-from django.contrib.auth import get_user_model
-from rest_framework.test import APITestCase
 
 
 class PrivacyS3Tests(APITestCase):
@@ -65,6 +67,7 @@ class PrivacyS3Tests(APITestCase):
         self.assertNotIn('Ajena', nicks)
         self.assertIn('ai_consent', data['profile'])
 
+    @override_settings(ANONIMIZACION_KEY='test-anon-key')
     def test_olvido_borra_en_cascada_y_conserva_auditoria(self):
         from apps.core.models import AuditLog
         plant = UserPlant.objects.create(user=self.user, nickname='Borrar')

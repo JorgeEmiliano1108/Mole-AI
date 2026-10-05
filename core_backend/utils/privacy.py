@@ -1,18 +1,19 @@
 """Utility functions for data privacy.
 
-Provides a single source of truth for deterministic anonymization of identifiers
-using SHA‑256. All modules that need to hash public identifiers (e.g. plant_id,
-user_id, diagnostic_id) must import :func:`anonymize_id` from here.
+Delega la pseudonimización al componente canónico `Anonymizer`
+(`apps.training_data.anonymization`) para garantizar que todos los servicios
+usen HMAC-SHA256 con la clave gestionada por `ANONIMIZACION_KEY`.
 """
 
-import hashlib
 
+def anonymize_id(value: str | None) -> str:
+    """Retorna pseudónimo HMAC-SHA256 de *value* o 'anonymous' si es vacío.
 
-def anonymize_id(value: str) -> str:
-    """Return a deterministic SHA‑256 hex digest of *value*.
-
-    The function is deliberately simple – no salt – because the goal is to make
-    the same identifier hash to the same value across services (so that joins
-    between the Redis bus and OpenTelemetry traces are possible).
+    La importación se realiza dentro de la función para evitar cargar el
+    registro de aplicaciones de Django durante la importación de utilidades.
     """
-    return hashlib.sha256(value.encode()).hexdigest()
+    if not value:
+        return "anonymous"
+    from apps.training_data.anonymization import Anonymizer
+
+    return Anonymizer().pseudonymize(str(value))

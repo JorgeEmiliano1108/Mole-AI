@@ -46,6 +46,7 @@ def test_flujo_jwt_completo():
 
 
 @pytest.mark.django_db
+@override_settings(ANONIMIZACION_KEY="test-anon-key")
 def test_arco_delete_anonimiza_y_audita():
     c = APIClient()
     c.post("/api/v1/auth/register/", {

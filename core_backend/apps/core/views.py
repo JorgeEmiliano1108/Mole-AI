@@ -78,7 +78,6 @@ from .serializers import (
     FeedbackTicketCreateSerializer,
     FeedbackTicketResponseSerializer,
     SensorBatchSerializer,
-    SensorDataPatchSerializer,
     SensorReadingSerializer,
 )
 from .services.safety_audit import log_safety_block
@@ -185,8 +184,13 @@ def sensor_data_view(request):
         return Response(
             {"error": "plant_id no vinculado a ningún dispositivo"}, status=404
         )
-    except Exception as e:  # noqa: BLE001
-        return Response({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("sensor_ingest_failed")
+        return Response(
+            {"error": "No se pudo procesar la lectura."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
 
 @api_view(['POST'])
 @authentication_classes([HardwareAPIKeyAuthentication])
@@ -348,9 +352,9 @@ class SyncBatchView(APIView):
                 result = ingest_frame(
                     device, serializer.validated_data, dedupe=True
                 )
-            except Exception as exc:
+            except Exception:
                 logger.exception("SyncBatch: fallo trama %d device=%s", i, device.pk)
-                conflicts.append({"index": i, "error": str(exc)[:200]})
+                conflicts.append({"index": i, "error": "Error procesando trama"})
                 continue
             accepted.append(i)
             applied_up_to = result["recorded_at"].isoformat()
@@ -544,8 +548,12 @@ def current_weather_proxy(request):
     try:
         r = requests.get(url, timeout=5)
         return Response(r.json(), status=r.status_code)
-    except requests.exceptions.RequestException as e:
-        return Response({'error': str(e)}, status=502)
+    except requests.exceptions.RequestException:
+        logger.exception("weather_proxy_failed")
+        return Response(
+            {'error': 'No se pudo obtener la información del clima.'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -661,16 +669,6 @@ def llm_chat_view(request):
     auth_header = request.META.get('HTTP_AUTHORIZATION', '')
     if not auth_header and 'Authorization' in request.headers:
         auth_header = request.headers['Authorization']
-        
-    headers = {
-        'Authorization': auth_header,
-        'Content-Type': 'application/json'
-    }
-    
-    payload = {
-        "user_id": str(request.user.id),
-        "message": question,
-    }
 
     try:
         # MCP o REST hacia MS2 Chat
@@ -721,12 +719,18 @@ def llm_chat_view(request):
             err_detail = e.response.text
         logger.error("Error HTTP %s desde MS2 Chat: %s", status_code, err_detail)
         return Response({"error": "Error en motor de IA", "details": err_detail}, status=status_code)
-    except requests.exceptions.RequestException as e:
-        logger.error("Fallo de red al contactar MS2 Chat: %s", e)
-        return Response({"error": "No se pudo comunicar con el motor de IA.", "details": str(e)}, status=503)
-    except Exception as e:  # noqa: BLE001
-        logger.error("Error inesperado en chat: %s", e)
-        return Response({"error": "Error en motor de IA", "details": str(e)}, status=500)
+    except requests.exceptions.RequestException:
+        logger.exception("chat_network_failed")
+        return Response(
+            {"error": "No se pudo comunicar con el motor de IA."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    except Exception:
+        logger.exception("chat_unexpected_failed")
+        return Response(
+            {"error": "Error en motor de IA."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 # --- POLLING GENÉRICO DE TAREAS ---
 @api_view(['GET'])
@@ -765,10 +769,11 @@ def task_status_view(request, task_id):
 
         return Response(response_data)
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception:
+        logger.exception("task_status_fetch_failed")
         return Response(
-            {"error": "Task status fetch failed", "details": str(exc)},
-            status=500,
+            {"error": "No se pudo consultar el estado de la tarea."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 

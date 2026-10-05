@@ -51,16 +51,21 @@ def profile_export_data(user):
 
 
 def purge_user_data(user):
-    """Elimina en cascada + purga Redis/MinIO. Retorna conteos por área."""
+    """Anonimiza assets de entrenamiento y elimina en cascada + purga Redis/MinIO."""
     from apps.ai_models.models import LLMRequest
     from apps.core.models import AIDiagnostic, Device, SensorLog
     from apps.plants.models import FavoritePlant, UserPlant
+    from apps.training_data.anonymization import export_user_dataset
     from apps.training_data.models import TrainingDocument, TrainingImage
 
     counts = {}
     user_id = user.id
     plant_ids = list(UserPlant.objects.filter(user=user)
                      .values_list("id", flat=True))
+
+    # LFPDPPP: anonimizar antes de borrar, preservando conocimiento agrotécnico.
+    anon_count, _fingerprints = export_user_dataset(user, purged=True)
+    counts["training_anon_records"] = anon_count
 
     counts["sensor_logs"] = SensorLog.objects.filter(
         plant_id__in=plant_ids).delete()[0]

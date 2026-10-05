@@ -14,6 +14,8 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 
+from apps.training_data.anonymization import export_user_dataset
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,10 +37,10 @@ def notify_training_asset(self, record_id: str, asset_type: str):
     try:
         # Fetch the record
         if asset_type == 'document':
-            from apps.training_data.models import TrainingDocument, ProcessingStatus
+            from apps.training_data.models import ProcessingStatus, TrainingDocument
             record = TrainingDocument.objects.get(pk=record_id)
         elif asset_type == 'image':
-            from apps.training_data.models import TrainingImage, ProcessingStatus
+            from apps.training_data.models import ProcessingStatus, TrainingImage
             record = TrainingImage.objects.get(pk=record_id)
         else:
             raise ValueError(f"Unknown asset_type: {asset_type}")
@@ -171,3 +173,27 @@ def purge_old_rag_chunks(self):
     except Exception as exc:  # noqa: BLE001
         logger.error("rag_chunks_purge_failed", extra={"error": str(exc)})
         raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(bind=True, max_retries=3, name="export_anonymized_dataset")
+def export_anonymized_dataset(self, user_id: str, purged: bool = False):
+    """Exporta datos entrenables de un usuario a la tabla espejo sin PII.
+
+    Se usa:
+      - De forma incremental tras cada diagnóstico de visión.
+      - Con `purged=True` antes del ejercicio del derecho ARCO (cancelación),
+        para conservar conocimiento agrotécnico anonimizado.
+    """
+    try:
+        from apps.authentication.models import User
+
+        user = User.objects.get(id=user_id)
+        created, _ = export_user_dataset(user, purged=purged)
+        logger.info(
+            "export_anonymized_dataset_completed",
+            extra={"user_id": user_id, "records_created": created, "purged": purged},
+        )
+        return {"status": "exported", "created": created, "purged": purged}
+    except Exception as exc:
+        logger.exception("export_anonymized_dataset_failed")
+        raise self.retry(exc=exc, countdown=5)

@@ -69,7 +69,12 @@ CSRF_COOKIE_SECURE = not DEBUG
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
-SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() == 'true'
+SECURE_SSL_REDIRECT = os.getenv(
+    'SECURE_SSL_REDIRECT', 'False' if DEBUG else 'True'
+).lower() == 'true'
+# Healthchecks y schema público deben seguir disponibles sin redirect,
+# especialmente bajo balanceadores que hacen probes HTTP.
+SECURE_REDIRECT_EXEMPT = [r'^health/$', r'^api/schema/$']
 
 # Confiar en la cabecera de Nginx (Terminación SSL en ALB o Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -449,7 +454,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Mole.AI API',
     'VERSION': '1.0.0',
-    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.IsAuthenticated'],
 }
 
 # --- ENRUTAMIENTO CELERY (worker único: consume `celery` + `training_queue`) ---

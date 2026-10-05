@@ -4,15 +4,20 @@ from datetime import timedelta
 import requests
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
-from apps.core.models import FeedbackTicket, SensorLog
+from apps.core.models import AdminStats, FeedbackTicket, SensorLog
 from apps.plants.models import UserPlant
+
+
+class _AdminUserDeactivateSerializer(serializers.Serializer):
+    status = serializers.CharField(default='deactivated')
 
 User = get_user_model()
 
@@ -33,25 +38,22 @@ def admin_stats_view(request):
         day_end = day_start + timedelta(days=1)
         count = User.objects.filter(date_joined__gte=day_start, date_joined__lt=day_end).count()
         regs.append(count)
-        
-    from django.db import connection
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT avg_hum, avg_temp, avg_uv, avg_ph FROM admin_stats LIMIT 1;")
-        row = cursor.fetchone()
 
+    # RNF-BE-01: acceso a la vista materializada vía ORM (no raw SQL).
+    row = AdminStats.objects.first()
     if row:
         aggs = {
-            'avg_hum': row[0],
-            'avg_temp': row[1],
-            'avg_uv': row[2],
-            'avg_ph': row[3]
+            'avg_hum': row.avg_hum,
+            'avg_temp': row.avg_temp,
+            'avg_uv': row.avg_uv,
+            'avg_ph': row.avg_ph,
         }
     else:
         aggs = {
             'avg_hum': None,
             'avg_temp': None,
             'avg_uv': None,
-            'avg_ph': None
+            'avg_ph': None,
         }
     # Validation strictly as requested: if table is empty, return 0 or []
     if all(v is None for v in aggs.values()):
@@ -234,6 +236,7 @@ def admin_users_list_view(request):
     })
 
 
+@extend_schema(methods=['DELETE'], responses={200: _AdminUserDeactivateSerializer})
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def admin_user_detail_view(request, user_id):
@@ -269,7 +272,7 @@ def admin_user_detail_view(request, user_id):
             ip_address=request.META.get("REMOTE_ADDR"),
             details=f"Desactivado user_id={user.id}.",
         )
-        return Response({"status": "deactivated"})
+        return Response({"status": "deactivated"}, status=status.HTTP_200_OK)
 
     # PATCH
     role = request.data.get('role')

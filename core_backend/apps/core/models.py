@@ -348,6 +348,23 @@ class SoilReading(models.Model):
             models.Index(fields=['binding', 'recorded_at']),
         ]
 
+
+class AdminStats(models.Model):
+    """Vista materializada de agregados para el dashboard admin (RNF-BE-01).
+
+    Modelo no gestionado (`managed = False`) que abstrae el acceso a la MV
+    `admin_stats` vía ORM, eliminando `cursor.execute` productivo.
+    """
+    avg_hum = models.FloatField(null=True, blank=True)
+    avg_temp = models.FloatField(null=True, blank=True)
+    avg_uv = models.FloatField(null=True, blank=True)
+    avg_ph = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = 'admin_stats'
+
+
 # ---------------------------------------------------------------------------
 # DATA LIFECYCLE MANAGEMENT -- Hourly Aggregates (DLM-01)
 # ---------------------------------------------------------------------------

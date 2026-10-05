@@ -7,7 +7,7 @@ persistencia sin tocar la lógica de anonimización.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
 
 from apps.training_data.models import TrainingDatasetAnon
 
@@ -25,6 +25,13 @@ class AnonymizationRepository(ABC):
         """Devuelve los registros asociados a un subject_hash."""
         raise NotImplementedError
 
+    @abstractmethod
+    def find_by_source_fingerprint(
+        self, source_fingerprint: str
+    ) -> TrainingDatasetAnon | None:
+        """Devuelve un registro por su fingerprint de fuente o None."""
+        raise NotImplementedError
+
 
 class DjangoAnonymizationRepository(AnonymizationRepository):
     """Implementación ORM/Django del repositorio de anonimización."""
@@ -35,3 +42,10 @@ class DjangoAnonymizationRepository(AnonymizationRepository):
 
     def find_by_subject_hash(self, subject_hash: str) -> Iterable[TrainingDatasetAnon]:
         return TrainingDatasetAnon.objects.filter(subject_hash=subject_hash).order_by("-anonymized_at")
+
+    def find_by_source_fingerprint(
+        self, source_fingerprint: str
+    ) -> TrainingDatasetAnon | None:
+        return TrainingDatasetAnon.objects.filter(
+            source_fingerprint=source_fingerprint
+        ).first()

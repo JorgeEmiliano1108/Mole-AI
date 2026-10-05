@@ -2,7 +2,7 @@
 
 > Generado por `scripts/build-v2-backlog.py` desde `.scratch/<tracker>/issues/`.
 > Para actualizar: edita el issue en `.scratch/` y re-ejecuta el script.
-> Total: 115 issues, 104 no completados.
+> Total: 115 issues, 97 no completados.
 
 ## admin-ux-audit (10 issues)
 
@@ -24,9 +24,9 @@
 | Issue | Estado | Sev | Título |
 |---|---|---|---|
 | `.scratch/anonimizacion/issues/01-adr-anonimizacion.md` | ready-for-human | — | 01: B1: Redactar ADR — Esquema HMAC para datasets de entrenamiento |
-| `.scratch/anonimizacion/issues/02-key-provider-strategy.md` | ready-for-agent | — | 02: B2: Implementar KeyProvider y Anonymizer con HMAC-SHA256 |
-| `.scratch/anonimizacion/issues/03-mirror-table-pipeline.md` | ready-for-agent | — | 03: B3: Crear tabla espejo `training_dataset_anon` y pipeline de exportación |
-| `.scratch/anonimizacion/issues/04-erasure-anonymize.md` | ready-for-agent | — | 04: B4: Modificar `purge_user_data` para anonimizar en lugar de eliminar |
+| `.scratch/anonimizacion/issues/02-key-provider-strategy.md` | completed | — | 02: B2: Implementar KeyProvider y Anonymizer con HMAC-SHA256 |
+| `.scratch/anonimizacion/issues/03-mirror-table-pipeline.md` | completed | — | 03: B3: Crear tabla espejo `training_dataset_anon` y pipeline de exportación |
+| `.scratch/anonimizacion/issues/04-erasure-anonymize.md` | completed | — | 04: B4: Modificar `purge_user_data` para anonimizar en lugar de eliminar |
 | `.scratch/anonimizacion/issues/05-sanitize-original-names.md` | ready-for-agent | — | 05: B5: Backfill controlado de `original_name` y validación final |
 
 ## deuda-fase5 (22 issues)
@@ -49,7 +49,7 @@
 | `.scratch/deuda-fase5/issues/14-healthchecks.md` | ready-for-agent | P2 | Issue 14: Healthchecks + depends_on healthy |
 | `.scratch/deuda-fase5/issues/15-pins-y-env.md` | ready-for-agent | P2 | Issue 15: Pinear dependencias + .env.example completo |
 | `.scratch/deuda-fase5/issues/16-backend-quality-pytest.md` | ready-for-agent | P2 | Issue 16: Ampliar backend-quality/pytest + e2e con Django |
-| `.scratch/deuda-fase5/issues/17-str-e-en-500.md` | ready-for-agent | P1 | Issue 17: str(e) fuera de respuestas + permisos schema/mock |
+| `.scratch/deuda-fase5/issues/17-str-e-en-500.md` | ready-for-human | P1 | Issue 17: str(e) fuera de respuestas + permisos schema/mock |
 | `.scratch/deuda-fase5/issues/18-adrs-faltantes.md` | ready-for-agent | P2 | Issue 18: ADRs faltantes (target, IRAM, NVS, DB_*, MQTT) |
 | `.scratch/deuda-fase5/issues/19-docs-sync.md` | ready-for-agent | P2 | Issue 19: Sincronizar docs con el código |
 | `.scratch/deuda-fase5/issues/20-mobile-ble-stack.md` | ready-for-agent | P1 | Issue 20: Stack BLE real en Flutter |
@@ -94,7 +94,7 @@
 | `.scratch/mcp-refactor/issues/03-mcp-tools-resources.md` | ready-for-agent | — | 03: A3: Implementar tools y resources MCP iniciales |
 | `.scratch/mcp-refactor/issues/04-django-mcp-client.md` | ready-for-agent | — | 04: A4: Adaptador MCP cliente en Django (MoleAIClient) |
 | `.scratch/mcp-refactor/issues/05-mcp-safety-gate.md` | ready-for-agent | — | 05: A5: Aplicar SafetyValidator a nivel de tool call y respuesta final |
-| `.scratch/mcp-refactor/issues/06-mcp-parity-tests.md` | ready-for-agent | — | 06: A6: Tests de paridad REST vs MCP y validación de contrato móvil |
+| `.scratch/mcp-refactor/issues/06-mcp-parity-tests.md` | completed | — | 06: A6: Tests de paridad REST vs MCP y validación de contrato móvil |
 | `.scratch/mcp-refactor/issues/07-mcp-feature-flag-flip.md` | ready-for-human | — | 07: A7: Activar MCP por defecto y deprecar rama REST interna |
 
 ## mvp-flutter (19 issues)
@@ -145,8 +145,8 @@
 | `.scratch/traceabilidad/issues/08-be-django-monolith.md` | ready-for-human | — | 08: RF-BE-01: Backend principal en Django |
 | `.scratch/traceabilidad/issues/09-be-jwt-profiles.md` | ready-for-human | — | 09: RF-BE-02: Autenticación JWT y gestión de perfiles/parcelas |
 | `.scratch/traceabilidad/issues/10-be-offline-sync.md` | ready-for-human | — | 10: RF-BE-03: Endpoints seguros para conciliación offline |
-| `.scratch/traceabilidad/issues/11-be-orm-sql-injection.md` | ready-for-agent | — | 11: RNF-BE-01: ORM y protección contra inyección SQL |
-| `.scratch/traceabilidad/issues/12-be-https-tls.md` | ready-for-agent | — | 12: RNF-BE-02: Seguridad perimetral HTTPS/TLS |
+| `.scratch/traceabilidad/issues/11-be-orm-sql-injection.md` | completed | — | 11: RNF-BE-01: ORM y protección contra inyección SQL |
+| `.scratch/traceabilidad/issues/12-be-https-tls.md` | completed | — | 12: RNF-BE-02: Seguridad perimetral HTTPS/TLS |
 | `.scratch/traceabilidad/issues/13-ms-web-mining.md` | ready-for-human | — | 13: RF-MS-01: Microservicio independiente de Web Mining |
 | `.scratch/traceabilidad/issues/14-ms-nlp-pipeline.md` | ready-for-human | — | 14: RF-MS-02: NLP para Web Mining (stop-words, lematización, chunking) |
 | `.scratch/traceabilidad/issues/15-ms-embeddings-vector-store.md` | wontfix | — | 15: RF-MS-03: Embeddings con Transformers a base de datos vectorial |
@@ -162,7 +162,7 @@
 | `.scratch/traceabilidad/issues/25-db-postgresql-django.md` | ready-for-human | — | 25: RF-DB-02: PostgreSQL acoplado a Django |
 | `.scratch/traceabilidad/issues/26-db-faiss-chroma.md` | wontfix | — | 26: RF-DB-03: Base de datos vectorial FAISS o Chroma |
 | `.scratch/traceabilidad/issues/27-db-sqlcipher.md` | ready-for-human | — | 27: RNF-DB-01: SQLCipher AES-256 para SQLite local |
-| `.scratch/traceabilidad/issues/28-db-anonymization.md` | ready-for-agent | — | 28: RNF-DB-02: Anonimización en PostgreSQL para reentrenamiento |
+| `.scratch/traceabilidad/issues/28-db-anonymization.md` | completed | — | 28: RNF-DB-02: Anonimización en PostgreSQL para reentrenamiento |
 | `.scratch/traceabilidad/issues/29-df-sensor-queue.md` | ready-for-agent | — | 29: RF-DF-01: Captura pasiva de métricas ESP32 → móvil y cola local |
 | `.scratch/traceabilidad/issues/30-df-background-sync.md` | ready-for-agent | — | 30: RF-DF-02: Sincronización en segundo plano al detectar conectividad |
 | `.scratch/traceabilidad/issues/31-df-crdt-conflict-resolution.md` | wontfix | — | 31: RNF-DF-01: CRDTs o marcas de tiempo vectoriales |

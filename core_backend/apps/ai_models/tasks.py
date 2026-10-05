@@ -9,6 +9,7 @@ from django.conf import settings
 
 from apps.core.services.safety_audit import log_safety_block
 from apps.core.services.safety_validator import SafetyValidator
+from apps.training_data.anonymization import AnonymizationService
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +121,13 @@ def analyze_vision_async(self, file_path, auth_token='', user_id=None, plant_id=
                         "task_id": self.request.id,
                     }
                 )
-                logger.info(f"AIDiagnostic saved: {diagnostic.id} for user {user_id}")
+                logger.info("AIDiagnostic saved: %s for user %s", diagnostic.id, user_id)
+
+                # Derivar registro anonimizado para reentrenamiento sin PII.
+                try:
+                    AnonymizationService().anonymize_diagnostic(diagnostic)
+                except Exception:
+                    logger.exception("anonymize_diagnostic_failed")
 
                 # Agregar task_id al resultado para polling
                 result["diagnostic_id"] = str(diagnostic.id)

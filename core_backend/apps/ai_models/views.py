@@ -11,6 +11,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from utils.uploads import assert_magic_image, safe_temp_path
 
 from apps.ai_models.models import PvuRouteLog
 from apps.ai_models.tasks import (
@@ -19,7 +20,6 @@ from apps.ai_models.tasks import (
     train_vision_async,
 )
 from apps.ai_models.utils import safe_serialize
-from utils.uploads import assert_magic_image, safe_temp_path
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +84,12 @@ def train_rag_view(request):
 
         train_rag_async.delay(temp_path, file_obj.name, file_obj.content_type)  # type: ignore
         return Response({"status": "accepted", "task": "RAG_TRAIN"}, status=202)
-    except Exception as e:  # noqa: BLE001
-        return Response({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("train_rag_failed")
+        return Response(
+            {"error": "No se pudo procesar el archivo de entrenamiento."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -110,8 +114,12 @@ def train_vision_view(request):
 
         train_vision_async.delay(datasets_info)  # type: ignore
         return Response({"status": "accepted", "count": len(datasets_info)}, status=202)
-    except Exception as e:  # noqa: BLE001
-        return Response({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("train_vision_failed")
+        return Response(
+            {"error": "No se pudo procesar el dataset."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 # --- VISTAS DE INFERENCIA ---
 @api_view(['POST'])
@@ -134,8 +142,12 @@ def analyze_vision_view(request):
 
     try:
         assert_magic_image(file_obj)
-    except ValueError as e:
-        return Response({"error": str(e)}, status=400)
+    except ValueError:
+        logger.warning("analyze_vision_invalid_image")
+        return Response(
+            {"error": "Formato de imagen no válido."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         temp_path = safe_temp_path(
@@ -147,12 +159,15 @@ def analyze_vision_view(request):
             destination.writelines(file_obj.chunks())
 
         auth_header = str(request.headers.get('Authorization', ''))
-        task = analyze_vision_async.delay(str(temp_path), auth_token=auth_header)  # type: ignore  
+        task = analyze_vision_async.delay(str(temp_path), auth_token=auth_header)  # type: ignore
 
         return Response({"status": "accepted", "task_id": task.id}, status=202)
-    except Exception as e:
-        logger.exception("Error en analyze_vision_view")
-        return Response({"error": str(e)}, status=500)
+    except Exception:
+        logger.exception("analyze_vision_failed")
+        return Response(
+            {"error": "No se pudo iniciar el análisis de imagen."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -173,8 +188,12 @@ def vision_task_status_view(request, task_id):
             'info': safe_serialize(task.info) if state not in ('SUCCESS', 'FAILURE') else None,
         }
         return Response(response_data)
-    except Exception as exc:  # noqa: BLE001
-        return Response({'error': 'Task status fetch failed', 'details': str(exc)})
+    except Exception:
+        logger.exception("vision_task_status_failed")
+        return Response(
+            {'error': 'No se pudo consultar el estado de la tarea.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 @api_view(['POST'])

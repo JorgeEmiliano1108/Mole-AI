@@ -266,7 +266,16 @@ paths:
       tags:
       - v1
       responses:
-        '204':
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - deactivated
           description: User deactivated successfully
   /api/v1/admin/users/create/:
     post:

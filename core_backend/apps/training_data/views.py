@@ -104,10 +104,10 @@ def document_upload_request_view(request):
             status=status.HTTP_201_CREATED,
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("document_upload_request_failed")
         return Response(
-            {'error': f'Error generando URL presignada: {e!s}'},
+            {'error': 'No se pudo generar la URL de subida. Intente más tarde.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -171,10 +171,10 @@ def image_upload_request_view(request):
             status=status.HTTP_201_CREATED,
         )
 
-    except Exception as e:
+    except Exception:
         logger.exception("image_upload_request_failed")
         return Response(
-            {'error': f'Error generando URL presignada: {e!s}'},
+            {'error': 'No se pudo generar la URL de subida. Intente más tarde.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -250,10 +250,10 @@ def upload_confirm_view(request):
             {'error': 'Registro no encontrado.'},
             status=status.HTTP_404_NOT_FOUND,
         )
-    except Exception as e:
+    except Exception:
         logger.exception("upload_confirm_failed")
         return Response(
-            {'error': f'Error confirmando subida: {e!s}'},
+            {'error': 'No se pudo confirmar la subida. Intente más tarde.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 

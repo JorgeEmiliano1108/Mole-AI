@@ -1,6 +1,12 @@
 """Tests for the local privacy module (anonymize_id)."""
 
+import pytest
 from app.core.privacy import anonymize_id
+
+
+@pytest.fixture(autouse=True)
+def _anon_key(monkeypatch):
+    monkeypatch.setenv("ANONIMIZACION_KEY", "test-ms1-anon-key")
 
 
 def test_anonymize_id_returns_64_char_hex():
@@ -23,3 +29,20 @@ def test_anonymize_id_empty():
 
 def test_anonymize_id_none():
     assert anonymize_id(None) == "anonymous"
+
+
+def test_anonymize_id_fails_closed_without_key(monkeypatch):
+    monkeypatch.delenv("ANONIMIZACION_KEY", raising=False)
+    with pytest.raises(RuntimeError):
+        anonymize_id("user-123")
+
+
+def test_anonymize_id_matches_hmac_reference():
+    """Verifica que la salida sea HMAC-SHA256 real, no solo SHA-256."""
+    import hashlib
+    import hmac
+
+    expected = hmac.new(
+        b"test-ms1-anon-key", b"user-123", hashlib.sha256
+    ).hexdigest()
+    assert anonymize_id("user-123") == expected

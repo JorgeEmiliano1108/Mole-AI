@@ -17,16 +17,16 @@ Sprint 2: sensors_ingest_view — JWT-protected IoT ingest (Zero-Trust)
 Sprint 4: async def views — non-blocking I/O via ASGI
 """
 import logging
-import random
 
 from django.http import JsonResponse
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.decorators import (
     api_view,
     authentication_classes,
     permission_classes,
 )
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.authentication.infrastructure.local_jwt_auth import LocalJWTAuthentication
@@ -36,20 +36,15 @@ from apps.plants.models import UserPlant
 logger = logging.getLogger(__name__)
 
 
-# ── Mock data (legacy, AllowAny — kept for backward compatibility) ───────────
+# ── Mock data (legacy, dev-only, gone in production) ───────────────────────
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated, IsAdminUser])
 def mock_sensor_data(request):
-    return JsonResponse({
-        "temperature": round(random.uniform(20.0, 30.0), 1),
-        "humidity": random.randint(40, 60),
-        "soil_ph": round(random.uniform(6.0, 7.5), 1),
-        "uv_index": random.randint(1, 5),
-        "health_status": "OPTIMAL",
-        "irrigation_active": False,
-        "lights_active": True
-    })
+    return JsonResponse(
+        {"detail": "Endpoint de datos simulados retirado."},
+        status=410,
+    )
 
 
 # ── Telemetry — Async (Sprint 4) ────────────────────────────────────────────
@@ -163,9 +158,12 @@ def sensors_ingest_view(request):
         return Response({"status": "success", "registered": 1}, status=201)
     except PlantNotBoundError:
         return Response({"error": "plant_id not registered"}, status=404)
-    except Exception as exc:
+    except Exception:
         logger.exception("Sensor ingest failed")
-        return Response({"error": str(exc)}, status=500)
+        return Response(
+            {"error": "No se pudo procesar la lectura."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 # ── Heartbeat Liveness (Sprint Dashboard UI — ISSUE-03 / INGEST-04) ─────────

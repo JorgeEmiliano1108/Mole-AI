@@ -50,13 +50,14 @@ infrastructure/nginx/certs/*.srl
 **/logs/
 **/storage/
 !microservices/mole_report/infrastructure/storage/
-!infrastructure/mosquitto/certs/ca.crt
 **/vectors/
 **/checkpoints/
 **/models/*.tflite
 **/models/*.h5
 **/models/*.pb
 !**/models/.gitkeep
+# Modelo edge versionado (FP16, 4.8MB): reproducible tras git clone sin LFS.
+!mobile/assets/models/*.tflite
 
 # Frontend Artifacts
 frontend/dist/
@@ -117,3 +118,7 @@ docs/thesis/
 docs/thesis/
 # Reportes del harness empírico (Track C): preliminares, no versionar
 .scratch/harness-empirico/reports/
+
+# Excepciones de infraestructura al final del documento: deben evaluarse
+# después de los comodines globales (*.crt) para que la negación prevalezca.
+!infrastructure/mosquitto/certs/ca.crt
