@@ -205,6 +205,14 @@ services:
       - "8001"
     env_file:
       - ../.env
+    # Opción A (F3): MS1 visión en NVIDIA NIM aunque el .env global sea
+    # DeepSeek. `environment:` gana a `env_file`, y se pisan los alias
+    # GANADORES (LLM_*), no los NVIDIA_* (AliasChoices los ignoraría).
+    # MS1_API_KEY la pone el operador en .env (jamás commiteada).
+    environment:
+      - LLM_API_KEY=${MS1_API_KEY:-}
+      - LLM_BASE_URL=${MS1_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      - LLM_VISION_MODEL=${LLM_VISION_MODEL:-meta/llama-3.2-11b-vision-instruct}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

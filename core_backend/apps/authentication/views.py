@@ -13,6 +13,7 @@
 import logging
 import uuid
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import (
     api_view,
@@ -505,14 +506,21 @@ RESET_TOKEN_TTL_SECONDS = 3600  # 1 hora, un solo uso
 def password_reset_request_view(request):
     """
     POST /api/v1/auth/password-reset/request/
-    Body: {"email"}. SIEMPRE responde 202 (anti-enumeración: no revela si el
-    email existe). Encola correo con token de un solo uso TTL 1h + AuditLog.
+    Body: {"email"}. Con correo habilitado (`PASSWORD_RESET_EMAIL_ENABLED=true`)
+    SIEMPRE responde 202 (anti-enumeración: no revela si el email existe);
+    encola correo con token de un solo uso TTL 1h + AuditLog.
+    Sin proveedor SMTP responde 501 honesto (ADR-0006, enmienda Wave D).
     Throttle anon 100/h (settings) contra enumeración masiva.
     """
     from django.contrib.auth import get_user_model
 
     from apps.core.models import AuditLog
 
+    if not getattr(settings, "PASSWORD_RESET_EMAIL_ENABLED", False):
+        return Response(
+            {"error": "Recuperación por correo no disponible en este entorno."},
+            status=status.HTTP_501_NOT_IMPLEMENTED,
+        )
     email = (request.data.get("email") or "").strip()
     User = get_user_model()
     user = User.objects.filter(email__iexact=email).first() if email else None

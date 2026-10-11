@@ -39,16 +39,29 @@ class TestPasswordReset:
 
     def test_request_siempre_202_anti_enumeracion(self):
         c = APIClient()
-        r1 = c.post("/api/v1/auth/password-reset/request/",
-                    {"email": "nadie@x.mx"}, format="json")
-        assert r1.status_code == 202
-        User.objects.create_user(username="u1", password="Segura123!",
-                                 email="u1@x.mx")
-        r2 = c.post("/api/v1/auth/password-reset/request/",
-                    {"email": "u1@x.mx"}, format="json")
-        assert r2.status_code == 202
-        # Indistinguibles: misma forma de respuesta.
-        assert r1.json() == r2.json()
+        # Con correo habilitado: 202 indistinguible exista o no el email.
+        with override_settings(PASSWORD_RESET_EMAIL_ENABLED=True):
+            r1 = c.post("/api/v1/auth/password-reset/request/",
+                        {"email": "nadie@x.mx"}, format="json")
+            assert r1.status_code == 202
+            User.objects.create_user(username="u1", password="Segura123!",
+                                     email="u1@x.mx")
+            r2 = c.post("/api/v1/auth/password-reset/request/",
+                        {"email": "u1@x.mx"}, format="json")
+            assert r2.status_code == 202
+            # Indistinguibles: misma forma de respuesta.
+            assert r1.json() == r2.json()
+
+    def test_request_sin_smtp_501_honesto(self):
+        # Sin proveedor SMTP (default): 501, sin revelar si el email existe.
+        c = APIClient()
+        User.objects.create_user(username="u501", password="Segura123!",
+                                 email="u501@x.mx")
+        for email in ("nadie@x.mx", "u501@x.mx"):
+            r = c.post("/api/v1/auth/password-reset/request/",
+                       {"email": email}, format="json")
+            assert r.status_code == 501
+            assert "error" in r.json()
 
     def test_confirm_invalido_400(self):
         c = APIClient()

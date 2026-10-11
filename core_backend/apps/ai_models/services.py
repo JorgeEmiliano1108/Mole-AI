@@ -20,7 +20,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 
 import sys
 from pathlib import Path
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +31,8 @@ if str(BASE_DIR / 'apps') not in sys.path:
 try:
     from apps.ai_models.models import LLMRequest, CNNInference, ModelPerformance
     from apps.core.models import SensorLog
-except ImportError as e:
-    logger.warning(f"Error importando modelos: {e}")
+except ImportError:
+    logger.warning("Modelos ai_models/core no disponibles; agregación deshabilitada.")
     LLMRequest = None
     CNNInference = None
     ModelPerformance = None
@@ -84,8 +83,9 @@ class SensorDataAggregator:
             logger.info(f"Aggregated sensor data: {len(sensor_data)} fields")
             return sensor_data
             
-        except Exception as e:
-            logger.error(f"Error aggregating sensor data: {str(e)}")
+        except Exception:
+            # Silent-compliance: sin detalle de excepción en logs/respuestas.
+            logger.exception("Error aggregating sensor data")
             return {}
 
 class MoleAIClient:
@@ -139,12 +139,14 @@ class MoleAIClient:
             logger.error(error_msg)
             raise MoleAIServiceError(error_msg)
         except aiohttp.ClientResponseError as e:
-            error_msg = f"HTTP error from Mole-AI service: {e.status} - {getattr(e, 'message', repr(e))}"
-            logger.error(error_msg)
+            # Silent-compliance: solo el status viaja en el mensaje; el detalle
+            # queda en el traceback del log.
+            error_msg = f"HTTP error from Mole-AI service: {e.status}"
+            logger.exception(error_msg)
             raise MoleAIServiceError(error_msg)
-        except Exception as e:
-            error_msg = f"Unexpected error calling Mole-AI service: {str(e)}"
-            logger.error(error_msg, exc_info=True)
+        except Exception:
+            error_msg = "Unexpected error calling Mole-AI service"
+            logger.exception(error_msg)
             raise MoleAIServiceError(error_msg)
     
     async def generate_chat_response(self, query: str, 
@@ -234,12 +236,13 @@ class MoleAIClient:
         except Exception as e:
             if 'llm_request' in locals() and llm_request is not None:
                 llm_request.status = 'failed'
-                llm_request.error_message = str(e)
+                # Silent-compliance: clase de error, nunca mensaje crudo.
+                llm_request.error_message = type(e).__name__
                 await sync_to_async(llm_request.save)()
-                
+
             await self._update_performance_metrics('mole-ai-v3', 0, False)
-            logger.error(f"Error generating chat response: {str(e)}")
-            raise MoleAIServiceError(f"Failed to generate chat response: {str(e)}")
+            logger.exception("Error generating chat response")
+            raise MoleAIServiceError("Failed to generate chat response")
     
     async def generate_embeddings(self, text: str, **kwargs) -> Dict[str, Any]:
         """OBSOLETO (HTTP 410 Gone conceptual) — NO USAR.
@@ -271,9 +274,9 @@ class MoleAIClient:
                 'version': response_data.get('version'),
                 'models': response_data.get('models', [])
             }
-        except Exception as e:
-            logger.error(f"Error checking health: {str(e)}")
-            return {'is_healthy': False, 'error': str(e)}
+        except Exception:
+            logger.exception("Error checking health")
+            return {'is_healthy': False, 'error': 'health_check_failed'}
     
     async def _update_performance_metrics(self, model_name: str, response_time_ms: int, success: bool):
         if ModelPerformance is None:
@@ -314,8 +317,8 @@ class MoleAIClient:
                 
                 await sync_to_async(performance.save)()
                 
-        except Exception as e:
-            logger.error(f"Error updating performance metrics: {str(e)}")
+        except Exception:
+            logger.exception("Error updating performance metrics")
 
 mole_ai_client = MoleAIClient()
 sensor_aggregator = SensorDataAggregator()

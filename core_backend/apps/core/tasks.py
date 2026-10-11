@@ -155,11 +155,12 @@ def chat_async(self, question, user_id, session_id):
             extra={
                 "task_id": self.request.id,
                 "hashed_uid": _hash_user_id(user_id),
-                "error": str(exc),
+                # Silent-compliance: clase de error, nunca mensaje crudo.
+                "error": type(exc).__name__,
             },
         )
-        # Retry on transient network errors
-        if "Connection" in str(exc) or "Timeout" in str(exc):
+        # Retry on transient network errors (por tipo, no por texto).
+        if isinstance(exc, (ConnectionError, TimeoutError)):
             raise self.retry(exc=exc, countdown=3)
         raise
 
@@ -251,7 +252,8 @@ def generate_pdf_async(self, diagnostic_id, user_id):
             extra={
                 "task_id": self.request.id,
                 "diagnostic_id": diagnostic_id,
-                "error": str(exc),
+                # Silent-compliance: clase de error, nunca mensaje crudo.
+                "error": type(exc).__name__,
             },
         )
         raise self.retry(exc=exc, countdown=5)

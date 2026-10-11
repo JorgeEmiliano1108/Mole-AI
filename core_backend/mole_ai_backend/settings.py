@@ -201,6 +201,22 @@ AXES_FAILURE_LIMIT = int(os.getenv('AXES_FAILURE_LIMIT', '5'))
 AXES_COOLOFF_TIME = 1
 AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
 
+# 5b. Correo transaccional (ADR-0006, enmienda Wave D 2026-10-06).
+# Sin proveedor SMTP no hay envío real: el endpoint password-reset/request
+# responde 501 honesto en lugar de un 202 que miente. Activar
+# PASSWORD_RESET_EMAIL_ENABLED=true solo con SMTP operativo.
+EMAIL_BACKEND = _env_first('EMAIL_BACKEND',
+                           default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = _env_first('EMAIL_HOST', default='')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = _env_first('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = _env_first('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = _env_first('DEFAULT_FROM_EMAIL', 'EMAIL_FROM',
+                                default='no-responder@mole.ai')
+PASSWORD_RESET_EMAIL_ENABLED = os.getenv(
+    'PASSWORD_RESET_EMAIL_ENABLED', 'False').lower() == 'true'
+
 # 6. Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

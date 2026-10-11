@@ -15,17 +15,19 @@ WebSocket Consumers for Mole-AI Real-time Chat System
 """
 import json
 import logging
+
 from channels.generic.websocket import AsyncWebsocketConsumer
+
 # channels.db.database_sync_to_async removed: using async MoleAI client instead
+
+logger = logging.getLogger(__name__)
 
 # Import con manejo de errores
 try:
     from apps.ai_models.services import get_enhanced_ai_response
-except ImportError as e:
-    logger.warning(f"No se puede importar AI services: {e}")
+except ImportError:
+    logger.warning("AI services no disponibles; chat WS degradado.")
     get_enhanced_ai_response = None
-
-logger = logging.getLogger(__name__)
 
 class ChatConsumer(AsyncWebsocketConsumer):
     """
@@ -127,11 +129,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "type": "error",
                 "message": "❌ Formato de mensaje inválido. Usa JSON válido."
             })
-        except Exception as e:
-            logger.error(f"Error processing message: {str(e)}")
+        except Exception:
+            # Silent-compliance: el detalle va al traceback; al cliente un
+            # mensaje genérico sin fugas de internals.
+            logger.exception("Error processing message")
             await self.send_json({
                 "type": "error",
-                "message": f"❌ Error en Mole-AI: {str(e)}"
+                "message": "❌ Error en Mole-AI. Intenta de nuevo."
             })
     
     # Removed _process_with_ai sync wrapper; using async get_enhanced_ai_response directly
