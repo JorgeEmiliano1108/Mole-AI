@@ -13,7 +13,9 @@ import 'package:mole_ai/core/notify.dart';
 import 'package:mole_ai/core/offline_store.dart';
 import 'package:mole_ai/core/safety_block_banner.dart';
 import 'package:mole_ai/features/auth/auth_controller.dart';
+import 'package:mole_ai/features/vision/capture_check.dart';
 import 'package:mole_ai/features/vision/edge_ai.dart';
+import 'package:mole_ai/features/vision/roi_crop.dart';
 import 'package:mole_ai/features/vision/vision.dart';
 import 'package:mole_ai/pvu/routing.dart';
 
@@ -171,33 +173,58 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
       final bytes = await img.readAsBytes();
       rawBytes = bytes;
 
+      // F3 (FE-07): validar captura ANTES de gastar batería/red.
+      // Rechazo = mensaje accionable, nada se encola ni se infiere.
+      final check = checkCapture(bytes);
+      if (!mounted) return;
+      if (!check.ok) {
+        setState(() {
+          _phase = null;
+          _message = check.reason;
+        });
+        return;
+      }
+
+      // F3 (FE-03): recorte ROI. Cancelar = frame completo, cero bloqueo.
+      List<int> framed = bytes;
+      final roi = await showRoiCropSheet(context, bytes);
+      if (!mounted) return;
+      if (roi != null) {
+        try {
+          framed = cropRoi(bytes, roi);
+        } catch (_) {
+          framed = bytes;
+        }
+      }
+      rawBytes = framed;
+
       // PVU: decidir ruta ANTES de gastar batería/RAM en inferencia.
       final net = await _currentConnectivity();
       final pvuRoute = await route(net: net, batteryPct: 1.0, wifi: null);
 
       if (pvuRoute is CloudRoute) {
-        await _submitToCloud(bytes, imgName);
+        await _submitToCloud(framed, imgName);
         return;
       }
 
       // Local o Hybrid: intentar edge primero.
       EdgeVerdict? edge;
       try {
-        edge = await EdgeAiService().diagnose(bytes);
+        edge = await EdgeAiService().diagnose(framed);
       } catch (_) {
         edge = null; // TFLite no disponible.
       }
       if (!mounted) return;
 
       if (edge != null && edge.local) {
-        await _showEdgeResult(edge, pvuRoute, bytes, imgName);
+        await _showEdgeResult(edge, pvuRoute, framed, imgName);
         return;
       }
 
       if (pvuRoute is LocalRoute) {
         // Sin red: mostramos el veredicto edge aunque sea incierto y encolamos.
         if (edge != null) {
-          await _showEdgeResult(edge, pvuRoute, bytes, imgName);
+          await _showEdgeResult(edge, pvuRoute, framed, imgName);
         } else {
           setState(() => _message = 'No se pudo analizar sin conexión.');
         }
@@ -205,7 +232,7 @@ class _DiagnosisScreenState extends ConsumerState<DiagnosisScreen> {
       }
 
       // Hybrid con edge incierto/no disponible → nube.
-      await _submitToCloud(bytes, imgName);
+      await _submitToCloud(framed, imgName);
     } catch (e) {
       if (!mounted) return;
       final queued = rawBytes;

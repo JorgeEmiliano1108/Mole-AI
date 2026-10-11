@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mole_ai/core/offline_store.dart';
 import 'package:mole_ai/features/alerts/alerts.dart';
 import 'package:mole_ai/features/alerts/alerts_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'offline_test.dart' show memStore;
 import 'species_test.dart' show FakeAdapter, clientWith, jsonBody;
@@ -71,6 +72,9 @@ AlertsRepository _repo(ResponseBody Function(RequestOptions) handler) =>
     AlertsRepository(clientWith(FakeAdapter(handler)));
 
 void main() {
+  // F2: UnreadAlerts persiste en prefs (reset al abrir) → mock sin channels.
+  setUpAll(() => SharedPreferences.setMockInitialValues({}));
+
   group('PlantAlert', () {
     test('parsea severidades y campos', () {
       final a = PlantAlert.fromJson(

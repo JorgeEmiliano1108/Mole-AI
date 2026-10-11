@@ -6,6 +6,7 @@
 library;
 
 import 'package:mole_ai/core/api_client.dart';
+import 'package:mole_ai/core/errors.dart';
 
 class Hotspot {
   Hotspot(
@@ -14,12 +15,27 @@ class Hotspot {
       required this.severity,
       this.species});
 
-  factory Hotspot.fromJson(Map<String, dynamic> j) => Hotspot(
-        lat: (j['lat'] as num).toDouble(),
-        lng: (j['lng'] as num).toDouble(),
-        severity: '${j['severity']}',
-        species: j['species'] as String?,
-      );
+  factory Hotspot.fromJson(Map<String, dynamic> j) {
+    final h = Hotspot.tryParse(j);
+    if (h == null) {
+      throw ApiException('Hotspot inválido.', details: j);
+    }
+    return h;
+  }
+
+  /// F1: `lat/lng` ausentes o no numéricos → null (la lista los salta)
+  /// en vez de reventar todo el mapa con `TypeError`.
+  static Hotspot? tryParse(Map<String, dynamic> j) {
+    final lat = j['lat'];
+    final lng = j['lng'];
+    if (lat is! num || lng is! num) return null;
+    return Hotspot(
+      lat: lat.toDouble(),
+      lng: lng.toDouble(),
+      severity: '${j['severity']}',
+      species: j['species'] as String?,
+    );
+  }
 
   final double lat;
   final double lng;
@@ -56,9 +72,11 @@ class MapRepository {
 
   Future<List<Hotspot>> hotspots() async {
     final body = await _api.getJson('map/hotspots/');
+    // F1: entradas inválidas se saltan; un hotspot roto no tumba el mapa.
     return ((body['hotspots'] as List?) ?? const [])
         .whereType<Map<String, dynamic>>()
-        .map(Hotspot.fromJson)
+        .map(Hotspot.tryParse)
+        .whereType<Hotspot>()
         .toList();
   }
 

@@ -35,6 +35,7 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   final _lon = TextEditingController(text: '-99.1332');
   CurrentWeather? _weather;
   bool _loading = false;
+  bool _offline = false;
   String? _error;
 
   @override
@@ -59,7 +60,15 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
       final w = await ref
           .read(mapRepositoryProvider)
           .currentWeather(lat, lon);
-      if (mounted) setState(() => _weather = w);
+      if (mounted) {
+        setState(() {
+          _weather = w;
+          _offline = false;
+        });
+      }
+    } on RetryableException {
+      // F2 (N-3): sin red → chip offline + conserva último dato.
+      if (mounted) setState(() => _offline = true);
     } catch (e) {
       if (mounted) setState(() => _error = _friendly(e));
     } finally {
@@ -127,13 +136,28 @@ class _WeatherScreenState extends ConsumerState<WeatherScreen> {
             const SizedBox(height: 16),
             if (_loading)
               const Center(child: CircularProgressIndicator()),
-            if (_error != null)
+            // F2 (N-3): chip offline declarado + reintento explícito.
+            if (_offline && !_loading)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Chip(
+                  avatar: Icon(Icons.cloud_off_outlined, size: 18),
+                  label: Text('Sin conexión: últimos datos conocidos'),
+                ),
+              ),
+            if (_error != null) ...[
               Semantics(
                 liveRegion: true,
                 child: Text(_error!,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.error)),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                  onPressed: _loading ? null : _load,
+                  child: const Text('Reintentar')),
+              const SizedBox(height: 8),
+            ],
             if (!_loading && _error == null && w != null)
               Card(
                 child: Column(

@@ -146,10 +146,11 @@ class SqfliteOfflineDb implements OfflineDb {
         whereArgs: [key],
         limit: 1);
     if (rows.isEmpty) return null;
-    return (
-      cachedAtIso: rows.first['cached_at'] as String,
-      payloadJson: rows.first['payload'] as String,
-    );
+    // F1: fila corrupta/deriva de esquema → null, nunca `TypeError`.
+    final cachedAt = rows.first['cached_at'];
+    final payload = rows.first['payload'];
+    if (cachedAt is! String || payload is! String) return null;
+    return (cachedAtIso: cachedAt, payloadJson: payload);
   }
 
   @override
@@ -188,8 +189,13 @@ class SqfliteOfflineDb implements OfflineDb {
       {'class': cls, 'text': text, 'used_at': now},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    final count = (await db.rawQuery('SELECT COUNT(*) AS c FROM offline_advice'))
-        .first['c'] as int;
+    final rawCount =
+        (await db.rawQuery('SELECT COUNT(*) AS c FROM offline_advice'))
+            .first['c'];
+    // F1: el driver puede devolver int64/num según plataforma.
+    final count = rawCount is int
+        ? rawCount
+        : (rawCount is num ? rawCount.toInt() : 0);
     if (count > maxEntries) {
       final toDrop = count - maxEntries;
       await db.rawDelete(

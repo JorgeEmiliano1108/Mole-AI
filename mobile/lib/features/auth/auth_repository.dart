@@ -5,6 +5,7 @@
 library;
 
 import 'package:mole_ai/core/api_client.dart';
+import 'package:mole_ai/core/errors.dart';
 import 'package:mole_ai/core/session_store.dart';
 
 class AuthRepository {
@@ -15,12 +16,16 @@ class AuthRepository {
 
   /// Login con username o email (`@` resuelve por email en backend).
   /// Retorna el rol (`user|admin|superuser`).
+  /// F1: cuerpo 2xx sin `token` → [ApiException], nunca `TypeError`.
   Future<String> login(String identifier, String password) async {
     final body = await _api.postJson('auth/login/', data: {
       'username': identifier,
       'password': password,
     });
-    final token = body['token'] as String;
+    final token = body['token'];
+    if (token is! String || token.isEmpty) {
+      throw ApiException('Respuesta de sesión inválida.', details: body);
+    }
     final role = (body['role'] as String?) ?? 'user';
     await _session.writeToken(token, role);
     return role;
@@ -49,8 +54,9 @@ class AuthRepository {
 
   Future<Map<String, dynamic>> profile() => _api.getJson('auth/profile/');
 
-  /// ADR-0006: solicita correo de recuperación. Siempre 202
-  /// (anti-enumeración: el backend no revela si el email existe).
+  /// ADR-0006: solicita correo de recuperación. Con SMTP habilitado el
+  /// backend responde 202 (anti-enumeración); sin proveedor responde 501
+  /// ([ApiException] con `statusCode` 501: la UI muestra "no disponible").
   Future<void> requestPasswordReset(String email) async {
     await _api.postJson('auth/password-reset/request/', data: {
       'email': email.trim(),
@@ -73,9 +79,13 @@ class AuthRepository {
   /// Sliding window (contrato §1): exige Bearer vigente; el backend rota `jti`.
   /// Lanza [UnauthorizedException] si el token ya expiró → re-login.
   /// RBAC integrity: el rol cacheado se sincroniza desde el JWT fresco.
+  /// F1: cuerpo 2xx sin `token` → [ApiException], nunca `TypeError`.
   Future<void> refresh() async {
     final body = await _api.postJson('auth/refresh/');
-    final token = body['token'] as String;
+    final token = body['token'];
+    if (token is! String || token.isEmpty) {
+      throw ApiException('Respuesta de sesión inválida.', details: body);
+    }
     final explicitRole = body['role'];
     final freshRole = (explicitRole is String &&
             (explicitRole == 'user' ||

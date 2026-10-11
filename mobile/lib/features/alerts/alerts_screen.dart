@@ -107,12 +107,12 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
     }
   }
 
-  /// Notifica error+warn nuevas (dedup); actualiza badge de no-leídos.
+  /// Notifica error+warn nuevas (dedup por id); actualiza badge de no-leídos.
   void _announce(List<PlantAlert> fresh) {
     var freshUnread = 0;
     final notify = widget.onNotify ?? NotifyService.show;
     for (final a in fresh) {
-      if (_seen.add(a.fingerprint) && a.notifiable) {
+      if (_seen.add(a.id) && a.notifiable) {
         freshUnread++;
         notify(
           a.severity == AlertSeverity.error ? 'Alerta en tu planta' : 'Aviso en tu planta',

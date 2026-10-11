@@ -6,6 +6,24 @@ library;
 
 import 'package:dio/dio.dart';
 import 'package:mole_ai/core/api_client.dart';
+import 'package:mole_ai/core/errors.dart';
+
+/// Concesión de subida presignada (contrato §6b, paso 1).
+///
+/// F1: valida `presigned_url` + `record_id` no vacíos. Lanza [ApiException]
+/// ante cuerpo malformado (nunca `TypeError` por `as String`).
+({String presignedUrl, String recordId}) parseUploadGrant(
+    Map<String, dynamic> req) {
+  final url = req['presigned_url'];
+  final recordId = req['record_id'];
+  if (url is! String ||
+      url.isEmpty ||
+      recordId == null ||
+      '$recordId'.isEmpty) {
+    throw ApiException('Respuesta de subida inválida.', details: req);
+  }
+  return (presignedUrl: url, recordId: '$recordId');
+}
 
 class SystemMetrics {
   SystemMetrics(

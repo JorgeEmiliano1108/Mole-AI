@@ -118,6 +118,7 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'txt', 'jpg', 'jpeg', 'png', 'webp', 'zip'],
     );
+    // file_picker v13: cancelar devuelve lista vacía (no null).
     if (files.isEmpty) return;
     final file = files.first;
     final bytes = await file.readAsBytes();
@@ -136,10 +137,11 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
       final mime = _mimeFor(file.name);
       final req = await repo.requestUpload(kind,
           filename: file.name, contentType: mime, fileSize: bytes.length);
-      await repo.putFile(req['presigned_url'] as String, bytes,
-          contentType: mime);
+      // F1: cuerpo malformado → ApiException, nunca `as String` roto.
+      final grant = parseUploadGrant(req);
+      await repo.putFile(grant.presignedUrl, bytes, contentType: mime);
       final done = await repo.confirm(
-          '${req['record_id']}', kind == 'documents' ? 'document' : 'image');
+          grant.recordId, kind == 'documents' ? 'document' : 'image');
       if (mounted) {
         setState(() {
           _notice = 'Adjuntado: ${done.status}. Se indexará en segundo plano.';
