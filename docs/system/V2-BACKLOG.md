@@ -2,22 +2,22 @@
 
 > Generado por `scripts/build-v2-backlog.py` desde `.scratch/<tracker>/issues/`.
 > Para actualizar: edita el issue en `.scratch/` y re-ejecuta el script.
-> Total: 115 issues, 97 no completados.
+> Total: 115 issues, 96 no completados.
 
 ## admin-ux-audit (10 issues)
 
 | Issue | Estado | Sev | Título |
 |---|---|---|---|
-| `.scratch/admin-ux-audit/issues/01-trailing-slash-admin.md` | desconocido | — | Issue 01 — Trailing slash en endpoints admin |
-| `.scratch/admin-ux-audit/issues/02-record-id-training.md` | desconocido | — | Issue 02 — Campo record_id en listados de training |
-| `.scratch/admin-ux-audit/issues/03-training-permissions-admin.md` | desconocido | — | Issue 03 — Restringir listados de training a admin |
-| `.scratch/admin-ux-audit/issues/04-error-retry-knowledge-audit.md` | desconocido | — | Issue 04 — Patrón unificado error + retry en Knowledge y Auditoría |
-| `.scratch/admin-ux-audit/issues/05-snackbar-users-mutation.md` | desconocido | — | Issue 05 — Feedback positivo en mutaciones de Usuarios |
-| `.scratch/admin-ux-audit/issues/06-a11y-admin.md` | desconocido | — | Issue 06 — Mejoras de accesibilidad en listas admin |
-| `.scratch/admin-ux-audit/issues/07-openapi-delete-status.md` | desconocido | — | Issue 07 — Alinear openapi.yml DELETE users con backend |
-| `.scratch/admin-ux-audit/issues/08-users-black-screen.md` | desconocido | — | Issue 08 — Pantalla negra en /admin/usuarios en dispositivo |
-| `.scratch/admin-ux-audit/issues/09-consent-expired-token.md` | desconocido | — | Issue 09 — Consentimiento bloqueado con token expirado |
-| `.scratch/admin-ux-audit/issues/10-audit-log-trailing-slash.md` | desconocido | — | Issue 10 — Trailing slash en GET admin/audit-log |
+| `.scratch/admin-ux-audit/issues/01-trailing-slash-admin.md` | ready-for-human | — | Issue 01 — Trailing slash en endpoints admin |
+| `.scratch/admin-ux-audit/issues/02-record-id-training.md` | ready-for-human | — | Issue 02 — Campo record_id en listados de training |
+| `.scratch/admin-ux-audit/issues/03-training-permissions-admin.md` | ready-for-human | — | Issue 03 — Restringir listados de training a admin |
+| `.scratch/admin-ux-audit/issues/04-error-retry-knowledge-audit.md` | ready-for-human | — | Issue 04 — Patrón unificado error + retry en Knowledge y Auditoría |
+| `.scratch/admin-ux-audit/issues/05-snackbar-users-mutation.md` | ready-for-human | — | Issue 05 — Feedback positivo en mutaciones de Usuarios |
+| `.scratch/admin-ux-audit/issues/06-a11y-admin.md` | ready-for-human | — | Issue 06 — Mejoras de accesibilidad en listas admin |
+| `.scratch/admin-ux-audit/issues/07-openapi-delete-status.md` | completed | — | Issue 07 — Alinear openapi.yml DELETE users con backend |
+| `.scratch/admin-ux-audit/issues/08-users-black-screen.md` | ready-for-human | — | Issue 08 — Pantalla negra en /admin/usuarios en dispositivo |
+| `.scratch/admin-ux-audit/issues/09-consent-expired-token.md` | ready-for-human | — | Issue 09 — Consentimiento bloqueado con token expirado |
+| `.scratch/admin-ux-audit/issues/10-audit-log-trailing-slash.md` | ready-for-human | — | Issue 10 — Trailing slash en GET admin/audit-log |
 
 ## anonimizacion (5 issues)
 
@@ -54,7 +54,7 @@
 | `.scratch/deuda-fase5/issues/19-docs-sync.md` | ready-for-agent | P2 | Issue 19: Sincronizar docs con el código |
 | `.scratch/deuda-fase5/issues/20-mobile-ble-stack.md` | ready-for-agent | P1 | Issue 20: Stack BLE real en Flutter |
 | `.scratch/deuda-fase5/issues/21-endurecimiento-iot-firmware-c.md` | needs-info | P2 | Issue 21: Endurecimiento IoT (firmware C) — etapa dedicada, fuera del MVP |
-| `.scratch/deuda-fase5/issues/21-mobile-hardening-casts.md` | ready-for-agent | P1 | Issue 21: Hardening mobile (casts + cobertura) |
+| `.scratch/deuda-fase5/issues/21-mobile-hardening-casts.md` | ready-for-human | P1 | Issue 21: Hardening mobile (casts + cobertura) |
 
 ## harness-empirico (5 issues)
 
@@ -108,7 +108,7 @@
 | `.scratch/mvp-flutter/issues/04-telemetria-edge.md` | needs-triage | — | 04 — Telemetría trama edge + lectura móvil |
 | `.scratch/mvp-flutter/issues/05-vision.md` | needs-triage | — | 05 — Visión diagnóstica |
 | `.scratch/mvp-flutter/issues/06-chat-rag.md` | needs-triage | — | 06 — Chat RAG única vía Celery |
-| `.scratch/mvp-flutter/issues/07-mapa-reportes.md` | needs-triage | — | 07 — Mapa, clima y reportes |
+| `.scratch/mvp-flutter/issues/07-mapa-reportes.md` | ready-for-human | — | 07 — Mapa, clima y reportes |
 | `.scratch/mvp-flutter/issues/08-hardening-mobile.md` | needs-triage | — | 08 — Hardening, CI y scaffold mobile/ |
 | `.scratch/mvp-flutter/issues/09-retiro-huggingface.md` | ready-for-agent | — | 09 — Retiro HuggingFace (NVIDIA + OpenWeather únicos) |
 | `.scratch/mvp-flutter/issues/10-seguridad-ingesta-consentimiento.md` | ready-for-agent | — | 10 — Seguridad ingesta + consentimiento (S09 parcial) |
@@ -117,7 +117,7 @@
 | `.scratch/mvp-flutter/issues/13-stack-formal.md` | ready-for-agent | — | 13 — Stack formal MRF/MRNF + matriz de trazabilidad |
 | `.scratch/mvp-flutter/issues/14-portal-publico.md` | ready-for-agent | — | 14 — Portal público + autenticación móvil |
 | `.scratch/mvp-flutter/issues/15-drawer-roles-admin.md` | ready-for-agent | — | 15 — Drawer, roles y panel admin |
-| `.scratch/mvp-flutter/issues/16-password-reset.md` | ready-for-agent | — | 16 — Backend portal: password-reset + usuarios admin + flora endémica |
+| `.scratch/mvp-flutter/issues/16-password-reset.md` | ready-for-human | — | 16 — Backend portal: password-reset + usuarios admin + flora endémica |
 | `.scratch/mvp-flutter/issues/17-ble-live.md` | ready-for-agent | — | 17 — BLE live telemetry (firmware + app) |
 | `.scratch/mvp-flutter/issues/18-curaduria-flora.md` | ready-for-human | — | 18 — Curaduría flora endémica (bloquea portal) |
 
@@ -137,11 +137,11 @@
 |---|---|---|---|
 | `.scratch/traceabilidad/issues/01-fe-flutter-framework.md` | ready-for-human | — | 01: RF-FE-01: Framework Flutter y compatibilidad Android |
 | `.scratch/traceabilidad/issues/02-fe-telemetry-dashboard.md` | ready-for-agent | — | 02: RF-FE-02: Telemetría local MQTT/CoAP y dashboard interactivo |
-| `.scratch/traceabilidad/issues/03-fe-camera-roi-normalization.md` | ready-for-agent | — | 03: RF-FE-03: Cámara, recorte de ROI y normalización |
+| `.scratch/traceabilidad/issues/03-fe-camera-roi-normalization.md` | ready-for-human | — | 03: RF-FE-03: Cámara, recorte de ROI y normalización |
 | `.scratch/traceabilidad/issues/04-fe-diagnosis-progressive-disclosure.md` | ready-for-agent | — | 04: RF-FE-04: Diagnóstico visual y Progressive Disclosure |
 | `.scratch/traceabilidad/issues/05-fe-mvc-pattern.md` | ready-for-agent | — | 05: RNF-FE-01: Patrón arquitectónico MVC |
 | `.scratch/traceabilidad/issues/06-fe-graceful-degradation.md` | ready-for-human | — | 06: RNF-FE-02: Graceful Degradation y offline-first |
-| `.scratch/traceabilidad/issues/07-fe-capture-validation.md` | ready-for-agent | — | 07: RNF-FE-03: Prevención de errores en captura de imágenes |
+| `.scratch/traceabilidad/issues/07-fe-capture-validation.md` | ready-for-human | — | 07: RNF-FE-03: Prevención de errores en captura de imágenes |
 | `.scratch/traceabilidad/issues/08-be-django-monolith.md` | ready-for-human | — | 08: RF-BE-01: Backend principal en Django |
 | `.scratch/traceabilidad/issues/09-be-jwt-profiles.md` | ready-for-human | — | 09: RF-BE-02: Autenticación JWT y gestión de perfiles/parcelas |
 | `.scratch/traceabilidad/issues/10-be-offline-sync.md` | ready-for-human | — | 10: RF-BE-03: Endpoints seguros para conciliación offline |

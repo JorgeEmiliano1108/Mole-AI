@@ -1,7 +1,7 @@
 # Contrato móvil — Mole.AI API v1 para Flutter (APK)
 
 > Fuente de verdad: código (`core_backend/`) + snapshot `docs/contracts/openapi.yml`
-> (generado con `manage.py spectacular`, 76 paths v1 + `/api/schema/`, 2026-09-17).
+> (generado con `manage.py spectacular`, 91 paths v1 + `/api/schema/`, 106 operaciones, 2026-09-17; counts re-verificados Wave D 2026-10-06).
 > Toda afirmación cita `ruta:línea`. Si el schema y este documento divergen, manda el código
 > y el gate CI `schema-diff` falla (ver §11).
 > Decisión usuario 2026-09-17: visión **async vía Django+Celery**, chat **vía gateway**,
@@ -28,7 +28,7 @@
 | `POST auth/register/` (`AllowAny`, LFPDPPP Art. 8: exige `consent:true`, 400 si falta) | `{username, password, email?, consent:true}` | `201 {status:created, username, email_verification_required:true}` + `AuditLog CONSENT_GRANTED` + mail Celery | `authentication/views.py:184-236`, `consent.py:record_consent` |
 | `POST auth/refresh/` (requiere Bearer **vigente** + `LocalJWTAuthentication`) | — (header) | `200 {token}` (nuevo JWT mismo schema; stateless, ventana deslizante 20min) | `authentication/refresh.py:14-44` |
 | `POST auth/logout/` | — | `200 {status:logged_out}` + **revocación servidor**: el `jti` se publica en denylist (Redis/locmem) con TTL = vida restante → el token viejo responde 401. El APK además borra secure storage | `authentication/views.py:logout_view`, `token_denylist.py` |
-| `POST auth/password-reset/request/` (`AllowAny`, throttle anon, siempre 202 anti-enumeración) | `{email}` | `202 {status:accepted}` + mail token un solo uso TTL 1h + `AuditLog PASSWORD_RESET_REQUESTED` (solo si el email existe; indistinguible si no) | `authentication/views.py:password_reset_request_view`, ADR-0006 |
+| `POST auth/password-reset/request/` (`AllowAny`, throttle anon) | `{email}` | Sin SMTP (`PASSWORD_RESET_EMAIL_ENABLED=false`, default): `501 {error}` honesto — el APK muestra "no disponible" sin reintentar (ADR-0006 enmienda Wave D). Con SMTP: `202 {status:accepted}` anti-enumeración + mail token un solo uso TTL 1h + `AuditLog PASSWORD_RESET_REQUESTED` | `authentication/views.py:password_reset_request_view`, ADR-0006 |
 | `POST auth/password-reset/confirm/` (`AllowAny`) | `{token, new_password}` (+fortaleza NIST) | `200 {status:password_updated}` + invalida token + `AuditLog PASSWORD_RESET_CONFIRMED`; `400` token inválido/expirado/debil | `authentication/views.py:password_reset_confirm_view` |
 | `POST auth/password-change/` (`IsAuthenticated`) | `{current_password, new_password}` | `200 {status:password_updated}` + `AuditLog PASSWORD_CHANGED`; `400` actual incorrecta/debil | `authentication/views.py:password_change_view` |
 | `POST auth/consent/` (LFPDPPP) | `{consent: true\|false}` estricto (`400` si no booleano) | `200 {status:recorded, data_consent, data_consent_date}` + `AuditLog(CONSENT_GRANTED\|REVOKED)` | `authentication/views.py:97-128` |

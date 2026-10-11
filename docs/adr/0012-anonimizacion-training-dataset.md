@@ -1,7 +1,8 @@
 # ADR-0012: Anonimización de datasets de entrenamiento (HMAC-SHA256 + tabla espejo)
 
 - **Fecha:** 2026-10-04
-- **Estado:** Aceptado (parcial: esquema + servicio; pipeline de purga pendiente)
+- **Estado:** Aceptado (esquema + servicio + pipeline ARCO; rotación de clave pendiente)
+- **Enmienda 2026-10-06 (Wave D):** el §1.5 original declaraba pendiente `export_anonymized_dataset`, purga→anonimizar y `KeyProvider`. Hoy existen: `KeyProvider/EnvKeyProvider/Anonymizer` (`training_data/anonymization.py:35-60`), task Celery `export_anonymized_dataset` (`training_data/tasks.py:178-196`), `export_user_dataset(user, purged=True)` invocado desde `purge_user_data` **antes** de borrar (`authentication/erasure.py:67`), y campo `purged` (migración `0003_add_anon_purged_flag.py`). RNF-DB-02 → ✅. Queda post-MVP: rotación de clave con re-derivación, migración de `anonymize_id` legado (`utils/privacy.py`, `mole_vision/.../privacy.py`) y `sanitize_original_names` (anonimizacion/05).
 - **Contexto:** `.scratch/anonimizacion/PRD.md` y `.scratch/traceabilidad` (RNF-DB-02) exigen que los datos de entrenamiento no conserven PII. El borrado directo destruye valor de entrenamiento; se adopta tabla espejo anonimizada.
 
 ## 1. Decisión
@@ -10,7 +11,7 @@
 2. **Sin PII por construcción:** sin FK de usuario, sin `image_path`, sin nombres originales. Derivación directa del payload de `AIDiagnostic`.
 3. **HMAC-SHA256 con `ANONIMIZACION_KEY` inyectada por entorno** (`core_backend/apps/training_data/anonymization.py::AnonymizationService`); fail-fast (`ImproperlyConfigured`) si falta la clave.
 4. **Repository Pattern:** puerto `AnonymizationRepository` + `DjangoAnonymizationRepository` (`core_backend/apps/training_data/repositories.py`); la persistencia es reemplazable sin tocar la lógica.
-5. **Alcance explícito pendiente (no parte de esta decisión):** task Celery `export_anonymized_dataset`, `purge_user_data` → anonimizar-en-lugar-de-borrar (`apps/authentication/erasure.py` sigue borrando), `sanitize_original_names`, ADR de key-provider/rotación. La clave legada sin salt (`utils/privacy.py::anonymize_id`, `mole_vision/.../privacy.py`) sigue viva y debe migrarse.
+5. **Alcance explícito pendiente (no parte de esta decisión):** ADR de key-provider/rotación con re-derivación, `sanitize_original_names`, migración de la clave legada sin salt (`utils/privacy.py::anonymize_id`, `mole_vision/.../privacy.py`). (Enmienda 2026-10-06: `export_anonymized_dataset`, `KeyProvider` y purga→anonimizar ya implementados — ver encabezado.)
 
 ## 2. Consecuencias
 

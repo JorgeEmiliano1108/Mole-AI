@@ -19,15 +19,19 @@ SCRATCH = REPO_ROOT / ".scratch"
 OUTPUT = REPO_ROOT / "docs" / "system" / "V2-BACKLOG.md"
 
 
+STATUS_RE = re.compile(r"\s*(?:[-*+]\s+)?(?:\*\*)?Status:(?:\*\*)?\s*(\S+)")
+
+
 def parse_issue(path: Path) -> dict:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
     title = next((ln.lstrip("# ").strip() for ln in lines if ln.startswith("#")), path.stem)
     status = "desconocido"
     for ln in lines:
-        match = re.match(r"\s*Status:\s*(\S+)", ln)
+        # Acepta `Status: x`, `- Status: x` y `- **Status:** x` (admin-ux-audit).
+        match = STATUS_RE.match(ln)
         if match:
-            status = match.group(1)
+            status = match.group(1).strip("*").rstrip(".,;:")
             break
     sev = ""
     match = re.search(r"Sev:\s*([^\n·]+)", text)

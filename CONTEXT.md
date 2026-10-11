@@ -23,7 +23,7 @@ Glosario canónico. Usar estos términos en issues, tests y código nuevo. Evita
 
 ## Directrices científicas (marco teórico del MVP)
 
-- **Sin LLMs locales en el móvil:** la arquitectura rechaza la inferencia de LLMs en el dispositivo por limitaciones severas de memoria (RAM) y consumo energético/térmico en gamas media/baja. La carga generativa se delega al cloud (proveedor LLM OpenAI-compatible, configurable sin vendor lock-in) y el Edge opera solo visión de bajo consumo (MobileNetV2 INT8, ver `assets/models/README.md`).
+- **Sin LLMs locales en el móvil:** la arquitectura rechaza la inferencia de LLMs en el dispositivo por limitaciones severas de memoria (RAM) y consumo energético/térmico en gamas media/baja. La carga generativa se delega al cloud (proveedor LLM OpenAI-compatible, configurable sin vendor lock-in) y el Edge opera solo visión de bajo consumo (MobileNetV2 **FP16** 4.8 MB, 38 clases, `confidenceThreshold=0.70`; INT8 descartado por contrato Dart f32 — ver `mobile/assets/models/README.md`).
 - **Strict claim-level faithfulness:** el RAG se evalúa por fidelidad estricta a nivel de afirmación bajo políticas fail-closed: es alucinación tanto no abstenerse cuando el contexto no alcanza (frase exacta de la REGLA DE ORO) como cualquier afirmación no fundamentada detectada por el juez, incluso en respuestas a consultas válidas. Esto mitiga el sesgo de longitud (verbosity bias) de los jueces genéricos y mide seguridad real, no elocuencia.
 
 ## Ambigüedades resueltas
@@ -41,5 +41,5 @@ Glosario canónico. Usar estos términos en issues, tests y código nuevo. Evita
 - **Sin-rotación**: RESUELTO 2026-09-14 — `auth_token_expires_at` + `rotate_token()` + `POST devices/<id>/rotate/` (migraciones `0012`/`0013`).
 - **Sin-paginación**: RESUELTO 2026-09-17 — `DEFAULT_PAGINATION_CLASS=PageNumberPagination/PAGE_SIZE=50` (solo afecta `GET plants/species/`; web tolerante).
 - **Consentimiento-solo-frontend**: RESUELTO 2026-09-14 — `POST auth/consent/` + `AuditLog` + `frontend/privacy.html`; APK registra consentimiento en onboarding.
-- **Contrato-móvil-ausente**: RESUELTO 2026-09-17 — `docs/mobile-contract.md` + snapshot `docs/contracts/openapi.yml` (76 paths v1) + gate CI `mobile-contract` (REC-5/S12).
+- **Contrato-móvil-ausente**: RESUELTO 2026-09-17 — `docs/mobile-contract.md` + snapshot `docs/contracts/openapi.yml` (91 paths v1 + `/api/schema/`, 106 operaciones, 2026-09-17; counts re-verificados Wave D 2026-10-06) + gate CI `mobile-contract` (REC-5/S12).
 - **Web-retirada**: 2026-09-21, admin = Django Admin RBAC nativo (grupo Botánico solo-view vía migración 0014; SuperAdmin = is_superuser). Cero Node/pnpm/vitest/Playwright en el repo; E2E en pytest + `integration_test` Dart.
