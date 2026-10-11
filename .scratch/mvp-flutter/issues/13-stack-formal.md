@@ -51,7 +51,6 @@ como primera barrera (F7); masking PII en exporter OTEL reutilizando `PIIFilter`
 None - can start immediately
 
 ## Comments
-
 - 2026-09-18 (agente): skills `to-issues`, `to-prd`. Etapa dev (no prod): sin presión
   de tienda; backend objetivo LAN. F4 (LangGraph) explícitamente diferida hasta
   puerta offline (F1+F2 con métricas).
@@ -105,3 +104,14 @@ None - can start immediately
   `flutter analyze` 0 issues, 54 tests. E2E compose verde: chat (respuesta+COFEPRIS
   vía nim-fake), JWT, NOM-059 403. Stack E2E apagado tras la verificación.
   F4 (LangGraph) formalmente DESBLOQUEADA pendiente de puerta hardware.
+
+## Diferido a V2.0 — Acta F4 (2026-10-06, skills `triage` + `grill-with-docs`)
+- Hecho y cerrado: MRF01 (offline-first + retención), MRF02 (FP16 4.8MB
+  empaquetado + threshold 0.70), MRF03 (SyncBatchView + cursor + fallback).
+- Diferido a V2.0: MRF04 (LangGraph multi-agente), MRF05 (RAG+CoT con
+  `steps[]`), MRF06 (`trace_id`/usage real), MRNF01 benchmarks + puerta F9,
+  MRNF03 (LangSmith/OTEL), MRNF04 (TLS1.3/pinning formal), MRNF05 (iOS),
+  MRNF06 (contrato dual). Criterio: Orquestador/agentes/CoT no existen en
+  código (veredicto forense RF-AI-01/02); prometerlos en matriz sería teatro.
+- Aceptación restante (`mobile-contract.md` + `audit-matrix.md` referencian
+  MRF/MRNF) se cumple para MRF01-03; el resto referencia este acta.

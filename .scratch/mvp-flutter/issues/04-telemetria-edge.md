@@ -21,3 +21,14 @@ Ingesta canónica `edge-batch` (ADR-0002): 1 serializer, anti-replay 300s único
 
 - `01-gobernanza-harness.md`
 - `02-auth-hs256.md`
+
+## Diferido parcial a V2.0 — Acta F4 (2026-10-06, skills `triage` + `grill-with-docs`)
+- HECHO (veredicto forense, sin código nuevo): ingesta canónica
+  `edge-batch` con `DeviceBearer` real + throttle, `ingest_frame` con
+  `bulk_create` + dedupe idempotente, `telemetry/latest/` + health con
+  BOLA, lectura APK testeada (`plants_vision_test.dart`, badge F1).
+- DIFERIDO V2.0: alias `batch` deprecado, alineación de contrato del
+  daemon (`sync_to_backend` emite `{"batch"}` incompatible — ROTO
+  documentado, no silencioso), E2E ESP32→Django con hardware, TLS
+  Fail-Safe verificado (depende de P0-03, también diferido).
+- Status queda `needs-triage` hasta que V2 retome la parte daemon/HW.

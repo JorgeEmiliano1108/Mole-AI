@@ -21,3 +21,9 @@ de vacío; plant_detail con reintento + chip offline (usa el flag de latestCache
 que se descartaba) + error con liveRegion; knowledge con polling transitorio
 (PENDING/UPLOADING/UPLOADED/INDEXING, máx 6 con backoff) + helper testeable.
 5 tests nuevos; suite 107/107, analyze 0.
+
+## Resolución Wave F2 (2026-10-06, skill `tdd`)
+- Único hueco real: `weather_screen.dart` sin reintento ni chip. Fix:
+  botón Reintentar ante error + chip `Sin conexión` ante `RetryableException`
+  (conserva último dato). Tests en `f2_alerts_weather_test.dart` (reintento
+  relanza 1 vez; offline muestra chip). `analyze` 0 en tocados.

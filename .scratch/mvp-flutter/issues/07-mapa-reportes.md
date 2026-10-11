@@ -1,6 +1,20 @@
 # 07 — Mapa, clima y reportes
 
-Status: needs-triage
+Status: ready-for-human
+
+## Triage F4 (2026-10-06, skill `triage`)
+- `needs-triage` → `ready-for-human`. Desglose por criterio (decisiones de
+  usuario registradas):
+  - HECHO: `hotspots` + weather proxy (`map.dart`, testeado incl. skip de
+    inválidos F1); MS-3 `generate→status→download` presigned
+    (`reports.dart` + `ReportsScreen`, widget tests F1 éxito/Reintentar).
+  - RECHAZADO: retirar ReportLab local (decisión: coexisten local/MS3
+    documentados) y `fl_chart` (evitado explícito en `pubspec.yaml:55-56`;
+    `charts.dart` usa CustomPainter).
+  - DIFERIDO V2.0: clustering de hotspots (cosmético, mandato anti-refacto).
+- Criterios originales re-mapeados: `test_map_hotspots` cubierto por
+  `hotspots()` + `n3_test` + `f1_screens_test`; E2E report cubierto a nivel
+  repo/UI con fakes (E2E con MS3 vivo = hold infra, ver N-4).
 
 ## Parent
 

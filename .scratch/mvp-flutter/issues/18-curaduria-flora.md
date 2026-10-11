@@ -23,3 +23,8 @@ Fichas verificadas de flora endémica mexicana con fuente citada por ficha (cien
 ## Blocked by
 
 - `16-password-reset.md` (campo `is_endemic` + backfill)
+
+## Nota F4 (2026-10-06, skill `triage`)
+- NO diferido: hold externo humano, gemelo de N-4. El agente no puede
+  firmarlo (exige juicio botánico). Se mantiene `ready-for-human` hasta
+  firma de lote + seeds con fuente. Sin acción de código.

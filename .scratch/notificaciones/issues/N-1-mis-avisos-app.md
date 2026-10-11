@@ -23,3 +23,14 @@ fingerprint, local-notify error/warn, caché offline+chip, `excludeSemantics` pa
 anuncio único), ruta `/avisos` + drawer con `Badge.count`. Hallazgos: Riverpod 3
 sin StateProvider; createTemp cuelga widget tests (ruta falsa); Semantics fusiona
 labels hijos (doble lectura → exclude). 9 tests + suite 98/98, analyze 0.
+
+## Resolución Wave F2 (2026-10-06, skills `tdd` + `grill-with-docs`)
+- Badge en NavigationBar: `home_shell.dart:alertsDestination(unread)` (5.º
+  destino → `context.go('/avisos')`, tabs intactos); drawer conserva el suyo.
+  Testeado como función pura (`f2_alerts_weather_test.dart`: con/sin conteo).
+- Unread persistido: `UnreadAlertsStore` (prefs `mole_unread_alerts`) +
+  `hydrate()` al arrancar el shell; `add/reset` persisten fire-and-forget.
+  `alerts_test.dart` usa `setMockInitialValues` (sin channels).
+- Dedup por id: `PlantAlert.id` (identidad DERIVADA = fingerprint; el backend
+  no emite id — follow-up N-0, documentado en código, no maquillado).
+- Verificación: 16 tests (alerts 9 + f2 7) verdes; `analyze` 0 en tocados.

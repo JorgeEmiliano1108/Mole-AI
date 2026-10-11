@@ -20,3 +20,12 @@ ADR-0005. **Firmware** (ESP-IDF, C): characteristic `FEE2` `READ+NOTIFY` (+CCC) 
 ## Blocked by
 
 - `14-portal-publico.md` (Mis plantas es la superficie que muestra BLE)
+
+## Diferido a V2.0 — Acta F4 (2026-10-06, skills `triage` + `grill-with-docs`)
+- Gemelo de `deuda-20-mobile-ble-stack` (misma acta): stack BLE real
+  diferido a post-MVP por decisión de usuario (telemetría solo-servidor).
+- Lo hecho queda: badge origen + merge con `telemetry/latest/`
+  (`plants.dart:233`, testeado); provisioning FEE1 + subscribe FEE2 +
+  tests HW/campo quedan para V2 (criterios 1-3 sin marcar).
+- Bloqueo por 14 resuelto (portal existe); el bloqueo vigente es
+  hardware + prueba campo, no código. Status queda `ready-for-agent`.

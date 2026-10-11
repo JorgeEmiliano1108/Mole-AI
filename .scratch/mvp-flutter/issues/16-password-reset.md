@@ -1,6 +1,20 @@
 # 16 — Backend portal: password-reset + usuarios admin + flora endémica
 
-Status: ready-for-agent
+Status: ready-for-human
+
+## Resolución F4 (2026-10-06, skills `triage` + `grill-with-docs`)
+- `ready-for-agent` → `ready-for-human` (código completo, verificado Wave 1):
+  `password-reset/request|confirm` (TTL 1h, un solo uso, hash+pepper,
+  anti-enumeración) + `password-change` + `AuditLog`;
+  degradación honesta 501 sin SMTP (`PASSWORD_RESET_EMAIL_ENABLED`,
+  ADR-0006 enmienda Wave D); admin users list/search/patch/soft-DELETE;
+  `is_endemic` + `?endemic=&habitat=` + `live-alerts` en
+  Ambient/SoilReading.
+- Evidencia: `test_issue16_portal.py` (request/confirm/change/admin/flora,
+  11 tests) + `mobile-contract.md` §1 (fila 501/202) + gate `schema-diff`.
+  Criterios originales cubiertos (el "202" de anti-enumeración rige solo
+  con SMTP habilitado, documentado).
+- Resta humano: validación del revisor, no código.
 
 ## Parent
 
